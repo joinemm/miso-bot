@@ -6,10 +6,19 @@ logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
 
 TOKEN = os.environ.get('MISO_BOT_TOKEN_BETA')
-client = commands.Bot(command_prefix=">")
+client = commands.Bot(command_prefix="<")
 
-extensions = ['cogs.events', 'cogs.errorhandler', 'cogs.customcommands']
+extensions = ['cogs.events', 'cogs.errorhandler', 'cogs.customcommands', 'cogs.fishy']
 
+
+@client.event
+async def on_ready():
+    logger.info("Loading complete")
+
+
+@client.before_invoke
+async def before_any_command(ctx):
+    command_logger.info(log.log_command(ctx))
 
 if __name__ == "__main__":
     for extension in extensions:

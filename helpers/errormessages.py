@@ -10,11 +10,11 @@ def invalid_argument(command, method, argument):
 
 
 def channel_not_found(channel):
-    return f"**ERROR:** Invalid channel {channel}"
+    return f"**ERROR:** Channel `{channel}` not found"
 
 
 def user_not_found(user):
-    return f"**ERROR:** Invalid user {user}"
+    return f"**ERROR:** User `{user}` not found"
 
 
 def missing_parameter(name):
