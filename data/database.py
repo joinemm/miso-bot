@@ -40,15 +40,44 @@ def fishdata(userid):
     return data
 
 
+def activitydata(guild_id, userid):
+    data = query("select * from activity where guild_id = ? and user_id = ?", (guild_id, userid), maketuple=True)
+    return data
+
+
 def add_activity(guild_id, user_id, xp, hour):
-    execute("update activity set h%s = h%s + ?, messages = messages + 1 where guild_id = ? and user_id = ?"
-            % (hour, hour), (xp, guild_id, user_id))
+    execute("insert or ignore into activity(guild_id, user_id) values(?, ?)", (guild_id, user_id))
+    execute("update activity set h%s = h%s + ?, xp = xp + ?, messages = messages + 1 where guild_id = ? and user_id = ?"
+            % (hour, hour), (xp, xp, guild_id, user_id))
 
 
 def update_user(user_id, column, new_value):
+    execute("insert or ignore into users(discord_id) values(?)", (user_id,))
     execute("update users set %s = ? where discord_id = ?" % column, (new_value, user_id))
 
 
-def add_fishy(user_id, fishtype, amount, timestamp):
-    execute("update fishy set fishy = fishy + ?, %s = %s + 1, timestamp = ? where discord_id = ?"
-            % (fishtype, fishtype), (amount, timestamp, user_id))
+def add_fishy(user_id, fishtype, amount, timestamp, fisher_id=None):
+    execute("insert or ignore into fishy(discord_id) values(?)", (user_id,))
+    if fisher_id is None:
+        # fishing for self
+        execute("update fishy set fishy = fishy + ?, %s = %s + 1, timestamp = ? where discord_id = ?"
+                % (fishtype, fishtype), (amount, timestamp, user_id))
+    else:
+        execute("insert or ignore into fishy(discord_id) values(?)", (fisher_id,))
+        execute("update fishy set fishy = fishy + ?, %s = %s + 1 where discord_id = ?"
+                % (fishtype, fishtype), (amount, user_id))
+        execute("update fishy set fishy_gifted = fishy_gifted + ?, timestamp = ? where discord_id = ?",
+                (amount, timestamp, fisher_id))
+
+
+def get_keywords(guild_id):
+    data = query("select keyword, user_id from notifications where guild_id = ?", (guild_id,))
+    return data
+
+
+def get_setting(guild_id, setting):
+    data = query("select %s from guilds where guild_id = ?" % setting, (guild_id,))
+    if data is None:
+        return None
+    else:
+        return data[0][0]
