@@ -15,8 +15,63 @@ class Events(commands.Cog):
         self.client = client
 
     @commands.command()
-    async def test(self, ctx, *args):
-        await ctx.send(" ".join(args))
+    async def test(self, ctx):
+        pages = []
+        for cog in self.client.cogs:
+            this_cog_commands = self.client.get_cog(cog).get_commands()
+            if this_cog_commands:
+                this_page = discord.Embed(title=f"{cog}")
+                for command in this_cog_commands:
+                    this_page.add_field(name=command.name +
+                                        (f' [{" | ".join(command.aliases)}]' if command.aliases else ""),
+                                        inline=False,
+                                        value=command.short_doc or "-no help yet-")
+                pages.append(this_page)
+        await util.page_switcher(ctx, self.client, pages)
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        # welcome message
+        message = db.get_setting(member.guild.id, "welcome_message")
+        if message is None:
+            message = "Welcome {mention}"
+        channel_id = db.get_setting(member.guild.id, "welcome_channel")
+        channel = member.guild.get_channel(channel_id)
+        if channel is None:
+            logger.warning(f"No welcome channel set for [{member.guild.name}]")
+            return
+        await channel.send(message.format(mention=member.mention, name=member.name))
+        logger.info(f"Welcomed {member.name} to {member.guild.name}")
+
+        # add autorole
+        role = member.guild.get_role(db.get_setting(member.guild.id, "autorole"))
+        if role is not None:
+            member.add_roles(role)
+
+    @commands.Cog.listener()
+    async def on_member_ban(self, guild, user):
+        channel_id = db.get_setting(guild.id, "welcome_channel")
+        channel = guild.get_channel(channel_id)
+        if channel is None:
+            logger.warning(f"No welcome channel set for [{guild.name}]")
+            return
+        message = "**{name}** has been permanently banned"
+        await channel.send(message.format(mention=user.mention, name=user.name))
+        logger.info(f"{user.name} was just banned from {guild.name}")
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        if member.id in [x.user.id for x in await member.guild.bans()]:
+            logger.info("user was banned, no remove message")
+            return
+        channel_id = db.get_setting(member.guild.id, "welcome_channel")
+        channel = member.guild.get_channel(channel_id)
+        if channel is None:
+            logger.warning(f"No welcome channel set for [{member.guild.name}] or cannot access")
+            return
+
+        await channel.send(f"Goodbye {member.mention} ( **{member.name}#{member.discriminator}** )")
+        logger.info(f"Said goodbye to {member.name} from {member.guild.name}")
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -56,7 +111,6 @@ class Events(commands.Cog):
 
         # notifications
         keywords = db.get_keywords(message.guild.id)
-        print(keywords)
         if keywords is not None:
             for (word, user_id) in keywords:
                 if user_id == message.author.id:
@@ -94,6 +148,40 @@ class Events(commands.Cog):
 
                 if level_now > level_before:
                     await message.channel.send(f"{message.author.mention} just leveled up! (level **{level_now}**)")
+
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        """Starboard"""
+        if reaction.emoji == "⭐":
+            if db.get_setting(reaction.message.guild.id, "starboard_toggle") == 1:
+
+                channel_id = db.get_setting(reaction.message.guild.id, "starboard_channel")
+                channel = reaction.message.guild.get_channel(channel_id)
+                if channel is None:
+                    logger.warning(f"Starboard channel not set for [{reaction.message.guild.name}]")
+                    return
+
+                board_msg_id = db.query("select starboard_message_id from starboard where message_id = ?",
+                                        (reaction.message.id,))
+                board_msg = await channel.get_message(board_msg_id)
+
+                if board_msg is None:
+                    if reaction.count == db.get_setting(reaction.message.guild.id, "starboard_amount"):
+                        content = discord.Embed(color=discord.Color.gold())
+                        content.set_author(name=f"{reaction.message.author}",
+                                           icon_url=reaction.message.author.avatar_url)
+                        content.description = reaction.message.content + f"\n\n[context]({reaction.message.jump_url})"
+                        content.timestamp = reaction.message.created_at
+                        content.set_footer(text=f"{reaction.count} ⭐ #{reaction.message.channel.name}")
+                        if len(reaction.message.attachments) > 0:
+                            content.set_image(url=reaction.message.attachments[0].url)
+
+                        msg = await channel.send(embed=content)
+                        db.execute("INSERT INTO starboard values(?, ?)", (reaction.message.id, msg.id))
+                else:
+                    content = board_msg.embeds[0]
+                    content.set_footer(text=f"{reaction.count} ⭐ #{reaction.message.channel.name}")
+                    await board_msg.edit(embed=content)
 
 
 def setup(client):
