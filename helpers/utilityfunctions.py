@@ -1,65 +1,70 @@
 import math
 import asyncio
 from discord.ext import commands
+import discord
+import copy
 
 
 async def send_as_pages(ctx, client, content, rows, maxrows=15):
-
-    pages = create_pages(rows, maxrows)
-    content.description = pages[0]
+    pages = create_pages(content, rows, maxrows)
     if len(pages) > 1:
-        content.set_footer(text=f"page 1 of {len(pages)}")
-    my_msg = await ctx.send(embed=content)
+        await page_switcher(ctx, client, pages)
+    else:
+        await ctx.send(embed=pages[0])
 
+
+async def page_switcher(ctx, client, pages):
     current_page = 0
+    pages[0].set_footer(text=f"page {current_page + 1} of {len(pages)}")
+    my_msg = await ctx.send(embed=pages[0])
 
-    if len(pages) > 1:
+    def check(_reaction, _user):
+        return _reaction.message.id == my_msg.id and _reaction.emoji in ["⬅", "➡"] \
+               and not _user == client.user
 
-        def check(_reaction, _user):
-            return _reaction.message.id == my_msg.id and _reaction.emoji in ["⬅", "➡"] \
-                   and not _user == client.user
+    await my_msg.add_reaction("⬅")
+    await my_msg.add_reaction("➡")
 
-        await my_msg.add_reaction("⬅")
-        await my_msg.add_reaction("➡")
-
-        while True:
+    while True:
+        try:
+            reaction, user = await client.wait_for('reaction_add', timeout=3600.0, check=check)
+        except asyncio.TimeoutError:
+            await my_msg.remove_reaction("⬅", client.user)
+            await my_msg.remove_reaction("➡", client.user)
+            return
+        else:
+            await my_msg.remove_reaction("⬅", user)
+            await my_msg.remove_reaction("➡", user)
             try:
-                reaction, user = await client.wait_for('reaction_add', timeout=3600.0, check=check)
-            except asyncio.TimeoutError:
-                await my_msg.clear_reactions()
-                return
-            else:
-                try:
-                    if reaction.emoji == "⬅" and current_page > 0:
-                        content.description = pages[current_page - 1]
-                        current_page -= 1
-                        await my_msg.remove_reaction("⬅", user)
-                    elif reaction.emoji == "➡":
-                        content.description = pages[current_page + 1]
-                        current_page += 1
-                        await my_msg.remove_reaction("➡", user)
-                    else:
-                        continue
-                    content.set_footer(text=f"page {current_page + 1} of {len(pages)}")
-                    await my_msg.edit(embed=content)
-                except IndexError:
+                if reaction.emoji == "⬅" and current_page > 0:
+                    content = pages[current_page - 1]
+                    current_page -= 1
+                elif reaction.emoji == "➡":
+                    content = pages[current_page + 1]
+                    current_page += 1
+                else:
                     continue
+                content.set_footer(text=f"page {current_page + 1} of {len(pages)}")
+                await my_msg.edit(embed=content)
+            except IndexError:
+                continue
 
 
-def create_pages(rows, maxrows=15):
+def create_pages(content, rows, maxrows=15):
     pages = []
-    description = ""
+    content.description = ""
     thisrow = 0
     for row in rows:
         thisrow += 1
-        if len(description) + len(row) < 2000 and thisrow < maxrows+1:
-            description += f"\n{row}"
+        if len(content.description) + len(row) < 2000 and thisrow < maxrows+1:
+            content.description += f"\n{row}"
         else:
             thisrow = 0
-            pages.append(f"{description}")
-            description = f"\n{row}"
-    if not description == "":
-        pages.append(f"{description}")
+            pages.append(content)
+            content = copy.deepcopy(content)
+            content.description = f"{row}"
+    if not content.description == "":
+        pages.append(content)
     return pages
 
 
@@ -101,5 +106,19 @@ async def get_user(ctx, mention):
 async def get_member(ctx, mention):
     try:
         return await commands.MemberConverter().convert(ctx, mention)
+    except commands.errors.BadArgument as e:
+        return None
+
+
+async def get_textchannel(ctx, mention):
+    try:
+        return await commands.TextChannelConverter().convert(ctx, mention)
+    except commands.errors.BadArgument as e:
+        return None
+
+
+async def get_role(ctx, mention):
+    try:
+        return await commands.RoleConverter().convert(ctx, mention)
     except commands.errors.BadArgument as e:
         return None

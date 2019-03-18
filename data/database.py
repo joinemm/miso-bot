@@ -75,9 +75,14 @@ def get_keywords(guild_id):
     return data
 
 
-def get_setting(guild_id, setting):
+def update_setting(guild_id, setting, new_value):
+    execute("insert or ignore into guilds(guild_id) values(?)", (guild_id,))
+    execute("update guilds set %s = ?" % setting, (new_value,))
+
+
+def get_setting(guild_id, setting, default=None):
     data = query("select %s from guilds where guild_id = ?" % setting, (guild_id,))
     if data is None:
-        return None
+        return default
     else:
         return data[0][0]
