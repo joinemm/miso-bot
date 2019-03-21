@@ -11,6 +11,21 @@ class Config(commands.Cog):
         self.client = client
 
     @commands.command()
+    async def help2(self, ctx):
+        pages = []
+        for cog in self.client.cogs:
+            this_cog_commands = self.client.get_cog(cog).get_commands()
+            if this_cog_commands:
+                this_page = discord.Embed(title=f"{cog}")
+                for command in this_cog_commands:
+                    this_page.add_field(name=command.name +
+                                             (f' [{" | ".join(command.aliases)}]' if command.aliases else ""),
+                                        inline=False,
+                                        value=command.short_doc or "-no help yet-")
+                pages.append(this_page)
+        await util.page_switcher(ctx, self.client, pages)
+
+    @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def welcomeconfig(self, ctx, option, *args):
         """
