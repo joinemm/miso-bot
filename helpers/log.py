@@ -37,3 +37,7 @@ def get_command_logger():
 
 def log_command(ctx):
     return f"{ctx.command}() | {ctx.guild} ]:: {ctx.author} \"{ctx.message.content}\""
+
+
+def custom_command_format(ctx, keyword):
+    return f"custom({keyword}) | {ctx.guild} ]:: {ctx.author} \"{ctx.message.content}\""
