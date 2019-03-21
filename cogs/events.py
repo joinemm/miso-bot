@@ -6,28 +6,12 @@ import data.database as db
 import re
 
 logger = log.get_logger(__name__)
-command_logger = log.get_command_logger()
 
 
 class Events(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-
-    @commands.command()
-    async def test(self, ctx):
-        pages = []
-        for cog in self.client.cogs:
-            this_cog_commands = self.client.get_cog(cog).get_commands()
-            if this_cog_commands:
-                this_page = discord.Embed(title=f"{cog}")
-                for command in this_cog_commands:
-                    this_page.add_field(name=command.name +
-                                        (f' [{" | ".join(command.aliases)}]' if command.aliases else ""),
-                                        inline=False,
-                                        value=command.short_doc or "-no help yet-")
-                pages.append(this_page)
-        await util.page_switcher(ctx, self.client, pages)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -142,9 +126,10 @@ class Events(commands.Cog):
         if not message.author.bot:
             announce = True if db.get_setting(message.guild.id, "levelup_toggle") == 1 else False
             if announce:
-                activity_data = db.activitydata(message.guild.id, message.author.id)
-                level_before = util.get_level(activity_data.xp-message_xp)
-                level_now = util.get_level(activity_data.xp)
+                activity_data = db.get_user_activity(message.guild.id, message.author.id)
+                xp = sum(activity_data)
+                level_before = util.get_level(xp-message_xp)
+                level_now = util.get_level(xp)
 
                 if level_now > level_before:
                     await message.channel.send(f"{message.author.mention} just leveled up! (level **{level_now}**)")
