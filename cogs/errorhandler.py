@@ -34,8 +34,9 @@ class Events(commands.Cog):
             return await ctx.author.send(f'{ctx.command} can not be used in Private Messages.')
 
         elif isinstance(error, commands.NotOwner):
-            logger.error(str(error))
-            return await ctx.send("Sorry, this command usable by the bot owner only! (Joinemm#1998)")
+            logger .error(str(error))
+            owner = await self.client.application_info().owner
+            return await ctx.send(f"Sorry, this command usable by the bot owner only! ({owner})")
 
         elif isinstance(error, commands.MissingPermissions):
             logger.error(str(error))
