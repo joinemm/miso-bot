@@ -122,3 +122,12 @@ async def get_role(ctx, mention):
         return await commands.RoleConverter().convert(ctx, mention)
     except commands.errors.BadArgument as e:
         return None
+
+
+async def command_group_help(ctx):
+    if ctx.invoked_subcommand is None or isinstance(ctx.invoked_subcommand, commands.Group):
+        await send_command_help(ctx)
+
+
+async def send_command_help(ctx):
+    await ctx.bot.get_command('help').callback(ctx, ctx.command.name)
