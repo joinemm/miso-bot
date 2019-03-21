@@ -20,15 +20,20 @@ class Fishy(commands.Cog):
                             "rare": fish_rare, "legendary": fish_legendary}
         self.__WEIGHTS = [0.09, 0.6, 0.2, 0.1, 0.01]
 
-    @commands.command()
-    async def fishy(self, ctx, mention=None):
+    @commands.command(aliases=["fish", "fihy"])
+    async def fishy(self, ctx, user=None):
+        """Go fishing and receive random fish. You can also gift fish to others.
+
+        Usage:
+            fishy
+            fishy <user>
+        """
         gift = False
-        if mention is not None:
-            receiver = await util.get_member(ctx, mention)
+        receiver = ctx.author
+        if user is not None:
+            receiver = await util.get_member(ctx, user)
             if receiver is not None and receiver is not ctx.author:
                 gift = True
-        else:
-            receiver = ctx.author
 
         fishdata = db.fishdata(ctx.author.id)
 
@@ -48,7 +53,13 @@ class Fishy(commands.Cog):
 
     @commands.command()
     async def leaderboard(self, ctx, scope=None):
-        users = db.query("select discord_id from fishy order by fishy desc")
+        """Shows the fishy leaderboard
+
+        Usage:
+            leaderboard
+            leaderboard global
+        """
+        users = db.query("select user_id from fishy order by fishy desc")
         rows = []
         rank_icon = [':first_place:', ':second_place:', ':third_place:']
         rank = 1
@@ -80,17 +91,45 @@ class Fishy(commands.Cog):
 
     @commands.command()
     async def fishystats(self, ctx, mention=None):
+        """Shows fishing statistics
+
+        Usage:
+            fishystats
+            fishystats <user>
+            fishystats global
+        """
+        user = ctx.author
         globaldata = False
         if mention is not None:
             if mention == 'global':
                 globaldata = True
-            user = await util.get_user(ctx, mention)
-            if user is None:
-                return await ctx.send(errormsg.user_not_found(mention))
-        else:
-            user = ctx.author
+            else:
+                user = await util.get_user(ctx, mention)
+                if user is None:
+                    return await ctx.send(errormsg.user_not_found(mention))
 
-        fishdata = db.fishdata(user.id)
+        if globaldata:
+            fishdata = None
+            users = db.query("select user_id from fishy")
+            for user_id in users:
+                u = self.client.get_user(user_id[0])
+                if u is None:
+                    print(user_id[0])
+                    continue
+                ufdata = db.fishdata(u.id)
+                if fishdata is None:
+                    fishdata = ufdata
+                else:
+                    fishdata = fishdata._replace(fishy=fishdata.fishy + ufdata.fishy,
+                                                 fishy_gifted=fishdata.fishy_gifted + ufdata.fishy_gifted,
+                                                 trash=fishdata.trash + ufdata.trash,
+                                                 common=fishdata.common + ufdata.common,
+                                                 uncommon=fishdata.uncommon + ufdata.uncommon,
+                                                 rare=fishdata.rare + ufdata.rare,
+                                                 legendary=fishdata.legendary + ufdata.legendary)
+
+        else:
+            fishdata = db.fishdata(user.id)
         content = discord.Embed(title=f"{'global' if globaldata else user.name} fishy stats")
         if fishdata is not None:
             total = fishdata.trash + fishdata.common + fishdata.uncommon + fishdata.rare + fishdata.legendary
