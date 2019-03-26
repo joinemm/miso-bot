@@ -64,6 +64,8 @@ class Rolepicker(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Rolechannel message handler"""
+        if message.guild is None:
+            return
         if message.channel.id == db.get_setting(message.guild.id, "rolepicker_channel"):
             if not message.author == self.client.user:
                 command = message.content[0]
