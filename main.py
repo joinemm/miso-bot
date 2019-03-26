@@ -6,10 +6,10 @@ logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
 
 TOKEN = os.environ.get('MISO_BOT_TOKEN_BETA')
-client = commands.Bot(command_prefix=">", case_insensitive=True)
+client = commands.Bot(command_prefix="<", case_insensitive=True)
 
 extensions = ['cogs.events', 'cogs.config', 'cogs.errorhandler', 'cogs.customcommands', 'cogs.fishy',
-              'cogs.rolepicker', 'cogs.mod', 'cogs.owner']
+              'cogs.rolepicker', 'cogs.mod', 'cogs.owner', 'cogs.notifications']
 
 
 @client.event
