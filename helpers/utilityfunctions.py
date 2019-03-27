@@ -6,6 +6,13 @@ import copy
 
 
 async def send_as_pages(ctx, client, content, rows, maxrows=15):
+    """
+    :param ctx: Context
+    :param client: Self.client
+    :param content: Base embed
+    :param rows: Embed description rows
+    :param maxrows: Max amount of rows per page
+    """
     pages = create_pages(content, rows, maxrows)
     if len(pages) > 1:
         await page_switcher(ctx, client, pages)
@@ -14,6 +21,11 @@ async def send_as_pages(ctx, client, content, rows, maxrows=15):
 
 
 async def page_switcher(ctx, client, pages):
+    """
+    :param ctx: Context
+    :param client: Self.client
+    :param pages: List of embeds to use as pages
+    """
     current_page = 0
     pages[0].set_footer(text=f"page {current_page + 1} of {len(pages)}")
     my_msg = await ctx.send(embed=pages[0])
@@ -51,6 +63,12 @@ async def page_switcher(ctx, client, pages):
 
 
 def create_pages(content, rows, maxrows=15):
+    """
+    :param content: Embed object to use as the base
+    :param rows: List of rows to use for the embed description
+    :param maxrows: Maximum amount of rows per page
+    :returns: List of Embed objects
+    """
     pages = []
     content.description = ""
     thisrow = 0
@@ -68,9 +86,23 @@ def create_pages(content, rows, maxrows=15):
     return pages
 
 
+def message_embed(message):
+    """
+    :param: message: Discord message object
+    :returns: Discord embed object
+    """
+    content = discord.Embed()
+    content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
+    content.description = message.content
+    content.set_footer(text=f"{message.guild.name} | #{message.channel.name}")
+    content.timestamp = message.created_at
+
+
 def timefromstring(s):
-    """parse string for a timeframe
-    :returns time in seconds"""
+    """
+    :param s: String to parse time from
+    :returns: Time in seconds
+    """
     t = 0
     words = s.split(" ")
     prev = words[0]
@@ -90,6 +122,10 @@ def timefromstring(s):
 
 
 def stringfromtime(t):
+    """
+    :param t: Time in seconds
+    :returns: Formatted string
+    """
     m, s = divmod(t, 60)
     h, m = divmod(m, 60)
     d, h = divmod(h, 24)
@@ -108,6 +144,10 @@ def stringfromtime(t):
 
 
 def get_xp(level):
+    """
+    :param level: Level
+    :return: Amount of xp needed to reach the level
+    """
     a = 0
     for x in range(1, level):
         a += math.floor(x + 300 * math.pow(2, (x / 7)))
@@ -115,6 +155,10 @@ def get_xp(level):
 
 
 def get_level(xp):
+    """
+    :param xp: Amount of xp
+    :returns: Current level based on the amount of xp
+    """
     i = 1
     while get_xp(i + 1) < xp:
         i += 1
@@ -126,12 +170,18 @@ def xp_to_next_level(level):
 
 
 def xp_from_message(message):
+    """
+    :param message: Message to get the xp from
+    :returns: Amount of xp rewarded from given message. Minimum 1
+    """
     words = message.content.split(" ")
     eligible_words = 0
     for x in words:
         if len(x) > 1:
             eligible_words += 1
-    xp = eligible_words + 10 * len(message.attachments)
+    xp = eligible_words + (10 * len(message.attachments))
+    if xp == 0:
+        xp = 1
     return xp
 
 
@@ -164,9 +214,11 @@ async def get_role(ctx, mention):
 
 
 async def command_group_help(ctx):
+    """Sends default command help if group command is invoked on it's own"""
     if ctx.invoked_subcommand is None or isinstance(ctx.invoked_subcommand, commands.Group):
         await send_command_help(ctx)
 
 
 async def send_command_help(ctx):
+    """Sends default command help"""
     await ctx.bot.get_command('help').callback(ctx, ctx.command.name)
