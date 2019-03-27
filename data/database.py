@@ -1,11 +1,15 @@
 import sqlite3
 from collections import namedtuple
+import json
+from functools import reduce
 
-FILE = 'data/database.db'
+
+SQLDATABASE = 'data/database.db'
+JSONDATABASE = 'data/data.json'
 
 
 def query(command, parameters=(), maketuple=False):
-    connection = sqlite3.connect(FILE)
+    connection = sqlite3.connect(SQLDATABASE)
     cursor = connection.cursor()
     cursor.execute(command, parameters)
     data = cursor.fetchall()
@@ -23,7 +27,7 @@ def query(command, parameters=(), maketuple=False):
 
 
 def execute(command, parameters=()):
-    connection = sqlite3.connect(FILE)
+    connection = sqlite3.connect(SQLDATABASE)
     cursor = connection.cursor()
     cursor.execute(command, parameters)
     connection.commit()
@@ -100,3 +104,31 @@ def rolepicker_role(rolename):
         return None
     else:
         return data[0][0]
+
+
+def get_from_data_json(keys):
+    with open(JSONDATABASE, 'r') as f:
+        data = json.load(f)
+    return reduce(getter, keys, data)
+
+
+def save_into_data_json(keys, value):
+    with open(JSONDATABASE, 'r') as f:
+        data = json.load(f)
+    with open(JSONDATABASE, 'w') as f:
+        if len(keys) > 1:
+            path_to = reduce(getter, keys[:-1], data)
+            path_to[keys[-1]] = value
+        else:
+            data[keys[0]] = value
+        json.dump(data, f, indent=4)
+
+
+def getter(d, key):
+    try:
+        return d.get(key, None)
+    except AttributeError:
+        try:
+            return d[int(key)]
+        except (ValueError, IndexError):
+            return None
