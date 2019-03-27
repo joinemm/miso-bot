@@ -68,6 +68,45 @@ def create_pages(content, rows, maxrows=15):
     return pages
 
 
+def timefromstring(s):
+    """parse string for a timeframe
+    :returns time in seconds"""
+    t = 0
+    words = s.split(" ")
+    prev = words[0]
+    for word in words[1:]:
+        try:
+            if word in ['hours', 'hour']:
+                t += int(prev) * 3600
+            elif word in ['minutes', 'minute', 'min']:
+                t += int(prev) * 60
+            elif word in ['seconds', 'second', 'sec']:
+                t += int(prev)
+        except ValueError:
+            pass
+        prev = word
+
+    return t
+
+
+def stringfromtime(t):
+    m, s = divmod(t, 60)
+    h, m = divmod(m, 60)
+    d, h = divmod(h, 24)
+
+    components = []
+    if d > 0:
+        components.append(f"{d} day" + ("s" if d > 1 else ""))
+    if h > 0:
+        components.append(f"{h} hour" + ("s" if h > 1 else ""))
+    if m > 0:
+        components.append(f"{m} minute" + ("s" if m > 1 else ""))
+    if s > 0:
+        components.append(f"{s} second" + ("s" if s > 1 else ""))
+
+    return " ".join(components)
+
+
 def get_xp(level):
     a = 0
     for x in range(1, level):
