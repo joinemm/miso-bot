@@ -152,37 +152,28 @@ class Config(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_roles=True)
-    async def roleconfig(self, ctx, option, role=""):
-
-        if option == 'help':
-            m = "**Available options:**\n" \
-                "`muterole`**:** The role added when muting a user.\n" \
-                "`autorole`**:** The role added automatically for new users.\n"
-            return await ctx.send(m)
-
+    async def muterole(self, ctx, role=""):
         thisrole = await util.get_role(ctx, role)
+        if thisrole is None:
+            oldrole = ctx.guild.get_role(db.get_setting(ctx.guild.id, "muterole"))
+            if oldrole is None:
+                return await ctx.send(errormsg.missing_parameter("role"))
+            return await ctx.send(f"Muterole on this server is currently `@{oldrole.name} ({oldrole.id})`")
+        db.update_setting(ctx.guild.id, "muterole", thisrole.id)
+        await ctx.send(f"Muterole set to `@{thisrole.name} ({thisrole.id})`")
 
-        if option == 'muterole':
-            if thisrole is None:
-                oldrole = ctx.guild.get_role(db.get_setting(ctx.guild.id, "muterole"))
-                if oldrole is None:
-                    return await ctx.send(errormsg.missing_parameter("role"))
-                return await ctx.send(f"Muterole on this server is currently `@{oldrole.name} ({oldrole.id})`")
-            db.update_setting(ctx.guild.id, "muterole", thisrole.id)
-            await ctx.send(f"Muterole set to `@{thisrole.name} ({thisrole.id})`")
-
-        elif option == 'autorole':
-            if thisrole is None:
-                oldrole = ctx.guild.get_role(db.get_setting(ctx.guild.id, "autorole"))
-                if oldrole is None:
-                    return await ctx.send(errormsg.missing_parameter("role"))
-                return await ctx.send(f"Automatically assigned role on this server is currently "
-                                      f"`@{oldrole.name} ({oldrole.id})`")
-            db.update_setting(ctx.guild.id, "autorole", thisrole.id)
-            await ctx.send(f"Automatically assigned role set to `@{thisrole.name}`")
-
-        else:
-            await ctx.send(errormsg.invalid_method(ctx.command.name, option))
+    @commands.command()
+    @commands.has_permissions(manage_roles=True)
+    async def autorole(self, ctx, role=""):
+        thisrole = await util.get_role(ctx, role)
+        if thisrole is None:
+            oldrole = ctx.guild.get_role(db.get_setting(ctx.guild.id, "autorole"))
+            if oldrole is None:
+                return await ctx.send(errormsg.missing_parameter("role"))
+            return await ctx.send(f"Automatically assigned role on this server is currently "
+                                  f"`@{oldrole.name} ({oldrole.id})`")
+        db.update_setting(ctx.guild.id, "autorole", thisrole.id)
+        await ctx.send(f"Automatically assigned role set to `@{thisrole.name}`")
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
