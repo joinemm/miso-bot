@@ -30,7 +30,7 @@ class Events(commands.Cog):
         # add autorole
         role = member.guild.get_role(db.get_setting(member.guild.id, "autorole"))
         if role is not None:
-            member.add_roles(role)
+            await member.add_roles(role)
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
@@ -45,9 +45,9 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        if member.id in [x.user.id for x in await member.guild.bans()]:
-            logger.info("user was banned, no remove message")
-            return
+        # if member.id in [x.user.id for x in await member.guild.bans()]:
+        #     logger.info("user was banned, no remove message")
+        #     return
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:

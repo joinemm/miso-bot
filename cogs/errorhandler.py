@@ -1,6 +1,7 @@
 from discord.ext import commands
 import helpers.log as log
 import traceback
+from helpers import utilityfunctions as util
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
@@ -50,7 +51,7 @@ class Events(commands.Cog):
 
         elif isinstance(error, commands.MissingRequiredArgument):
             logger.error(str(error))
-            return await ctx.send(f"**ERROR:** Missing required argument `{error.param}`")
+            return await util.send_command_help(ctx)
 
         else:
             logger.error(f"Ignoring exception in command {ctx.command}:")
