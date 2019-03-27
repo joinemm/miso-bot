@@ -132,13 +132,13 @@ def stringfromtime(t):
 
     components = []
     if d > 0:
-        components.append(f"{d} day" + ("s" if d > 1 else ""))
+        components.append(f"{int(d)} day" + ("s" if d > 1 else ""))
     if h > 0:
-        components.append(f"{h} hour" + ("s" if h > 1 else ""))
+        components.append(f"{int(h)} hour" + ("s" if h > 1 else ""))
     if m > 0:
-        components.append(f"{m} minute" + ("s" if m > 1 else ""))
+        components.append(f"{int(m)} minute" + ("s" if m > 1 else ""))
     if s > 0:
-        components.append(f"{s} second" + ("s" if s > 1 else ""))
+        components.append(f"{int(s)} second" + ("s" if s > 1 else ""))
 
     return " ".join(components)
 
