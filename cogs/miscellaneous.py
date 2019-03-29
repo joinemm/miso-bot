@@ -4,6 +4,8 @@ import data.database as db
 import random
 import requests
 from bs4 import BeautifulSoup
+import json
+from libraries import minestat
 
 
 class Miscellaneous(commands.Cog):
@@ -57,6 +59,7 @@ class Miscellaneous(commands.Cog):
 
     @stan.command()
     async def update(self, ctx):
+        await ctx.message.channel.trigger_typing()
         artist_list_old = db.get_from_data_json(['artists'])
         artist_list_new = set()
         urls_to_scrape = ['https://kprofiles.com/k-pop-girl-groups/',
@@ -83,6 +86,7 @@ class Miscellaneous(commands.Cog):
     @commands.command()
     async def ship(self, ctx, *, names):
         """Ship two people, separate names with 'and'"""
+        await ctx.message.channel.trigger_typing()
         names = names.split(' and ')
         if not len(names) == 2:
             return await ctx.send("Please give two names separated with `and`")
@@ -102,12 +106,12 @@ class Miscellaneous(commands.Cog):
             emoji = ":hearts:"
         content = discord.Embed(title=f"{names[0]} {emoji} {names[1]} - {percentage}", colour=discord.Colour.magenta())
         content.description = text
-
         await ctx.send(embed=content)
 
-    @commands.command()
+    @commands.command(aliases=['pewds'])
     async def pewdiepie(self, ctx):
         """Pewdiepie VS T-series"""
+        await ctx.message.channel.trigger_typing()
         pewdiepie = get_subcount("UC-lHJZR3Gqxm24_Vd_AJ5Yw")
         tseries = get_subcount("UCq-Fj5jknLsUf-MWSy4_brA")
 
@@ -126,20 +130,69 @@ class Miscellaneous(commands.Cog):
         content.set_footer(text=desc)
         await ctx.send(embed=content)
 
-    @commands.command()
-    async def xkcd(self, ctx, comic_id=None):
-        """Get a random xkcd"""
-        if comic_id is None:
-            url = "https://c.xkcd.com/random/comic/"
-            response = requests.get(url, headers={
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Connection": "keep-alive",
-                "Referer": "https://xkcd.com/",
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0"})
-            location = response.url
+    @commands.command(aliases=['mc'])
+    async def minecraft(self, ctx, address='mc.joinemm.me'):
+        """Get the status of a minecraft server"""
+        server = minestat.MineStat(address, 25565)
+        content = discord.Embed()
+        content.colour = discord.Color.green()
+        if server.online:
+            content.add_field(name="Server Address", value=f"`{server.address}`")
+            content.add_field(name="Version", value=server.version)
+            content.add_field(name="Players", value=f"{server.current_players}/{server.max_players}")
+            content.add_field(name="Latency", value=f"{server.latency}ms")
+            content.set_footer(text=f"{server.motd}")
         else:
-            location = f"https://xkcd.com/{comic_id}/"
-        await ctx.send(location)
+            content.description = "**Server is offline**"
+        content.set_thumbnail(url="https://vignette.wikia.nocookie.net/potcoplayers/images/c/c2/"
+                                  "Minecraft-icon-file-gzpvzfll.png/revision/latest?cb=20140813205910")
+        await ctx.send(embed=content)
+
+    @commands.group(aliases=['hs'])
+    async def horoscope(self, ctx):
+        """Get your daily horoscope"""
+        # TODO: CHANGE API AS THIS ONE BRAKE
+        await ctx.message.channel.trigger_typing()
+        sign = db.userdata(ctx.author.id).sunsign
+        print(sign)
+        if sign is None:
+            return await ctx.send("Please save your sunsign using `>horoscope set <sign>`\n"
+                                  "use `>horoscope list` if you don't know which one you are.")
+
+        url = f"http://theastrologer-api.herokuapp.com/api/horoscope/{sign}/today"
+        response = requests.get(url)
+        response_data = json.loads(response.content.decode('utf-8'))
+        content = discord.Embed()
+        content.title = response_data['sunsign']
+        content.set_footer(text=response_data['date'])
+        content.add_field(name='Mood', value=response_data['meta']['mood'].capitalize(), inline=True)
+        content.add_field(name='Keywords', inline=True,
+                          value=", ".join([x.capitalize() for x in response_data['meta']['keywords'].split(", ")]))
+        content.add_field(name='Intensity', value=response_data['meta']['intensity'], inline=True)
+        content.add_field(name='Horoscope', value=response_data['horoscope'].split("(c)")[0])
+        await ctx.send(embed=content)
+
+    @horoscope.command()
+    async def set(self, ctx, sign):
+        hs = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn',
+              'aquarius', 'pisces']
+        sign = sign.lower()
+        if sign not in hs:
+            await ctx.send(f"`{sign}` is not a valid sunsign! use `>horoscope help` for a list of sunsigns.")
+            return
+        db.update_user(ctx.author.id, "sunsign", sign)
+        await ctx.send(f"Sunsign saved as `{sign}`")
+
+    @horoscope.command()
+    async def list(self, ctx):
+        sign_list = "Aries (Mar 21-Apr 19)\nTaurus (Apr 20-May 20)\nGemini (May 21-June 20)\n" \
+                    "Cancer (Jun 21-Jul 22)\nLeo (Jul 23-Aug 22)\nVirgo (Aug 23-Sep 22)\nLibra (Sep 23-Oct 22)\n" \
+                    "Scorpio (Oct 23-Nov 21)\nSagittarius (Nov 22-Dec 21)\nCapricorn (Dec 22-Jan 19)\n" \
+                    "Aquarius (Jan 20-Feb 18)\nPisces (Feb 19-Mar 20)"
+        content = discord.Embed()
+        content.title = f"Sunsign list"
+        content.description = sign_list
+        return await ctx.send(embed=content)
 
 
 def setup(client):
