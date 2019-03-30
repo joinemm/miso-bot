@@ -8,61 +8,45 @@ import requests
 from colorthief import ColorThief
 
 
-async def send_as_pages(ctx, client, content, rows, maxrows=15):
+async def send_as_pages(ctx, content, rows, maxrows=15):
     """
     :param ctx     : Context
-    :param client  : Self.client
     :param content : Base embed
     :param rows    : Embed description rows
     :param maxrows : Max amount of rows per page
     """
     pages = create_pages(content, rows, maxrows)
     if len(pages) > 1:
-        await page_switcher(ctx, client, pages)
+        await page_switcher(ctx, pages)
     else:
         await ctx.send(embed=pages[0])
 
 
-async def page_switcher(ctx, client, pages):
+async def page_switcher(ctx, pages):
     """
     :param ctx    : Context
-    :param client : Self.client
     :param pages  : List of embeds to use as pages
     """
-    current_page = 0
-    pages[0].set_footer(text=f"page {current_page + 1} of {len(pages)}")
-    my_msg = await ctx.send(embed=pages[0])
+    pages = TwoWayIterator(pages)
+    pages.current().set_footer(text=f"page 1 of {len(pages.items)}")
+    msg = await ctx.send(embed=pages.current())
 
-    def check(_reaction, _user):
-        return _reaction.message.id == my_msg.id and _reaction.emoji in ["⬅", "➡"] \
-               and not _user == client.user
+    async def switch_page(content):
+        content.set_footer(text=f"page {pages.index + 1} of {len(pages.items)}")
+        await msg.edit(embed=content)
 
-    await my_msg.add_reaction("⬅")
-    await my_msg.add_reaction("➡")
+    async def previous_page():
+        content = pages.previous()
+        await switch_page(content)
 
-    while True:
-        try:
-            reaction, user = await client.wait_for('reaction_add', timeout=3600.0, check=check)
-        except asyncio.TimeoutError:
-            await my_msg.remove_reaction("⬅", client.user)
-            await my_msg.remove_reaction("➡", client.user)
-            return
-        else:
-            await my_msg.remove_reaction("⬅", user)
-            await my_msg.remove_reaction("➡", user)
-            try:
-                if reaction.emoji == "⬅" and current_page > 0:
-                    content = pages[current_page - 1]
-                    current_page -= 1
-                elif reaction.emoji == "➡":
-                    content = pages[current_page + 1]
-                    current_page += 1
-                else:
-                    continue
-                content.set_footer(text=f"page {current_page + 1} of {len(pages)}")
-                await my_msg.edit(embed=content)
-            except IndexError:
-                continue
+    async def next_page():
+        content = pages.next()
+        await switch_page(content)
+
+    functions = {"⬅": previous_page,
+                 "➡": next_page}
+
+    await reaction_buttons(ctx, msg, functions)
 
 
 def create_pages(content, rows, maxrows=15):
@@ -92,7 +76,7 @@ def create_pages(content, rows, maxrows=15):
 async def reaction_buttons(ctx, message, functions, timeout=600.0, only_author=False, single_use=False):
     """Handler for reaction buttons
     :param message     : message to add reactions to
-    :param functions   : dictionary of {emoji : function} pairs. functions must be async
+    :param functions   : dictionary of {emoji : function} pairs. functions must be async. return True to exit
     :param timeout     : float, default 10 minutes (600.0)
     :param only_author : only allow the user who used the command use the buttons
     :param single_use  : delete buttons after one is used
@@ -113,9 +97,9 @@ async def reaction_buttons(ctx, message, functions, timeout=600.0, only_author=F
         except asyncio.TimeoutError:
             break
         else:
-            await functions[str(reaction.emoji)]()
+            exits = await functions[str(reaction.emoji)]()
             await message.remove_reaction(reaction.emoji, user)
-            if single_use:
+            if single_use or exits is True:
                 break
 
     try:
@@ -312,3 +296,23 @@ def color_from_image_url(url):
     except Exception as e:
         print(e)
         return None
+
+
+class TwoWayIterator:
+
+    def __init__(self, list_of_stuff):
+        self.items = list_of_stuff
+        self.index = 0
+
+    def next(self):
+        if not self.index == len(self.items) - 1:
+            self.index += 1
+        return self.items[self.index]
+
+    def previous(self):
+        if not self.index == 0:
+            self.index -= 1
+        return self.items[self.index]
+
+    def current(self):
+        return self.items[self.index]
