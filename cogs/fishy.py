@@ -85,7 +85,7 @@ class Fishy(commands.Cog):
         content = discord.Embed(title=f"{'global' if scope == 'global' else ctx.guild.name} fishy leaderboard",
                                 color=discord.Color.blue())
         if rows:
-            await util.send_as_pages(ctx, self.client, content, rows, 2)
+            await util.send_as_pages(ctx, content, rows, 2)
         else:
             await ctx.send(embed=content)
 
