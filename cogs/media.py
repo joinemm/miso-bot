@@ -17,6 +17,7 @@ import copy
 
 TWITTER_CKEY = os.environ['TWITTER_CONSUMER_KEY']
 TWITTER_CSECRET = os.environ['TWITTER_CONSUMER_SECRET']
+IG_COOKIE = os.environ.get('IG_COOKIE')
 
 
 class Media(commands.Cog):
@@ -113,39 +114,72 @@ class Media(commands.Cog):
         """Search youtube for the given search query and return first result"""
         response = requests.get(f"http://www.youtube.com/results?search_query={query}")
         video_ids = set(re.findall('watch\\?v=(.{11})', response.content.decode('utf-8')))
-        results = [f'http://www.youtube.com/watch?v={x}' for x in video_ids]
-        msg = await ctx.send(f"**#1:** {results[0]}")
+        results = util.TwoWayIterator([f'http://www.youtube.com/watch?v={x}' for x in video_ids])
 
-        await msg.add_reaction("⬅")
-        await msg.add_reaction("➡")
-        await msg.add_reaction("✅")
+        msg = await ctx.send(f"**#1:** {results.current()}")
 
-        def check(_reaction, _user):
-            return _reaction.message.id == msg.id and _reaction.emoji in ["⬅", "➡", "✅"] and _user == ctx.author
+        async def next_link():
+            link = results.next()
+            await msg.edit(content=f"**#{results.index+1}:** {link}", embed=None)
 
-        i = 0
-        while True:
-            try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=300.0, check=check)
-            except asyncio.TimeoutError:
-                await msg.remove_reaction("⬅", self.client.user)
-                await msg.remove_reaction("➡", self.client.user)
-                await msg.remove_reaction("✅", self.client.user)
-            else:
-                if reaction.emoji == "⬅" and i > 0:
-                    i -= 1
-                    await msg.remove_reaction("⬅", user)
-                elif reaction.emoji == "➡" and i < len(results) - 1:
-                    i += 1
-                    await msg.remove_reaction("➡", user)
-                elif reaction.emoji == "✅":
-                    return await msg.clear_reactions()
-                await msg.edit(content=f"**#{i + 1}:** {results[i]}", embed=None)
+        async def prev_link():
+            link = results.previous()
+            await msg.edit(content=f"**#{results.index+1}:** {link}", embed=None)
+
+        async def done():
+            return True
+
+        functions = {"⬅": prev_link,
+                     "➡": next_link,
+                     "✅": done}
+
+        await util.reaction_buttons(ctx, msg, functions, only_author=True)
 
     @commands.command()
     async def ig(self, ctx, url):
         """Get the source images from an instagram post"""
-        # TODO: steal from ig bot
+        if "/" not in url:
+            url = f"https://www.instagram.com/p/{url}"
+
+        headers = {"Accept": "*/*",
+                   "Host": "www.instagram.com",
+                   "Accept-Encoding": "gzip, deflate, br",
+                   "Accept-Language": "en,en-US;q=0.5",
+                   "Connection": "keep-alive",
+                   "DNT": "1",
+                   "Upgrade-Insecure-Requests": "1",
+                   "Cookie": IG_COOKIE,
+                   "User-Agent": 'Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0'}
+
+        response = requests.get(url + "/?__a=1", headers=headers)
+        response.raise_for_status()
+        data = json.loads(response.content.decode('utf-8'))['graphql']['shortcode_media']
+        medias = []
+        try:
+            for x in data['edge_sidecar_to_children']['edges']:
+                medias.append(x['node'])
+        except KeyError:
+            medias.append(data)
+
+        avatar_url = data['owner']['profile_pic_url']
+        username = data['owner']['username']
+        content = discord.Embed(color=discord.Color.magenta())
+        content.set_author(name='@' + username, url=url, icon_url=avatar_url)
+
+        if medias:
+            # there are images
+            for medianode in medias:
+                if medianode.get('is_video'):
+                    await ctx.send(embed=content)
+                    await ctx.send(medianode.get('video_url'))
+                else:
+                    content.set_image(url=medianode.get('display_url'))
+                    await ctx.send(embed=content)
+                content.description = None
+                content._author = None
+
+        else:
+            await ctx.send("No media found")
 
     @commands.command()
     async def twitter(self, ctx, tweet_url, delete=None):
@@ -177,17 +211,20 @@ class Media(commands.Cog):
                             media_url = video_urls[x]['url']
             media_files.append((" ".join(hashtags), media_url, video_url))
 
-        for file in media_files:
-            content = discord.Embed(colour=int(tweet.user.profile_link_color, 16))
-            content.set_image(url=file[1] + ":orig")
-            content.set_author(icon_url=tweet.user.profile_image_url, name=f"@{tweet.user.screen_name}\n{file[0]}",
-                               url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}")
+        content = discord.Embed(colour=int(tweet.user.profile_link_color, 16))
+        content.set_author(icon_url=tweet.user.profile_image_url,
+                           name=f"@{tweet.user.screen_name}\n{media_files[0][0]}",
+                           url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}")
 
+        for file in media_files:
+            content.set_image(url=file[1] + ":orig")
             await ctx.send(embed=content)
 
             if file[2] is not None:
                 # contains a video/gif, send it separately
                 await ctx.send(file[2])
+
+            content._author = None
 
         if delete == "delete":
             await ctx.message.delete()
@@ -227,10 +264,7 @@ class Media(commands.Cog):
         async def randomize():
             await msg.edit(content=f"**{query}**: {random.choice(urls)}")
 
-        functions = {"❌": msg.delete,
-                     "🔁": randomize}
-
-        await util.reaction_buttons(ctx, msg, functions)
+        await util.reaction_buttons(ctx, msg, {"❌": msg.delete, "🔁": randomize})
 
     @commands.command()
     async def melon(self, ctx, timeframe=None):
