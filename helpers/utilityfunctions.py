@@ -3,15 +3,18 @@ import asyncio
 from discord.ext import commands
 import discord
 import copy
+import re
+import requests
+from colorthief import ColorThief
 
 
 async def send_as_pages(ctx, client, content, rows, maxrows=15):
     """
-    :param ctx: Context
-    :param client: Self.client
-    :param content: Base embed
-    :param rows: Embed description rows
-    :param maxrows: Max amount of rows per page
+    :param ctx     : Context
+    :param client  : Self.client
+    :param content : Base embed
+    :param rows    : Embed description rows
+    :param maxrows : Max amount of rows per page
     """
     pages = create_pages(content, rows, maxrows)
     if len(pages) > 1:
@@ -22,9 +25,9 @@ async def send_as_pages(ctx, client, content, rows, maxrows=15):
 
 async def page_switcher(ctx, client, pages):
     """
-    :param ctx: Context
-    :param client: Self.client
-    :param pages: List of embeds to use as pages
+    :param ctx    : Context
+    :param client : Self.client
+    :param pages  : List of embeds to use as pages
     """
     current_page = 0
     pages[0].set_footer(text=f"page {current_page + 1} of {len(pages)}")
@@ -64,10 +67,10 @@ async def page_switcher(ctx, client, pages):
 
 def create_pages(content, rows, maxrows=15):
     """
-    :param content: Embed object to use as the base
-    :param rows: List of rows to use for the embed description
-    :param maxrows: Maximum amount of rows per page
-    :returns: List of Embed objects
+    :param content : Embed object to use as the base
+    :param rows    : List of rows to use for the embed description
+    :param maxrows : Maximum amount of rows per page
+    :returns       : List of Embed objects
     """
     pages = []
     content.description = ""
@@ -86,10 +89,46 @@ def create_pages(content, rows, maxrows=15):
     return pages
 
 
+async def reaction_buttons(ctx, message, functions, timeout=600.0, only_author=False, single_use=False):
+    """Handler for reaction buttons
+    :param message     : message to add reactions to
+    :param functions   : dictionary of {emoji : function} pairs. functions must be async
+    :param timeout     : float, default 10 minutes (600.0)
+    :param only_author : only allow the user who used the command use the buttons
+    :param single_use  : delete buttons after one is used
+    """
+
+    for emoji in functions:
+        await message.add_reaction(emoji)
+
+    def check(_reaction, _user):
+        return _reaction.message.id == message.id \
+               and _reaction.emoji in functions \
+               and not _user == ctx.bot.user \
+               and (_user == ctx.author or not only_author)
+
+    while True:
+        try:
+            reaction, user = await ctx.bot.wait_for('reaction_add', timeout=timeout, check=check)
+        except asyncio.TimeoutError:
+            break
+        else:
+            await functions[str(reaction.emoji)]()
+            await message.remove_reaction(reaction.emoji, user)
+            if single_use:
+                break
+
+    try:
+        for emoji in functions:
+            await message.remove_reaction(emoji, ctx.bot.user)
+    except discord.errors.NotFound:
+        pass
+
+
 def message_embed(message):
     """
-    :param: message: Discord message object
-    :returns: Discord embed object
+    :param: message : Discord message object
+    :returns        : Discord embed object
     """
     content = discord.Embed()
     content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
@@ -100,8 +139,8 @@ def message_embed(message):
 
 def timefromstring(s):
     """
-    :param s: String to parse time from
-    :returns: Time in seconds
+    :param s : String to parse time from
+    :returns : Time in seconds
     """
     t = 0
     words = s.split(" ")
@@ -123,8 +162,8 @@ def timefromstring(s):
 
 def stringfromtime(t):
     """
-    :param t: Time in seconds
-    :returns: Formatted string
+    :param t : Time in seconds
+    :returns : Formatted string
     """
     m, s = divmod(t, 60)
     h, m = divmod(m, 60)
@@ -145,8 +184,8 @@ def stringfromtime(t):
 
 def get_xp(level):
     """
-    :param level: Level
-    :return: Amount of xp needed to reach the level
+    :param level : Level
+    :return      : Amount of xp needed to reach the level
     """
     a = 0
     for x in range(1, level):
@@ -156,8 +195,8 @@ def get_xp(level):
 
 def get_level(xp):
     """
-    :param xp: Amount of xp
-    :returns: Current level based on the amount of xp
+    :param xp : Amount of xp
+    :returns  : Current level based on the amount of xp
     """
     i = 1
     while get_xp(i + 1) < xp:
@@ -213,6 +252,13 @@ async def get_role(ctx, mention):
         return None
 
 
+async def get_color(ctx, mention):
+    try:
+        return await commands.ColourConverter().convert(ctx, mention)
+    except commands.errors.BadArgument as e:
+        return None
+
+
 async def command_group_help(ctx):
     """Sends default command help if group command is invoked on it's own"""
     if ctx.invoked_subcommand is None or isinstance(ctx.invoked_subcommand, commands.Group):
@@ -222,3 +268,47 @@ async def command_group_help(ctx):
 async def send_command_help(ctx):
     """Sends default command help"""
     await ctx.bot.get_command('help').callback(ctx, ctx.command.name)
+
+
+def escape_markdown(s):
+    transformations = {
+        re.escape(c): '\\' + c
+        for c in ('*', '`', '_', '~', '\\', '||')
+    }
+
+    def replace(obj):
+        return transformations.get(re.escape(obj.group(0)), '')
+
+    pattern = re.compile('|'.join(transformations.keys()))
+
+    return pattern.sub(replace, s)
+
+
+def rgb_to_hex(rgb):
+    r, g, b = rgb
+
+    def clamp(x):
+        return max(0, min(x, 255))
+
+    return "{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
+
+
+def color_from_image_url(url):
+    if url.strip() == "":
+        return None
+    try:
+        r = requests.get(url)
+        if r.status_code == 200:
+            with open('downloads/colorthief.png', 'wb') as f:
+                for chunk in r:
+                    f.write(chunk)
+        else:
+            return None
+
+        color_thief = ColorThief('downloads/colorthief.png')
+        dominant_color = color_thief.get_color(quality=1)
+
+        return rgb_to_hex(dominant_color)
+    except Exception as e:
+        print(e)
+        return None
