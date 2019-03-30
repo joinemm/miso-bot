@@ -93,8 +93,7 @@ class CustomCommands(commands.Cog):
 
         if rows:
             content = discord.Embed(title=f"{ctx.guild.name} commands")
-            content.description = "\n".join(rows)
-            await ctx.send(embed=content)
+            await util.send_as_pages(ctx, content, rows, maxrows=25)
         else:
             await ctx.send("No custom commands added on this server yet")
 
