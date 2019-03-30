@@ -113,7 +113,7 @@ class Info(commands.Cog):
                               inline=False)
             i += 1
         pages.append(content)
-        await util.page_switcher(ctx, self.client, pages)
+        await util.page_switcher(ctx, pages)
 
 
 def setup(client):
