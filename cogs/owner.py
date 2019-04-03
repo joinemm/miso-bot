@@ -12,11 +12,6 @@ class Owner(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.command()
-    @commands.is_owner()
-    async def test(self, ctx, g, u):
-        db.get_user_activity(g, u)
-
     @commands.command(hidden=True, rest_is_raw=True)
     @commands.is_owner()
     async def say(self, ctx, channel, *, message):
