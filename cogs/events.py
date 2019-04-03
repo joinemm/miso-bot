@@ -45,9 +45,6 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        # if member.id in [x.user.id for x in await member.guild.bans()]:
-        #     logger.info("user was banned, no remove message")
-        #     return
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:
@@ -74,6 +71,10 @@ class Events(commands.Cog):
         # miso was pinged
         if not message.author.bot and self.client.user in message.mentions:
             await message.channel.send("<:misoping:532922215105036329>")
+
+        # stfu
+        if not message.author.bot and 'stfu' in message.content.lower():
+            await message.channel.send("no u")
 
         # git gud
         if not message.author.bot and message.content.lower().startswith("git"):
