@@ -14,10 +14,14 @@ import os
 import arrow
 from helpers import utilityfunctions as util
 import copy
+import spotipy
+from spotipy import util
 
-TWITTER_CKEY = os.environ['TWITTER_CONSUMER_KEY']
-TWITTER_CSECRET = os.environ['TWITTER_CONSUMER_SECRET']
+TWITTER_CKEY = os.environ.get('TWITTER_CONSUMER_KEY')
+TWITTER_CSECRET = os.environ.get('TWITTER_CONSUMER_SECRET')
 IG_COOKIE = os.environ.get('IG_COOKIE')
+SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
+SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
 
 
 class Media(commands.Cog):
@@ -35,8 +39,6 @@ class Media(commands.Cog):
             return await ctx.send("Missing color source. Valid color sources are:\n"
                                   "`[@mention | @rolemention | hex | image_url | random]`\n"
                                   "These can be chained together to create patterns")
-
-        # parse sources
 
         colors = []
         i = 0
@@ -108,6 +110,78 @@ class Media(commands.Cog):
 
         content.set_image(url=image_url)
         await ctx.send(embed=content)
+
+    @commands.command()
+    async def spotify(self, ctx, url, amount=15):
+        """Analyze a spotify playlist"""
+        try:
+            if url.startswith("https://open."):
+                # its playlist link
+                user_id = re.search(r'user/(.*?)/playlist', url).group(1)
+                playlist_id = re.search(r'playlist/(.*?)\?', url).group(1)
+            else:
+                # its URI (probably)
+                data = url.split(":")
+                playlist_id = data[4]
+                user_id = data[2]
+        except IndexError:
+            return await ctx.send("**ERROR:** Invalid playlist url/URI.\n"
+                                  "How to get Spotify URI?: Right click playlist -> Share -> Copy Spotify URI")
+
+        if amount > 50:
+            amount = 50
+
+        token = spotipy.util.oauth2.SpotifyClientCredentials(client_id=SPOTIFY_CLIENT_ID,
+                                                             client_secret=SPOTIFY_CLIENT_SECRET)
+        cache_token = token.get_access_token()
+        spotify = spotipy.Spotify(cache_token)
+        tracks_per_request = 100
+        results = []
+
+        playlist_data = spotify.user_playlist(user_id, playlist_id)
+        playlist_name = playlist_data['name']
+        playlist_owner = playlist_data['owner']['display_name']
+        playlist_image = playlist_data['images'][0]['url']
+
+        this_request_results = spotify.user_playlist_tracks(user_id, playlist_id, limit=tracks_per_request,
+                                                            offset=0)["items"]
+        for i in range(len(this_request_results)):
+            results.append(this_request_results[i])
+        while len(this_request_results) >= tracks_per_request:
+            this_request_results = spotify.user_playlist_tracks(user_id, playlist_id, limit=tracks_per_request,
+                                                                offset=len(results))["items"]
+            for i in range(len(this_request_results)):
+                results.append(this_request_results[i])
+
+        artists_dict = {}
+        total = 0
+        for i in range(len(results)):
+            artist = results[i]["track"]["artists"][0]["name"]
+            if artist in artists_dict:
+                artists_dict[artist] += 1
+            else:
+                artists_dict[artist] = 1
+            total += 1
+
+        count = 0
+        description = ""
+        for item in sorted(artists_dict.items(), key=lambda v: v[1], reverse=True):
+            if count < amount:
+                percentage = (item[1] / total) * 100
+                description += f"**{item[1]}** tracks ({percentage:.2f}%) — **{item[0]}**\n"
+                count += 1
+            else:
+                break
+
+        message = discord.Embed(colour=discord.Colour.green())
+        message.set_author(name=f"{playlist_name} · by {playlist_owner}",
+                           icon_url="https://i.imgur.com/tN20ywg.png")
+        message.set_thumbnail(url=playlist_image)
+        message.title = "Artist distribution:"
+        message.set_footer(text=f"Total: {total} tracks from {len(artists_dict)} different artists")
+        message.description = description
+
+        await ctx.send(embed=message)
 
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx, *, query):
