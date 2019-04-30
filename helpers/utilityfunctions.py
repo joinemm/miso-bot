@@ -251,7 +251,7 @@ async def command_group_help(ctx):
 
 async def send_command_help(ctx):
     """Sends default command help"""
-    await ctx.bot.get_command('help').callback(ctx, ctx.command.name)
+    await ctx.send_help(ctx.invoked_subcommand or ctx.command)
 
 
 def escape_markdown(s):
