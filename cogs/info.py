@@ -104,7 +104,7 @@ class Info(commands.Cog):
                 content.clear_fields()
                 i = 0
             sha = commit['sha'][:7]
-            author = commit['commit']['author']['name']
+            author = commit['author']['login']
             date = commit['commit']['author']['date']
             arrow_date = arrow.get(date)
             url = commit['html_url']
