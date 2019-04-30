@@ -18,7 +18,7 @@ class Rolepicker(commands.Cog):
 
     @rolepicker.command()
     async def add(self, ctx, name, role):
-        """<name> <role>"""
+        """Add a role to the picker"""
         role_to_add = await util.get_role(ctx, role)
         if role_to_add is None:
             return await ctx.send(errormsg.role_not_found(role))
@@ -28,7 +28,7 @@ class Rolepicker(commands.Cog):
 
     @rolepicker.command()
     async def remove(self, ctx, name):
-        """<name>"""
+        """Remove a role from the picker"""
         roles = db.query("select rolename from roles where guild_id = ?", (ctx.guild.id,))
         if name in [x[0] for x in roles]:
             db.execute("DELETE FROM roles WHERE guild_id = ? and rolename = ?", (ctx.guild.id, name))
@@ -38,7 +38,7 @@ class Rolepicker(commands.Cog):
 
     @rolepicker.command()
     async def channel(self, ctx, channel):
-        """<channel>"""
+        """Set the channel you can add roles in"""
         this_channel = await util.get_textchannel(ctx, channel)
         if this_channel is None:
             return await ctx.send(errormsg.channel_not_found(channel))
@@ -48,12 +48,12 @@ class Rolepicker(commands.Cog):
 
     @rolepicker.command()
     async def list(self, ctx):
+        """List all the roles currently added"""
         data = db.query("select rolename, role_id from roles where guild_id = ?", (ctx.guild.id,))
         content = discord.Embed(title=f"Available roles in {ctx.guild.name}")
         if data is not None:
             content.description = ""
             for name, role_id in data:
-                print(name, role_id)
                 role = ctx.guild.get_role(role_id)
                 if role is not None:
                     content.description += f"\n`{name}` : {role.mention if role is not None else 'None'}"

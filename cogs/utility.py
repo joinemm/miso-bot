@@ -209,9 +209,8 @@ class Utility(commands.Cog):
         await ctx.send(f"`{source}->{target}` " + translation)
 
     @commands.command()
-    async def question(self, ctx, *args):
+    async def question(self, ctx, *, query):
         """Ask something from wolfram alpha"""
-        query = " ".join(args)
         url = f"http://api.wolframalpha.com/v1/result?appid={WOLFRAM_APPID}&i={query}&output=json"
         response = requests.get(url.replace("+", "%2B"))
         if response.status_code == 200:
