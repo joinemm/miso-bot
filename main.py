@@ -6,10 +6,12 @@ logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
 
 TOKEN = os.environ.get('MISO_BOT_TOKEN_BETA')
-client = commands.Bot(command_prefix="<", case_insensitive=True)
+client = commands.Bot(command_prefix='<', case_insensitive=True)
 
 extensions = ['cogs.events', 'cogs.config', 'cogs.errorhandler', 'cogs.customcommands', 'cogs.fishy', 'cogs.info',
-              'cogs.rolepicker', 'cogs.mod', 'cogs.owner', 'cogs.notifications', 'cogs.miscellaneous', 'cogs.media']
+              'cogs.rolepicker', 'cogs.mod', 'cogs.owner', 'cogs.notifications', 'cogs.miscellaneous', 'cogs.media',
+              'cogs.chatbot', 'cogs.lastfm'
+              ]
 
 
 @client.event
@@ -19,7 +21,8 @@ async def on_ready():
 
 @client.before_invoke
 async def before_any_command(ctx):
-    command_logger.info(log.log_command(ctx))
+    if ctx.invoked_subcommand is None:
+        command_logger.info(log.log_command(ctx))
 
 if __name__ == "__main__":
     for extension in extensions:
@@ -28,6 +31,5 @@ if __name__ == "__main__":
             logger.info(f"{extension} loaded successfully")
         except Exception as error:
             logger.error(f"{extension} loading failed [{error}]")
-            pass
 
     client.run(TOKEN)
