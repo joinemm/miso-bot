@@ -15,7 +15,7 @@ import arrow
 from helpers import utilityfunctions as util
 import copy
 import spotipy
-from spotipy import util
+from spotipy import util as spotipyutil
 
 TWITTER_CKEY = os.environ.get('TWITTER_CONSUMER_KEY')
 TWITTER_CSECRET = os.environ.get('TWITTER_CONSUMER_SECRET')
@@ -91,6 +91,8 @@ class Media(commands.Cog):
             content.title = name
             content.description = f"{hexvalue} - {rgbvalue}"
         else:
+            if len(colors) > 25:
+                colors = colors[:25]
             palette = ""
             for color in colors:
                 try:
@@ -131,8 +133,8 @@ class Media(commands.Cog):
         if amount > 50:
             amount = 50
 
-        token = spotipy.util.oauth2.SpotifyClientCredentials(client_id=SPOTIFY_CLIENT_ID,
-                                                             client_secret=SPOTIFY_CLIENT_SECRET)
+        token = spotipyutil.oauth2.SpotifyClientCredentials(client_id=SPOTIFY_CLIENT_ID,
+                                                            client_secret=SPOTIFY_CLIENT_SECRET)
         cache_token = token.get_access_token()
         spotify = spotipy.Spotify(cache_token)
         tracks_per_request = 100
@@ -356,11 +358,11 @@ class Media(commands.Cog):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0"})
 
         soup = BeautifulSoup(response.text, 'html.parser')
-        song_titles = [util.escape_markdown(x.find('span').find('a').text)
+        song_titles = [util.escape_md(x.find('span').find('a').text)
                        for x in soup.find_all('div', {'class': 'ellipsis rank01'})]
-        artists = [util.escape_markdown(x.find('a').text)
+        artists = [util.escape_md(x.find('a').text)
                    for x in soup.find_all('div', {'class': 'ellipsis rank02'})]
-        albums = [util.escape_markdown(x.find('a').text)
+        albums = [util.escape_md(x.find('a').text)
                   for x in soup.find_all('div', {'class': 'ellipsis rank03'})]
         image = soup.find('img', {'onerror': 'WEBPOCIMG.defaultAlbumImg(this);'}).get('src')
 
