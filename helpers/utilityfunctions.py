@@ -5,7 +5,8 @@ import discord
 import copy
 import re
 import requests
-from colorthief import ColorThief
+import colorgram
+from PIL import Image
 
 
 async def send_as_pages(ctx, content, rows, maxrows=15):
@@ -28,11 +29,15 @@ async def page_switcher(ctx, pages):
     :param pages  : List of embeds to use as pages
     """
     pages = TwoWayIterator(pages)
-    pages.current().set_footer(text=f"page 1 of {len(pages.items)}")
+    old_footer = pages.current().footer.text
+    if old_footer == discord.Embed.Empty:
+        old_footer = None
+    pages.current().set_footer(text=f"1/{len(pages.items)}" + (f' | {old_footer}' if old_footer is not None else ''))
     msg = await ctx.send(embed=pages.current())
 
     async def switch_page(content):
-        content.set_footer(text=f"page {pages.index + 1} of {len(pages.items)}")
+        content.set_footer(text=f"{pages.index + 1}/{len(pages.items)}" + (f' | {old_footer}' if old_footer is not None
+                                                                           else ''))
         await msg.edit(embed=content)
 
     async def previous_page():
@@ -64,7 +69,7 @@ def create_pages(content, rows, maxrows=15):
         if len(content.description) + len(row) < 2000 and thisrow < maxrows+1:
             content.description += f"\n{row}"
         else:
-            thisrow = 0
+            thisrow = 1
             pages.append(content)
             content = copy.deepcopy(content)
             content.description = f"{row}"
@@ -254,7 +259,7 @@ async def send_command_help(ctx):
     await ctx.send_help(ctx.invoked_subcommand or ctx.command)
 
 
-def escape_markdown(s):
+def escape_md(s):
     transformations = {
         re.escape(c): '\\' + c
         for c in ('*', '`', '_', '~', '\\', '||')
@@ -264,7 +269,6 @@ def escape_markdown(s):
         return transformations.get(re.escape(obj.group(0)), '')
 
     pattern = re.compile('|'.join(transformations.keys()))
-
     return pattern.sub(replace, s)
 
 
@@ -277,25 +281,21 @@ def rgb_to_hex(rgb):
     return "{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
 
 
-def color_from_image_url(url):
+def color_from_image_url(url, fallback='f81894'):
     if url.strip() == "":
-        return None
+        return fallback
     try:
-        r = requests.get(url)
-        if r.status_code == 200:
-            with open('downloads/colorthief.png', 'wb') as f:
-                for chunk in r:
-                    f.write(chunk)
-        else:
-            return None
+        response = requests.get(url, stream=True)
+        response.raw.decode_content = True
+        image = Image.open(response.raw)
 
-        color_thief = ColorThief('downloads/colorthief.png')
-        dominant_color = color_thief.get_color(quality=1)
+        colors = colorgram.extract(image, 1)
+        dominant_color = colors[0].rgb
 
         return rgb_to_hex(dominant_color)
     except Exception as e:
         print(e)
-        return None
+        return fallback
 
 
 class TwoWayIterator:
