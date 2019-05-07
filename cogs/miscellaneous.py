@@ -131,9 +131,9 @@ class Miscellaneous(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=['mc'])
-    async def minecraft(self, ctx, address='mc.joinemm.me'):
+    async def minecraft(self, ctx, address='mc.joinemm.me', port='25565'):
         """Get the status of a minecraft server"""
-        server = minestat.MineStat(address, 25565)
+        server = minestat.MineStat(address, int(port))
         content = discord.Embed()
         content.colour = discord.Color.green()
         if server.online:
@@ -213,12 +213,9 @@ def get_subcount(query_id):
             continue
         if response.status_code == 200:
             try:
-                subcount = int(response.content.decode('utf-8'))
-                break
+                return int(response.content.decode('utf-8'))
             except ValueError:
                 continue
         tries += 1
         if tries > maxtries:
             return 0
-
-    return subcount
