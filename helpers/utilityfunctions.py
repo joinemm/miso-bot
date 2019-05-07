@@ -213,39 +213,39 @@ def xp_from_message(message):
     return xp
 
 
-async def get_user(ctx, mention):
+async def get_user(ctx, mention, fallback=None):
     try:
         return await commands.UserConverter().convert(ctx, mention)
-    except commands.errors.BadArgument as e:
-        return None
+    except commands.errors.BadArgument:
+        return fallback
 
 
-async def get_member(ctx, mention):
+async def get_member(ctx, mention, fallback=None):
     try:
         return await commands.MemberConverter().convert(ctx, mention)
-    except commands.errors.BadArgument as e:
-        return None
+    except commands.errors.BadArgument:
+        return fallback
 
 
-async def get_textchannel(ctx, mention):
+async def get_textchannel(ctx, mention, fallback=None):
     try:
         return await commands.TextChannelConverter().convert(ctx, mention)
-    except commands.errors.BadArgument as e:
-        return None
+    except commands.errors.BadArgument:
+        return fallback
 
 
-async def get_role(ctx, mention):
+async def get_role(ctx, mention, fallback=None):
     try:
         return await commands.RoleConverter().convert(ctx, mention)
-    except commands.errors.BadArgument as e:
-        return None
+    except commands.errors.BadArgument:
+        return fallback
 
 
-async def get_color(ctx, mention):
+async def get_color(ctx, mention, fallback=None):
     try:
         return await commands.ColourConverter().convert(ctx, mention)
-    except commands.errors.BadArgument as e:
-        return None
+    except commands.errors.BadArgument:
+        return fallback
 
 
 async def command_group_help(ctx):
