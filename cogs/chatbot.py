@@ -11,7 +11,7 @@ import helpers.utilityfunctions as util
 
 logger = log.get_logger(__name__)
 
-misomisc
+
 class Chatbot(commands.Cog):
 
     def __init__(self, client):

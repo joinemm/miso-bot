@@ -299,6 +299,7 @@ def color_from_image_url(url, fallback='f81894'):
         print(e)
         return fallback
 
+
 def useragent():
     agents = db.get_from_data_json(['useragents'])
     return random.choice(agents)
