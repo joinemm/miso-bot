@@ -7,6 +7,8 @@ import re
 import requests
 import colorgram
 from PIL import Image
+import data.database as db
+import random
 
 
 async def send_as_pages(ctx, content, rows, maxrows=15):
@@ -296,6 +298,10 @@ def color_from_image_url(url, fallback='f81894'):
     except Exception as e:
         print(e)
         return fallback
+
+def useragent():
+    agents = db.get_from_data_json(['useragents'])
+    return random.choice(agents)
 
 
 class TwoWayIterator:

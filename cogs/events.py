@@ -68,10 +68,6 @@ class Events(commands.Cog):
             await message.add_reaction(self.client.get_emoji(540246030491451392))
             await message.add_reaction(self.client.get_emoji(540246041962872852))
 
-        # miso was pinged
-        if not message.author.bot and self.client.user in message.mentions:
-            await message.channel.send("<:misoping:532922215105036329>")
-
         # stfu
         if not message.author.bot and 'stfu' in message.content.lower():
             await message.channel.send("no u")
@@ -149,7 +145,7 @@ class Events(commands.Cog):
 
                 board_msg_id = db.query("select starboard_message_id from starboard where message_id = ?",
                                         (reaction.message.id,))
-                board_msg = await channel.get_message(board_msg_id)
+                board_msg = await channel.fetch_message(board_msg_id)
 
                 if board_msg is None:
                     if reaction.count == db.get_setting(reaction.message.guild.id, "starboard_amount"):
