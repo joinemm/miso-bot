@@ -12,6 +12,7 @@ class Rolepicker(commands.Cog):
         self.client = client
 
     @commands.group()
+    @commands.has_permissions(manage_roles=True)
     async def rolepicker(self, ctx):
         """Setup the role picker"""
         await util.command_group_help(ctx)
