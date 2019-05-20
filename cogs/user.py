@@ -2,6 +2,7 @@ import discord
 import arrow
 from discord.ext import commands
 import helpers.utilityfunctions as util
+from libraries import plotter
 import data.database as db
 import random
 
@@ -105,6 +106,26 @@ class User(commands.Cog):
         content.set_thumbnail(url=ctx.guild.icon_url)
 
         await ctx.send(embed=content)
+
+    @commands.command(aliases=["level"])
+    async def activity(self, ctx, user=""):
+        user = await util.get_user(ctx, user, ctx.author)
+
+        activitydata = db.activitydata(ctx.guild.id, user.id)
+        if activitydata is None:
+            return await ctx.send(f"No activity for `{user}` found on this server")
+
+        activities = list(activitydata[3:])
+        xp = sum(activities)
+        level = util.get_level(xp)
+
+        title = f"LVL {level} | {xp - util.get_xp(level)}/" \
+                f"{util.xp_to_next_level(level)} XP to levelup | Total xp: {xp}"
+
+        plotter.create_graph(activities, str(user.color), title=title)
+
+        with open("downloads/graph.png", "rb") as img:
+            await ctx.send(file=discord.File(img))
 
 
 def setup(client):
