@@ -40,8 +40,7 @@ aside.sidebar {
 }
 
 .sidebar ul li a {
-  color: var(--sidebar-text);
-  color: var(--sidebar-text: #EAE7DC;);
+  color: #EAE7DC;
   font-size: 1rem;
 }
 
