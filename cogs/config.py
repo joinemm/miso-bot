@@ -10,7 +10,8 @@ class Config(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.command()
+    @commands.command(hidden=True)
+    @commands.is_owner()
     async def help2(self, ctx):
         pages = []
         for cog in self.client.cogs:
@@ -25,130 +26,116 @@ class Config(commands.Cog):
                 pages.append(this_page)
         await util.page_switcher(ctx, self.client, pages)
 
-    @commands.command()
+    @commands.group()
     @commands.has_permissions(manage_channels=True)
-    async def welcomeconfig(self, ctx, option, *args):
-        """
-        `>welcomeconfig channel <textchannel>`
-        `>welcomeconfig message <message...>`
-        `>welcomeconfig {enable | disable}`
-        """
-        if option == "channel":
-            if len(args) == 0:
-                return await ctx.send(errormsg.missing_parameter("channel"))
+    async def welcomeconfig(self, ctx):
+        await util.command_group_help(ctx)
 
-            channel = await util.get_textchannel(ctx, args[0])
-            if channel is None:
-                return await ctx.send(errormsg.channel_not_found(args[0]))
+    @welcomeconfig.command(name="channel")
+    async def welcome_channel(self, ctx, textchannel):
+        channel = await util.get_textchannel(ctx, textchannel)
+        if channel is None:
+            return await ctx.send(errormsg.channel_not_found(textchannel))
 
-            db.update_setting(ctx.guild.id, "welcome_channel", channel.id)
-            await ctx.send(f"Welcome channel for {ctx.guild.name} set to {channel.mention}")
+        db.update_setting(ctx.guild.id, "welcome_channel", channel.id)
+        await ctx.send(f"Welcome channel set to {channel.mention}")
 
-        elif option == "message":
-            message = " ".join(args)
-            db.update_setting(ctx.guild.id, "welcome_message", message)
-            await ctx.send("New welcome message set:")
-            await ctx.send(message.format(mention=ctx.author.mention, user=ctx.author.name))
+    @welcomeconfig.command(name="message")
+    async def welcome_message(self, ctx, *, message):
+        db.update_setting(ctx.guild.id, "welcome_message", message)
+        await ctx.send("New welcome message set:")
+        await ctx.send(message.format(mention=ctx.author.mention, user=ctx.author.name))
 
-        elif option == "enable":
-            db.update_setting(ctx.guild.id, "welcome_toggle", 1)
-            await ctx.send("Welcome messages **enabled**")
+    @welcomeconfig.command(name="enable")
+    async def welcome_enable(self, ctx):
+        db.update_setting(ctx.guild.id, "welcome_toggle", 1)
+        await ctx.send("Welcome messages **enabled**")
 
-        elif option == "disable":
-            db.update_setting(ctx.guild.id, "welcome_toggle", 0)
-            await ctx.send("Welcome messages **disabled**")
+    @welcomeconfig.command(name="disable")
+    async def welcome_disable(self, ctx):
+        db.update_setting(ctx.guild.id, "welcome_toggle", 0)
+        await ctx.send("Welcome messages **disabled**")
 
-        elif option == "help":
-            m = "**Available options:**\n" \
-                "`channel`**:** Set the channel that welcome and leave messages are sent into.\n" \
-                "`message`**:** Change the welcome message. use `{name}` and `{mention}` for automatic formatting.\n" \
-                "`enable | disable`**:** Enables and disables welcome messages."
-            await ctx.send(m)
-
-        else:
-            await ctx.send(errormsg.invalid_method(ctx.command.name, option))
-
-    @commands.command()
+    @commands.group()
     @commands.has_permissions(manage_channels=True)
-    async def starboard(self, ctx, option, *args):
-        if option == "channel":
-            if len(args) == 0:
-                return await ctx.send(errormsg.missing_parameter("channel"))
+    async def starboard(self, ctx):
+        await util.command_group_help(ctx)
 
-            channel = await util.get_textchannel(ctx, args[0])
-            if channel is None:
-                return await ctx.send(errormsg.channel_not_found(args[0]))
+    @starboard.command(name="channel")
+    async def starboard_channel(self, ctx, textchannel):
+        channel = await util.get_textchannel(ctx, textchannel)
+        if channel is None:
+            return await ctx.send(errormsg.channel_not_found(textchannel))
 
-            db.update_setting(ctx.guild.id, "starboard_channel", channel.id)
-            await ctx.send(f"{channel.mention} is now the starboard channel")
+        db.update_setting(ctx.guild.id, "starboard_channel", channel.id)
+        await ctx.send(f"{channel.mention} is now the starboard channel")
 
-        elif option == "amount":
-            if len(args) == 0:
-                return await ctx.send(errormsg.missing_parameter("amount"))
+    @starboard.command(name="amount")
+    async def starboard_amount(self, ctx, amount):
+        try:
+            amount = int(amount)
+        except ValueError:
+            return await ctx.send(f"**ERROR:** {amount} is not a number.")
 
+        db.update_setting(ctx.guild.id, "starboard_amount", amount)
+        await ctx.send(f"Starboard reaction amount requirement set to `{amount}`")
+
+    @starboard.command(name="enable")
+    async def starboard_enable(self, ctx):
+        db.update_setting(ctx.guild.id, "starboard_toggle", 1)
+        await ctx.send("Starboard **enabled**")
+
+    @starboard.command(name="disable")
+    async def starboard_disable(self, ctx):
+        db.update_setting(ctx.guild.id, "starboard_toggle", 0)
+        await ctx.send("Starboard **disabled**")
+
+    @commands.group()
+    @commands.has_permissions(manage_channels=True)
+    async def votechannel(self, ctx):
+        await util.command_group_help(ctx)
+
+    @votechannel.command(name="add")
+    async def votechannel_add(self, ctx, textchannel):
+        channel = await util.get_textchannel(ctx, textchannel)
+        if channel is None:
+            return await ctx.send(errormsg.channel_not_found(textchannel))
+
+        db.execute("INSERT OR IGNORE INTO votechannels values(?, ?)", (ctx.guild.id, channel.id))
+        await ctx.send(f"{channel.mention} is now a voting channel")
+
+    @votechannel.command(name="remove")
+    async def votechannel_remove(self, ctx, textchannel):
+        channel = await util.get_textchannel(ctx, textchannel)
+        if channel is None:
             try:
-                amount = int(args[0])
+                channel_id = int(textchannel)
             except ValueError:
-                return await ctx.send("**ERROR:** Please give a number")
-
-            db.update_setting(ctx.guild.id, "starboard_amount", amount)
-            await ctx.send(f"Starboard reaction amount requirement set to `{amount}`")
-
-        elif option == "enable":
-            db.update_setting(ctx.guild.id, "starboard_toggle", 1)
-            await ctx.send("Starboard **enabled**")
-
-        elif option == "disable":
-            db.update_setting(ctx.guild.id, "starboard_toggle", 0)
-            await ctx.send("Starboard **disabled**")
-
-        elif option == "help":
-            m = "**Available options:**\n" \
-                "`channel`**:** Set the channel that starred messages are sent into.\n" \
-                "`amount`**:** Change the minimum amount of reactions needed for a message to be starred\n" \
-                "`enable | disable`**:** Enables and disables the starboard."
-            await ctx.send(m)
-
+                return await ctx.send(errormsg.channel_not_found(textchannel))
         else:
-            await ctx.send(errormsg.invalid_method(ctx.command.name, option))
+            channel_id = channel.id
 
-    @commands.command()
-    @commands.has_permissions(manage_channels=True)
-    async def votechannel(self, ctx, option, mention=None):
-        if option in ['add', 'remove']:
-            channel = await util.get_textchannel(ctx, mention)
-            if channel is None:
-                return await ctx.send(errormsg.channel_not_found(mention))
+        if db.query("SELECT * FROM votechannels WHERE guild_id = ? and channel_id = ?",
+                    (ctx.guild.id, channel_id)) is None:
+            return await ctx.send("**ERROR:** Given channel is not a voting channel.")
 
-            if option == 'add':
-                db.execute("INSERT OR IGNORE INTO votechannels values(?, ?)", (ctx.guild.id, channel.id))
-                await ctx.send(f"{channel.mention} is now a voting channel")
+        db.execute("DELETE FROM votechannels where guild_id = ? and channel_id = ?", (ctx.guild.id, channel_id))
+        await ctx.send(f"{channel.mention} is no longer a voting channel")
 
-            elif option == 'remove':
-                db.execute("DELETE FROM votechannels where guild_id = ? and channel_id = ?", (ctx.guild.id, channel.id))
-                await ctx.send(f"{channel.mention} is no longer a voting channel")
-
-        elif option == 'list':
-            channels = db.query("select channel_id from votechannels where guild_id = ?", (ctx.guild.id,))
-            mentions = []
-            for channel in channels:
-                c = ctx.guild.get_channel(channel[0])
-                if c is not None:
-                    mentions.append(c.mention)
-            if mentions:
-                content = discord.Embed(title=f"Voting channels in {ctx.guild.name}")
-                content.description = "\n".join(mentions)
-                await ctx.send(embed=content)
-
-        elif option == 'help':
-            m = "**Available options:**\n" \
-                "`add`**:** Add a voting channel.\n" \
-                "`remove`**:** Remove a voting channel\n" \
-                "`list`**:** List all voting channels on this server"
-            await ctx.send(m)
-
-        else:
-            await ctx.send(errormsg.invalid_method(ctx.command.name, option))
+    @votechannel.command(name="list")
+    async def votechannel_list(self, ctx):
+        channels = db.query("select channel_id from votechannels where guild_id = ?", (ctx.guild.id,))
+        mentions = []
+        for channel in channels:
+            c = ctx.guild.get_channel(channel[0])
+            if c is not None:
+                mentions.append(c.mention)
+            else:
+                mentions.append(channel[0])
+        if mentions:
+            content = discord.Embed(title=f"Voting channels in {ctx.guild.name}")
+            content.description = "\n".join(mentions)
+            await ctx.send(embed=content)
 
     @commands.command()
     @commands.has_permissions(manage_roles=True)
