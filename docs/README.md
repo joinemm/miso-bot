@@ -1,7 +1,5 @@
-# Links
-
-> invite
-
+# Miso Bot
+---
 # Configuration
 
 #### Member join and leave messages
