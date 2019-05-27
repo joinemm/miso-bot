@@ -2,9 +2,9 @@
 
   --main-background: #F0EBf4;
   --accent-color: #e7c9c9;
-  --accent-color-2: #e98074;
+  --accent-color-2: #f63d7e;
   --text: #838d8a;
-  --sidebar-text: #a84a40;
+  --sidebar-text: #a1413b;
 
 
   --theme-color: #1FC5BF;
@@ -40,7 +40,7 @@ aside.sidebar {
 }
 
 .sidebar ul li a {
-  color: #EAE7DC;
+  color: var(--sidebar-text);
   font-size: 1rem;
 }
 
@@ -87,7 +87,7 @@ body .sidebar-toggle-button {
 
 body .sidebar-toggle span {
   transition: all 0.3s linear;
-  background-color: var(--accent-color-2);
+  background-color: var(--sidebar-text);
   height: 0.25rem;
   width: 1.5rem;
   position: absolute;
@@ -124,12 +124,15 @@ th {
 
 .markdown-section em,
 .markdown-section blockquote {
-font-family: 'Source Code Pro', monospace;
+  color: var(--accent-color-2);
+  font-size: 1em;
+  line-height: 1.5;
 }
 
 .cover-main img {
   max-width: 10rem;
   max-height: 10rem;
+  border-radius: 50%;
 }
 
 section.cover p {
@@ -213,7 +216,6 @@ section.cover .cover-main {
   border-radius: 0;
   font-size: 0.9em;
   padding: 6px 10px;
-  /* color: #111; */
 }
 
 .markdown-section table {
