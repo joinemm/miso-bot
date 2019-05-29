@@ -345,6 +345,7 @@ class Media(commands.Cog):
     @commands.command()
     async def melon(self, ctx, timeframe=None):
         """Get realtime / daily / monthly chart from Melon"""
+        await ctx.trigger_typing()
         if timeframe not in ["day", "month", "rise", None]:
             if timeframe == "realtime":
                 timeframe = None
@@ -386,7 +387,7 @@ class Media(commands.Cog):
             x += 1
 
         pages.append(content)
-        await util.page_switcher(ctx, self.client, pages)
+        await util.page_switcher(ctx, pages)
 
     @commands.command()
     async def xkcd(self, ctx, comic_id=None):
