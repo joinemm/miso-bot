@@ -20,7 +20,6 @@ class Chatbot(commands.Cog):
         self.proxies = get_proxies()
 
     async def conversation(self, ctx, user, sentence):
-
         sentence = sentence.replace(str(self.client.user.mention), "Mitsuku")
         sentence = await commands.clean_content(use_nicknames=False, escape_markdown=True).convert(ctx, sentence)
 
@@ -34,6 +33,8 @@ class Chatbot(commands.Cog):
         data = self.process_talk(user.id, sentence, sessionid)
         if data is None:
             return
+        elif data is False:
+            return await ctx.send("I am tired, please don't talk to me now.")
         for response in data['responses']:
             buttons = re.findall(r'<button>(.*?)</button>', response)
             for button in buttons:
@@ -66,6 +67,7 @@ class Chatbot(commands.Cog):
     @commands.command(is_hidden=True)
     @commands.is_owner()
     async def refreshproxies(self, ctx):
+        """Refreshes the list of free proxies"""
         self.proxies = get_proxies()
         await ctx.send(f"Done. **{len(self.proxies)}** IP proxies available")
 
@@ -92,6 +94,11 @@ class Chatbot(commands.Cog):
 
     def process_talk(self, user_id, sentence, sessionid):
         input_string = urllib.parse.quote(sentence, safe='')
+
+        if len(self.proxies) == 0:
+            self.proxies = get_proxies()
+            if len(self.proxies) == 0:
+                return False
 
         proxy_pool = cycle(self.proxies)
         proxy = next(proxy_pool)
