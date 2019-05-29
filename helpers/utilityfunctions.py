@@ -151,7 +151,7 @@ def timefromstring(s):
     return t
 
 
-def stringfromtime(t):
+def stringfromtime(t, accuracy=4):
     """
     :param t : Time in seconds
     :returns : Formatted string
@@ -170,7 +170,7 @@ def stringfromtime(t):
     if s > 0:
         components.append(f"{int(s)} second" + ("s" if s > 1 else ""))
 
-    return " ".join(components)
+    return " ".join(components[:accuracy])
 
 
 def get_xp(level):
