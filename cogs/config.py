@@ -20,11 +20,11 @@ class Config(commands.Cog):
                 this_page = discord.Embed(title=f"{cog}")
                 for command in this_cog_commands:
                     this_page.add_field(name=command.name +
-                                             (f' [{" | ".join(command.aliases)}]' if command.aliases else ""),
+                                        (f' [{" | ".join(command.aliases)}]' if command.aliases else ""),
                                         inline=False,
                                         value=command.short_doc or "-no help yet-")
                 pages.append(this_page)
-        await util.page_switcher(ctx, self.client, pages)
+        await util.page_switcher(ctx, pages)
 
     @commands.group()
     @commands.has_permissions(manage_channels=True)
