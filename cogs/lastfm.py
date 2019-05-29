@@ -9,6 +9,8 @@ import json
 import data.database as db
 import arrow
 import imgkit
+from bs4 import BeautifulSoup
+
 
 LASTFM_APPID = os.environ['LASTFM_APIKEY']
 LASTFM_TOKEN = os.environ['LASTFM_SECRET']
@@ -109,7 +111,7 @@ class LastFm(commands.Cog):
             plays = artist['playcount']
             rows.append(f"`{i+1}.` **{plays}** plays — **{name}**")
 
-        image_url = artists[0]['image'][-1]['#text']
+        image_url = scrape_artist_image(artists[0]['name'])  # artists[0]['image'][-1]['#text']
         image_url_small = artists[0]['image'][1]['#text']
         image_colour = util.color_from_image_url(image_url_small)
 
@@ -248,8 +250,8 @@ class LastFm(commands.Cog):
                                   f" is formatted exactly as shown in the last fm database.")
 
         artist_info = api_request({"method": "artist.getinfo", "artist": artistname})['artist']
-        image_url = artist_info['image'][-1]['#text']
-        image_url_small = artist_info['image'][1]['#text']
+        image_url = scrape_artist_image(artistname)  # artist_info['image'][-1]['#text']
+        image_url_small = scrape_artist_image(artistname)  # artist_info['image'][1]['#text']
         formatted_name = artist_info['name']
 
         image_colour = util.color_from_image_url(image_url_small)
@@ -301,7 +303,7 @@ class LastFm(commands.Cog):
             for artist in artists:
                 name = artist['name']
                 plays = artist['playcount']
-                chart.append((f"{plays} plays<br>{name} - {artist}", artist['image'][3]['#text']))
+                chart.append((f"{plays} plays<br>{name} - {artist}", scrape_artist_image(name)))
 
         elif arguments['method'] == "user.getrecenttracks":
             chart_type = "recent tracks"
@@ -336,7 +338,7 @@ class LastFm(commands.Cog):
                 continue
 
             # is on this server and has lastfm connected
-            tasks.append([artistname, lastfm_username, user[0]])
+            tasks.append([artistname, lastfm_username, member.name])
 
         data = await self.client.loop.create_task(threaded(get_playcount, tasks, len(tasks)))
         for playcount, user, name in data:
@@ -353,6 +355,7 @@ class LastFm(commands.Cog):
             rows.append(f"{rank} **{x[1]}** — **{x[0]}** plays")
 
         content = discord.Embed(title=f"Who knows **{artistname}**?")
+        content.set_thumbnail(url=scrape_artist_image(artistname))
         if not rows:
             return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
 
@@ -508,3 +511,11 @@ def get_userinfo_embed(username):
     content.set_thumbnail(url=profile_pic_url)
     content.set_footer(text=f"Total plays: {playcount}")
     return content
+
+
+def scrape_artist_image(artist):
+    url = f"https://www.last.fm/music/{artist}"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    image = soup.find("meta",  property="og:image")
+    return image['content'] if image else None
