@@ -5,6 +5,7 @@
   --accent-color-2: #f63d7e;
   --text: #838d8a;
   --sidebar-text: #a1413b;
+  --button-hover: #ed0054;
 
 
   --theme-color: #1FC5BF;
@@ -135,6 +136,10 @@ th {
   border-radius: 50%;
 }
 
+section.cover {
+    height: 100vh;
+}
+
 section.cover p {
   line-height: inherit;
 }
@@ -157,14 +162,14 @@ section.cover .cover-main>p:last-child a:first-child {
 }
 
 section.cover .cover-main>p:last-child a:hover {
-  color: var(--accent-color);
-  border-color: var(--accent-color);
+  color: var(--button-hover);
+  border-color: var(--button-hover);
   opacity: 1;
 }
 
 section.cover .cover-main>p:last-child a:last-child:hover {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
+  background-color: var(--button-hover);
+  border-color: var(--button-hover);
   color: #fff;
   opacity: 1;
 }
