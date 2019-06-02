@@ -16,6 +16,12 @@ class Info(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.start_time = time.time()
+        self.client.remove_command('help')
+
+    @commands.command()
+    async def help(self, ctx):
+        """Get help"""
+        await ctx.send("https://misobot.xyz")
 
     @commands.command()
     async def patreon(self, ctx):
