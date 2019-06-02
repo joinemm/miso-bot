@@ -6,7 +6,7 @@ import helpers.utilityfunctions as util
 import helpers.errormessages as errormsg
 
 
-COOLDOWN = 3600
+COOLDOWN = 21600
 TRASH_ICONS = (':moyai:', ':stopwatch:', ':wrench:', ':hammer:', ':pick:', ':nut_and_bolt:', ':gear:', ':toilet:',
                ':alembic:', ':bathtub:', ':paperclip:', ':scissors:', ':boot:', ':high_heel:', ':spoon:',
                ':saxophone:', ':trumpet:', ':scooter:', ':anchor:')
@@ -20,7 +20,7 @@ class Fishy(commands.Cog):
                             "rare": fish_rare, "legendary": fish_legendary}
         self.__WEIGHTS = [0.09, 0.6, 0.2, 0.1, 0.01]
 
-    @commands.command(aliases=["fish", "fihy"])
+    @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
     async def fishy(self, ctx, user=None):
         """Go fishing and receive random fish. You can also gift fish to others.
 
@@ -43,7 +43,14 @@ class Fishy(commands.Cog):
             time_since_fishy = COOLDOWN
 
         if time_since_fishy < COOLDOWN:
-            return await ctx.send(f"Not yet, wait like {(COOLDOWN - time_since_fishy) // 60:.0f} minutes ok")
+            not_yet_quotes = [
+                "Bro chill, you can't fish yet! You gotta wait like",
+                "You can't fish yet, fool! Please wait",
+                "You're fishing too fast! Please wait",
+                "You're still on cooldown buddy. You need to wait"
+            ]
+            return await ctx.send(f"{random.choice(not_yet_quotes)} "
+                                  f"**{util.stringfromtime(COOLDOWN - time_since_fishy, 2)}**")
 
         catch = random.choices(list(self.__FISHTYPES.keys()), self.__WEIGHTS)[0]
         amount = await self.__FISHTYPES[catch](ctx, receiver, gift)
@@ -114,9 +121,9 @@ class Fishy(commands.Cog):
             for user_id in users:
                 u = self.client.get_user(user_id[0])
                 if u is None:
-                    print(user_id[0])
-                    continue
-                ufdata = db.fishdata(u.id)
+                    ufdata = db.fishdata(user_id[0])
+                else:
+                    ufdata = db.fishdata(u.id)
                 if fishdata is None:
                     fishdata = ufdata
                 else:
@@ -144,7 +151,7 @@ class Fishy(commands.Cog):
                                   f"Average fishy: **{fishdata.fishy / total:.2f}**"
         await ctx.send(embed=content)
 
-    @commands.command()
+    @commands.command(hidden=True)
     async def fishdistributiontest(self, ctx, amount=100):
         fishes = {"trash": 0, "fish_common": 0, "fish_uncommon": 0, "fish_rare": 0, "fish_legendary": 0}
         for i in range(amount):
