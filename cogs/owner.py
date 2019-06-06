@@ -23,9 +23,12 @@ class Owner(commands.Cog):
     @commands.is_owner()
     async def guilds(self, ctx):
         """Show all connected guilds"""
-        content = "**Connected guilds:**\n"
-        for guild in self.client.guilds:
-            content += f"**{guild.name}** - {guild.member_count} users\n"
+        membercount = sum(1 for x in self.client.get_all_members())
+        content = f"__Total **{len(self.client.guilds)}** guilds, **{membercount}** unique users__"
+
+        for guild in sorted(self.client.guilds, key=lambda x: x.member_count, reverse=True):
+            content += f"\n[`{guild.id}`] **{guild.name}** - `{guild.member_count}` members"
+
         await ctx.send(content)
 
     @commands.command(hidden=True)
