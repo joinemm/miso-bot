@@ -29,17 +29,19 @@ class LastFm(commands.Cog):
 
     @commands.group()
     async def fm(self, ctx):
+        """Lastfm commands"""
         # await util.command_group_help(ctx)
         ctx.username = db.userdata(ctx.author.id).lastfm_username
-        if ctx.username is None:
+        if ctx.invoked_subcommand is not None and ctx.username is None:
             return await ctx.send(f"No saved LastFM username found in database.\n"
                                   f"Use `{self.client.command_prefix}fm set <username>` to set one.")
 
-        if ctx.invoked_subcommand is None or isinstance(ctx.invoked_subcommand, commands.Group):
-            await ctx.send(embed=get_userinfo_embed(ctx.username))
+        await util.command_group_help(ctx)
+        # await ctx.send(embed=get_userinfo_embed(ctx.username))
 
     @fm.command()
     async def set(self, ctx, username):
+        """Save your lastfm username"""
         content = get_userinfo_embed(username)
         if content is None:
             await ctx.send(f"Invalid LastFM username `{username}`")
@@ -47,8 +49,14 @@ class LastFm(commands.Cog):
         db.update_user(ctx.author.id, "lastfm_username", username)
         await ctx.send(f"{ctx.message.author.mention} Username saved as `{username}`", embed=content)
 
+    @fm.command()
+    async def profile(self, ctx):
+        """Lastfm profile"""
+        await ctx.send(embed=get_userinfo_embed(ctx.username))
+
     @fm.command(aliases=['np'])
     async def nowplaying(self, ctx):
+        """Currently playing song / most recent song"""
         data = api_request({"user": ctx.username,
                             "method": "user.getrecenttracks",
                             "limit": 1})
@@ -97,6 +105,7 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['ta'])
     async def topartists(self, ctx, *args):
+        """Most listened artists"""
         arguments = parse_arguments(args)
         data = api_request({"user": ctx.username,
                             "method": "user.gettopartists",
@@ -126,6 +135,7 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['talb'])
     async def topalbums(self, ctx, *args):
+        """Most listened albums"""
         arguments = parse_arguments(args)
         data = api_request({"user": ctx.username,
                             "method": "user.gettopalbums",
@@ -156,6 +166,7 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['tt'])
     async def toptracks(self, ctx, *args):
+        """Most listened tracks"""
         arguments = parse_arguments(args)
         data = api_request({"user": ctx.username,
                             "method": "user.gettoptracks",
@@ -186,6 +197,7 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['recents', 're'])
     async def recent(self, ctx, size=15):
+        """Recently listened tracks"""
         data = api_request({"user": ctx.username,
                             "method": "user.getrecenttracks",
                             "limit": int(size)})
@@ -214,9 +226,7 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def artist(self, ctx, mode, *, artistname):
-        """Get you top tracks or top albums for an artist
-
-        mode = [tt|talb]"""
+        """Top tracks / albums for specific artist"""
         await ctx.message.channel.trigger_typing()
         if mode in ["toptracks", "tt", "tracks", "track"]:
             method = "user.gettoptracks"
@@ -276,6 +286,7 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def chart(self, ctx, *args):
+        """Visual chart of your top albums"""
         await ctx.message.channel.trigger_typing()
         arguments = parse_chart_arguments(args)
         data = api_request({"user": ctx.username,
@@ -296,22 +307,6 @@ class LastFm(commands.Cog):
                 artist = album['artist']['name']
                 plays = album['playcount']
                 chart.append((f"{plays} plays<br>{name} - {artist}", album['image'][3]['#text']))
-
-        elif arguments['method'] == "user.gettopartists":
-            chart_type = "top artist"
-            artists = data['topartists']['artist']
-            for artist in artists:
-                name = artist['name']
-                plays = artist['playcount']
-                chart.append((f"{plays} plays<br>{name} - {artist}", scrape_artist_image(name)))
-
-        elif arguments['method'] == "user.getrecenttracks":
-            chart_type = "recent tracks"
-            tracks = data['recenttracks']['track']
-            for track in tracks:
-                name = track['name']
-                artist = track['artist']['#text']
-                chart.append((f"{name} - {artist}", track['image'][3]['#text']))
 
         img_divs = ''.join(['<div class="art"><img src="{' + str(i) + '[1]}"><p class="label">{'
                             + str(i) + '[0]}</p></div>' for i in range(len(chart))])
@@ -451,12 +446,6 @@ def parse_chart_arguments(args):
         if parsed['method'] is None:
             if a in ['talb', 'topalbums']:
                 parsed['method'] = "user.gettopalbums"
-                continue
-            elif a in ['ta', 'topartists']:
-                parsed['method'] = "user.gettopartists"
-                continue
-            elif a in ['re', 'recent', 'recents']:
-                parsed['method'] = "user.getrecenttracks"
                 continue
 
         if parsed['period'] is None:
