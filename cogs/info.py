@@ -16,12 +16,12 @@ class Info(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.start_time = time.time()
-        self.client.remove_command('help')
+        #self.client.remove_command('help')
 
-    @commands.command()
-    async def help(self, ctx):
-        """Get help"""
-        await ctx.send("https://misobot.xyz")
+    #@commands.command()
+    #async def help(self, ctx):
+    #    """Get help"""
+    #    await ctx.send("https://misobot.xyz")
 
     @commands.command()
     async def patreon(self, ctx):
@@ -31,7 +31,7 @@ class Info(commands.Cog):
     @commands.command()
     async def patrons(self, ctx):
         """List the current patreons"""
-        patrons = [381491116853166080, 121757433507872768]
+        patrons = [381491116853166080, 121757433507872768, 132921952544227329]
         content = discord.Embed(title="Patreon supporters ❤")
         content.description = ""
         for x in patrons:
@@ -53,8 +53,8 @@ class Info(commands.Cog):
                                    colour=discord.Colour.red())
 
         info_embed.set_thumbnail(url=self.client.user.avatar_url)
-        info_embed.add_field(name='Github', value='https://github.com/joinemm/Miso-bot-rewrite', inline=False)
-        info_embed.add_field(name='Documentation', value="http://joinemm.me/misobot", inline=False)
+        info_embed.add_field(name='Github', value='https://github.com/joinemm/misobot2', inline=False)
+        info_embed.add_field(name='Documentation', value="https://misobot.xyz", inline=False)
         info_embed.add_field(name='Patreon', value="https://www.patreon.com/joinemm", inline=False)
 
         await ctx.send(embed=info_embed)
