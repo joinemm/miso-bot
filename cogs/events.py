@@ -69,7 +69,7 @@ class Events(commands.Cog):
             await message.add_reaction(self.client.get_emoji(540246041962872852))
 
         # stfu
-        if not message.author.bot and 'stfu' in message.content.lower():
+        if not message.author.bot and message.content.lower() == 'stfu':
             await message.channel.send("no u")
 
         # git gud
@@ -119,6 +119,10 @@ class Events(commands.Cog):
         message_xp = util.xp_from_message(message)
         currenthour = message.created_at.hour
         db.add_activity(message.guild.id, message.author.id, message_xp, currenthour)
+
+        # pinged
+        # if not message.author.bot and self.client.user in message.mentions:
+
 
         if not message.author.bot:
             announce = True if db.get_setting(message.guild.id, "levelup_toggle") == 1 else False
