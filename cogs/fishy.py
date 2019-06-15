@@ -22,12 +22,7 @@ class Fishy(commands.Cog):
 
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
     async def fishy(self, ctx, user=None):
-        """Go fishing and receive random fish. You can also gift fish to others.
-
-        Usage:
-            fishy
-            fishy <user>
-        """
+        """Go fishing and receive random fish. You can also gift fish to others"""
         gift = False
         receiver = ctx.author
         if user is not None:
@@ -60,12 +55,7 @@ class Fishy(commands.Cog):
 
     @commands.command()
     async def leaderboard(self, ctx, scope=None):
-        """Shows the fishy leaderboard
-
-        Usage:
-            leaderboard
-            leaderboard global
-        """
+        """Shows the fishy leaderboard"""
         users = db.query("select user_id from fishy order by fishy desc")
         rows = []
         rank_icon = [':first_place:', ':second_place:', ':third_place:']
@@ -92,19 +82,13 @@ class Fishy(commands.Cog):
         content = discord.Embed(title=f"{'global' if scope == 'global' else ctx.guild.name} fishy leaderboard",
                                 color=discord.Color.blue())
         if rows:
-            await util.send_as_pages(ctx, content, rows, 2)
+            await util.send_as_pages(ctx, content, rows, 10)
         else:
             await ctx.send(embed=content)
 
     @commands.command()
     async def fishystats(self, ctx, mention=None):
-        """Shows fishing statistics
-
-        Usage:
-            fishystats
-            fishystats <user>
-            fishystats global
-        """
+        """Shows fishing statistics"""
         user = ctx.author
         globaldata = False
         if mention is not None:
