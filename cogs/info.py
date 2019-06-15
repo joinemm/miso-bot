@@ -71,10 +71,9 @@ class Info(commands.Cog):
     async def status(self, ctx):
         """Get the bot's status"""
         up_time = time.time() - self.start_time
-        uptime_string = util.stringfromtime(up_time)
-
+        uptime_string = util.stringfromtime(up_time, 2)
         stime = time.time() - psutil.boot_time()
-        system_uptime_string = util.stringfromtime(stime)
+        system_uptime_string = util.stringfromtime(stime, 2)
 
         mem = psutil.virtual_memory()
         pid = os.getpid()
@@ -88,11 +87,13 @@ class Info(commands.Cog):
         content.add_field(name="System uptime", value=system_uptime_string)
         content.add_field(name="System RAM Usage", value=f"{mem.percent}%")
         content.add_field(name="Bot memory usage", value=f"{memory_use / math.pow(1024, 2):.2f}MB")
+        content.add_field(name="Discord API latency", value=f"{self.client.latency * 1000:.1f}ms")
 
         await ctx.send(embed=content)
 
     @commands.command()
     async def changelog(self, ctx):
+        """Github commit history"""
         author = "joinemm"
         repo = "Miso-bot-rewrite"
         data = get_commits(author, repo)
@@ -104,7 +105,7 @@ class Info(commands.Cog):
         pages = []
         i = 0
         for commit in data:
-            if i == 10:
+            if i == 5:
                 pages.append(content)
                 content = copy.deepcopy(content)
                 content.clear_fields()
