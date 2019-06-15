@@ -59,7 +59,6 @@ class Miscellaneous(commands.Cog):
 
     @stan.command()
     async def update(self, ctx):
-        await ctx.message.channel.trigger_typing()
         artist_list_old = db.get_from_data_json(['artists'])
         artist_list_new = set()
         urls_to_scrape = ['https://kprofiles.com/k-pop-girl-groups/',
@@ -86,7 +85,6 @@ class Miscellaneous(commands.Cog):
     @commands.command()
     async def ship(self, ctx, *, names):
         """Ship two people, separate names with 'and'"""
-        await ctx.message.channel.trigger_typing()
         names = names.split(' and ')
         if not len(names) == 2:
             return await ctx.send("Please give two names separated with `and`")
@@ -111,7 +109,6 @@ class Miscellaneous(commands.Cog):
     @commands.command(aliases=['pewds'])
     async def pewdiepie(self, ctx):
         """Pewdiepie VS T-series"""
-        await ctx.message.channel.trigger_typing()
         pewdiepie = get_subcount("UC-lHJZR3Gqxm24_Vd_AJ5Yw")
         tseries = get_subcount("UCq-Fj5jknLsUf-MWSy4_brA")
 
@@ -131,9 +128,32 @@ class Miscellaneous(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=['mc'])
-    async def minecraft(self, ctx, address='mc.joinemm.me', port='25565'):
+    async def minecraft(self, ctx, address=None, port=None):
         """Get the status of a minecraft server"""
-        server = minestat.MineStat(address, int(port))
+        if address == "set":
+            if port is None:
+                return await ctx.send(f"Save minecraft server address for this discord server:\n"
+                                      f"`{self.client.command_prefix}minecraft set <address>` or\n"
+                                      f"`{self.client.command_prefix}minecraft set <address>:<port>`")
+
+            # TODO: actually make the database thing
+            address = port.split(":")[0]
+            try:
+                port = int(port.split(":")[1])
+            except IndexError:
+                port = 25565
+
+            db.execute("""REPLACE INTO minecraft VALUES (?, ?, ?)""", (ctx.guild.id, address, port))
+            return await ctx.send(f"Minecraft server of this discord set to `{address}:{port}`")
+
+        if address is None:
+            serverdata = db.query("""SELECT address, port FROM minecraft WHERE guild_id = ?""", (ctx.guild.id,))
+            if serverdata is None:
+                return await ctx.send("No minecraft server saved for this discord server!")
+            else:
+                address, port = serverdata[0]
+
+        server = minestat.MineStat(address, int(port or '25565'))
         content = discord.Embed()
         content.colour = discord.Color.green()
         if server.online:
@@ -141,7 +161,7 @@ class Miscellaneous(commands.Cog):
             content.add_field(name="Version", value=server.version)
             content.add_field(name="Players", value=f"{server.current_players}/{server.max_players}")
             content.add_field(name="Latency", value=f"{server.latency}ms")
-            content.set_footer(text=f"{server.motd}")
+            content.set_footer(text=f"Message of the day: {server.motd}")
         else:
             content.description = "**Server is offline**"
         content.set_thumbnail(url="https://vignette.wikia.nocookie.net/potcoplayers/images/c/c2/"
@@ -151,8 +171,6 @@ class Miscellaneous(commands.Cog):
     @commands.group(aliases=['hs'])
     async def horoscope(self, ctx):
         """Get your daily horoscope"""
-        # TODO: CHANGE API AS THIS ONE BRAKE
-        await ctx.message.channel.trigger_typing()
         sign = db.userdata(ctx.author.id).sunsign
         print(sign)
         if sign is None:
