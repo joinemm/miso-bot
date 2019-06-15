@@ -11,7 +11,7 @@ import wikipedia
 import tweepy
 from tweepy import OAuthHandler
 import os
-import arrow
+# import arrow
 from helpers import utilityfunctions as util
 import copy
 import spotipy
@@ -33,8 +33,6 @@ class Media(commands.Cog):
     @commands.command(aliases=["colour"])
     async def color(self, ctx, *sources):
         """Get a hex color, the color of discord user, or a random color."""
-        await ctx.message.channel.trigger_typing()
-
         if not sources:
             return await ctx.send("Missing color source. Valid color sources are:\n"
                                   "`[@mention | @rolemention | hex | image_url | random]`\n"
@@ -91,8 +89,10 @@ class Media(commands.Cog):
             content.title = name
             content.description = f"{hexvalue} - {rgbvalue}"
         else:
-            if len(colors) > 25:
-                colors = colors[:25]
+            if len(colors) > 12:
+                await ctx.send("Maximum amount of colors is 12, ignoring rest...")
+                await ctx.trigger_typing()
+                colors = colors[:12]
             palette = ""
             for color in colors:
                 try:
@@ -128,7 +128,7 @@ class Media(commands.Cog):
                 user_id = data[2]
         except IndexError:
             return await ctx.send("**ERROR:** Invalid playlist url/URI.\n"
-                                  "How to get Spotify URI?: Right click playlist -> Share -> Copy Spotify URI")
+                                  "How to get Spotify URI? Right click playlist -> `Share` -> `Copy Spotify URI`")
 
         if amount > 50:
             amount = 50
@@ -345,7 +345,6 @@ class Media(commands.Cog):
     @commands.command()
     async def melon(self, ctx, timeframe=None):
         """Get realtime / daily / monthly chart from Melon"""
-        await ctx.trigger_typing()
         if timeframe not in ["day", "month", "rise", None]:
             if timeframe == "realtime":
                 timeframe = None
