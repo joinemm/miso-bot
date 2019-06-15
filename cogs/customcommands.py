@@ -15,7 +15,7 @@ class CustomCommands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        """ only for CommandNotFound"""
+        """only for CommandNotFound"""
         error = getattr(error, 'original', error)
         if isinstance(error, commands.CommandNotFound):
             keyword = ctx.message.content.split(' ', 1)[0][len(self.client.command_prefix):]
@@ -38,12 +38,12 @@ class CustomCommands(commands.Cog):
 
     @commands.group()
     async def command(self, ctx):
-        """Configuration for server specific custom commmands"""
+        """Server specific custom commmands"""
         await util.command_group_help(ctx)
 
     @command.command()
     async def add(self, ctx, name, *, response):
-        """<keyword> <response...>"""
+        """Add a new command"""
         if name in self.client_command_list():
             return await ctx.send(f"Sorry, `{self.client.command_prefix}{name}` is already a built in command!")
         elif name in custom_command_list(ctx.guild.id):
@@ -58,6 +58,7 @@ class CustomCommands(commands.Cog):
 
     @command.command()
     async def remove(self, ctx, name):
+        """Remove a custom command"""
         if name not in custom_command_list(ctx.guild.id):
             return await ctx.send(f"Cannot delete command `{self.client.command_prefix}{name}` as it does not exist")
 
@@ -66,6 +67,7 @@ class CustomCommands(commands.Cog):
 
     @command.command()
     async def search(self, ctx, name):
+        """Search for a command"""
         content = discord.Embed()
 
         internal_rows = []
@@ -87,6 +89,7 @@ class CustomCommands(commands.Cog):
 
     @command.command()
     async def list(self, ctx):
+        """List all commands on this server"""
         rows = []
         for command in custom_command_list(ctx.guild.id):
             rows.append(f"{self.client.command_prefix}{command}")
