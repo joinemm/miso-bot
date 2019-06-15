@@ -125,6 +125,9 @@ class Config(commands.Cog):
     @votechannel.command(name="list")
     async def votechannel_list(self, ctx):
         channels = db.query("select channel_id from votechannels where guild_id = ?", (ctx.guild.id,))
+        if channels is None:
+            return await ctx.send("There are no voting channels on this server yet!")
+
         mentions = []
         for channel in channels:
             c = ctx.guild.get_channel(channel[0])
