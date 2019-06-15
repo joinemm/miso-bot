@@ -286,7 +286,7 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def chart(self, ctx, *args):
-        """Visual chart of your top albums"""
+        """Visual chart of your top albums or artists"""
         await ctx.message.channel.trigger_typing()
         arguments = parse_chart_arguments(args)
         data = api_request({"user": ctx.username,
@@ -307,6 +307,23 @@ class LastFm(commands.Cog):
                 artist = album['artist']['name']
                 plays = album['playcount']
                 chart.append((f"{plays} plays<br>{name} - {artist}", album['image'][3]['#text']))
+
+        elif arguments['method'] == "user.gettopartists":
+            chart_type = "top artist"
+            artists = data['topartists']['artist']
+            scraped_images = scrape_artists_for_chart(ctx.username, arguments['period'], arguments['amount'])
+            for i, artist in enumerate(artists):
+                name = artist['name']
+                plays = artist['playcount']
+                chart.append((f"{plays} plays<br>{name}", scraped_images[i]))
+
+        elif arguments['method'] == "user.getrecenttracks":
+            chart_type = "recent tracks"
+            tracks = data['recenttracks']['track']
+            for track in tracks:
+                name = track['name']
+                artist = track['artist']['#text']
+                chart.append((f"{name} - {artist}", track['image'][3]['#text']))
 
         img_divs = ''.join(['<div class="art"><img src="{' + str(i) + '[1]}"><p class="label">{'
                             + str(i) + '[0]}</p></div>' for i in range(len(chart))])
@@ -444,8 +461,14 @@ def parse_chart_arguments(args):
                 pass
 
         if parsed['method'] is None:
-            if a in ['talb', 'topalbums']:
+            if a in ['talb', 'topalbums', 'albums', 'album']:
                 parsed['method'] = "user.gettopalbums"
+                continue
+            elif a in ['ta', 'topartists', 'artists', 'artist']:
+                parsed['method'] = "user.gettopartists"
+                continue
+            elif a in ['re', 'recent', 'recents']:
+                parsed['method'] = "user.getrecenttracks"
                 continue
 
         if parsed['period'] is None:
@@ -503,8 +526,28 @@ def get_userinfo_embed(username):
 
 
 def scrape_artist_image(artist):
-    url = f"https://www.last.fm/music/{artist}"
+    url = f"https://www.last.fm/music/{artist}/+images"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
-    image = soup.find("meta",  property="og:image")
-    return image['content'] if image else None
+    image = soup.find("img", {"class": "image-list-image"})
+    return image['src'].replace("/avatar170s/", "/300x300/") if image else None
+
+
+def scrape_artists_for_chart(username, period, amount):
+    period_format_map = {"7day": "LAST_7_DAYS",
+                         "1month": "LAST_30_DAYS",
+                         "3month": "LAST_90_DAYS",
+                         "6month": "LAST_180_DAYS",
+                         "12month": "LAST_365_DAYS",
+                         "overall": "ALL"}
+    page = 0
+    images = []
+    while len(images) < amount:
+        page += 1
+        url = f"https://www.last.fm/user/{username}/library/artists?date_preset={period_format_map[period]}&page={page}"
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        imagedivs = soup.findAll("td", {"class": "chartlist-image"})
+        images += [div.find("img")['src'].replace("/avatar70s/", "/300x300/") for div in imagedivs]
+    return images[:amount]
+
