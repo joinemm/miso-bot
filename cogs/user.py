@@ -107,6 +107,17 @@ class User(commands.Cog):
 
         await ctx.send(embed=content)
 
+    @commands.command()
+    async def roleslist(self, ctx):
+        """List the roles of this server"""
+        content = discord.Embed(title=f"Roles in **{ctx.message.guild.name}**")
+        rows = []
+        for role in reversed(ctx.message.guild.roles):
+            item = f"{role.mention} ({role.id}) (**{str(role.color)}**) - **{len(role.members)}** members"
+            rows.append(item)
+
+        await util.send_as_pages(ctx, content, rows)
+
     @commands.command(aliases=["level"])
     async def activity(self, ctx, user=""):
         user = await util.get_user(ctx, user, ctx.author)
