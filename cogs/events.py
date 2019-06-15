@@ -69,7 +69,7 @@ class Events(commands.Cog):
             await message.add_reaction(self.client.get_emoji(540246041962872852))
 
         # stfu
-        if not message.author.bot and message.content.lower() == 'stfu':
+        if not message.author.bot and 'stfu' in message.content.lower():
             await message.channel.send("no u")
 
         # git gud
@@ -90,31 +90,6 @@ class Events(commands.Cog):
             else:
                 await message.channel.send(f"`git: '{gitcommand}' is not a git command. See 'git --help'.`")
 
-        # notifications
-        keywords = db.get_keywords(message.guild.id)
-        if keywords is not None:
-            for (word, user_id) in keywords:
-                if user_id == message.author.id:
-                    continue
-                pattern = re.compile(r'(?:^|\W){0}(?:$|\W)'.format(word), flags=re.IGNORECASE)
-                if pattern.findall(message.content):
-                    user = message.guild.get_member(user_id)
-                    if user is None:
-                        continue
-                    if user not in message.channel.members:
-                        continue
-
-                    # create and send notification message
-                    content = discord.Embed()
-                    content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
-                    highlighted_text = re.sub(pattern, lambda x: f'**{x.group(0)}**', message.content)
-                    content.description = f"`>>>` {highlighted_text}\n\n" \
-                                          f"[Go to message]({message.jump_url})"
-                    content.set_footer(text=f"{message.guild.name} | #{message.channel.name}")
-                    content.timestamp = message.created_at
-
-                    await user.send(embed=content)
-
         # xp gain
         message_xp = util.xp_from_message(message)
         currenthour = message.created_at.hour
@@ -123,7 +98,7 @@ class Events(commands.Cog):
         # pinged
         # if not message.author.bot and self.client.user in message.mentions:
 
-
+        # leveups
         if not message.author.bot:
             announce = True if db.get_setting(message.guild.id, "levelup_toggle") == 1 else False
             if announce:
@@ -136,7 +111,7 @@ class Events(commands.Cog):
                     await message.channel.send(f"{message.author.mention} just leveled up! (level **{level_now}**)")
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
+    async def on_reaction_add(self, reaction, _):
         """Starboard"""
         if reaction.emoji == "⭐":
             if db.get_setting(reaction.message.guild.id, "starboard_toggle") == 1:
@@ -156,7 +131,8 @@ class Events(commands.Cog):
                         content = discord.Embed(color=discord.Color.gold())
                         content.set_author(name=f"{reaction.message.author}",
                                            icon_url=reaction.message.author.avatar_url)
-                        content.description = reaction.message.content + f"\n\n[context]({reaction.message.jump_url})"
+                        jump = f"\n\n[context]({reaction.message.jump_url})"
+                        content.description = reaction.message.content[:2048-len(jump)] + jump
                         content.timestamp = reaction.message.created_at
                         content.set_footer(text=f"{reaction.count} ⭐ #{reaction.message.channel.name}")
                         if len(reaction.message.attachments) > 0:
