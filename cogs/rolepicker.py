@@ -18,7 +18,7 @@ class Rolepicker(commands.Cog):
         await util.command_group_help(ctx)
 
     @rolepicker.command()
-    async def add(self, ctx, name, role):
+    async def add(self, ctx, role, name):
         """Add a role to the picker"""
         role_to_add = await util.get_role(ctx, role)
         if role_to_add is None:
@@ -62,6 +62,18 @@ class Rolepicker(commands.Cog):
             content.description = "No roles set on this server"
         await ctx.send(embed=content)
 
+    @rolepicker.command()
+    async def case(self, ctx, boolean):
+        """Toggle case sensitivity"""
+        if boolean.lower() == 'true':
+            newvalue = 1
+        elif boolean.lower() == 'false':
+            newvalue = 0
+        else:
+            return await ctx.send("Invalid value, use `true` or `false`")
+        db.update_setting(ctx.guild.id, "rolepicker_case", newvalue)
+        await ctx.send(f"Roles are now {('' if newvalue == 1 else 'not ')}case sensitive!")
+
     @commands.Cog.listener()
     async def on_message(self, message):
         """Rolechannel message handler"""
@@ -72,7 +84,8 @@ class Rolepicker(commands.Cog):
                 command = message.content[0]
                 rolename = message.content[1:].strip()
                 if command in ["+", "-"]:
-                    role = message.guild.get_role(db.rolepicker_role(rolename))
+                    case = db.get_setting(message.guild.id, "rolepicker_case")
+                    role = message.guild.get_role(db.rolepicker_role(rolename, caps=(case != 1)))
                     if role is None:
                         await message.channel.send(errormsg.role_not_found(rolename))
                     else:
