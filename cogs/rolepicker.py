@@ -85,7 +85,7 @@ class Rolepicker(commands.Cog):
                 rolename = message.content[1:].strip()
                 if command in ["+", "-"]:
                     case = db.get_setting(message.guild.id, "rolepicker_case")
-                    role = message.guild.get_role(db.rolepicker_role(rolename, caps=(case != 1)))
+                    role = message.guild.get_role(db.rolepicker_role(rolename, caps=(case != 0)))
                     if role is None:
                         await message.channel.send(errormsg.role_not_found(rolename))
                     else:
