@@ -51,6 +51,8 @@ def activitydata(guild_id, user_id):
 
 def get_user_activity(guild_id, user_id):
     data = query("select * from activity where guild_id = ? and user_id = ?", (guild_id, user_id))
+    if data is None:
+        return None
     activities = list(data[0][3:])
     return activities
 
@@ -96,6 +98,12 @@ def get_setting(guild_id, setting, default=None):
         return default
     else:
         return data[0][0]
+
+
+def add_crown(artist, guild_id, user_id, playcount):
+    execute("""INSERT OR IGNORE INTO crowns VALUES (?, ?, ?, ?)""", (artist, guild_id, user_id, playcount))
+    execute("""UPDATE crowns SET user_id = ? AND playcount = ? WHERE artist = ? AND guild_id = ?""",
+            (user_id, playcount, artist, playcount))
 
 
 def rolepicker_role(rolename):

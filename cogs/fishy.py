@@ -6,7 +6,7 @@ import helpers.utilityfunctions as util
 import helpers.errormessages as errormsg
 
 
-COOLDOWN = 21600
+COOLDOWN = 7200
 TRASH_ICONS = (':moyai:', ':stopwatch:', ':wrench:', ':hammer:', ':pick:', ':nut_and_bolt:', ':gear:', ':toilet:',
                ':alembic:', ':bathtub:', ':paperclip:', ':scissors:', ':boot:', ':high_heel:', ':spoon:',
                ':saxophone:', ':trumpet:', ':scooter:', ':anchor:')
@@ -32,7 +32,7 @@ class Fishy(commands.Cog):
 
         fishdata = db.fishdata(ctx.author.id)
 
-        if fishdata.timestamp is not None:
+        if fishdata is not None and fishdata.timestamp is not None:
             time_since_fishy = ctx.message.created_at.timestamp() - fishdata.timestamp
         else:
             time_since_fishy = COOLDOWN

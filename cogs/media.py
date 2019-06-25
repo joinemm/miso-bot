@@ -77,7 +77,7 @@ class Media(commands.Cog):
 
         content = discord.Embed(colour=await util.get_color(ctx, colors[0]))
         if len(colors) == 1:
-            color = colors[0]
+            color = colors[0].strip('#')
             url = f"http://thecolorapi.com/id?hex={color}&format=json"
             response = requests.get(url=url)
             response.raise_for_status()
@@ -96,7 +96,7 @@ class Media(commands.Cog):
             palette = ""
             for color in colors:
                 try:
-                    url = f"http://thecolorapi.com/id?hex={color}&format=json"
+                    url = f"http://thecolorapi.com/id?hex={color.strip('#')}&format=json"
                     response = requests.get(url=url)
                     response.raise_for_status()
                     data = json.loads(response.content.decode('utf-8'))
@@ -104,7 +104,7 @@ class Media(commands.Cog):
                     # rgbvalue = data['rgb']['value']
                     name = data['name']['value']
                     content.add_field(name=name, value=f"{hexvalue}")
-                    palette += color + "/"
+                    palette += color.strip('#') + "/"
                 except Exception as e:
                     print(e)
                     await ctx.send(f"Skipping color {color} because of error `{e}`")
