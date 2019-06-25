@@ -27,16 +27,21 @@ class LastFm(commands.Cog):
         with open("html/fm_chart_flex.html", "r", encoding="utf-8") as file:
             self.chart_html_flex = file.read().replace('\n', '')
 
+    @commands.command(hidden=True, aliases=['fmchart'])
+    async def fmartist(self, ctx):
+        await ctx.send(f"This command has been deprecated. Please use `>{ctx.message.content.replace('fm', 'fm ')}`")
+
     @commands.group()
     async def fm(self, ctx):
         """Lastfm commands"""
         # await util.command_group_help(ctx)
-        ctx.username = db.userdata(ctx.author.id).lastfm_username
-        if ctx.invoked_subcommand is not None and ctx.username is None:
-            return await ctx.send(f"No saved LastFM username found in database.\n"
-                                  f"Use `{self.client.command_prefix}fm set <username>` to set one.")
+        userdata = db.userdata(ctx.author.id)
+        ctx.username = userdata.lastfm_username if userdata is not None else None
+        if ctx.username is None and str(ctx.invoked_subcommand) not in ['fm set']:
+            raise LastFMError(f"No lastfm username saved. Please use {self.client.command_prefix}fm set <lastfm username>")
 
-        await util.command_group_help(ctx)
+        if ctx.invoked_subcommand is None:
+            await util.command_group_help(ctx)
         # await ctx.send(embed=get_userinfo_embed(ctx.username))
 
     @fm.command()
@@ -342,7 +347,8 @@ class LastFm(commands.Cog):
         await ctx.message.channel.trigger_typing()
         listeners = []
         tasks = []
-        for user in db.query("SELECT user_id, lastfm_username FROM users where lastfm_username is not null"):
+        userslist = db.query("SELECT user_id, lastfm_username FROM users where lastfm_username is not null")
+        for user in (userslist if userslist is not None else []):
             lastfm_username = user[1]
 
             member = ctx.guild.get_member(user[0])
@@ -350,27 +356,46 @@ class LastFm(commands.Cog):
                 continue
 
             # is on this server and has lastfm connected
-            tasks.append([artistname, lastfm_username, member.name])
+            tasks.append([artistname, lastfm_username, member])
 
-        data = await self.client.loop.create_task(threaded(get_playcount, tasks, len(tasks)))
-        for playcount, user, name in data:
-            if playcount > 0:
-                artistname = name
-                listeners.append((playcount, user))
+        if tasks:
+            data = await self.client.loop.create_task(threaded(get_playcount, tasks, len(tasks)))
+            for playcount, user, name in data:
+                if playcount > 0:
+                    artistname = name
+                    listeners.append((playcount, user))
 
         rows = []
         for i, x in enumerate(sorted(listeners, key=lambda p: p[0], reverse=True)):
             if i == 0:
                 rank = ":crown:"
+                db.add_crown(artistname, ctx.guild.id, x[1].id, x[0])
             else:
                 rank = f"`{i + 1}`."
-            rows.append(f"{rank} **{x[1]}** — **{x[0]}** plays")
+            rows.append(f"{rank} **{x[1].name}** — **{x[0]}** plays")
 
         content = discord.Embed(title=f"Who knows **{artistname}**?")
-        content.set_thumbnail(url=scrape_artist_image(artistname))
+        image = scrape_artist_image(artistname)
+        print(image)
+        content.set_thumbnail(url=image)
         if not rows:
             return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
 
+        await util.send_as_pages(ctx, content, rows)
+
+    @commands.command()
+    async def crowns(self, ctx, _global=None):
+        crownartists = db.query("""SELECT artist, playcount FROM crowns WHERE guild_id = ? AND user_id = ?""",
+                                (ctx.guild.id, ctx.author.id))
+        if crownartists is None:
+            return await ctx.send("You have not acquired any crowns yet! "
+                                  "Use the `>whoknows` command to claim your crowns")
+        rows = []
+        for artist, playcount in crownartists:
+            rows.append(f"**{artist}** with **{playcount}** plays")
+
+        content = discord.Embed(color=discord.Color.gold())
+        content.title = f"Artist crowns for {ctx.author.name} - Total {len(crownartists)} crowns"
         await util.send_as_pages(ctx, content, rows)
 
 
