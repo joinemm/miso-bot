@@ -103,12 +103,13 @@ class Events(commands.Cog):
             announce = True if db.get_setting(message.guild.id, "levelup_toggle") == 1 else False
             if announce:
                 activity_data = db.get_user_activity(message.guild.id, message.author.id)
-                xp = sum(activity_data)
-                level_before = util.get_level(xp-message_xp)
-                level_now = util.get_level(xp)
+                if activity_data is not None:
+                    xp = sum(activity_data)
+                    level_before = util.get_level(xp-message_xp)
+                    level_now = util.get_level(xp)
 
-                if level_now > level_before:
-                    await message.channel.send(f"{message.author.mention} just leveled up! (level **{level_now}**)")
+                    if level_now > level_before:
+                        await message.channel.send(f"{message.author.mention} just leveled up! (level **{level_now}**)")
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, _):
