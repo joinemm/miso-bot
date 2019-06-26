@@ -7,6 +7,21 @@ from bs4 import BeautifulSoup
 import json
 from libraries import minestat
 
+hs_colors = {
+            "aries": discord.Color.red(),
+            "taurus": discord.Color.dark_teal(),
+            'gemini': discord.Color.gold(),
+            'cancer': discord.Color.greyple(),
+            'leo': discord.Color.orange(),
+            'virgo': discord.Color.green(),
+            'libra': discord.Color.dark_teal(),
+            'scorpio': discord.Color.dark_red(),
+            'sagittarius': discord.Color.purple(),
+            'capricorn': discord.Color.dark_green(),
+            'aquarius': discord.Color.teal(),
+            'pisces': discord.Color.blurple()
+        }
+
 
 class Miscellaneous(commands.Cog):
 
@@ -171,23 +186,31 @@ class Miscellaneous(commands.Cog):
     @commands.group(aliases=['hs'])
     async def horoscope(self, ctx):
         """Get your daily horoscope"""
+        if ctx.invoked_subcommand is not None:
+            return
         sign = db.userdata(ctx.author.id).sunsign
-        print(sign)
         if sign is None:
             return await ctx.send("Please save your sunsign using `>horoscope set <sign>`\n"
                                   "use `>horoscope list` if you don't know which one you are.")
 
-        url = f"http://theastrologer-api.herokuapp.com/api/horoscope/{sign}/today"
-        response = requests.get(url)
+        params = (
+            ('sign', sign),
+            ('day', 'today'),
+        )
+
+        response = requests.post('https://aztro.sameerkumar.website/', params=params)
         response_data = json.loads(response.content.decode('utf-8'))
-        content = discord.Embed()
-        content.title = response_data['sunsign']
-        content.set_footer(text=response_data['date'])
-        content.add_field(name='Mood', value=response_data['meta']['mood'].capitalize(), inline=True)
-        content.add_field(name='Keywords', inline=True,
-                          value=", ".join([x.capitalize() for x in response_data['meta']['keywords'].split(", ")]))
-        content.add_field(name='Intensity', value=response_data['meta']['intensity'], inline=True)
-        content.add_field(name='Horoscope', value=response_data['horoscope'].split("(c)")[0])
+
+        content = discord.Embed(color=hs_colors[sign])
+        content.title = f"{sign.capitalize()} - {response_data['current_date']}"
+        content.add_field(name='Mood', value=response_data['mood'], inline=True)
+        content.add_field(name='Compatibility', value=response_data['compatibility'], inline=True)
+        content.add_field(name='Color', value=response_data['color'], inline=True)
+        content.add_field(name='Lucky number', value=response_data['lucky_number'], inline=True)
+        content.add_field(name='Lucky time', value=response_data['lucky_time'], inline=True)
+        content.add_field(name='Date range', value=response_data['date_range'], inline=True)
+
+        content.description = response_data['description']
         await ctx.send(embed=content)
 
     @horoscope.command()
@@ -196,18 +219,28 @@ class Miscellaneous(commands.Cog):
               'aquarius', 'pisces']
         sign = sign.lower()
         if sign not in hs:
-            await ctx.send(f"`{sign}` is not a valid sunsign! use `>horoscope help` for a list of sunsigns.")
+            await ctx.send(f"`{sign}` is not a valid sunsign! use `>horoscope list` for a list of sunsigns.")
             return
         db.update_user(ctx.author.id, "sunsign", sign)
         await ctx.send(f"Sunsign saved as `{sign}`")
 
     @horoscope.command()
     async def list(self, ctx):
-        sign_list = "Aries (Mar 21-Apr 19)\nTaurus (Apr 20-May 20)\nGemini (May 21-June 20)\n" \
-                    "Cancer (Jun 21-Jul 22)\nLeo (Jul 23-Aug 22)\nVirgo (Aug 23-Sep 22)\nLibra (Sep 23-Oct 22)\n" \
-                    "Scorpio (Oct 23-Nov 21)\nSagittarius (Nov 22-Dec 21)\nCapricorn (Dec 22-Jan 19)\n" \
-                    "Aquarius (Jan 20-Feb 18)\nPisces (Feb 19-Mar 20)"
-        content = discord.Embed()
+        sign_list = """
+            `(Mar 21-Apr 19)` **Aries**
+            `(Apr 20-May 20)` **Taurus**
+            `(May 21-Jun 20)` **Gemini**
+            `(Jun 21-Jul 22)` **Cancer**
+            `(Jul 23-Aug 22)` **Leo**
+            `(Aug 23-Sep 22)` **Virgo**
+            `(Sep 23-Oct 22)` **Libra**
+            `(Oct 23-Nov 21)` **Scorpio**
+            `(Nov 22-Dec 21)` **Sagittarius**
+            `(Dec 22-Jan 19)` **Capricorn**
+            `(Jan 20-Feb 18)` **Aquarius**
+            `(Feb 19-Mar 20)` **Pisces**
+            """
+        content = discord.Embed(color=discord.Color.gold())
         content.title = f"Sunsign list"
         content.description = sign_list
         return await ctx.send(embed=content)
