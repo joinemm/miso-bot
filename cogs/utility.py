@@ -100,8 +100,8 @@ class Utility(commands.Cog):
         })
         if response.status_code == 200:
             data = json.loads(response.content.decode('utf-8'))
-            await ctx.send(f"```{data}```")
             # searched for word id, now use the word id to get definition
+            all_entries = []
             if data['results']:
                 definitions_embed = discord.Embed(colour=discord.Colour.blue())
                 definitions_embed.description = ""
@@ -113,7 +113,6 @@ class Utility(commands.Cog):
                     'app_key': OXFORD_TOKEN,
                 })
                 data = json.loads(response.content.decode('utf-8'))
-                all_entries = []
                 for entry in data['results'][0]['lexicalEntries']:
                     definitions_value = ""
                     name = data['results'][0]['word']

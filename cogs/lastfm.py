@@ -29,7 +29,7 @@ class LastFm(commands.Cog):
 
     @commands.command(hidden=True, aliases=['fmchart'])
     async def fmartist(self, ctx):
-        await ctx.send(f"This command has been deprecated. Please use `>{ctx.message.content.replace('fm', 'fm ')}`")
+        await ctx.send(f"This command has been deprecated. Please use `{ctx.message.content.replace('fm', 'fm ')}`")
 
     @commands.group()
     async def fm(self, ctx):
