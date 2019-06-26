@@ -194,16 +194,18 @@ class Utility(commands.Cog):
         languages = text.partition(" ")[0]
         if "/" in languages:
             source, target = languages.split("/")
-            text = text.partition(" ")[1]
+            text = text.partition(" ")[2]
             if source == "":
                 source = detect_language(text)
             if target == "":
                 target = "en"
         else:
             source = detect_language(text)
-            target = "en"
+            if source == "en":
+                target = "ko"
+            else:
+                target = "en"
         language_pair = f"{source}/{target}"
-        print(language_pair)
         # we have language and query, now choose the appropriate translator
 
         if language_pair in papago_pairs:
