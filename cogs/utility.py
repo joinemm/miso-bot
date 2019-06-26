@@ -32,15 +32,21 @@ class Utility(commands.Cog):
         self.client = client
 
     @commands.command()
-    async def weather(self, ctx, *, address):
+    async def weather(self, ctx, *address):
         """Get weather of a location"""
         if len(address) == 0:
-            return await ctx.send(f"```{self.client.command_prefix}weather <location>\n"
-                                  f"{self.client.command_prefix}weather save <location>\n\n"
-                                  f"Get weather of a location```")
+            location = db.userdata(ctx.author.id).location
+            if location is None:
+                return await ctx.send(f"```{self.client.command_prefix}weather <location>\n"
+                                      f"{self.client.command_prefix}weather save <location>\n\n"
+                                      f"Get weather of a location```")
+        elif address[0] == "save":
+            db.update_user(ctx.author.id, "location", "+".join(address[1:]))
+            return await ctx.send(f"Saved your location as `{' '.join(address[1:])}`")
 
-        address = address.replace(" ", "+")
-        url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={GOOGLE_API_KEY}"
+        else:
+            location = "+".join(address)
+        url = f"https://maps.googleapis.com/maps/api/geocode/json?address={location}&key={GOOGLE_API_KEY}"
         response = requests.get(url=url)
         response.raise_for_status()
         json_data = json.loads(response.content.decode('utf-8'))
