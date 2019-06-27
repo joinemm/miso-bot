@@ -16,6 +16,7 @@ class Info(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.start_time = time.time()
+        self.version = '2.0'
         #self.client.remove_command('help')
 
     #@commands.command()
@@ -45,20 +46,23 @@ class Info(commands.Cog):
         """Get information about the bot"""
         appinfo = await self.client.application_info()
         membercount = len(set(self.client.get_all_members()))
-        info_embed = discord.Embed(title="Miso Bot | version 2.0",
-                                   description=f"Created by {appinfo.owner.mention}\n\n"
-                                   f"Use `{self.client.command_prefix}help` to get the list of commands, "
-                                   f"or visit the documention website for more help."
-                                   f"\n\nCurrently active in **{len(self.client.guilds)}** "
-                                   f"servers totaling **{membercount}** unique users",
-                                   colour=discord.Colour.red())
+        content = discord.Embed(title=f"Miso Bot | version {self.version}", colour=discord.Colour.red())
+        content.description=f"""
+            Created by **{appinfo.owner}** {appinfo.owner.mention}
+            
+            Use `{self.client.command_prefix}help` to get the full list of commands, 
+            or visit the documention website for more detailed help.
+            
+            Currently active in **{len(self.client.guilds)}** servers,
+            totaling **{membercount}** unique users.
+            """
 
-        info_embed.set_thumbnail(url=self.client.user.avatar_url)
-        info_embed.add_field(name='Github', value='https://github.com/joinemm/misobot2', inline=False)
-        info_embed.add_field(name='Documentation', value="https://misobot.xyz", inline=False)
-        info_embed.add_field(name='Patreon', value="https://www.patreon.com/joinemm", inline=False)
+        content.set_thumbnail(url=self.client.user.avatar_url)
+        content.add_field(name='Github', value='https://github.com/joinemm/misobot2', inline=False)
+        content.add_field(name='Documentation', value="https://misobot.xyz", inline=False)
+        content.add_field(name='Patreon', value="https://www.patreon.com/joinemm", inline=False)
 
-        await ctx.send(embed=info_embed)
+        await ctx.send(embed=content)
 
     @commands.command()
     async def ping(self, ctx):
@@ -80,7 +84,7 @@ class Info(commands.Cog):
         pid = os.getpid()
         memory_use = psutil.Process(pid).memory_info()[0]
 
-        content = discord.Embed(title=f"Miso Bot | version 2.1")
+        content = discord.Embed(title=f"Miso Bot | version {self.version}")
         content.set_thumbnail(url=self.client.user.avatar_url)
 
         content.add_field(name="Bot process uptime", value=uptime_string)
