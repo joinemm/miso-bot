@@ -73,7 +73,7 @@ class Utility(commands.Cog):
         daily = json_data['daily']
         time = get_timezone({'lat': lat, 'lon': lon})
 
-        content = discord.Embed(color=discord.Color.dark_purple())
+        content = discord.Embed(color=discord.Color.teal())
         content.set_thumbnail(url=f"http://flagpedia.net/data/flags/w580/{country}.png")
         content.set_author(name=formatted_name, icon_url=ctx.author.avatar_url)
         content.add_field(name=hourly['summary'],
