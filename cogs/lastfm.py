@@ -34,7 +34,6 @@ class LastFm(commands.Cog):
     @commands.group()
     async def fm(self, ctx):
         """Lastfm commands"""
-        # await util.command_group_help(ctx)
         userdata = db.userdata(ctx.author.id)
         ctx.username = userdata.lastfm_username if userdata is not None else None
         if ctx.username is None and str(ctx.invoked_subcommand) not in ['fm set']:
@@ -42,7 +41,6 @@ class LastFm(commands.Cog):
 
         if ctx.invoked_subcommand is None:
             await util.command_group_help(ctx)
-        # await ctx.send(embed=get_userinfo_embed(ctx.username))
 
     @fm.command()
     async def set(self, ctx, username):
@@ -187,8 +185,13 @@ class LastFm(commands.Cog):
             plays = track['playcount']
             rows.append(f"`{i + 1}.` **{plays}** plays - **{artist_name}** — ***{name}***")
 
-        image_url = tracks[0]['image'][-1]['#text']
-        image_url_small = tracks[0]['image'][1]['#text']
+        trackdata = api_request({"user": ctx.username,
+                                 "method": "track.getInfo",
+                                 "artist": tracks[0]['artist']['name'], "track": tracks[0]['name']},
+                                ignore_errors=True)
+
+        image_url = trackdata['track']['album']['image'][-1]['#text']
+        image_url_small = trackdata['track']['album']['image'][1]['#text']
         image_colour = util.color_from_image_url(image_url_small)
 
         content = discord.Embed()
@@ -232,7 +235,6 @@ class LastFm(commands.Cog):
     @fm.command()
     async def artist(self, ctx, mode, *, artistname):
         """Top tracks / albums for specific artist"""
-        await ctx.message.channel.trigger_typing()
         if mode in ["toptracks", "tt", "tracks", "track"]:
             method = "user.gettoptracks"
             path = ["toptracks", "track"]
@@ -292,7 +294,6 @@ class LastFm(commands.Cog):
     @fm.command()
     async def chart(self, ctx, *args):
         """Visual chart of your top albums or artists"""
-        await ctx.message.channel.trigger_typing()
         arguments = parse_chart_arguments(args)
         data = api_request({"user": ctx.username,
                             "method": arguments['method'],
