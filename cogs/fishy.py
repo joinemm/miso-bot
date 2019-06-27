@@ -29,6 +29,8 @@ class Fishy(commands.Cog):
             receiver = await util.get_member(ctx, user)
             if receiver is not None and receiver is not ctx.author:
                 gift = True
+            else:
+                receiver = ctx.author
 
         fishdata = db.fishdata(ctx.author.id)
 
