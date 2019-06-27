@@ -344,6 +344,7 @@ class LastFm(commands.Cog):
 
     @commands.command()
     async def whoknows(self, ctx, *, artistname):
+        """Check who has listened to a given artist the most"""
         await ctx.message.channel.trigger_typing()
         listeners = []
         tasks = []
@@ -376,7 +377,6 @@ class LastFm(commands.Cog):
 
         content = discord.Embed(title=f"Who knows **{artistname}**?")
         image = scrape_artist_image(artistname)
-        print(image)
         content.set_thumbnail(url=image)
         if not rows:
             return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
@@ -385,6 +385,7 @@ class LastFm(commands.Cog):
 
     @commands.command()
     async def crowns(self, ctx, _global=None):
+        """Check your current whoknows crowns"""
         crownartists = db.query("""SELECT artist, playcount FROM crowns WHERE guild_id = ? AND user_id = ?""",
                                 (ctx.guild.id, ctx.author.id))
         if crownartists is None:
@@ -555,7 +556,9 @@ def scrape_artist_image(artist):
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     image = soup.find("img", {"class": "image-list-image"})
-    return image['src'].replace("/avatar170s/", "/300x300/") if image else None
+    if image is None:
+        image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
+    return image['src'].replace("/avatar170s/", "/300x300/") if image else ""
 
 
 def scrape_artists_for_chart(username, period, amount):
