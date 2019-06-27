@@ -76,6 +76,7 @@ class Mod(commands.Cog):
         except AttributeError:
             # unknown user, most likely not in guild so just ban without confirmation
             await ctx.guild.ban(u)
+            return await ctx.send(f"Banned `{u}`")
 
         # send confirmation message
         msg = await ctx.send(embed=content)
