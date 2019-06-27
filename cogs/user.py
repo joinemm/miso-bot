@@ -127,8 +127,11 @@ class User(commands.Cog):
 
         users = []
         for row in data:
-            user = ctx.guild.get_member(row[1])
-            if user is None and not _global == "global":
+            if _global == "global":
+                user = self.client.get_user(row[1])
+            else:
+                user = ctx.guild.get_member(row[1])
+            if user is None:
                 continue
             users.append((user, row[2], sum(row[3:])))
 
