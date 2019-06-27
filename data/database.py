@@ -101,13 +101,16 @@ def get_setting(guild_id, setting, default=None):
 
 
 def add_crown(artist, guild_id, user_id, playcount):
-    execute("""INSERT OR IGNORE INTO crowns VALUES (?, ?, ?, ?)""", (artist, guild_id, user_id, playcount))
-    execute("""UPDATE crowns SET user_id = ? AND playcount = ? WHERE artist = ? AND guild_id = ?""",
+    execute("INSERT OR IGNORE INTO crowns VALUES (?, ?, ?, ?)", (artist, guild_id, user_id, playcount))
+    execute("UPDATE crowns SET user_id = ? AND playcount = ? WHERE artist = ? AND guild_id = ?",
             (user_id, playcount, artist, playcount))
 
 
-def rolepicker_role(rolename):
-    data = query("select role_id from roles where rolename = ?", (rolename,))
+def rolepicker_role(rolename, caps=True):
+    if caps:
+        data = query("SELECT role_id FROM roles WHERE rolename = ?", (rolename,))
+    else:
+        data = query("SELECT role_id FROM roles WHERE rolename = ? COLLATE NOCASE", (rolename,))
     if data is None:
         return None
     else:
