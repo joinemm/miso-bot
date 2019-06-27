@@ -287,7 +287,7 @@ def rgb_to_hex(rgb):
     return "{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
 
 
-def color_from_image_url(url, fallback='f81894'):
+def color_from_image_url(url, fallback='E74C3C'):
     if url.strip() == "":
         return fallback
     try:
