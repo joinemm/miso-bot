@@ -32,18 +32,19 @@ class Info(commands.Cog):
     async def patrons(self, ctx):
         """List the current patreons"""
         patrons = [381491116853166080, 121757433507872768, 132921952544227329]
-        content = discord.Embed(title="Patreon supporters ❤")
-        content.description = ""
+        content = discord.Embed(title="Patreon supporters ❤", color=discord.Color.red())
+        rows = []
         for x in patrons:
             user = self.client.get_user(x)
-            content.description += f"\n{user or x}"
-        await ctx.send(embed=content)
+            rows.append(f"**{user or x}**")
+
+        await util.send_as_pages(ctx, content, rows)
 
     @commands.command(name='info')
     async def info(self, ctx):
         """Get information about the bot"""
         appinfo = await self.client.application_info()
-        membercount = sum(1 for x in self.client.get_all_members())
+        membercount = len(set(self.client.get_all_members()))
         info_embed = discord.Embed(title="Miso Bot | version 2.0",
                                    description=f"Created by {appinfo.owner.mention}\n\n"
                                    f"Use `{self.client.command_prefix}help` to get the list of commands, "
@@ -64,8 +65,8 @@ class Info(commands.Cog):
         """Get the bot's ping"""
         pong_msg = await ctx.send(":ping_pong:")
         sr_lat = (pong_msg.created_at - ctx.message.created_at).total_seconds() * 1000
-        await pong_msg.edit(content=f"Command latency = `{sr_lat}ms`\n"
-                                    f"API heartbeat = `{self.client.latency * 1000:.1f}ms`")
+        await pong_msg.edit(content=f"Command latency = `{sr_lat}`ms\n"
+                                    f"Discord latency = `{self.client.latency * 1000:.1f}`ms")
 
     @commands.command(aliases=['uptime'])
     async def status(self, ctx):
@@ -79,7 +80,7 @@ class Info(commands.Cog):
         pid = os.getpid()
         memory_use = psutil.Process(pid).memory_info()[0]
 
-        content = discord.Embed(title=f"Miso Bot | version 2.0")
+        content = discord.Embed(title=f"Miso Bot | version 2.1")
         content.set_thumbnail(url=self.client.user.avatar_url)
 
         content.add_field(name="Bot process uptime", value=uptime_string)
@@ -95,9 +96,9 @@ class Info(commands.Cog):
     async def changelog(self, ctx):
         """Github commit history"""
         author = "joinemm"
-        repo = "Miso-bot-rewrite"
+        repo = "misobot2"
         data = get_commits(author, repo)
-        content = discord.Embed(color=discord.Color.from_rgb(255, 255, 255))
+        content = discord.Embed(color=discord.Color.from_rgb(46, 188, 79))
         content.set_author(name="Github commit history", icon_url=data[0]['author']['avatar_url'],
                            url=f"https://github.com/{author}/{repo}/commits/master")
         content.set_thumbnail(url='http://www.logospng.com/images/182/github-icon-182553.png')
@@ -115,7 +116,7 @@ class Info(commands.Cog):
             date = commit['commit']['author']['date']
             arrow_date = arrow.get(date)
             url = commit['html_url']
-            content.add_field(name=f"[`{sha}`] **{commit['commit']['message']}**",
+            content.add_field(name=f"[`{sha}`] {commit['commit']['message']}",
                               value=f"**{author}** committed {arrow_date.humanize()} | [link]({url})",
                               inline=False)
             i += 1
