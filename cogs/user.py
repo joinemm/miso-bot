@@ -118,6 +118,27 @@ class User(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
+    @commands.command(aliases=['levels'])
+    async def toplevels(self, ctx, _global=None):
+        data = db.query("SELECT * FROM activity WHERE guild_id = ?", (ctx.guild.id,))
+
+        users = []
+        for row in data:
+            user = ctx.guild.get_member(row[1])
+            if user is None and not _global == "global":
+                continue
+            # print(f"{row[0]} : {row[1]} : {row[2]} - {sum(row[3:])}")
+            users.append((user, row[2], sum(row[3:])))
+
+        rows = []
+        for i, (user, messages, xp) in enumerate(sorted(users, key=lambda tup: tup[2], reverse=True)):
+            rows.append(f"`{i}:` LVL **{util.get_level(xp)}** - **{user.name}** `[{xp} XP | {messages} messages]`")
+
+        content = discord.Embed(color=discord.Color.green(),
+                                title=f"{'Global l' if _global == 'global' else 'L'}evels leaderboard"
+                                f"{'' if _global == 'global' else f' for {ctx.guild.name}'}")
+        await util.send_as_pages(ctx, content, rows)
+
     @commands.command(aliases=["level"])
     async def activity(self, ctx, user=""):
         """See your hourly server activity chart"""
