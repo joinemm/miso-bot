@@ -13,6 +13,7 @@ class Config(commands.Cog):
     @commands.command(hidden=True)
     @commands.is_owner()
     async def help2(self, ctx):
+        """WIP"""
         pages = []
         for cog in self.client.cogs:
             this_cog_commands = self.client.get_cog(cog).get_commands()
@@ -29,10 +30,12 @@ class Config(commands.Cog):
     @commands.group()
     @commands.has_permissions(manage_channels=True)
     async def welcomeconfig(self, ctx):
+        """Configure welcome message"""
         await util.command_group_help(ctx)
 
     @welcomeconfig.command(name="channel")
     async def welcome_channel(self, ctx, textchannel):
+        """Set the welcome channel"""
         channel = await util.get_textchannel(ctx, textchannel)
         if channel is None:
             return await ctx.send(errormsg.channel_not_found(textchannel))
@@ -42,27 +45,32 @@ class Config(commands.Cog):
 
     @welcomeconfig.command(name="message")
     async def welcome_message(self, ctx, *, message):
+        """Change the welcome message"""
         db.update_setting(ctx.guild.id, "welcome_message", message)
         await ctx.send("New welcome message set:")
         await ctx.send(message.format(mention=ctx.author.mention, user=ctx.author.name))
 
     @welcomeconfig.command(name="enable")
     async def welcome_enable(self, ctx):
+        """Enable welcome messages"""
         db.update_setting(ctx.guild.id, "welcome_toggle", 1)
         await ctx.send("Welcome messages **enabled**")
 
     @welcomeconfig.command(name="disable")
     async def welcome_disable(self, ctx):
+        """Disable welcome messages"""
         db.update_setting(ctx.guild.id, "welcome_toggle", 0)
         await ctx.send("Welcome messages **disabled**")
 
     @commands.group()
     @commands.has_permissions(manage_channels=True)
     async def starboard(self, ctx):
+        """Configure the starboard"""
         await util.command_group_help(ctx)
 
     @starboard.command(name="channel")
     async def starboard_channel(self, ctx, textchannel):
+        """Set starboard channel"""
         channel = await util.get_textchannel(ctx, textchannel)
         if channel is None:
             return await ctx.send(errormsg.channel_not_found(textchannel))
@@ -72,6 +80,7 @@ class Config(commands.Cog):
 
     @starboard.command(name="amount")
     async def starboard_amount(self, ctx, amount):
+        """Change the amount of stars required"""
         try:
             amount = int(amount)
         except ValueError:
@@ -82,21 +91,25 @@ class Config(commands.Cog):
 
     @starboard.command(name="enable")
     async def starboard_enable(self, ctx):
+        """Enable the starboard"""
         db.update_setting(ctx.guild.id, "starboard_toggle", 1)
         await ctx.send("Starboard **enabled**")
 
     @starboard.command(name="disable")
     async def starboard_disable(self, ctx):
+        """Disable the starboard"""
         db.update_setting(ctx.guild.id, "starboard_toggle", 0)
         await ctx.send("Starboard **disabled**")
 
     @commands.group()
     @commands.has_permissions(manage_channels=True)
     async def votechannel(self, ctx):
+        """Configure voting channels"""
         await util.command_group_help(ctx)
 
     @votechannel.command(name="add")
     async def votechannel_add(self, ctx, textchannel):
+        """Set a channel to be a voting channel"""
         channel = await util.get_textchannel(ctx, textchannel)
         if channel is None:
             return await ctx.send(errormsg.channel_not_found(textchannel))
@@ -106,6 +119,7 @@ class Config(commands.Cog):
 
     @votechannel.command(name="remove")
     async def votechannel_remove(self, ctx, textchannel):
+        """Remove voting channel"""
         channel = await util.get_textchannel(ctx, textchannel)
         if channel is None:
             try:
@@ -124,6 +138,7 @@ class Config(commands.Cog):
 
     @votechannel.command(name="list")
     async def votechannel_list(self, ctx):
+        """List all current voting channels"""
         channels = db.query("select channel_id from votechannels where guild_id = ?", (ctx.guild.id,))
         if channels is None:
             return await ctx.send("There are no voting channels on this server yet!")
@@ -143,6 +158,7 @@ class Config(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_roles=True)
     async def muterole(self, ctx, role=""):
+        """Set the mute role"""
         thisrole = await util.get_role(ctx, role)
         if thisrole is None:
             oldrole = ctx.guild.get_role(db.get_setting(ctx.guild.id, "muterole"))
@@ -155,6 +171,7 @@ class Config(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_roles=True)
     async def autorole(self, ctx, role=""):
+        """Set the role given automatically to new members"""
         thisrole = await util.get_role(ctx, role)
         if thisrole is None:
             oldrole = ctx.guild.get_role(db.get_setting(ctx.guild.id, "autorole"))
@@ -168,6 +185,7 @@ class Config(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def levelupmessages(self, ctx, value):
+        """Enable o disable levelup messages"""
         value = value.lower()
         if value == 'enable':
             v = 1

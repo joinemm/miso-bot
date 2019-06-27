@@ -14,6 +14,7 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_roles=True)
     async def mute(self, ctx, user, *duration):
+        """Mute user"""
         muterole = ctx.message.guild.get_role(db.get_setting(ctx.guild.id, "muterole"))
         if muterole is None:
             await ctx.send(f"Muterole for this server is invalid or not set, please use `>muterole` to set it.")
@@ -43,6 +44,7 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_roles=True)
     async def unmute(self, ctx, user):
+        """Unmute user"""
         muterole = ctx.message.guild.get_role(db.get_setting(ctx.guild.id, "muterole"))
         if muterole is None:
             await ctx.send(f"Muterole for this server is invalid or not set, please use `>muterole` to set it.")
@@ -57,6 +59,7 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, user):
+        """Ban user"""
         u = await util.get_user(ctx, user)
         if u is None:
             try:

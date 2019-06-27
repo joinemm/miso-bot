@@ -39,10 +39,12 @@ class Notifications(commands.Cog):
 
     @commands.group()
     async def notification(self, ctx):
+        """Add keyword notifications on this server"""
         await util.command_group_help(ctx)
 
     @notification.command()
     async def add(self, ctx, *, keyword):
+        """Add a notification"""
         await ctx.message.delete()
 
         check = db.query("SELECT * FROM notifications WHERE guild_id = ? and user_id = ? and keyword = ?",
@@ -56,6 +58,7 @@ class Notifications(commands.Cog):
 
     @notification.command()
     async def remove(self, ctx, *, keyword):
+        """Remove notification"""
         await ctx.message.delete()
 
         check = db.query("SELECT * FROM notifications WHERE guild_id = ? and user_id = ? and keyword = ?",
@@ -70,6 +73,7 @@ class Notifications(commands.Cog):
 
     @notification.command()
     async def list(self, ctx):
+        """List your current notifications"""
         words = db.query("SELECT guild_id, keyword FROM notifications where user_id = ?",
                          (ctx.author.id,))
         data = {}

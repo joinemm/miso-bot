@@ -120,6 +120,7 @@ class User(commands.Cog):
 
     @commands.command(aliases=["level"])
     async def activity(self, ctx, user=""):
+        """See your hourly server activity chart"""
         user = await util.get_user(ctx, user, ctx.author)
 
         activitydata = db.activitydata(ctx.guild.id, user.id)
