@@ -48,7 +48,7 @@ class User(commands.Cog):
 
         activity = str(user.activities[0]) if user.activities else "None"
         content = discord.Embed(color=user.color)
-        content.title = f"{user.name}#{user.discriminator} ({user.id})"
+        content.title = f"{user.name}#{user.discriminator} | #{user.id}"
         content.add_field(name="Status", value=status)
         content.add_field(name="Activity", value=activity)
         content.add_field(name="Fishy", value=f":tropical_fish: {fishydata.fishy}")
@@ -82,10 +82,11 @@ class User(commands.Cog):
         """Show the newest members of this server"""
         sorted_members = sorted(ctx.guild.members, key=lambda x: x.joined_at, reverse=True)
 
-        content = discord.Embed(title=f"{ctx.guild.name} members:")
+        content = discord.Embed(title=f"{ctx.guild.name} members")
         rows = []
         for i, member in enumerate(sorted_members):
-            rows.append(f"`#{i+1}` : `[{member.joined_at.strftime('%y%m%d %H:%M')}]` **{member.name}**")
+            rows.append(f"[`{member.joined_at.strftime('%y%m%d %H:%M')}`] "
+                        f"**#{len(sorted_members)-i}** : **{member.name}**")
 
         await util.send_as_pages(ctx, content, rows)
 
@@ -113,7 +114,8 @@ class User(commands.Cog):
         content = discord.Embed(title=f"Roles in **{ctx.message.guild.name}**")
         rows = []
         for role in reversed(ctx.message.guild.roles):
-            item = f"[`{role.id} | {str(role.color)}`] **x{len(role.members)}** : {role.mention}"
+            item = f"[`{role.id} | {str(role.color)}`] **x{len(role.members)}**" \
+                   f"{'<' if len(role.members) == 0 else ' '}: {role.mention}"
             rows.append(item)
 
         await util.send_as_pages(ctx, content, rows)
@@ -128,7 +130,6 @@ class User(commands.Cog):
             user = ctx.guild.get_member(row[1])
             if user is None and not _global == "global":
                 continue
-            # print(f"{row[0]} : {row[1]} : {row[2]} - {sum(row[3:])}")
             users.append((user, row[2], sum(row[3:])))
 
         rows = []
