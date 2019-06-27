@@ -113,13 +113,14 @@ class User(commands.Cog):
         content = discord.Embed(title=f"Roles in **{ctx.message.guild.name}**")
         rows = []
         for role in reversed(ctx.message.guild.roles):
-            item = f"{role.mention} ({role.id}) (**{str(role.color)}**) - **{len(role.members)}** members"
+            item = f"[`{role.id} | {str(role.color)}`] **x{len(role.members)}** : {role.mention}"
             rows.append(item)
 
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command(aliases=['levels'])
     async def toplevels(self, ctx, _global=None):
+        """Levels leaderboard"""
         data = db.query("SELECT * FROM activity WHERE guild_id = ?", (ctx.guild.id,))
 
         users = []
@@ -131,7 +132,7 @@ class User(commands.Cog):
             users.append((user, row[2], sum(row[3:])))
 
         rows = []
-        for i, (user, messages, xp) in enumerate(sorted(users, key=lambda tup: tup[2], reverse=True)):
+        for i, (user, messages, xp) in enumerate(sorted(users, key=lambda tup: tup[2], reverse=True), start=1):
             rows.append(f"`{i}:` LVL **{util.get_level(xp)}** - **{user.name}** `[{xp} XP | {messages} messages]`")
 
         content = discord.Embed(color=discord.Color.green(),

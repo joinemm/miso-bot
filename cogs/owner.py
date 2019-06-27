@@ -1,7 +1,6 @@
 from discord.ext import commands
 import discord
 import helpers.log as log
-import data.database as db
 import helpers.utilityfunctions as util
 
 logger = log.get_logger(__name__)
@@ -23,13 +22,14 @@ class Owner(commands.Cog):
     @commands.is_owner()
     async def guilds(self, ctx):
         """Show all connected guilds"""
-        membercount = sum(1 for x in self.client.get_all_members())
-        content = f"__Total **{len(self.client.guilds)}** guilds, **{membercount}** unique users__"
+        membercount = len(set(self.client.get_all_members()))
+        content = discord.Embed(title=f"Total **{len(self.client.guilds)}** guilds, **{membercount}** unique users")
 
+        rows = []
         for guild in sorted(self.client.guilds, key=lambda x: x.member_count, reverse=True):
-            content += f"\n[`{guild.id}`] **{guild.name}** - `{guild.member_count}` members"
+            rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
 
-        await ctx.send(content)
+        await util.send_as_pages(ctx, content, rows)
 
     @commands.command(hidden=True)
     @commands.is_owner()
