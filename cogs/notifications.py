@@ -16,6 +16,9 @@ class Notifications(commands.Cog):
         if message.guild is None:
             return
 
+        if message.author.id == self.client.bot.id:
+            return 
+
         keywords = db.get_keywords(message.guild.id)
         if keywords is None:
             return

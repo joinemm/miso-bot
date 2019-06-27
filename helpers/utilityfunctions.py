@@ -44,10 +44,14 @@ async def page_switcher(ctx, pages):
 
     async def previous_page():
         content = pages.previous()
+        if content is None:
+            return
         await switch_page(content)
 
     async def next_page():
         content = pages.next()
+        if content is None:
+            return
         await switch_page(content)
 
     functions = {"⬅": previous_page,
@@ -312,14 +316,18 @@ class TwoWayIterator:
         self.index = 0
 
     def next(self):
-        if not self.index == len(self.items) - 1:
+        if self.index == len(self.items) - 1:
+            return None
+        else:
             self.index += 1
-        return self.items[self.index]
+            return self.items[self.index]
 
     def previous(self):
-        if not self.index == 0:
+        if self.index == 0:
+            return None
+        else:
             self.index -= 1
-        return self.items[self.index]
+            return self.items[self.index]
 
     def current(self):
         return self.items[self.index]
