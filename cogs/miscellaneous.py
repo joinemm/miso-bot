@@ -30,6 +30,7 @@ class Miscellaneous(commands.Cog):
 
     @commands.command(aliases=['random'])
     async def rng(self, ctx, cap=1):
+        """Random number generator"""
         try:
             choice = random.randint(0, int(cap))
         except ValueError:
@@ -66,6 +67,7 @@ class Miscellaneous(commands.Cog):
 
     @commands.group(invoke_without_command=True)
     async def stan(self, ctx):
+        """Get a random kpop artist to stan"""
         artist_list = db.get_from_data_json(['artists'])
         if artist_list:
             await ctx.send(f"stan **{random.choice(artist_list)}**")
@@ -74,6 +76,7 @@ class Miscellaneous(commands.Cog):
 
     @stan.command()
     async def update(self, ctx):
+        """Update the kpop artist database"""
         artist_list_old = db.get_from_data_json(['artists'])
         artist_list_new = set()
         urls_to_scrape = ['https://kprofiles.com/k-pop-girl-groups/',
@@ -151,7 +154,6 @@ class Miscellaneous(commands.Cog):
                                       f"`{self.client.command_prefix}minecraft set <address>` or\n"
                                       f"`{self.client.command_prefix}minecraft set <address>:<port>`")
 
-            # TODO: actually make the database thing
             address = port.split(":")[0]
             try:
                 port = int(port.split(":")[1])
@@ -215,6 +217,7 @@ class Miscellaneous(commands.Cog):
 
     @horoscope.command()
     async def set(self, ctx, sign):
+        """Set your sunsign"""
         hs = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn',
               'aquarius', 'pisces']
         sign = sign.lower()
@@ -226,6 +229,7 @@ class Miscellaneous(commands.Cog):
 
     @horoscope.command()
     async def list(self, ctx):
+        """Get list of all sunsigns"""
         sign_list = """
             `(Mar 21-Apr 19)` **Aries**
             `(Apr 20-May 20)` **Taurus**
