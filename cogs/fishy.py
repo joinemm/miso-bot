@@ -124,7 +124,7 @@ class Fishy(commands.Cog):
         content = discord.Embed(title=f"{'global' if globaldata else user.name} fishy stats")
         if fishdata is not None:
             total = fishdata.trash + fishdata.common + fishdata.uncommon + fishdata.rare + fishdata.legendary
-            content.description = f"Total fishies fished: **{fishdata.fishy}**\n" \
+            content.description = f"Total fishies: **{fishdata.fishy}**\n" \
                                   f"Total fishies gifted: **{fishdata.fishy_gifted}**\n\n" \
                                   f"Trash: **{fishdata.trash}** - {(fishdata.trash/total)*100:.1f}%\n" \
                                   f"Common: **{fishdata.common}** - {(fishdata.common/total)*100:.1f}%\n" \
@@ -136,7 +136,9 @@ class Fishy(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(hidden=True)
+    @commands.is_owner()
     async def fishdistributiontest(self, ctx, amount=100):
+        """Test the distribution of fish"""
         fishes = {"trash": 0, "fish_common": 0, "fish_uncommon": 0, "fish_rare": 0, "fish_legendary": 0}
         for i in range(amount):
             f = self.__FISHTYPES[random.choices(list(self.__FISHTYPES.keys()), self.__WEIGHTS)[0]].__name__
@@ -158,7 +160,7 @@ async def fish_common(ctx, user, gift):
 
 async def fish_uncommon(ctx, user, gift):
     amount = random.randint(30, 99)
-    await ctx.send(f"**Caught an uncommon fish " + (f"for {user.name}" if gift else "") +
+    await ctx.send(f"**Caught an uncommon fish" + (f" for {user.name}" if gift else "") +
                    f"!** (**{amount}** fishies) :blowfish:")
     return amount
 
@@ -180,7 +182,7 @@ async def fish_legendary(ctx, user, gift):
 
 async def trash(ctx, user, gift):
     icon = random.choice(TRASH_ICONS)
-    await ctx.send(f"Caught **trash!**  {icon}" + (f" for {user.name}" if gift else "")
+    await ctx.send(f"Caught **trash{'!' if not gift else ''}**  {icon}" + (f" for {user.name}!" if gift else "")
                    + " Better luck next time.")
     return None
 
