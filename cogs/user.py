@@ -123,17 +123,23 @@ class User(commands.Cog):
     @commands.command(aliases=['levels'])
     async def toplevels(self, ctx, _global=None):
         """Levels leaderboard"""
-        data = db.query("SELECT * FROM activity WHERE guild_id = ?", (ctx.guild.id,))
 
         users = []
-        for row in data:
-            if _global == "global":
-                user = self.client.get_user(row[1])
-            else:
+        if _global == "global":
+            user_ids = db.query("SELECT DISTINCT user_id FROM activity")
+            for user_id in [x[0] for x in user_ids]:
+                rows = db.query("SELECT * FROM activity WHERE user_id = ?", (user_id, ))
+                user = self.client.get_user(user_id)
+                if user is None:
+                    continue
+                users.append((user, sum(row[2] for row in rows), sum(sum(row[3:]) for row in rows)))
+        else:
+            data = db.query("SELECT * FROM activity WHERE guild_id = ?", (ctx.guild.id,))
+            for row in data:
                 user = ctx.guild.get_member(row[1])
-            if user is None:
-                continue
-            users.append((user, row[2], sum(row[3:])))
+                if user is None:
+                    continue
+                users.append((user, row[2], sum(row[3:])))
 
         rows = []
         for i, (user, messages, xp) in enumerate(sorted(users, key=lambda tup: tup[2], reverse=True), start=1):
