@@ -190,13 +190,18 @@ class LastFm(commands.Cog):
                                  "artist": tracks[0]['artist']['name'], "track": tracks[0]['name']},
                                 ignore_errors=True)
 
-        image_url = trackdata['track']['album']['image'][-1]['#text']
-        image_url_small = trackdata['track']['album']['image'][1]['#text']
-        image_colour = util.color_from_image_url(image_url_small)
-
         content = discord.Embed()
+        try:
+            image_url = trackdata['track']['album']['image'][-1]['#text']
+            image_url_small = trackdata['track']['album']['image'][1]['#text']
+            image_colour = util.color_from_image_url(image_url_small)
+        except KeyError:
+            image_url = scrape_artist_image(tracks[0]['artist']['name'])
+            image_colour = util.color_from_image_url(image_url)
+
         content.colour = int(image_colour, 16)
         content.set_thumbnail(url=image_url)
+
         content.set_footer(text=f"Total unique tracks: {user_attr['total']}")
         content.set_author(name=f"{user_attr['user']} — {arguments['amount']} "
                                 f"Most played tracks {arguments['period']}", icon_url=ctx.message.author.avatar_url)
@@ -243,7 +248,6 @@ class LastFm(commands.Cog):
             path = ["topalbums", "album"]
         else:
             return ctx.send_command_help()
-            #return await ctx.send(f"ERROR: Invalid mode `{mode}`\ntry `topalbums` or `toptracks`")
 
         def filter_artist(artist_dict, items):
             for item in items:
@@ -267,8 +271,8 @@ class LastFm(commands.Cog):
                                   f" is formatted exactly as shown in the last fm database.")
 
         artist_info = api_request({"method": "artist.getinfo", "artist": artistname})['artist']
-        image_url = scrape_artist_image(artistname)  # artist_info['image'][-1]['#text']
-        image_url_small = scrape_artist_image(artistname)  # artist_info['image'][1]['#text']
+        image_url = scrape_artist_image(artistname)
+        image_url_small = scrape_artist_image(artistname)
         formatted_name = artist_info['name']
 
         image_colour = util.color_from_image_url(image_url_small)
