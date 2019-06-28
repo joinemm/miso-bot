@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import discord.utils as discordutils
 import requests
 import json
 import math
@@ -23,6 +24,12 @@ class Info(commands.Cog):
     #async def help(self, ctx):
     #    """Get help"""
     #    await ctx.send("https://misobot.xyz")
+
+    @commands.command()
+    async def invite(self, ctx):
+        """Invite miso to your server!"""
+        url = discordutils.oauth_url('500385855072894982', permissions=discord.Permissions(506981447))
+        await ctx.send(url)
 
     @commands.command()
     async def patreon(self, ctx):
