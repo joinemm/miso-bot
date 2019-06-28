@@ -63,17 +63,18 @@ class Mod(commands.Cog):
         u = await util.get_user(ctx, user)
         if u is None:
             try:
-                u = discord.Object(id=int(user))
+                u = await self.client.fetch_user(int(user))
             except ValueError:
-                return await ctx.send(errormsg.user_not_found(user))
+                return await ctx.send(f"Invalid user or id `{user}`")
 
         if u.id == 133311691852218378:
             return await ctx.send("no.")
 
         content = discord.Embed(title="Ban user?", color=discord.Color.red())
         try:
-            content.description = f"**{u.name}#{u.discriminator}** {u.mention}\n{u.id}"
-        except AttributeError:
+            content.description = f"{u.mention}\n**{u.name}#{u.discriminator}**\n{u.id}"
+        except AttributeError as e:
+            print(e)
             # unknown user, most likely not in guild so just ban without confirmation
             await ctx.guild.ban(u)
             return await ctx.send(f"Banned `{u}`")
