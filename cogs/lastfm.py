@@ -10,6 +10,7 @@ import data.database as db
 import arrow
 import imgkit
 from bs4 import BeautifulSoup
+import re
 
 
 LASTFM_APPID = os.environ['LASTFM_APIKEY']
@@ -56,6 +57,31 @@ class LastFm(commands.Cog):
     async def profile(self, ctx):
         """Lastfm profile"""
         await ctx.send(embed=get_userinfo_embed(ctx.username))
+
+    @fm.command(aliases=['yt'])
+    async def youtube(self, ctx):
+        """Searches for currently playing song on youtube"""
+        data = api_request({"user": ctx.username,
+                            "method": "user.getrecenttracks",
+                            "limit": 1})
+
+        tracks = data['recenttracks']['track']
+        user_attr = data['recenttracks']['@attr']
+
+        artist = tracks[0]['artist']['#text']
+        album = tracks[0]['album']['#text']
+        track = tracks[0]['name']
+
+        query = f"{artist} {track}"
+        response = requests.get(f"http://www.youtube.com/results?search_query={query}")
+        video_ids = re.findall('watch\\?v=(.{11})', response.content.decode('utf-8'))
+
+        state = "Most recent track"
+        if '@attr' in tracks[0]:
+            if "nowplaying" in tracks[0]['@attr']:
+                state = "Now Playing"
+
+        await ctx.send(f'**{user_attr["user"]} - {state}**\nhttp://www.youtube.com/watch?v={video_ids[0]}')
 
     @fm.command(aliases=['np'])
     async def nowplaying(self, ctx):
