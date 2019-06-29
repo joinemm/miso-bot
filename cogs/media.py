@@ -227,7 +227,7 @@ class Media(commands.Cog):
                    "Cookie": IG_COOKIE,
                    "User-Agent": 'Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0'}
 
-        response = requests.get(url + "/?__a=1", headers=headers)
+        response = requests.get(url.strip("/") + "/?__a=1", headers=headers)
         response.raise_for_status()
         data = json.loads(response.content.decode('utf-8'))['graphql']['shortcode_media']
         medias = []
