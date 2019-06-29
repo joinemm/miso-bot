@@ -11,6 +11,7 @@ import arrow
 import imgkit
 from bs4 import BeautifulSoup
 import re
+import urllib.parse
 
 
 LASTFM_APPID = os.environ['LASTFM_APIKEY']
@@ -583,7 +584,7 @@ def get_userinfo_embed(username):
 
 
 def scrape_artist_image(artist):
-    url = f"https://www.last.fm/music/{artist}/+images"
+    url = f"https://www.last.fm/music/{urllib.parse.quote_plus(artist)}/+images"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     image = soup.find("img", {"class": "image-list-image"})
