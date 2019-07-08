@@ -185,7 +185,7 @@ async def trash(ctx, user, gift):
     icon = random.choice(TRASH_ICONS)
     await ctx.send(f"Caught **trash{'!' if not gift else ''}**  {icon}" + (f" for {user.name}!" if gift else "")
                    + " Better luck next time.")
-    return None
+    return 0
 
 
 def setup(client):
