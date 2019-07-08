@@ -196,11 +196,13 @@ class Media(commands.Cog):
 
         async def next_link():
             link = results.next()
-            await msg.edit(content=f"**#{results.index+1}:** {link}", embed=None)
+            if link is not None:
+                await msg.edit(content=f"**#{results.index+1}:** {link}", embed=None)
 
         async def prev_link():
             link = results.previous()
-            await msg.edit(content=f"**#{results.index+1}:** {link}", embed=None)
+            if link is not None:
+                await msg.edit(content=f"**#{results.index+1}:** {link}", embed=None)
 
         async def done():
             return True
