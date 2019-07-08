@@ -214,7 +214,10 @@ class Media(commands.Cog):
     @commands.command()
     async def ig(self, ctx, url):
         """Get the source images from an instagram post"""
-        if "/" not in url:
+        result = re.findall('/p/(.*?)(/|\\Z)', url)
+        if result:
+            url = f"https://www.instagram.com/p/{result[0][0]}"
+        else:
             url = f"https://www.instagram.com/p/{url}"
 
         headers = {"Accept": "*/*",
@@ -293,7 +296,7 @@ class Media(commands.Cog):
                            url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}")
 
         for file in media_files:
-            content.set_image(url=file[1] + ":orig")
+            content.set_image(url=file[1].replace('.jpg', '?format=jpg&name=orig'))
             await ctx.send(embed=content)
 
             if file[2] is not None:
