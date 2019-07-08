@@ -18,12 +18,12 @@ class Info(commands.Cog):
         self.client = client
         self.start_time = time.time()
         self.version = '2.0'
-        #self.client.remove_command('help')
+        # self.client.remove_command('help')
 
-    #@commands.command()
-    #async def help(self, ctx):
-    #    """Get help"""
-    #    await ctx.send("https://misobot.xyz")
+    # @commands.command()
+    # async def help(self, ctx):
+    #     """Get help"""
+    #     await ctx.send("https://misobot.xyz")
 
     @commands.command()
     async def invite(self, ctx):
@@ -123,11 +123,11 @@ class Info(commands.Cog):
                 content.clear_fields()
                 i = 0
             sha = commit['sha'][:7]
-            author = commit['author']['login']
-            date = commit['commit']['author']['date']
+            author = commit['author'].get('login') if commit['author'] else 'UNKNOWN'
+            date = commit['commit']['author'].get('date')
             arrow_date = arrow.get(date)
             url = commit['html_url']
-            content.add_field(name=f"[`{sha}`] {commit['commit']['message']}",
+            content.add_field(name=f"[`{sha}`] {commit['commit'].get('message')}",
                               value=f"**{author}** committed {arrow_date.humanize()} | [link]({url})",
                               inline=False)
             i += 1
