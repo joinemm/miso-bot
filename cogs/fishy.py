@@ -51,9 +51,8 @@ class Fishy(commands.Cog):
 
         catch = random.choices(list(self.__FISHTYPES.keys()), self.__WEIGHTS)[0]
         amount = await self.__FISHTYPES[catch](ctx, receiver, gift)
-        if amount:
-            db.add_fishy(receiver.id, catch, amount, ctx.message.created_at.timestamp(),
-                         fisher_id=(ctx.author.id if gift else None))
+        db.add_fishy(receiver.id, catch, amount, ctx.message.created_at.timestamp(),
+                     fisher_id=(ctx.author.id if gift else None))
 
     @commands.command()
     async def leaderboard(self, ctx, scope=None):
