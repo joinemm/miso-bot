@@ -533,7 +533,7 @@ def parse_chart_arguments(args):
             parsed['period'] = get_period(a)
 
     if parsed['period'] is None:
-        parsed['period'] = 'overall'
+        parsed['period'] = '7day'
     if parsed['width'] is None:
         parsed['width'] = 3
         parsed['height'] = 3
