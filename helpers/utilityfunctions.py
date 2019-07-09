@@ -182,10 +182,8 @@ def get_xp(level):
     :param level : Level
     :return      : Amount of xp needed to reach the level
     """
-    a = 0
-    for x in range(1, level):
-        a += math.floor(x + 300 * math.pow(2, (x / 7)))
-    return math.floor(a / 4)
+
+    return math.ceil(math.pow((level-1)/(0.05*(1 + math.sqrt(5))), 2))
 
 
 def get_level(xp):
@@ -193,10 +191,8 @@ def get_level(xp):
     :param xp : Amount of xp
     :returns  : Current level based on the amount of xp
     """
-    i = 1
-    while get_xp(i + 1) < xp:
-        i += 1
-    return i
+
+    return math.floor(0.05*(1 + math.sqrt(5))*math.sqrt(xp)) + 1
 
 
 def xp_to_next_level(level):
