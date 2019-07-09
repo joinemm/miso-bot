@@ -22,7 +22,7 @@ class Fishy(commands.Cog):
 
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
     async def fishy(self, ctx, user=None):
-        """Go fishing and receive random fish. You can also gift fish to others"""
+        """Go fishing and receive / give random fish"""
         gift = False
         receiver = ctx.author
         if user is not None:
@@ -72,6 +72,9 @@ class Fishy(commands.Cog):
 
             fishdata = db.fishdata(user_id)
             if fishdata is None:
+                continue
+
+            if fishdata.fishy == 0:
                 continue
 
             if rank < len(rank_icon) + 1:
