@@ -31,15 +31,17 @@ async def page_switcher(ctx, pages):
     :param pages  : List of embeds to use as pages
     """
     pages = TwoWayIterator(pages)
-    old_footer = pages.current().footer.text
-    if old_footer == discord.Embed.Empty:
-        old_footer = None
-    pages.current().set_footer(text=f"1/{len(pages.items)}" + (f' | {old_footer}' if old_footer is not None else ''))
+
+    # add all page numbers
+    for i, page in enumerate(pages.items, start=1):
+        old_footer = page.footer.text
+        if old_footer == discord.Embed.Empty:
+            old_footer = None
+        page.set_footer(text=f"{i}/{len(pages.items)}" + (f' | {old_footer}' if old_footer is not None else ''))
+
     msg = await ctx.send(embed=pages.current())
 
     async def switch_page(content):
-        content.set_footer(text=f"{pages.index + 1}/{len(pages.items)}" + (f' | {old_footer}' if old_footer is not None
-                                                                           else ''))
         await msg.edit(embed=content)
 
     async def previous_page():
@@ -201,8 +203,8 @@ def xp_to_next_level(level):
 
 def xp_from_message(message):
     """
-    :param message: Message to get the xp from
-    :returns: Amount of xp rewarded from given message. Minimum 1
+    :param message : Message to get the xp from
+    :returns       : Amount of xp rewarded from given message. Minimum 1
     """
     words = message.content.split(" ")
     eligible_words = 0
@@ -262,6 +264,10 @@ async def send_command_help(ctx):
 
 
 def escape_md(s):
+    """
+    :param s : String to espace markdown from
+    :return  : The escaped string
+    """
     transformations = {
         re.escape(c): '\\' + c
         for c in ('*', '`', '_', '~', '\\', '||')
@@ -275,6 +281,10 @@ def escape_md(s):
 
 
 def rgb_to_hex(rgb):
+    """
+    :param rgb : RBG color in tuple of 3
+    :return    : Hex color string
+    """
     r, g, b = rgb
 
     def clamp(x):
@@ -284,6 +294,11 @@ def rgb_to_hex(rgb):
 
 
 def color_from_image_url(url, fallback='E74C3C'):
+    """
+    :param url      : Url to an image to capture colors from
+    :param fallback : The color to fallback to incase the operation fails
+    :return         : Hex color code of the most dominant color in the image
+    """
     if url.strip() == "":
         return fallback
     try:
@@ -301,11 +316,13 @@ def color_from_image_url(url, fallback='E74C3C'):
 
 
 def useragent():
+    """Returns random user agent to use in web scraping"""
     agents = db.get_from_data_json(['useragents'])
     return random.choice(agents)
 
 
 class TwoWayIterator:
+    """Two way iterator class that is used as the backend for paging"""
 
     def __init__(self, list_of_stuff):
         self.items = list_of_stuff
