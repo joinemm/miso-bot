@@ -39,31 +39,43 @@ class User(commands.Cog):
                         "dnd": "<:dnd:533466208377241614>", "offline": "<:offline:533466238567972874>"}
         try:
             status = f"{status_emoji[str(user.status)]}{str(user.status).capitalize()}"
+            if user.is_on_mobile():
+                status += " :iphone:"
         except AttributeError:
             status = "Unavailable"
-        if user.is_on_mobile():
-            status += " :iphone:"
 
-        member_number = 1
-        for member in ctx.guild.members:
-            if member.joined_at < user.joined_at:
-                member_number += 1
-
-        activity = str(user.activities[0]) if user.activities else "None"
-        content = discord.Embed(color=user.color)
+        try:
+            activity = str(user.activities[0]) if user.activities else "None"
+        except AttributeError:
+            activity = "Unknown"
+        content = discord.Embed()
+        try:
+            content.colour = user.color
+            member_number = 1
+            for member in ctx.guild.members:
+                if member.joined_at < user.joined_at:
+                    member_number += 1
+        except AttributeError:
+            pass
         content.title = f"{user.name}#{user.discriminator} | #{user.id}"
         content.add_field(name="Status", value=status)
         content.add_field(name="Activity", value=activity)
-        content.add_field(name="Fishy", value=f"{fishydata.fishy}")
+        content.add_field(name="Fishy", value=f"{fishydata.fishy if fishydata is not None else 0}")
         content.add_field(name="Last fishy", value=fishy_time)
         content.add_field(name="Account created", value=user.created_at.strftime('%d/%m/%Y %H:%M'))
-        content.add_field(name="Joined server", value=user.joined_at.strftime('%d/%m/%Y %H:%M'))
+        try:
+            content.add_field(name="Joined server", value=user.joined_at.strftime('%d/%m/%Y %H:%M'))
+        except AttributeError:
+            pass
         content.add_field(name="Member", value=f"#{member_number}")
-        roles_names = []
-        for role in user.roles:
-            roles_names.append(role.mention)
-        role_string = " ".join([role.mention for role in user.roles])
-        content.add_field(name="Roles", value=role_string, inline=False)
+        try:
+            roles_names = []
+            for role in user.roles:
+                roles_names.append(role.mention)
+            role_string = " ".join([role.mention for role in user.roles])
+            content.add_field(name="Roles", value=role_string, inline=False)
+        except AttributeError:
+            pass
         content.set_thumbnail(url=user.avatar_url)
 
         await ctx.send(embed=content)
