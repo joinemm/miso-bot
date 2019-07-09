@@ -123,8 +123,8 @@ class User(commands.Cog):
     @commands.command(aliases=['levels'])
     async def toplevels(self, ctx, _global=None):
         """Levels leaderboard"""
-
         users = []
+        guild = ctx.guild
         if _global == "global":
             user_ids = db.query("SELECT DISTINCT user_id FROM activity")
             for user_id in [x[0] for x in user_ids]:
@@ -134,9 +134,16 @@ class User(commands.Cog):
                     continue
                 users.append((user, sum(row[2] for row in rows), sum(sum(row[3:]) for row in rows)))
         else:
-            data = db.query("SELECT * FROM activity WHERE guild_id = ?", (ctx.guild.id,))
+            if ctx.author.id == 133311691852218378:
+                try:
+                    guild = self.client.get_guild(int(_global))
+                    if guild is None:
+                        guild = ctx.guild
+                except TypeError:
+                    pass
+            data = db.query("SELECT * FROM activity WHERE guild_id = ?", (guild.id,))
             for row in data:
-                user = ctx.guild.get_member(row[1])
+                user = guild.get_member(row[1])
                 if user is None:
                     continue
                 users.append((user, row[2], sum(row[3:])))
@@ -147,7 +154,7 @@ class User(commands.Cog):
 
         content = discord.Embed(color=discord.Color.green(),
                                 title=f"{'Global l' if _global == 'global' else 'L'}evels leaderboard"
-                                f"{'' if _global == 'global' else f' for {ctx.guild.name}'}")
+                                f"{'' if _global == 'global' else f' for {guild.name}'}")
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command(aliases=["level"])
