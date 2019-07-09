@@ -30,7 +30,7 @@ class User(commands.Cog):
         user = await util.get_user(ctx, user, ctx.author)
 
         fishydata = db.fishdata(user.id)
-        if fishydata.timestamp is None:
+        if fishydata is None or fishydata.timestamp is None:
             fishy_time = "Never"
         else:
             fishy_time = arrow.get(fishydata.timestamp).humanize()
@@ -51,7 +51,7 @@ class User(commands.Cog):
         content.title = f"{user.name}#{user.discriminator} | #{user.id}"
         content.add_field(name="Status", value=status)
         content.add_field(name="Activity", value=activity)
-        content.add_field(name="Fishy", value=f":tropical_fish: {fishydata.fishy}")
+        content.add_field(name="Fishy", value=f"{fishydata.fishy}")
         content.add_field(name="Last fishy", value=fishy_time)
         content.add_field(name="Account created", value=user.created_at.strftime('%d/%m/%Y %H:%M'))
         content.add_field(name="Joined server", value=user.joined_at.strftime('%d/%m/%Y %H:%M'))
