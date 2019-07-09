@@ -12,6 +12,7 @@ import imgkit
 from bs4 import BeautifulSoup
 import re
 import urllib.parse
+from operator import itemgetter
 
 
 LASTFM_APPID = os.environ['LASTFM_APIKEY']
@@ -424,7 +425,7 @@ class LastFm(commands.Cog):
             return await ctx.send("You have not acquired any crowns yet! "
                                   "Use the `>whoknows` command to claim your crowns")
         rows = []
-        for artist, playcount in crownartists:
+        for artist, playcount in sorted(crownartists, key=itemgetter(1), reverse=True):
             rows.append(f"**{artist}** with **{playcount}** plays")
 
         content = discord.Embed(color=discord.Color.gold())
