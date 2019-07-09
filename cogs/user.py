@@ -37,7 +37,10 @@ class User(commands.Cog):
 
         status_emoji = {"online": "<:online:533466178711191590>", "idle": "<:idle:533466151729102852>",
                         "dnd": "<:dnd:533466208377241614>", "offline": "<:offline:533466238567972874>"}
-        status = f"{status_emoji[str(user.status)]}{str(user.status).capitalize()}"
+        try:
+            status = f"{status_emoji[str(user.status)]}{str(user.status).capitalize()}"
+        except AttributeError:
+            status = "Unavailable"
         if user.is_on_mobile():
             status += " :iphone:"
 
