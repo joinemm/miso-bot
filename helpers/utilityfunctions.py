@@ -27,8 +27,8 @@ async def send_as_pages(ctx, content, rows, maxrows=15):
 
 async def page_switcher(ctx, pages):
     """
-    :param ctx    : Context
-    :param pages  : List of embeds to use as pages
+    :param ctx   : Context
+    :param pages : List of embeds to use as pages
     """
     pages = TwoWayIterator(pages)
 
@@ -90,7 +90,7 @@ async def reaction_buttons(ctx, message, functions, timeout=600.0, only_author=F
     """Handler for reaction buttons
     :param message     : message to add reactions to
     :param functions   : dictionary of {emoji : function} pairs. functions must be async. return True to exit
-    :param timeout     : float, default 10 minutes (600.0)
+    :param timeout     : time in seconds for how long the buttons work for default 10 minutes (600.0)
     :param only_author : only allow the user who used the command use the buttons
     :param single_use  : delete buttons after one is used
     """
@@ -218,6 +218,7 @@ def xp_from_message(message):
 
 
 async def get_user(ctx, mention, fallback=None):
+    """Get a discord user from mention, name, or id"""
     try:
         return await commands.UserConverter().convert(ctx, mention)
     except commands.errors.BadArgument:
@@ -225,6 +226,7 @@ async def get_user(ctx, mention, fallback=None):
 
 
 async def get_member(ctx, mention, fallback=None):
+    """Get a discord guild member from mention, name, or id"""
     try:
         return await commands.MemberConverter().convert(ctx, mention)
     except commands.errors.BadArgument:
@@ -232,6 +234,7 @@ async def get_member(ctx, mention, fallback=None):
 
 
 async def get_textchannel(ctx, mention, fallback=None):
+    """Get a discord text channel from mention, name, or id"""
     try:
         return await commands.TextChannelConverter().convert(ctx, mention)
     except commands.errors.BadArgument:
@@ -239,6 +242,7 @@ async def get_textchannel(ctx, mention, fallback=None):
 
 
 async def get_role(ctx, mention, fallback=None):
+    """Get a discord role from mention, name, or id"""
     try:
         return await commands.RoleConverter().convert(ctx, mention)
     except commands.errors.BadArgument:
@@ -246,6 +250,7 @@ async def get_role(ctx, mention, fallback=None):
 
 
 async def get_color(ctx, mention, fallback=None):
+    """Get a discord color from hex value"""
     try:
         return await commands.ColourConverter().convert(ctx, mention)
     except commands.errors.BadArgument:
