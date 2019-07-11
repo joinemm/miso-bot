@@ -223,7 +223,7 @@ class User(commands.Cog):
         content = discord.Embed(title=f"{'global' if _global_ else ctx.guild.name} fishy leaderboard",
                                 color=discord.Color.blue())
 
-        await util.send_as_pages(ctx, content, rows, 10)
+        await util.send_as_pages(ctx, content, rows)
 
     @leaderboard.command(name='levels')
     async def leaderboard_levels(self, ctx, scope='', timeframe=''):
@@ -271,7 +271,7 @@ class User(commands.Cog):
         content.title = f"{'Global' if _global_ else guild.name} levels leaderboard"
         if time != '':
             content.title += f" - {time}"
-        await util.send_as_pages(ctx, content, rows, 10)
+        await util.send_as_pages(ctx, content, rows)
 
     @leaderboard.command(name='crowns')
     async def leaderboard_crowns(self, ctx):
@@ -280,7 +280,7 @@ class User(commands.Cog):
                         (ctx.guild.id,))
         rows = []
         rank = 1
-        for user_id, count in sorted(data, key=itemgetter(1)):
+        for user_id, count in sorted(data, key=itemgetter(1), reverse=True):
             user = ctx.guild.get_member(user_id)
             if user is None:
                 continue
@@ -289,7 +289,7 @@ class User(commands.Cog):
             rank += 1
         content = discord.Embed(color=discord.Color.gold())
         content.title = f"{ctx.guild.name} artist crowns leaderboard"
-        await util.send_as_pages(ctx, content, rows, 10)
+        await util.send_as_pages(ctx, content, rows)
 
 
 def setup(client):
