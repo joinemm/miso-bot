@@ -12,6 +12,31 @@ class Events(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        self.logchannel = 598783743959891968
+
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild):
+        logger.info(f"New guild : {guild}")
+        channel = self.client.get_channel(self.logchannel)
+        if channel is None:
+            return logger.warning(f"Unable to get log channel!")
+
+        content = discord.Embed(color=discord.Color.green())
+        content.title = "New guild!"
+        content.description = f"Miso just joined **{guild}**\nWith **{guild.member_count}** members"
+        await channel.send(embed=content)
+
+    @commands.Cog.listener()
+    async def on_guild_remove(self, guild):
+        logger.info(f"Left guild : {guild}")
+        channel = self.client.get_channel(self.logchannel)
+        if channel is None:
+            return logger.warning(f"Unable to get log channel!")
+
+        content = discord.Embed(color=discord.Color.red())
+        content.title = "Left guild!"
+        content.description = f"Miso just left **{guild}**\nWith **{guild.member_count}** members :("
+        await channel.send(embed=content)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
