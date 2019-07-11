@@ -28,7 +28,11 @@ class User(commands.Cog):
     @commands.command()
     async def userinfo(self, ctx, *, user=""):
         """Get information about user"""
-        user = await util.get_user(ctx, user, ctx.author)
+        member = await util.get_member(ctx, user)
+        if member is None:
+            user = await util.get_user(ctx, user, ctx.author)
+        else:
+            user = member
 
         fishydata = db.fishdata(user.id)
         if fishydata is None or fishydata.timestamp is None:
