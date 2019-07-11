@@ -3,12 +3,10 @@ from discord.ext import commands
 import random
 import data.database as db
 import helpers.utilityfunctions as util
-import helpers.errormessages as errormsg
-
 
 COOLDOWN = 7200
 TRASH_ICONS = (':moyai:', ':stopwatch:', ':wrench:', ':hammer:', ':pick:', ':nut_and_bolt:', ':gear:', ':toilet:',
-               ':alembic:', ':bathtub:', ':paperclip:', ':scissors:', ':boot:', ':high_heel:', ':spoon:',
+               ':alembic:', ':bathtub:', ':paperclip:', ':scissors:', ':boot:', ':high_heel:',
                ':saxophone:', ':trumpet:', ':scooter:', ':anchor:')
 
 
@@ -21,16 +19,13 @@ class Fishy(commands.Cog):
         self.__WEIGHTS = [0.09, 0.6, 0.2, 0.1, 0.01]
 
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
-    async def fishy(self, ctx, user=None):
+    async def fishy(self, ctx, user=''):
         """Go fishing and receive / give random fish"""
-        gift = False
-        receiver = ctx.author
-        if user is not None:
-            receiver = await util.get_member(ctx, user)
-            if receiver is not None and receiver is not ctx.author:
-                gift = True
-            else:
-                receiver = ctx.author
+        receiver = await util.get_member(ctx, user, fallback=ctx.author)
+        if receiver is not None and receiver is not ctx.author:
+            gift = True
+        else:
+            gift = False
 
         fishdata = db.fishdata(ctx.author.id)
 
@@ -55,88 +50,49 @@ class Fishy(commands.Cog):
                      fisher_id=(ctx.author.id if gift else None))
 
     @commands.command()
-    async def leaderboard(self, ctx, scope=None):
-        """Shows the fishy leaderboard"""
-        users = db.query("select user_id from fishy order by fishy desc")
-        rows = []
-        rank_icon = [':first_place:', ':second_place:', ':third_place:']
-        rank = 1
-        for userdata in users:
-            user_id = userdata[0]
-            if scope == 'global':
-                user = self.client.get_user(user_id)
-            else:
-                user = ctx.guild.get_member(user_id)
-            if user is None:
-                continue
-
-            fishdata = db.fishdata(user_id)
-            if fishdata is None:
-                continue
-
-            if fishdata.fishy == 0:
-                continue
-
-            if rank < len(rank_icon) + 1:
-                ranking = rank_icon[rank-1]
-            else:
-                ranking = f"`{rank}.`"
-            rows.append(f"{ranking} {user.name} - **{fishdata.fishy}** fishy")
-            rank += 1
-        content = discord.Embed(title=f"{'global' if scope == 'global' else ctx.guild.name} fishy leaderboard",
-                                color=discord.Color.blue())
-        if rows:
-            await util.send_as_pages(ctx, content, rows, 10)
-        else:
-            await ctx.send(embed=content)
-
-    @commands.command()
-    async def fishystats(self, ctx, mention=None):
+    async def fishystats(self, ctx, mention=''):
         """Shows fishing statistics"""
-        user = ctx.author
-        globaldata = False
-        if mention is not None:
-            if mention == 'global':
-                globaldata = True
-            else:
-                user = await util.get_user(ctx, mention)
-                if user is None:
-                    return await ctx.send(errormsg.user_not_found(mention))
+        globaldata = mention == 'global'
+        if not globaldata:
+            user = await util.get_user(ctx, mention, fallback=ctx.author)
+        else:
+            user = ctx.author
 
         if globaldata:
             fishdata = None
             users = db.query("select user_id from fishy")
             for user_id in users:
-                u = self.client.get_user(user_id[0])
-                if u is None:
-                    ufdata = db.fishdata(user_id[0])
-                else:
-                    ufdata = db.fishdata(u.id)
+                user_fishdata = db.fishdata(user_id[0])
                 if fishdata is None:
-                    fishdata = ufdata
+                    fishdata = user_fishdata
                 else:
-                    fishdata = fishdata._replace(fishy=fishdata.fishy + ufdata.fishy,
-                                                 fishy_gifted=fishdata.fishy_gifted + ufdata.fishy_gifted,
-                                                 trash=fishdata.trash + ufdata.trash,
-                                                 common=fishdata.common + ufdata.common,
-                                                 uncommon=fishdata.uncommon + ufdata.uncommon,
-                                                 rare=fishdata.rare + ufdata.rare,
-                                                 legendary=fishdata.legendary + ufdata.legendary)
+                    fishdata = fishdata._replace(
+                        fishy=fishdata.fishy + user_fishdata.fishy,
+                        fishy_gifted=fishdata.fishy_gifted + user_fishdata.fishy_gifted,
+                        trash=fishdata.trash + user_fishdata.trash,
+                        common=fishdata.common + user_fishdata.common,
+                        uncommon=fishdata.uncommon + user_fishdata.uncommon,
+                        rare=fishdata.rare + user_fishdata.rare,
+                        legendary=fishdata.legendary + user_fishdata.legendary)
 
         else:
             fishdata = db.fishdata(user.id)
         content = discord.Embed(title=f"{'global' if globaldata else user.name} fishy stats")
         if fishdata is not None:
             total = fishdata.trash + fishdata.common + fishdata.uncommon + fishdata.rare + fishdata.legendary
-            content.description = f"Total fishies: **{fishdata.fishy}**\n" \
-                                  f"Total fishies gifted: **{fishdata.fishy_gifted}**\n\n" \
-                                  f"Trash: **{fishdata.trash}** - {(fishdata.trash/total)*100:.1f}%\n" \
-                                  f"Common: **{fishdata.common}** - {(fishdata.common/total)*100:.1f}%\n" \
-                                  f"Uncommon: **{fishdata.uncommon}** - {(fishdata.uncommon/total)*100:.1f}%\n" \
-                                  f"Rare: **{fishdata.rare}** - {(fishdata.rare/total)*100:.1f}%\n" \
-                                  f"Legendary: **{fishdata.legendary}** - {(fishdata.legendary/total)*100:.1f}%\n\n" \
-                                  f"Total fish count: **{total}**\n" \
-                                  f"Average fishy: **{fishdata.fishy / total:.2f}**"
+            content.description = f"""
+                Total fishy: **{fishdata.fishy}**
+                Fishy gifted: **{fishdata.fishy_gifted}**
+                
+                Trash: **{fishdata.trash}** - {(fishdata.trash / total) * 100:.1f}%
+                Common: **{fishdata.common}** - {(fishdata.common / total) * 100:.1f}%
+                Uncommon: **{fishdata.uncommon}** - {(fishdata.uncommon / total) * 100:.1f}%
+                Rare: **{fishdata.rare}** - {(fishdata.rare / total) * 100:.1f}%
+                Legendary: **{fishdata.legendary}** - {(fishdata.legendary / total) * 100:.1f}%
+                
+                Total fish count: **{total}**
+                Average fishy: **{fishdata.fishy / total:.2f}**
+                """
         await ctx.send(embed=content)
 
     @commands.command(hidden=True)
