@@ -5,6 +5,7 @@ import helpers.utilityfunctions as util
 from libraries import plotter
 import data.database as db
 import random
+from operator import itemgetter
 
 
 class User(commands.Cog):
@@ -135,48 +136,9 @@ class User(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.command(aliases=['levels'])
-    async def toplevels(self, ctx, *args):
-        """Levels leaderboard"""
-        _global = (args[0] == 'global') if args else False
-        users = []
-        guild = ctx.guild
-        if _global:
-            timeframe = args[1] if len(args) > 1 else 'overall'
-            time, table = get_activity_table(timeframe)
-            user_ids = db.query("SELECT DISTINCT user_id FROM %s" % table)
-            for user_id in [x[0] for x in user_ids]:
-                rows = db.query("SELECT * FROM %s WHERE user_id = ?" % table, (user_id, ))
-                user = self.client.get_user(user_id)
-                if user is None or user.bot:
-                    continue
-                users.append((user, sum(row[2] for row in rows), sum(sum(row[3:]) for row in rows)))
-        else:
-            timeframe = args[0] if args else 'overall'
-            time, table = get_activity_table(timeframe)
-            if ctx.author.id == 133311691852218378 and args:
-                try:
-                    guild = self.client.get_guild(int(args[-1]))
-                    if guild is None:
-                        guild = ctx.guild
-                except ValueError:
-                    pass
-            data = db.query("SELECT * FROM %s WHERE guild_id = ?" % table, (guild.id,))
-            for row in data:
-                user = guild.get_member(row[1])
-                if user is None or user.bot:
-                    continue
-                users.append((user, row[2], sum(row[3:])))
-
-        rows = []
-        for i, (user, messages, xp) in enumerate(sorted(users, key=lambda tup: tup[2], reverse=True), start=1):
-            rows.append(f"`{i}:` LVL **{util.get_level(xp)}** - **{user.name}** `[{xp} XP | {messages} messages]`")
-
-        content = discord.Embed(color=discord.Color.green())
-        content.title = f"{'Global l' if _global else 'L'}evels leaderboard{'' if _global else f' for {guild.name}'}"
-        if time != '':
-            content.title += f" - {time}"
-        await util.send_as_pages(ctx, content, rows)
+    @commands.command(aliases=['levels'], hidden=True)
+    async def toplevels(self, ctx):
+        await ctx.send(f"This command has been deprecated. Please use `>leaderboard levels [timeframe]`")
 
     @commands.command(aliases=["level"])
     async def activity(self, ctx, user=""):
@@ -217,7 +179,7 @@ class User(commands.Cog):
                 users.append((row[1], sum(row[3:])))
 
             ranking = "N/A"
-            for i, (userid, xp) in enumerate(sorted(users, key=lambda tup: tup[1], reverse=True), start=1):
+            for i, (userid, xp) in enumerate(sorted(users, key=itemgetter(1), reverse=True), start=1):
                 if userid == user.id:
                     ranking = f"#{i}"
 
@@ -225,6 +187,109 @@ class User(commands.Cog):
 
         content.description += "```"
         await ctx.send(embed=content)
+
+    @commands.group()
+    async def leaderboard(self, ctx):
+        """Show various leaderboards"""
+        await util.command_group_help(ctx)
+
+    @leaderboard.command(name='fishy')
+    async def leaderboard_fishy(self, ctx, scope=''):
+        """Fishy leaderboard"""
+        _global_ = scope == 'global'
+        users = db.query("select user_id, fishy from fishy order by fishy desc")
+        rows = []
+        rank_icon = [':first_place:', ':second_place:', ':third_place:']
+        rank = 1
+        for user_id, fishy in users:
+            if _global_:
+                user = self.client.get_user(user_id)
+            else:
+                user = ctx.guild.get_member(user_id)
+            if user is None:
+                continue
+
+            if fishy == 0:
+                continue
+
+            if rank <= len(rank_icon):
+                ranking = rank_icon[rank - 1]
+            else:
+                ranking = f"`{rank}.`"
+
+            rows.append(f"{ranking} {user.name} - **{fishy}** fishy")
+            rank += 1
+
+        content = discord.Embed(title=f"{'global' if _global_ else ctx.guild.name} fishy leaderboard",
+                                color=discord.Color.blue())
+
+        await util.send_as_pages(ctx, content, rows, 10)
+
+    @leaderboard.command(name='levels')
+    async def leaderboard_levels(self, ctx, scope='', timeframe=''):
+        """Levels leaderboard"""
+        _global_ = scope == 'global'
+        if timeframe == '':
+            timeframe = scope
+        users = []
+        guild = ctx.guild
+
+        if _global_:
+            time, table = get_activity_table(timeframe)
+            user_ids = db.query("SELECT DISTINCT user_id FROM %s" % table)
+            for user_id in [x[0] for x in user_ids]:
+                rows = db.query("SELECT * FROM %s WHERE user_id = ?" % table, (user_id,))
+                user = self.client.get_user(user_id)
+                if user is None or user.bot:
+                    continue
+
+                users.append((user, sum(row[2] for row in rows), sum(sum(row[3:]) for row in rows)))
+        else:
+            time, table = get_activity_table(timeframe)
+            # guild selector for owner only
+            if ctx.author.id == 133311691852218378 and scope != '':
+                try:
+                    guild = self.client.get_guild(int(scope))
+                    if guild is None:
+                        guild = ctx.guild
+                except ValueError:
+                    pass
+
+            data = db.query("SELECT * FROM %s WHERE guild_id = ?" % table, (guild.id,))
+            for row in data:
+                user = guild.get_member(row[1])
+                if user is None or user.bot:
+                    continue
+
+                users.append((user, row[2], sum(row[3:])))
+
+        rows = []
+        for i, (user, messages, xp) in enumerate(sorted(users, key=itemgetter(2), reverse=True), start=1):
+            rows.append(f"`{i}:` LVL **{util.get_level(xp)}** - **{user.name}** `[{xp} XP | {messages} messages]`")
+
+        content = discord.Embed(color=discord.Color.teal())
+        content.title = f"{'Global' if _global_ else guild.name} levels leaderboard"
+        if time != '':
+            content.title += f" - {time}"
+        await util.send_as_pages(ctx, content, rows, 10)
+
+    @leaderboard.command(name='crowns')
+    async def leaderboard_crowns(self, ctx):
+        """Artist crown leaderboard"""
+        data = db.query("SELECT user_id, COUNT(1) FROM crowns WHERE guild_id = ? GROUP BY user_id",
+                        (ctx.guild.id,))
+        rows = []
+        rank = 1
+        for user_id, count in sorted(data, key=itemgetter(1)):
+            user = ctx.guild.get_member(user_id)
+            if user is None:
+                continue
+
+            rows.append(f"`{rank}:` **{count}** crowns - **{user.name}**")
+            rank += 1
+        content = discord.Embed(color=discord.Color.gold())
+        content.title = f"{ctx.guild.name} artist crowns leaderboard"
+        await util.send_as_pages(ctx, content, rows, 10)
 
 
 def setup(client):
