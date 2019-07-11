@@ -44,13 +44,13 @@ def fishdata(userid):
     return data
 
 
-def activitydata(guild_id, user_id):
-    data = query("select * from activity where guild_id = ? and user_id = ?", (guild_id, user_id), maketuple=True)
+def activitydata(guild_id, user_id, tablename='activity'):
+    data = query("select * from %s where guild_id = ? and user_id = ?" % tablename, (guild_id, user_id), maketuple=True)
     return data
 
 
-def get_user_activity(guild_id, user_id):
-    data = query("select * from activity where guild_id = ? and user_id = ?", (guild_id, user_id))
+def get_user_activity(guild_id, user_id, tablename='activity'):
+    data = query("select * from %s where guild_id = ? and user_id = ?" % tablename, (guild_id, user_id))
     if data is None:
         return None
     activities = list(data[0][3:])
@@ -58,9 +58,10 @@ def get_user_activity(guild_id, user_id):
 
 
 def add_activity(guild_id, user_id, xp, hour):
-    execute("insert or ignore into activity(guild_id, user_id) values(?, ?)", (guild_id, user_id))
-    execute("update activity set h%s = h%s + ?, messages = messages + 1 where guild_id = ? and user_id = ?"
-            % (hour, hour), (xp, guild_id, user_id))
+    for activity_table in ['activity', 'activity_day', 'activity_week', 'activity_month']:
+        execute("insert or ignore into %s(guild_id, user_id) values(?, ?)" % activity_table, (guild_id, user_id))
+        execute("update %s set h%s = h%s + ?, messages = messages + 1 where guild_id = ? and user_id = ?"
+                % (activity_table, hour, hour), (xp, guild_id, user_id))
 
 
 def update_user(user_id, column, new_value):

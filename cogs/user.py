@@ -136,30 +136,35 @@ class User(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command(aliases=['levels'])
-    async def toplevels(self, ctx, _global=None):
+    async def toplevels(self, ctx, *args):
         """Levels leaderboard"""
+        _global = (args[0] == 'global') if args else False
         users = []
         guild = ctx.guild
-        if _global == "global":
-            user_ids = db.query("SELECT DISTINCT user_id FROM activity")
+        if _global:
+            timeframe = args[1] if len(args) > 1 else 'overall'
+            time, table = get_activity_table(timeframe)
+            user_ids = db.query("SELECT DISTINCT user_id FROM %s" % table)
             for user_id in [x[0] for x in user_ids]:
-                rows = db.query("SELECT * FROM activity WHERE user_id = ?", (user_id, ))
+                rows = db.query("SELECT * FROM %s WHERE user_id = ?" % table, (user_id, ))
                 user = self.client.get_user(user_id)
-                if user is None:
+                if user is None or user.bot:
                     continue
                 users.append((user, sum(row[2] for row in rows), sum(sum(row[3:]) for row in rows)))
         else:
-            if ctx.author.id == 133311691852218378:
+            timeframe = args[0] if args else 'overall'
+            time, table = get_activity_table(timeframe)
+            if ctx.author.id == 133311691852218378 and args:
                 try:
-                    guild = self.client.get_guild(int(_global))
+                    guild = self.client.get_guild(int(args[-1]))
                     if guild is None:
                         guild = ctx.guild
-                except TypeError:
+                except ValueError:
                     pass
-            data = db.query("SELECT * FROM activity WHERE guild_id = ?", (guild.id,))
+            data = db.query("SELECT * FROM %s WHERE guild_id = ?" % table, (guild.id,))
             for row in data:
                 user = guild.get_member(row[1])
-                if user is None:
+                if user is None or user.bot:
                     continue
                 users.append((user, row[2], sum(row[3:])))
 
@@ -167,9 +172,10 @@ class User(commands.Cog):
         for i, (user, messages, xp) in enumerate(sorted(users, key=lambda tup: tup[2], reverse=True), start=1):
             rows.append(f"`{i}:` LVL **{util.get_level(xp)}** - **{user.name}** `[{xp} XP | {messages} messages]`")
 
-        content = discord.Embed(color=discord.Color.green(),
-                                title=f"{'Global l' if _global == 'global' else 'L'}evels leaderboard"
-                                f"{'' if _global == 'global' else f' for {guild.name}'}")
+        content = discord.Embed(color=discord.Color.green())
+        content.title = f"{'Global l' if _global else 'L'}evels leaderboard{'' if _global else f' for {guild.name}'}"
+        if time != '':
+            content.title += f" - {time}"
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command(aliases=["level"])
@@ -193,6 +199,44 @@ class User(commands.Cog):
         with open("downloads/graph.png", "rb") as img:
             await ctx.send(file=discord.File(img))
 
+    @commands.command()
+    async def rank(self, ctx, user=""):
+        user = await util.get_user(ctx, user, ctx.author)
+
+        content = discord.Embed(color=user.color)
+        content.set_author(name=f"XP Rankings for {user.name}", icon_url=user.avatar_url)
+        content.description = "```"
+        for table, label in zip(['activity_day', 'activity_week', 'activity_month', 'activity'],
+                                ["Daily  ", "Weekly ", "Monthly", "Overall"]):
+            users = []
+            data = db.query("SELECT * FROM %s WHERE guild_id = ?" % table, (ctx.guild.id,))
+            for row in data:
+                this_user = self.client.get_user(row[1])
+                if this_user is None or this_user.bot:
+                    continue
+                users.append((row[1], sum(row[3:])))
+
+            ranking = "N/A"
+            for i, (userid, xp) in enumerate(sorted(users, key=lambda tup: tup[1], reverse=True), start=1):
+                if userid == user.id:
+                    ranking = f"#{i}"
+
+            content.description += f"\n{label} : {ranking}"
+
+        content.description += "```"
+        await ctx.send(embed=content)
+
 
 def setup(client):
     client.add_cog(User(client))
+
+
+def get_activity_table(timeframe):
+    if timeframe in ["day", "daily"]:
+        return 'Today', 'activity_day'
+    if timeframe in ["week", "weekly"]:
+        return 'This week', 'activity_week'
+    if timeframe in ["month", "monthly"]:
+        return 'This month', 'activity_month'
+    else:
+        return '', 'activity'
