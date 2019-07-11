@@ -211,7 +211,7 @@ class User(commands.Cog):
             users = []
             data = db.query("SELECT * FROM %s WHERE guild_id = ?" % table, (ctx.guild.id,))
             for row in data:
-                this_user = self.client.get_user(row[1])
+                this_user = ctx.guild.get_member(row[1])
                 if this_user is None or this_user.bot:
                     continue
                 users.append((row[1], sum(row[3:])))
