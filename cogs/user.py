@@ -195,7 +195,6 @@ class User(commands.Cog):
 
     @leaderboard.command(name='fishy')
     async def leaderboard_fishy(self, ctx, scope=''):
-        """Fishy leaderboard"""
         _global_ = scope == 'global'
         users = db.query("select user_id, fishy from fishy order by fishy desc")
         rows = []
@@ -220,6 +219,9 @@ class User(commands.Cog):
             rows.append(f"{ranking} {user.name} - **{fishy}** fishy")
             rank += 1
 
+        if not rows:
+            return await ctx.send("Nobody has been fishing yet on this server!")
+
         content = discord.Embed(title=f"{'global' if _global_ else ctx.guild.name} fishy leaderboard",
                                 color=discord.Color.blue())
 
@@ -227,7 +229,6 @@ class User(commands.Cog):
 
     @leaderboard.command(name='levels')
     async def leaderboard_levels(self, ctx, scope='', timeframe=''):
-        """Levels leaderboard"""
         _global_ = scope == 'global'
         if timeframe == '':
             timeframe = scope
@@ -275,9 +276,11 @@ class User(commands.Cog):
 
     @leaderboard.command(name='crowns')
     async def leaderboard_crowns(self, ctx):
-        """Artist crown leaderboard"""
         data = db.query("SELECT user_id, COUNT(1) FROM crowns WHERE guild_id = ? GROUP BY user_id",
                         (ctx.guild.id,))
+        if data is None:
+            return await ctx.send("No crown data for this server exists yet! "
+                                  "Use the `>whoknows` command to gain crowns")
         rows = []
         rank = 1
         for user_id, count in sorted(data, key=itemgetter(1), reverse=True):
@@ -285,7 +288,7 @@ class User(commands.Cog):
             if user is None:
                 continue
 
-            rows.append(f"`{rank}:` **{count}** crowns - **{user.name}**")
+            rows.append(f"`{rank}:`" if rank > 1 else ":crown:" + f"**{count}** crowns - **{user.name}**")
             rank += 1
         content = discord.Embed(color=discord.Color.gold())
         content.title = f"{ctx.guild.name} artist crowns leaderboard"
