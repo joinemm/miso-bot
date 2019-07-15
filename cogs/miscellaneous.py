@@ -231,19 +231,19 @@ class Miscellaneous(commands.Cog):
     async def list(self, ctx):
         """Get list of all sunsigns"""
         sign_list = """
-            `(Mar 21-Apr 19)` **Aries**
-            `(Apr 20-May 20)` **Taurus**
-            `(May 21-Jun 20)` **Gemini**
-            `(Jun 21-Jul 22)` **Cancer**
-            `(Jul 23-Aug 22)` **Leo**
-            `(Aug 23-Sep 22)` **Virgo**
-            `(Sep 23-Oct 22)` **Libra**
-            `(Oct 23-Nov 21)` **Scorpio**
-            `(Nov 22-Dec 21)` **Sagittarius**
-            `(Dec 22-Jan 19)` **Capricorn**
-            `(Jan 20-Feb 18)` **Aquarius**
-            `(Feb 19-Mar 20)` **Pisces**
-            """
+`(Mar 21-Apr 19)` **Aries**
+`(Apr 20-May 20)` **Taurus**
+`(May 21-Jun 20)` **Gemini**
+`(Jun 21-Jul 22)` **Cancer**
+`(Jul 23-Aug 22)` **Leo**
+`(Aug 23-Sep 22)` **Virgo**
+`(Sep 23-Oct 22)` **Libra**
+`(Oct 23-Nov 21)` **Scorpio**
+`(Nov 22-Dec 21)` **Sagittarius**
+`(Dec 22-Jan 19)` **Capricorn**
+`(Jan 20-Feb 18)` **Aquarius**
+`(Feb 19-Mar 20)` **Pisces**
+"""
         content = discord.Embed(color=discord.Color.gold())
         content.title = f"Sunsign list"
         content.description = sign_list
