@@ -81,18 +81,18 @@ class Fishy(commands.Cog):
         if fishdata is not None:
             total = fishdata.trash + fishdata.common + fishdata.uncommon + fishdata.rare + fishdata.legendary
             content.description = f"""
-                Total fishy: **{fishdata.fishy}**
-                Fishy gifted: **{fishdata.fishy_gifted}**
-                
-                Trash: **{fishdata.trash}** - {(fishdata.trash / total) * 100:.1f}%
-                Common: **{fishdata.common}** - {(fishdata.common / total) * 100:.1f}%
-                Uncommon: **{fishdata.uncommon}** - {(fishdata.uncommon / total) * 100:.1f}%
-                Rare: **{fishdata.rare}** - {(fishdata.rare / total) * 100:.1f}%
-                Legendary: **{fishdata.legendary}** - {(fishdata.legendary / total) * 100:.1f}%
-                
-                Total fish count: **{total}**
-                Average fishy: **{fishdata.fishy / total:.2f}**
-                """
+Total fishy: **{fishdata.fishy}**
+Fishy gifted: **{fishdata.fishy_gifted}**
+
+Trash: **{fishdata.trash}** - {(fishdata.trash / total) * 100:.1f}%
+Common: **{fishdata.common}** - {(fishdata.common / total) * 100:.1f}%
+Uncommon: **{fishdata.uncommon}** - {(fishdata.uncommon / total) * 100:.1f}%
+Rare: **{fishdata.rare}** - {(fishdata.rare / total) * 100:.1f}%
+Legendary: **{fishdata.legendary}** - {(fishdata.legendary / total) * 100:.1f}%
+
+Total fish count: **{total}**
+Average fishy: **{fishdata.fishy / total:.2f}**
+"""
         await ctx.send(embed=content)
 
     @commands.command(hidden=True)
