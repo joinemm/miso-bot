@@ -405,7 +405,7 @@ class LastFm(commands.Cog):
                 rank = ":crown:"
                 db.add_crown(artistname, ctx.guild.id, x[1].id, x[0])
             else:
-                rank = f"`{i + 1}`."
+                rank = f"`{i + 1}.`"
             rows.append(f"{rank} **{x[1].name}** — **{x[0]}** plays")
 
         content = discord.Embed(title=f"Who knows **{artistname}**?")
@@ -415,7 +415,7 @@ class LastFm(commands.Cog):
             return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
 
         await util.send_as_pages(ctx, content, rows)
-        
+
 
 def setup(client):
     client.add_cog(LastFm(client))
