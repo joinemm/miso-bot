@@ -415,23 +415,7 @@ class LastFm(commands.Cog):
             return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
 
         await util.send_as_pages(ctx, content, rows)
-
-    @commands.command()
-    async def crowns(self, ctx, _global=None):
-        """Check your current whoknows crowns"""
-        crownartists = db.query("""SELECT artist, playcount FROM crowns WHERE guild_id = ? AND user_id = ?""",
-                                (ctx.guild.id, ctx.author.id))
-        if crownartists is None:
-            return await ctx.send("You have not acquired any crowns yet! "
-                                  "Use the `>whoknows` command to claim your crowns")
-        rows = []
-        for artist, playcount in sorted(crownartists, key=itemgetter(1), reverse=True):
-            rows.append(f"**{artist}** with **{playcount}** plays")
-
-        content = discord.Embed(color=discord.Color.gold())
-        content.title = f"Artist crowns for {ctx.author.name} - Total {len(crownartists)} crowns"
-        await util.send_as_pages(ctx, content, rows)
-
+        
 
 def setup(client):
     client.add_cog(LastFm(client))
