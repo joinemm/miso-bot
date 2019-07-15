@@ -292,7 +292,7 @@ class User(commands.Cog):
             if user is None:
                 continue
 
-            rows.append(f"`{rank}:`" if rank > 1 else ":crown:" + f"**{count}** crowns - **{user.name}**")
+            rows.append((f"`{rank}:`" if rank > 1 else ":crown:") + f"**{count}** crowns - **{user.name}**")
             rank += 1
         content = discord.Embed(color=discord.Color.gold())
         content.title = f"{ctx.guild.name} artist crowns leaderboard"
