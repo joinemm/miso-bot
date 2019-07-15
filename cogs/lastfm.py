@@ -572,6 +572,8 @@ def scrape_artist_image(artist):
     url = f"https://www.last.fm/music/{urllib.parse.quote_plus(artist)}/+images"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
+    if soup is None:
+        return ""
     image = soup.find("img", {"class": "image-list-image"})
     if image is None:
         image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
