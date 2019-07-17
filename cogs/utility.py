@@ -7,7 +7,10 @@ import os
 import urllib.request
 import html
 import arrow
+import asyncio
 from helpers import utilityfunctions as util
+import helpers.log as log
+from time import time
 
 
 GOOGLE_API_KEY = os.environ.get('GOOGLE_KEY')
@@ -18,12 +21,16 @@ OXFORD_TOKEN = os.environ.get('OXFORD_TOKEN')
 NAVER_APPID = os.environ.get('NAVER_APPID')
 NAVER_TOKEN = os.environ.get('NAVER_TOKEN')
 WOLFRAM_APPID = os.environ.get('WOLFRAM_APPID')
+GFYCAT_CLIENT_ID = os.environ.get('GFYCAT_CLIENT_ID')
+GFYCAT_SECRET = os.environ.get('GFYCAT_SECRET')
 
 
 papago_pairs = ['ko/en', 'ko/ja', 'ko/zh-cn', 'ko/zh-tw', 'ko/vi', 'ko/id', 'ko/de', 'ko/ru', 'ko/es', 'ko/it',
                 'ko/fr', 'en/ja', 'ja/zh-cn', 'ja/zh-tw', 'zh-cn/zh-tw', 'en/ko', 'ja/ko', 'zh-cn/ko', 'zh-tw/ko',
                 'vi/ko', 'id/ko', 'th/ko', 'de/ko', 'ru/ko', 'es/ko', 'it/ko', 'fr/ko', 'ja/en', 'zh-cn/ja',
                 'zh-tw/ja', 'zh-tw/zh-tw']
+
+logger = log.get_logger(__name__)
 
 
 class Utility(commands.Cog):
@@ -244,6 +251,37 @@ class Utility(commands.Cog):
 
         await ctx.send(result)
 
+    @commands.command()
+    async def creategif(self, ctx, media_url):
+        """Create a gfycat from video url"""
+        starttimer = time()
+        auth_headers = gfycat_oauth()
+        response = requests.post("https://api.gfycat.com/v1/gfycats", json={"fetchUrl": media_url},
+                                 headers=auth_headers)
+        data = json.loads(response.content.decode('utf-8'))
+        gfyname = data['gfyname']
+
+        message = await ctx.send("Encoding... please wait")
+
+        while True:
+            response = requests.get(f"https://api.gfycat.com/v1/gfycats/fetch/status/{gfyname}",
+                                    headers=auth_headers).json()
+            task = response['task']
+            if task == 'encoding':
+                pass
+
+            elif task == 'complete':
+                await message.edit(content=f"Gif created in **{util.stringfromtime(time() - starttimer, 2)}**\n"
+                                           f"https://gfycat.com/{response['gfyname']}")
+                break
+
+            else:
+                logger.error(response)
+                await message.edit(content="There was an error creating your gif :(")
+                break
+
+            await asyncio.sleep(1)
+
 
 def setup(client):
     client.add_cog(Utility(client))
@@ -268,3 +306,21 @@ def detect_language(string):
     response.raise_for_status()
     data = json.loads(response.content.decode('utf-8'))
     return data['data']['detections'][0][0]['language']
+
+
+def gfycat_oauth():
+    params = {
+        "grant_type": "client_credentials",
+        "client_id": GFYCAT_CLIENT_ID,
+        "client_secret": GFYCAT_SECRET
+    }
+
+    token = requests.post("https://api.gfycat.com/v1/oauth/token", json=params, timeout=3).json()
+
+    access_token = token["access_token"]
+
+    auth_headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+
+    return auth_headers
