@@ -12,7 +12,6 @@ import imgkit
 from bs4 import BeautifulSoup
 import re
 import urllib.parse
-from operator import itemgetter
 
 
 LASTFM_APPID = os.environ['LASTFM_APIKEY']
@@ -408,12 +407,29 @@ class LastFm(commands.Cog):
                 rank = f"`{i + 1}.`"
             rows.append(f"{rank} **{x[1].name}** — **{x[0]}** plays")
 
-        content = discord.Embed(title=f"Who knows **{artistname}**?")
-        image = scrape_artist_image(artistname)
-        content.set_thumbnail(url=image)
         if not rows:
             return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
 
+        content = discord.Embed(title=f"Who knows **{artistname}**?")
+        image = scrape_artist_image(artistname)
+        content.set_thumbnail(url=image)
+
+        await util.send_as_pages(ctx, content, rows)
+
+    @commands.command()
+    async def crowns(self, ctx, _global=None):
+        """Check your current whoknows crowns"""
+        crownartists = db.query("""SELECT artist, playcount FROM crowns WHERE guild_id = ? AND user_id = ?""",
+                                (ctx.guild.id, ctx.author.id))
+        if crownartists is None:
+            return await ctx.send("You have not acquired any crowns yet! "
+                                  "Use the `>whoknows` command to claim your crowns")
+        rows = []
+        for artist, playcount in sorted(crownartists, key=itemgetter(1), reverse=True):
+            rows.append(f"**{artist}** with **{playcount}** plays")
+
+        content = discord.Embed(color=discord.Color.gold())
+        content.title = f"Artist crowns for {ctx.author.name} - Total {len(crownartists)} crowns"
         await util.send_as_pages(ctx, content, rows)
 
 
@@ -576,7 +592,10 @@ def scrape_artist_image(artist):
         return ""
     image = soup.find("img", {"class": "image-list-image"})
     if image is None:
-        image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
+        try:
+            image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
+        except AttributeError:
+            return ""
     return image['src'].replace("/avatar170s/", "/300x300/") if image else ""
 
 
