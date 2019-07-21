@@ -259,7 +259,11 @@ class Utility(commands.Cog):
         response = requests.post("https://api.gfycat.com/v1/gfycats", json={"fetchUrl": media_url},
                                  headers=auth_headers)
         data = json.loads(response.content.decode('utf-8'))
-        gfyname = data['gfyname']
+        try:
+            gfyname = data['gfyname']
+        except KeyError:
+            logger.error(data)
+            return await ctx.send("Cannot create gif from this file!")
 
         message = await ctx.send("Encoding... please wait")
 
