@@ -102,9 +102,7 @@ def get_setting(guild_id, setting, default=None):
 
 
 def add_crown(artist, guild_id, user_id, playcount):
-    execute("INSERT OR IGNORE INTO crowns VALUES (?, ?, ?, ?)", (artist, guild_id, user_id, playcount))
-    execute("UPDATE crowns SET user_id = ? AND playcount = ? WHERE artist = ? AND guild_id = ?",
-            (user_id, playcount, artist, playcount))
+    execute("REPLACE INTO crowns VALUES (?, ?, ?, ?)", (artist, guild_id, user_id, playcount))
 
 
 def rolepicker_role(rolename, caps=True):
