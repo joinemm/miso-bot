@@ -91,9 +91,9 @@ class Rolepicker(commands.Cog):
         """Rolechannel message handler"""
         if message.guild is None:
             return
+        if db.get_setting(message.guild.id, "rolepicker_enabled") == 0:
+            return
         if message.channel.id == db.get_setting(message.guild.id, "rolepicker_channel"):
-            if db.get_setting(message.guild.id, "rolepicker_enabled") == 0:
-                return
             if not message.author == self.client.user:
                 command = message.content[0]
                 rolename = message.content[1:].strip()
@@ -113,7 +113,10 @@ class Rolepicker(commands.Cog):
                     await message.channel.send(f"**Invalid command** `{command}`\n"
                                                f"Use `+` to add a role and `-` to remove a role")
             await asyncio.sleep(5)
-            await message.delete()
+            try:
+                await message.delete()
+            except discord.errors.NotFound:
+                pass
 
 
 def setup(client):
