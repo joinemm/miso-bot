@@ -1,7 +1,7 @@
 import logging
 import sys
 
-FORMATTER = logging.Formatter("[ %(asctime)s | %(levelname)s | %(name)s.%(funcName)s() ]:: %(message)s",
+FORMATTER = logging.Formatter("[ %(asctime)s | %(levelname)-7s | %(name)s.%(funcName)s() ]:: %(message)s",
                               datefmt='%d/%m/%y %H:%M:%S')
 FORMATTER_COMMANDS = logging.Formatter("[ %(asctime)s | COMMAND | %(message)s",
                                        datefmt='%d/%m/%y %H:%M:%S')
@@ -36,7 +36,8 @@ def get_command_logger():
 
 
 def log_command(ctx):
-    return f"{ctx.command}() | {ctx.guild} ]:: {ctx.author} \"{ctx.message.content}\""
+    text = f"{(str(ctx.command)+'()'):19} | {ctx.guild.name} ]:: {ctx.author} \"{ctx.message.content}\""
+    return text
 
 
 def custom_command_format(ctx, keyword):
