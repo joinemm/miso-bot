@@ -105,11 +105,12 @@ def add_crown(artist, guild_id, user_id, playcount):
     execute("REPLACE INTO crowns VALUES (?, ?, ?, ?)", (artist, guild_id, user_id, playcount))
 
 
-def rolepicker_role(rolename, caps=True):
+def rolepicker_role(guild_id, rolename, caps=True):
     if caps:
-        data = query("SELECT role_id FROM roles WHERE rolename = ?", (rolename,))
+        data = query("SELECT role_id FROM roles WHERE rolename = ? AND guild_id = ?", (rolename, guild_id))
     else:
-        data = query("SELECT role_id FROM roles WHERE rolename = ? COLLATE NOCASE", (rolename,))
+        data = query("SELECT role_id FROM roles WHERE rolename = ? AND guild_id = ? COLLATE NOCASE",
+                     (rolename, guild_id))
     if data is None:
         return None
     else:
