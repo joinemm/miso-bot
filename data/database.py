@@ -90,7 +90,7 @@ def get_keywords(guild_id):
 
 def update_setting(guild_id, setting, new_value):
     execute("insert or ignore into guilds(guild_id) values(?)", (guild_id,))
-    execute("update guilds set %s = ?" % setting, (new_value,))
+    execute("update guilds set %s = ? where guild_id = ?" % setting, (new_value, guild_id))
 
 
 def get_setting(guild_id, setting, default=None):
