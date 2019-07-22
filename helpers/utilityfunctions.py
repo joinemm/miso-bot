@@ -111,7 +111,10 @@ async def reaction_buttons(ctx, message, functions, timeout=600.0, only_author=F
             break
         else:
             exits = await functions[str(reaction.emoji)]()
-            await message.remove_reaction(reaction.emoji, user)
+            try:
+                await message.remove_reaction(reaction.emoji, user)
+            except discord.errors.NotFound:
+                pass
             if single_use or exits is True:
                 break
 
