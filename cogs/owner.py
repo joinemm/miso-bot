@@ -2,6 +2,8 @@ from discord.ext import commands
 import discord
 import helpers.log as log
 import helpers.utilityfunctions as util
+import data.database as db
+import sqlite3
 
 logger = log.get_logger(__name__)
 
@@ -38,6 +40,18 @@ class Owner(commands.Cog):
         print('logout')
         await ctx.send("Shutting down... :wave:")
         await self.client.logout()
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def sql(self, ctx, *, statement):
+        connection = sqlite3.connect(db.SQLDATABASE)
+        cursor = connection.cursor()
+        cursor.execute(statement)
+
+        pretty_table = db.pp(cursor)
+        await ctx.send(f"```{pretty_table}```")
+
+        connection.close()
 
 
 def setup(client):
