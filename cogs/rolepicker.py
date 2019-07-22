@@ -74,18 +74,32 @@ class Rolepicker(commands.Cog):
         db.update_setting(ctx.guild.id, "rolepicker_case", newvalue)
         await ctx.send(f"Roles are now {('' if newvalue == 1 else 'not ')}case sensitive!")
 
+    @rolepicker.command()
+    async def enable(self, ctx):
+        """Enable the rolepicker (if disabled)"""
+        db.update_setting(ctx.guild.id, "rolepicker_enabled", 1)
+        await ctx.send("Rolepicker is now **enabled**")
+
+    @rolepicker.command()
+    async def disable(self, ctx):
+        """Disable the rolepicker"""
+        db.update_setting(ctx.guild.id, "rolepicker_enabled", 0)
+        await ctx.send("Rolepicker is now **disabled**")
+
     @commands.Cog.listener()
     async def on_message(self, message):
         """Rolechannel message handler"""
         if message.guild is None:
             return
         if message.channel.id == db.get_setting(message.guild.id, "rolepicker_channel"):
+            if db.get_setting(message.guild.id, "rolepicker_enabled") == 0:
+                return
             if not message.author == self.client.user:
                 command = message.content[0]
                 rolename = message.content[1:].strip()
                 if command in ["+", "-"]:
                     case = db.get_setting(message.guild.id, "rolepicker_case")
-                    role = message.guild.get_role(db.rolepicker_role(rolename, caps=(case != 0)))
+                    role = message.guild.get_role(db.rolepicker_role(message.guild.id, rolename, caps=(case != 0)))
                     if role is None:
                         await message.channel.send(errormsg.role_not_found(rolename))
                     else:
