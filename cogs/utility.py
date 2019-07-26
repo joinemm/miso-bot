@@ -294,6 +294,7 @@ class Utility(commands.Cog):
 
     @commands.command()
     async def streamable(self, ctx, media_url):
+        """Create a streamable from video url"""
         starttimer = time()
         url = f"https://api.streamable.com/import?url={media_url.strip('`')}"
         response = requests.get(url, auth=(STREAMABLE_USER, STREAMABLE_PASSWORD))
