@@ -68,10 +68,13 @@ class LastFm(commands.Cog):
                             "limit": 1})
 
         tracks = data['recenttracks']['track']
+
+        if not tracks:
+            return await ctx.send("You have not listened to anything yet!")
+
         user_attr = data['recenttracks']['@attr']
 
         artist = tracks[0]['artist']['#text']
-        album = tracks[0]['album']['#text']
         track = tracks[0]['name']
 
         query = f"{artist} {track}"
@@ -94,6 +97,10 @@ class LastFm(commands.Cog):
 
         user_attr = data['recenttracks']['@attr']
         tracks = data['recenttracks']['track']
+
+        if not tracks:
+            return await ctx.send("You have not listened to anything yet!")
+
         artist = tracks[0]['artist']['#text']
         album = tracks[0]['album']['#text']
         track = tracks[0]['name']
@@ -145,6 +152,10 @@ class LastFm(commands.Cog):
 
         user_attr = data['topartists']['@attr']
         artists = data['topartists']['artist']
+
+        if not artists:
+            return await ctx.send("You have not listened to any artists yet!")
+
         rows = []
         for i, artist in enumerate(artists):
             name = util.escape_md(artist['name'])
@@ -175,6 +186,10 @@ class LastFm(commands.Cog):
 
         user_attr = data['topalbums']['@attr']
         albums = data['topalbums']['album']
+
+        if not albums:
+            return await ctx.send("You have not listened to any albums yet!")
+
         rows = []
         for i, album in enumerate(albums):
             name = util.escape_md(album['name'])
@@ -206,6 +221,10 @@ class LastFm(commands.Cog):
 
         user_attr = data['toptracks']['@attr']
         tracks = data['toptracks']['track']
+
+        if not tracks:
+            return await ctx.send("You have not listened to anything yet!")
+
         rows = []
         for i, track in enumerate(tracks):
             name = util.escape_md(track['name'])
@@ -245,6 +264,10 @@ class LastFm(commands.Cog):
 
         user_attr = data['recenttracks']['@attr']
         tracks = data['recenttracks']['track']
+
+        if not tracks:
+            return await ctx.send("You have not listened to anything yet!")
+
         rows = []
         for i, track in enumerate(tracks):
             if i >= size:
