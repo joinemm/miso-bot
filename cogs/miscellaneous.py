@@ -215,6 +215,11 @@ class Miscellaneous(commands.Cog):
         content.description = response_data['description']
         await ctx.send(embed=content)
 
+    @commands.command()
+    async def clap(self, ctx, *words):
+        """Add a clap emoji between words"""
+        await ctx.send(' 👏 '.join(words) + ' 👏')
+
     @horoscope.command()
     async def set(self, ctx, sign):
         """Set your sunsign"""
