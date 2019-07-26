@@ -23,6 +23,8 @@ NAVER_TOKEN = os.environ.get('NAVER_TOKEN')
 WOLFRAM_APPID = os.environ.get('WOLFRAM_APPID')
 GFYCAT_CLIENT_ID = os.environ.get('GFYCAT_CLIENT_ID')
 GFYCAT_SECRET = os.environ.get('GFYCAT_SECRET')
+STREAMABLE_USER = os.environ.get('STREAMABLE_USER')
+STREAMABLE_PASSWORD = os.environ.get('STREAMABLE_PASSWORD')
 
 
 papago_pairs = ['ko/en', 'ko/ja', 'ko/zh-cn', 'ko/zh-tw', 'ko/vi', 'ko/id', 'ko/de', 'ko/ru', 'ko/es', 'ko/it',
@@ -285,6 +287,28 @@ class Utility(commands.Cog):
                 break
 
             await asyncio.sleep(1)
+
+    @commands.command()
+    async def streamable(self, ctx, media_url):
+        url = f"https://api.streamable.com/import?url={media_url}"
+        response = requests.get(url, auth=(STREAMABLE_USER, STREAMABLE_PASSWORD))
+
+        if response.status_code != 200:
+            try:
+                data = response.json()
+                messages = []
+                for category in data['messages']:
+                    for msg in data['messages'][category]:
+                        messages.append(msg)
+                messages = ' | '.join(messages)
+                errormsg = f"ERROR {response.status_code}: {messages}"
+            except (json.JSONDecodeError, KeyError):
+                errormsg = response.content.decode('utf-8')
+
+            return await ctx.send(f"```{errormsg}```")
+
+        data = response.json()
+        await ctx.send('**Your streamable is ready** https://streamable.com/' + data.get('shortcode'))
 
 
 def setup(client):
