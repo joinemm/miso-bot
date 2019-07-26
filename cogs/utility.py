@@ -260,7 +260,7 @@ class Utility(commands.Cog):
         """Create a gfycat from video url"""
         starttimer = time()
         auth_headers = gfycat_oauth()
-        response = requests.post("https://api.gfycat.com/v1/gfycats", json={"fetchUrl": media_url},
+        response = requests.post("https://api.gfycat.com/v1/gfycats", json={"fetchUrl": media_url.strip("`")},
                                  headers=auth_headers)
         data = json.loads(response.content.decode('utf-8'))
         try:
@@ -295,7 +295,7 @@ class Utility(commands.Cog):
     @commands.command()
     async def streamable(self, ctx, media_url):
         starttimer = time()
-        url = f"https://api.streamable.com/import?url={media_url}"
+        url = f"https://api.streamable.com/import?url={media_url.strip('`')}"
         response = requests.get(url, auth=(STREAMABLE_USER, STREAMABLE_PASSWORD))
 
         if response.status_code != 200:
