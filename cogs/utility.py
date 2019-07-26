@@ -11,6 +11,7 @@ import asyncio
 from helpers import utilityfunctions as util
 import helpers.log as log
 from time import time
+from bs4 import BeautifulSoup
 
 
 GOOGLE_API_KEY = os.environ.get('GOOGLE_KEY')
@@ -44,7 +45,8 @@ class Utility(commands.Cog):
     async def weather(self, ctx, *address):
         """Get weather of a location"""
         if len(address) == 0:
-            location = db.userdata(ctx.author.id).location
+            userdata = db.userdata(ctx.author.id)
+            location = userdata.location if userdata is not None else None
             if location is None:
                 return await ctx.send(f"```{self.client.command_prefix}weather <location>\n"
                                       f"{self.client.command_prefix}weather save <location>\n\n"
@@ -267,14 +269,15 @@ class Utility(commands.Cog):
             logger.error(data)
             return await ctx.send("Cannot create gif from this file!")
 
-        message = await ctx.send("Encoding... please wait")
+        message = await ctx.send("Encoding")
 
+        i = 1
         while True:
             response = requests.get(f"https://api.gfycat.com/v1/gfycats/fetch/status/{gfyname}",
                                     headers=auth_headers).json()
             task = response['task']
             if task == 'encoding':
-                pass
+                await message.edit(content="Encoding" + '.' * (i % 4))
 
             elif task == 'complete':
                 await message.edit(content=f"Gif created in **{util.stringfromtime(time() - starttimer, 2)}**\n"
@@ -286,10 +289,12 @@ class Utility(commands.Cog):
                 await message.edit(content="There was an error creating your gif :(")
                 break
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(1 + int(i/8))
+            i += 1
 
     @commands.command()
     async def streamable(self, ctx, media_url):
+        starttimer = time()
         url = f"https://api.streamable.com/import?url={media_url}"
         response = requests.get(url, auth=(STREAMABLE_USER, STREAMABLE_PASSWORD))
 
@@ -309,8 +314,23 @@ class Utility(commands.Cog):
             return await ctx.send(f"```{errormsg.split(';')[0]}```")
 
         data = response.json()
-        await asyncio.sleep(1)
-        await ctx.send('https://streamable.com/' + data.get('shortcode'))
+        link = 'https://streamable.com/' + data.get('shortcode')
+
+        message = await ctx.send("Processing Video")
+
+        i = 1
+        while True:
+            status = requests.get(link)
+            soup = BeautifulSoup(status.text, 'html.parser')
+            meta = soup.find('meta', {'property': 'og:url'})
+            if meta:
+                await message.edit(content=f"Streamable created in **{util.stringfromtime(time() - starttimer, 2)}**\n"
+                                           + meta.get('content'))
+                break
+            error = soup.find('h1').text + '.' * (i % 4)
+            await message.edit(content=error)
+            await asyncio.sleep(1 + int(i/8))
+            i += 1
 
 
 def setup(client):
