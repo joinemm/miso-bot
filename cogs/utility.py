@@ -305,10 +305,12 @@ class Utility(commands.Cog):
             except (json.JSONDecodeError, KeyError):
                 errormsg = response.content.decode('utf-8')
 
-            return await ctx.send(f"```{errormsg}```")
+            logger.error(errormsg)
+            return await ctx.send(f"```{errormsg.split(';')[0]}```")
 
         data = response.json()
-        await ctx.send('**Your streamable is ready** https://streamable.com/' + data.get('shortcode'))
+        await asyncio.sleep(1)
+        await ctx.send('https://streamable.com/' + data.get('shortcode'))
 
 
 def setup(client):
