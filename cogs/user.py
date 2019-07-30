@@ -16,7 +16,7 @@ class User(commands.Cog):
     @commands.command(aliases=['dp'])
     async def avatar(self, ctx, *, user=""):
         """Get user's profile picture"""
-        user = await util.get_user(ctx, user, ctx.author)
+        user = await util.get_member(ctx, user, ctx.author, try_user=True)
 
         content = discord.Embed(color=user.color)
         image = user.avatar_url_as(static_format="png")
@@ -28,11 +28,7 @@ class User(commands.Cog):
     @commands.command()
     async def userinfo(self, ctx, *, user=""):
         """Get information about user"""
-        member = await util.get_member(ctx, user)
-        if member is None:
-            user = await util.get_user(ctx, user, ctx.author)
-        else:
-            user = member
+        user = await util.get_member(ctx, user, ctx.author, try_user=True)
 
         fishydata = db.fishdata(user.id)
         if fishydata is None or fishydata.timestamp is None:

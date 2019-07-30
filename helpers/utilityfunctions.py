@@ -228,12 +228,15 @@ async def get_user(ctx, mention, fallback=None):
         return fallback
 
 
-async def get_member(ctx, mention, fallback=None):
+async def get_member(ctx, mention, fallback=None, try_user=False):
     """Get a discord guild member from mention, name, or id"""
     try:
         return await commands.MemberConverter().convert(ctx, mention)
     except commands.errors.BadArgument:
-        return fallback
+        if try_user:
+            return get_user(ctx, mention, fallback)
+        else:
+            return fallback
 
 
 async def get_textchannel(ctx, mention, fallback=None):
