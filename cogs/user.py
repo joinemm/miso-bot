@@ -266,11 +266,12 @@ class User(commands.Cog):
 
         rows = []
         for i, (user, messages, xp) in enumerate(sorted(users, key=itemgetter(2), reverse=True), start=1):
-            rows.append(f"`{i}:` LVL **{util.get_level(xp)}** - **{user.name}** `[{xp} XP | {messages} messages]`")
+            rows.append(f"`{i}:`" + (f"LVL **{util.get_level(xp)}** - " if time is None else '') +
+                        f"**{user.name}** `[{xp} XP | {messages} messages]`")
 
         content = discord.Embed(color=discord.Color.teal())
         content.title = f"{'Global' if _global_ else guild.name} levels leaderboard"
-        if time != '':
+        if time is not None:
             content.title += f" - {time}"
         await util.send_as_pages(ctx, content, rows)
 
@@ -307,4 +308,4 @@ def get_activity_table(timeframe):
     if timeframe in ["month", "monthly"]:
         return 'This month', 'activity_month'
     else:
-        return '', 'activity'
+        return None, 'activity'
