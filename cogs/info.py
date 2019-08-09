@@ -10,6 +10,7 @@ import os
 import arrow
 import copy
 import helpers.utilityfunctions as util
+import data.database as db
 
 
 class Info(commands.Cog):
@@ -39,14 +40,23 @@ class Info(commands.Cog):
     @commands.command()
     async def patrons(self, ctx):
         """List the current patreons"""
-        patrons = [381491116853166080, 121757433507872768, 132921952544227329]
+        patrons = db.query("select user_id, currently_active from patrons")
         content = discord.Embed(title="Patreon supporters ❤", color=discord.Color.red())
-        rows = []
+        current = []
+        past = []
         for x in patrons:
-            user = self.client.get_user(x)
-            rows.append(f"**{user or x}**")
+            user = self.client.get_user(x[0])
+            if util.int_to_bool(x[1]):
+                current.append(user or x[0])
+            else:
+                past.append(user or x[0])
 
-        await util.send_as_pages(ctx, content, rows)
+        if current:
+            content.add_field(name="Current patrons", value="\n".join([f"**{x}**" for x in current]))
+        if past:
+            content.add_field(name="Inactive patrons", value="\n".join([f"**{x}**" for x in past]))
+
+        await ctx.send(embed=content)
 
     @commands.command(name='info')
     async def info(self, ctx):
