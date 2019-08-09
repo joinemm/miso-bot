@@ -333,6 +333,22 @@ def useragent():
     return random.choice(agents)
 
 
+def bool_to_int(value: bool):
+    """Turn boolean into 1 or 0"""
+    if value is True:
+        return 1
+    else:
+        return 0
+
+
+def int_to_bool(value):
+    """Turn integer into boolean"""
+    if value is None or value == 0:
+        return False
+    else:
+        return True
+
+
 def create_welcome_embed(user, guild, messageformat):
     """Creates and returns embed for welcome message"""
     content = discord.Embed(title="New member! :wave:", color=discord.Color.green())
