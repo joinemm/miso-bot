@@ -9,6 +9,7 @@ import colorgram
 from PIL import Image
 import data.database as db
 import random
+import datetime
 
 
 async def send_as_pages(ctx, content, rows, maxrows=15):
@@ -330,6 +331,17 @@ def useragent():
     """Returns random user agent to use in web scraping"""
     agents = db.get_from_data_json(['useragents'])
     return random.choice(agents)
+
+
+def create_welcome_embed(user, guild, messageformat):
+    """Creates and returns embed for welcome message"""
+    content = discord.Embed(title="New member! :wave:", color=discord.Color.green())
+    content.set_thumbnail(url=user.avatar_url)
+    content.timestamp = datetime.datetime.utcnow()
+    content.set_footer(text=f"👤#{len(guild.members)}")
+    content.description = messageformat.format(mention=user.mention, user=user, id=user.id,
+                                               server=guild.name, username=user.name)
+    return content
 
 
 class TwoWayIterator:
