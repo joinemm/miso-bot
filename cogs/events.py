@@ -91,9 +91,9 @@ class Events(commands.Cog):
         if db.query("select * from votechannels where guild_id = ? and channel_id = ?",
                     (message.guild.id, message.channel.id)) is not None:
             await message.add_reaction(self.client.get_emoji(
-                db.query("select id from emojis where name = 'upvote'")[0]))
+                db.query("select id from emojis where name = 'upvote'")[0][0]))
             await message.add_reaction(self.client.get_emoji(
-                db.query("select id from emojis where name = 'downvote'")[0]))
+                db.query("select id from emojis where name = 'downvote'")[0][0]))
 
         # stfu
         if not message.author.bot and 'stfu' in message.content.lower():
