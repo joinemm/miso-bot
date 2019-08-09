@@ -117,10 +117,10 @@ async def send_notification(user, message, pattern=None):
     if pattern is not None:
         highlighted_text = re.sub(pattern, lambda x: f'**{x.group(0)}**', message.content)
     else:
-        highlighted_text = message.content
-    content.description = f"`>>>` {highlighted_text}\n\n" \
+        highlighted_text = message.content.replace(f">notifytest ", "")
+    content.description = f"> {highlighted_text}\n" \
         f"[Go to message]({message.jump_url})"
-    content.set_footer(text=f"{message.guild.name} | #{message.channel.name}")
+    content.set_footer(text=f"{message.guild.name} | #{message.channel.name}", icon_url=message.guild.icon_url)
     content.timestamp = message.created_at
 
     await user.send(embed=content)
