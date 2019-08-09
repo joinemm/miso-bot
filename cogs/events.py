@@ -40,10 +40,13 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        # welcome message
-        message = db.get_setting(member.guild.id, "welcome_message")
-        if message is None:
-            message = "Welcome {mention}"
+        """Called when a new member joins a server"""
+        if db.get_setting(member.guild.id, "welcome_toggle") == 0:
+            return logger.info(f"{member.name} just joined {member.guild.name}, but welcome messages are disabled!")
+
+        message_format = db.get_setting(member.guild.id, "welcome_message")
+        if message_format is None:
+            message_format = "Welcome **{username}** {mention} to **{server}**"
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:
@@ -59,6 +62,10 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
+        """Called when user gets banned from a server"""
+        if db.get_setting(guild.id, "welcome_toggle") == 0:
+            return logger.info(f"{user.name} just got banned from {guild.name}, but welcome messages are disabled!")
+
         channel_id = db.get_setting(guild.id, "welcome_channel")
         channel = guild.get_channel(channel_id)
         if channel is None:
@@ -70,6 +77,10 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
+        """Called when member leaves a guild or is kicked"""
+        if db.get_setting(member.guild.id, "welcome_toggle") == 0:
+            return logger.info(f"{member.name} just left {member.guild.name}, but welcome messages are disabled!")
+
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:
