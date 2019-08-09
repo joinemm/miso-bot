@@ -50,9 +50,9 @@ class Events(commands.Cog):
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:
-            logger.warning(f"No welcome channel set for [{member.guild.name}]")
-            return
-        await channel.send(message.format(mention=member.mention, name=member.name))
+            return logger.warning(f"No welcome channel set for [{member.guild.name}]")
+
+        await channel.send(embed=util.create_welcome_embed(member, member.guild, message_format))
         logger.info(f"Welcomed {member.name} to {member.guild.name}")
 
         # add autorole
