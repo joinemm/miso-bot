@@ -51,18 +51,17 @@ class Info(commands.Cog):
     @commands.command(name='info')
     async def info(self, ctx):
         """Get information about the bot"""
-        appinfo = await self.client.application_info()
         membercount = len(set(self.client.get_all_members()))
         content = discord.Embed(title=f"Miso Bot | version {self.version}", colour=discord.Colour.red())
-        content.description=f"""
-            Created by **{appinfo.owner}** {appinfo.owner.mention}
-            
-            Use `{self.client.command_prefix}help` to get the full list of commands, 
-            or visit the documention website for more detailed help.
-            
-            Currently active in **{len(self.client.guilds)}** servers,
-            totaling **{membercount}** unique users.
-            """
+        content.description = f"""
+Created by **{self.client.appinfo.owner}** {self.client.appinfo.owner.mention}
+
+Use `{self.client.command_prefix}help` to get the full list of commands, 
+or visit the documention website for more detailed help.
+
+Currently active in **{len(self.client.guilds)}** servers,
+totaling **{membercount}** unique users.
+"""
 
         content.set_thumbnail(url=self.client.user.avatar_url)
         content.add_field(name='Github', value='https://github.com/joinemm/misobot2', inline=False)
