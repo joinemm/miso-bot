@@ -41,7 +41,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         """Called when a new member joins a server"""
-        if db.get_setting(member.guild.id, "welcome_toggle") == 0:
+        if not util.int_to_bool(db.get_setting(member.guild.id, "welcome_toggle")):
             return logger.info(f"{member.name} just joined {member.guild.name}, but welcome messages are disabled!")
 
         message_format = db.get_setting(member.guild.id, "welcome_message")
@@ -63,7 +63,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         """Called when user gets banned from a server"""
-        if db.get_setting(guild.id, "welcome_toggle") == 0:
+        if not util.int_to_bool(db.get_setting(guild.id, "welcome_toggle")):
             return logger.info(f"{user.name} just got banned from {guild.name}, but welcome messages are disabled!")
 
         channel_id = db.get_setting(guild.id, "welcome_channel")
@@ -78,7 +78,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         """Called when member leaves a guild or is kicked"""
-        if db.get_setting(member.guild.id, "welcome_toggle") == 0:
+        if not util.int_to_bool(db.get_setting(member.guild.id, "welcome_toggle")):
             return logger.info(f"{member.name} just left {member.guild.name}, but welcome messages are disabled!")
 
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
@@ -107,7 +107,8 @@ class Events(commands.Cog):
                 db.query("select id from emojis where name = 'downvote'")[0][0]))
 
         # stfu
-        if not message.author.bot and 'stfu' in message.content.lower():
+        pattern = re.compile(r'(?:^|\W){0}(?:$|\W)'.format('stfu'), flags=re.IGNORECASE)
+        if not message.author.bot and pattern.findall(message.content):
             await message.channel.send("no u")
 
         # git gud
@@ -138,7 +139,7 @@ class Events(commands.Cog):
 
         # leveups
         if not message.author.bot:
-            announce = True if db.get_setting(message.guild.id, "levelup_toggle") == 1 else False
+            announce = util.int_to_bool(db.get_setting(message.guild.id, "levelup_toggle"))
             if announce:
                 activity_data = db.get_user_activity(message.guild.id, message.author.id)
                 if activity_data is not None:
@@ -153,7 +154,7 @@ class Events(commands.Cog):
     async def on_reaction_add(self, reaction, _):
         """Starboard"""
         if reaction.emoji == "⭐":
-            if db.get_setting(reaction.message.guild.id, "starboard_toggle") == 1:
+            if util.int_to_bool(db.get_setting(reaction.message.guild.id, "starboard_toggle")):
 
                 channel_id = db.get_setting(reaction.message.guild.id, "starboard_channel")
                 channel = reaction.message.guild.get_channel(channel_id)
