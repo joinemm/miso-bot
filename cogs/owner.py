@@ -4,6 +4,7 @@ import helpers.log as log
 import helpers.utilityfunctions as util
 import data.database as db
 import sqlite3
+import arrow
 
 logger = log.get_logger(__name__)
 
@@ -40,6 +41,44 @@ class Owner(commands.Cog):
         print('logout')
         await ctx.send("Shutting down... :wave:")
         await self.client.logout()
+
+    @commands.group(hidden=True)
+    @commands.is_owner()
+    async def patron(self, ctx):
+        await util.command_group_help(ctx)
+
+    @patron.command(name='add')
+    @commands.is_owner()
+    async def patron_add(self, ctx, user, tier, patron_since=None):
+        discord_user = await util.get_user(ctx, user)
+        if discord_user is None:
+            return await ctx.send(f"Cannot find user {user}")
+
+        since_ts = arrow.get(patron_since).timestamp
+
+        db.execute("INSERT INTO patrons VALUES(?, ?, ?, ?)", (discord_user.id, int(tier), since_ts, 1))
+        await ctx.send(f"**{discord_user}** is now a patreon!")
+
+    @patron.command(name='remove')
+    @commands.is_owner()
+    async def patron_remove(self, ctx, user):
+        discord_user = await util.get_user(ctx, user)
+        db.execute("DELETE FROM patrons WHERE user_id = ?",
+                   (discord_user.id if discord_user is not None else int(user),))
+        await ctx.send(f"Removed **{discord_user if discord_user is not None else int(user)}** from patrons")
+
+    @patron.command(name='toggle')
+    @commands.is_owner()
+    async def patron_toggle(self, ctx, user):
+        discord_user = await util.get_user(ctx, user)
+        if discord_user is None:
+            return await ctx.send(f"Cannot find user {user}")
+
+        current = util.int_to_bool(db.query("SELECT currently_active FROM patrons WHERE user_id = ?",
+                                            (discord_user.id,))[0][0])
+        db.execute("UPDATE patrons SET currently_active = ? WHERE user_id = ?",
+                   (util.bool_to_int(not current), discord_user.id))
+        await ctx.send(f"**{discord_user}** patreon activity set to **{not current}**")
 
     @commands.command(hidden=True)
     @commands.is_owner()
