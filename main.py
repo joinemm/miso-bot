@@ -16,6 +16,7 @@ extensions = ['cogs.events', 'cogs.config', 'cogs.errorhandler', 'cogs.customcom
 
 @client.event
 async def on_ready():
+    client.appinfo = await client.application_info()
     logger.info("Loading complete")
 
 
