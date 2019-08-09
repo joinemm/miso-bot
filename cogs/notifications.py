@@ -50,11 +50,13 @@ class Notifications(commands.Cog):
         check = db.query("SELECT * FROM notifications WHERE guild_id = ? and user_id = ? and keyword = ?",
                          (ctx.guild.id, ctx.author.id, keyword))
         if check is not None:
-            return await ctx.send("You already have this notification <:hyunjinwtf:532922316212928532>")
+            hyunjinwtf = self.client.get_emoji(db.query("select id from emojis where name = hyunjinwtf")[0][0])
+            return await ctx.send(f"You already have this notification {hyunjinwtf}")
 
         db.execute("REPLACE INTO notifications values(?, ?, ?)", (ctx.guild.id, ctx.author.id, keyword))
         await ctx.author.send(f"New notification for keyword `{keyword}` set in `{ctx.guild.name}` ")
-        await ctx.send("Set a notification! Check your DMs <:vivismirk:532923084026544128>")
+        vivismirk = self.client.get_emoji(db.query("select id from emojis where name = vivismirk")[0][0])
+        await ctx.send(f"Set a notification! Check your DMs {vivismirk}")
 
     @notification.command()
     async def remove(self, ctx, *, keyword):
@@ -64,12 +66,14 @@ class Notifications(commands.Cog):
         check = db.query("SELECT * FROM notifications WHERE guild_id = ? and user_id = ? and keyword = ?",
                          (ctx.guild.id, ctx.author.id, keyword))
         if check is None:
-            return await ctx.send("You don't even have a notification for that <:hyunjinwtf:532922316212928532>")
+            hyunjinwtf = self.client.get_emoji(db.query("select id from emojis where name = hyunjinwtf")[0][0])
+            return await ctx.send(f"You don't even have a notification for that {hyunjinwtf}")
 
         db.execute("DELETE FROM notifications where guild_id = ? and user_id = ? and keyword = ?",
                    (ctx.guild.id, ctx.author.id, keyword))
         await ctx.author.send(f"Notification for keyword `{keyword}` removed for `{ctx.guild.name}` ")
-        await ctx.send("removed a notification! Check your DMs <:vivismirk:532923084026544128>")
+        vivismirk = self.client.get_emoji(db.query("select id from emojis where name = vivismirk")[0][0])
+        await ctx.send(f"removed a notification! Check your DMs {vivismirk}")
 
     @notification.command()
     async def list(self, ctx):
@@ -94,7 +98,8 @@ class Notifications(commands.Cog):
             text = "**No notifications yet!**"
 
         await ctx.author.send(text)
-        await ctx.send("List sent to your DMs <:vivismirk:532923084026544128>")
+        vivismirk = self.client.get_emoji(db.query("select id from emojis where name = vivismirk")[0][0])
+        await ctx.send(f"List sent to your DMs {vivismirk}")
 
     @commands.command(hidden=True)
     @commands.is_owner()
