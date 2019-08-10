@@ -145,6 +145,13 @@ def getter(d, key):
             return None
 
 
+def log_command_usage(ctx):
+    execute("INSERT OR IGNORE INTO command_usage VALUES(?, ?, ?, ?)",
+            (ctx.guild.id, ctx.author.id, str(ctx.command), 0))
+    execute("UPDATE command_usage SET count = count + 1 WHERE (guild_id = ? AND user_id = ? AND command = ?)",
+            (ctx.guild.id, ctx.author.id, str(ctx.command)))
+
+
 def pp(cursor, data=None, rowlens=0):
     d = cursor.description
     if not d:

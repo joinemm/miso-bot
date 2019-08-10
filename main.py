@@ -1,6 +1,7 @@
 from discord.ext import commands
 import os
 import helpers.log as log
+import data.database as db
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
@@ -25,6 +26,7 @@ async def before_any_command(ctx):
     await ctx.trigger_typing()
     if ctx.invoked_subcommand is None:
         command_logger.info(log.log_command(ctx))
+        db.log_command_usage(ctx)
 
 if __name__ == "__main__":
     for extension in extensions:
