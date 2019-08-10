@@ -22,6 +22,7 @@ TWITTER_CSECRET = os.environ.get('TWITTER_CONSUMER_SECRET')
 IG_COOKIE = os.environ.get('IG_COOKIE')
 SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
+GOOGLE_API_KEY = os.environ.get('GOOGLE_KEY')
 
 
 class Media(commands.Cog):
@@ -188,21 +189,31 @@ class Media(commands.Cog):
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx, *, query):
         """Search youtube for the given search query and return first result"""
-        response = requests.get(f"http://www.youtube.com/results?search_query={query}")
-        video_ids = set(re.findall('watch\\?v=(.{11})', response.content.decode('utf-8')))
-        results = util.TwoWayIterator([f'http://www.youtube.com/watch?v={x}' for x in video_ids])
 
-        msg = await ctx.send(f"**#1:** {results.current()}")
+        response = requests.get(url='https://www.googleapis.com/youtube/v3/search',
+                                params={'part': 'snippet',
+                                        'type': 'video',
+                                        'maxResults': 25,
+                                        'q': query,
+                                        'key': GOOGLE_API_KEY}).json()
+
+        urls = []
+        for item in response.get('items'):
+            urls.append(f"https://youtube.com/watch?v={item['id']['videoId']}")
+
+        videos = util.TwoWayIterator(urls)
+
+        msg = await ctx.send(f"**#1:** {videos.current()}")
 
         async def next_link():
-            link = results.next()
+            link = videos.next()
             if link is not None:
-                await msg.edit(content=f"**#{results.index+1}:** {link}", embed=None)
+                await msg.edit(content=f"**#{videos.index+1}:** {link}", embed=None)
 
         async def prev_link():
-            link = results.previous()
+            link = videos.previous()
             if link is not None:
-                await msg.edit(content=f"**#{results.index+1}:** {link}", embed=None)
+                await msg.edit(content=f"**#{videos.index+1}:** {link}", embed=None)
 
         async def done():
             return True
