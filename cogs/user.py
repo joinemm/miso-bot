@@ -14,7 +14,7 @@ class User(commands.Cog):
         self.client = client
 
     @commands.command(aliases=['dp'])
-    async def avatar(self, ctx, *, user=""):
+    async def avatar(self, ctx, *, user=None):
         """Get user's profile picture"""
         user = await util.get_member(ctx, user, ctx.author, try_user=True)
 
@@ -26,7 +26,7 @@ class User(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def userinfo(self, ctx, *, user=""):
+    async def userinfo(self, ctx, *, user=None):
         """Get information about user"""
         user = await util.get_member(ctx, user, ctx.author, try_user=True)
 
@@ -141,9 +141,9 @@ class User(commands.Cog):
         await ctx.send(f"This command has been deprecated. Please use `>leaderboard levels [timeframe]`")
 
     @commands.command(aliases=["level"])
-    async def activity(self, ctx, user=""):
+    async def activity(self, ctx, user=None):
         """See your hourly server activity chart (GMT)"""
-        user = await util.get_user(ctx, user, ctx.author)
+        user = await util.get_member(ctx, user, ctx.author)
 
         activitydata = db.activitydata(ctx.guild.id, user.id)
         if activitydata is None:
@@ -162,8 +162,8 @@ class User(commands.Cog):
             await ctx.send(file=discord.File(img))
 
     @commands.command()
-    async def rank(self, ctx, user=""):
-        user = await util.get_user(ctx, user, ctx.author)
+    async def rank(self, ctx, user=None):
+        user = await util.get_member(ctx, user, ctx.author)
 
         content = discord.Embed(color=user.color)
         content.set_author(name=f"XP Rankings for {user.name}", icon_url=user.avatar_url)

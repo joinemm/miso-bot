@@ -223,6 +223,8 @@ def xp_from_message(message):
 
 async def get_user(ctx, mention, fallback=None):
     """Get a discord user from mention, name, or id"""
+    if mention is None:
+        return fallback
     try:
         return await commands.UserConverter().convert(ctx, mention)
     except commands.errors.BadArgument:
@@ -231,11 +233,13 @@ async def get_user(ctx, mention, fallback=None):
 
 async def get_member(ctx, mention, fallback=None, try_user=False):
     """Get a discord guild member from mention, name, or id"""
+    if mention is None:
+        return fallback
     try:
         return await commands.MemberConverter().convert(ctx, mention)
     except commands.errors.BadArgument:
         if try_user:
-            return get_user(ctx, mention, fallback)
+            return await get_user(ctx, mention, fallback)
         else:
             return fallback
 
