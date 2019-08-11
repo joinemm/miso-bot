@@ -13,7 +13,7 @@ class Wordcloud(commands.Cog):
         self.mask = np.array(Image.open("html/cloud.png"))
 
     @commands.command()
-    async def wordcloud(self, ctx, user, messages):
+    async def wordcloud(self, ctx, user, messages=1000):
         """Create a word cloud of messages in the channel used in"""
         if int(messages) > 10000:
             return await ctx.send("For performance reasons the amount of messages is limited to 10000 for now!")
