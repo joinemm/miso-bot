@@ -324,6 +324,10 @@ Get information about the server.
 
 > \>serverinfo
 
+Get list of all roles on the server, and information about them.
+
+> \>roleslist
+
 ---
 
 # Images
@@ -331,6 +335,56 @@ Get information about the server.
 Input text into various meme images. (currently just one).
 
 > \>olivia <text...>
+
+---
+
+# Utility Commands
+
+#### Host services
+
+Create a gfycat gif from a video url / twitter link / instagram link.
+
+> \>creategif <video\>
+
+Create streamable link from a video url / twitter link / instagram link.
+
+> \>streamable <video\>
+
+#### Definitions
+
+Get a definition for a word from the Oxford Dictionary.
+
+> \>define <word\>
+
+Get a definition for a word from the Urban Dictionary.
+
+> \>urban <word\>
+
+#### Translator
+
+Translate any text between any two languages.   
+Uses Papago translator for all supported languages (most asian languages), and Google translate for anything not supported by Papago.
+
+You can optionally specify the two languages in the start using the format `xx/xx` where `xx` are language codes.    
+Either of them can be left blank; If the first language is left blank, the source language will be automatically detected from the given text.    
+If the target language is left blank, it will default to english.
+
+> \>translate xx/xx <text...\>    
+> \>translate /xx <text...\>    
+> \>translate <text...\>    
+
+#### Misc 
+
+Get current weather, and brief forecast for any location.    
+You can also save your location so you dont have to specify it every time.
+
+> \>weather <location\>    
+> \>weather save <location\>
+
+Ask something from wolfram alpha.    
+Currency and unit conversion, math equations etc.
+
+> \>question <your question...\>
 
 ---
 
