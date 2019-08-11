@@ -24,7 +24,7 @@ class Wordcloud(commands.Cog):
             user_limiter = member.id if member is not None else None
 
         all_words = []
-        async for message in ctx.channel.history(limit=int(messages), oldest_first=True):
+        async for message in ctx.channel.history(limit=int(messages)):
             if message.author.bot:
                 continue
             if user_limiter is None or message.author.id == user_limiter:
