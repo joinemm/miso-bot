@@ -9,7 +9,11 @@ Set the channel where join and leave messages are sent in.
 > \>welcomeconfig channel <textchannel\>
 
 Set a custom welcome message.   
-Use `{user}` or `{mention}` as placeholders to be filled with the user who joined.
+You can use these placeholders and they will be filled accordingly:
+- `{user}` = `username#1234`
+- `{username}` = `username`
+- `{mention}` = `@username`
+- `{guild}` = `servername`
 
 > \>welcomeconfig message <text...>
 
@@ -46,11 +50,13 @@ Useful in suggestion channels and such.
 Set the role added when muting someone.    
 For proper muterole configuration you must disable `send messages` for the role in every channel.
 
-> \>muterole <role\>
+> \>muterole <role\>   
+> \>muterole none
 
 Set the role applied automatically for new members who join the server.
 
-> \>autorole <role\>
+> \>autorole <role\>   
+> \>autorole none
 
 #### Other
 
@@ -67,6 +73,10 @@ Designate a channel for picking roles and assign them to keywords.
 Once set up, using `+keyword` or `-keyword` in the channel will change your roles accordingly.
 
 > \>rolepicker channel <textchannel\>
+
+Enable and disable the rolepicker
+
+> \>rolepicker [ enable | disable ]
 
 Add and remove assignable roles.
 
@@ -89,15 +99,10 @@ You can also gift fishy to other members:
 
 > \>fishy <member\>
 
-See the fishy leaderboard.
-
-> \>leaderboard    
-> \>leaderboard global
-
 See statistics about your or other user's fishing.
 
 > \>fishystats    
-> \>fishystats <member\>
+> \>fishystats <member\>  
 > \>fishystats global
 
 ---
@@ -201,7 +206,8 @@ You can chain any of these sources together to form a palette.
 
 #### Social media
 
-Embeds the given post in discord so you can easily save all the images in high resolution, or just show them. You can use full url, or just the post id.
+Embeds the given post in discord so you can easily save all the images in high resolution, or just show them.    
+You can use full url, or just the post id. (eg. `1156225603470688261` for twitter or `B0u02QonS3z` for instagram)
 
 > \>ig <url\>  
 > \>ig <id\>
@@ -223,6 +229,54 @@ Search various places on the web like gfycat and youtube.
 
 ---
 
+# LastFM
+
+Integration with the music tracking service, last.fm.    
+For anything requiring artist name, the name must be formatted **exactly** as is shows up in the lastfm website.
+
+First connect your lastfm account by using
+
+> \>fm set <username\>
+
+Check your profile with 
+
+> \>fm profile
+
+Then you can check various top lists.
+
+> \>fm toptracks <timeframe\>    
+> \>fm topartists <timeframe\>    
+> \>fm topalbums <timeframe\>    
+
+Show your most recently listened to tracks, or the one currently playing in embed or youtube link form.
+
+> \>fm recent  
+> \>fm nowplaying    
+> \>fm youtube
+
+Show artist specific data from your listens.
+
+> \>fm artist toptracks <artist\>    
+> \>fm artist topalbums <artist\>
+
+Generate a visual chart of your data.    
+You can optionally specify datatype `( artist | album | recent )`, timeframe or size of the chart in any order.    
+Defaults to albums week 3x3.
+
+> \>fm chart    
+> \>fm chart <datatype\> <timeframe\> <NxN\>   
+
+Check who has listened to given artist most on this server.    
+Top listener gains a crown.
+
+> \>whoknows <artist\>
+
+See your artist crowns on this server.
+
+> \>crowns
+
+---
+
 # Users and levels
 
 #### About XP
@@ -234,20 +288,29 @@ The bot will start counting xp from the moment it's invited, so past messages wo
 ---
 Shows your server activity graph per hour, along with your xp and level information.
 
-> \>activity
+> \>activity    
+> \>activity <user\>
 
-Get the activity leaderboard. Shows the users with most xp on this server (or globally).
+Show your daily/weekly/monthly/overall xp ranking
 
-> \>toplevels  
-> \>toplevels global
+> \>rank    
+> \>rank <user\>
 
 Get user's profile picture.
 
+> \>avatar    
 > \>avatar <user\>
 
 User information.
 
+> \>userinfo    
 > \>userinfo <user>
+
+Show various leaderboards
+
+> \>leaderboard levels [global] <timeframe\>    
+> \>leaderboard fishy [global]    
+> \>leaderboard crowns
 
 ---
 
