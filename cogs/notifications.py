@@ -14,13 +14,20 @@ class Notifications(commands.Cog):
         self.client = client
         self.emojis = {}
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.cache_emojis()
+
+    def cache_emojis(self):
         for emoji in ['vivismirk', 'hyunjinwtf']:
             try:
                 self.emojis[emoji] = self.client.get_emoji(db.query("select id from emojis where name = ?",
                                                                     (emoji,))[0][0])
             except TypeError as e:
                 self.emojis[emoji] = None
-                logger.error(f"Unable to retrieve {emoji} [{e}]")
+
+            if self.emojis[emoji] is None:
+                logger.error(f"Unable to retrieve {emoji}")
 
     @commands.Cog.listener()
     async def on_message(self, message):
