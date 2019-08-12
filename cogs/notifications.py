@@ -3,14 +3,24 @@ from discord.ext import commands
 import data.database as db
 import helpers.utilityfunctions as util
 import re
+import helpers.log as log
+
+logger = log.get_logger(__name__)
 
 
 class Notifications(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-        self.vivismirk = self.client.get_emoji(db.query("select id from emojis where name = 'vivismirk'")[0][0])
-        self.hyunjinwtf = self.client.get_emoji(db.query("select id from emojis where name = 'hyunjinwtf'")[0][0])
+        self.emojis = {}
+
+        for emoji in ['vivismirk', 'hyunjinwtf']:
+            try:
+                self.emojis[emoji] = self.client.get_emoji(db.query("select id from emojis where name = ?",
+                                                                    (emoji,))[0][0])
+            except TypeError as e:
+                self.emojis[emoji] = None
+                logger.error(f"Unable to retrieve {emoji} [{e}]")
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -52,11 +62,11 @@ class Notifications(commands.Cog):
         check = db.query("SELECT * FROM notifications WHERE guild_id = ? and user_id = ? and keyword = ?",
                          (ctx.guild.id, ctx.author.id, keyword))
         if check is not None:
-            return await ctx.send(f"You already have this notification {self.hyunjinwtf}")
+            return await ctx.send(f"You already have this notification {self.emojis.get('hyunjinwtf')}")
 
         db.execute("REPLACE INTO notifications values(?, ?, ?)", (ctx.guild.id, ctx.author.id, keyword))
         await ctx.author.send(f"New notification for keyword `{keyword}` set in `{ctx.guild.name}` ")
-        await ctx.send(f"Set a notification! Check your DMs {self.vivismirk}")
+        await ctx.send(f"Set a notification! Check your DMs {self.emojis.get('vivismirk')}")
 
     @notification.command()
     async def remove(self, ctx, *, keyword):
@@ -66,12 +76,12 @@ class Notifications(commands.Cog):
         check = db.query("SELECT * FROM notifications WHERE guild_id = ? and user_id = ? and keyword = ?",
                          (ctx.guild.id, ctx.author.id, keyword))
         if check is None:
-            return await ctx.send(f"You don't even have a notification for that {self.hyunjinwtf}")
+            return await ctx.send(f"You don't even have a notification for that {self.emojis.get('hyunjinwtf')}")
 
         db.execute("DELETE FROM notifications where guild_id = ? and user_id = ? and keyword = ?",
                    (ctx.guild.id, ctx.author.id, keyword))
         await ctx.author.send(f"Notification for keyword `{keyword}` removed for `{ctx.guild.name}` ")
-        await ctx.send(f"removed a notification! Check your DMs {self.vivismirk}")
+        await ctx.send(f"removed a notification! Check your DMs {self.emojis.get('vivismirk')}")
 
     @notification.command()
     async def list(self, ctx):
@@ -96,7 +106,7 @@ class Notifications(commands.Cog):
             text = "**No notifications yet!**"
 
         await ctx.author.send(text)
-        await ctx.send(f"List sent to your DMs {self.vivismirk}")
+        await ctx.send(f"List sent to your DMs {self.emojis.get('vivismirk')}")
 
     @commands.command(hidden=True)
     @commands.is_owner()
