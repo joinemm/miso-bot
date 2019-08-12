@@ -36,7 +36,8 @@ def get_command_logger():
 
 
 def log_command(ctx):
-    text = f"{(str(ctx.command)+'()'):19} | {ctx.guild.name} ]:: {ctx.author} \"{ctx.message.content}\""
+    text = f"{(str(ctx.command)+'()'):19} | {ctx.guild.name if ctx.guild is not None else 'DM'} ]:: " \
+           f"{ctx.author} \"{ctx.message.content}\""
     return text
 
 
