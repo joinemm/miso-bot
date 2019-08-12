@@ -289,16 +289,16 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @fm.command()
-    async def artist(self, ctx, mode, *, artistname):
+    async def artist(self, ctx, datatype, *, artistname):
         """Top tracks / albums for specific artist"""
-        if mode in ["toptracks", "tt", "tracks", "track"]:
+        if datatype in ["toptracks", "tt", "tracks", "track"]:
             method = "user.gettoptracks"
             path = ["toptracks", "track"]
-        elif mode in ["topalbums", "talb", "albums", "album"]:
+        elif datatype in ["topalbums", "talb", "albums", "album"]:
             method = "user.gettopalbums"
             path = ["topalbums", "album"]
         else:
-            return ctx.send_command_help()
+            return await util.send_command_help(ctx)
 
         def filter_artist(artist_dict, items):
             for item in items:
@@ -318,8 +318,7 @@ class LastFm(commands.Cog):
                 artist_data = filter_artist(artist_data, datapacket[path[0]][path[1]])
 
         if not artist_data:
-            return await ctx.send(f"You have never listened to **{artistname}**!\nMake sure the artist's name"
-                                  f" is formatted exactly as shown in the last fm database.")
+            return await ctx.send(f"You have never listened to **{artistname}**!")
 
         artist_info = api_request({"method": "artist.getinfo", "artist": artistname})['artist']
         image_url = scrape_artist_image(artistname)
