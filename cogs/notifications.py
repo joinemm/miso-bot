@@ -86,27 +86,26 @@ class Notifications(commands.Cog):
     @notification.command()
     async def list(self, ctx):
         """List your current notifications"""
-        words = db.query("SELECT guild_id, keyword FROM notifications where user_id = ?",
+        words = db.query("SELECT guild_id, keyword FROM notifications where user_id = ? ORDER BY keyword",
                          (ctx.author.id,))
-        data = {}
-        for noti in words:
-            if noti[0] in words:
-                data[noti[0]].append(noti[1])
-            else:
-                data[noti[0]] = [noti[1]]
-        text = ""
-        for guild in data:
-            server = self.client.get_guild(int(guild))
-            if server is not None:
-                text += f"**{server.name}:**"
-                for word in data[guild]:
-                    text += f"\n└`{word}`"
-                text += "\n"
-        if text == "":
-            text = "**No notifications yet!**"
 
-        await ctx.author.send(text)
-        await ctx.send(f"List sent to your DMs {self.emojis.get('vivismirk')}")
+        if words is None:
+            return await ctx.send("You have not set any notifications yet!")
+
+        guilds = {}
+        for guild_id, keyword in words:
+            guilds[guild_id] = guilds.get(guild_id, []) + [keyword]
+
+        content = discord.Embed(title=":love_letter: Your notifications", color=discord.Color.red())
+        for guild_id in guilds:
+            server = self.client.get_guild(guild_id)
+            if server is None:
+                continue
+            content.add_field(name=server.name, value='\n'.join([f"└`{x}`" for x in guilds.get(guild_id)]))
+
+        await ctx.author.send(embed=content)
+        if ctx.guild is not None:
+            await ctx.send(f"List sent to your DMs {self.emojis.get('vivismirk')}")
 
     @commands.command(hidden=True)
     @commands.is_owner()
