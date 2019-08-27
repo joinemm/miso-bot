@@ -11,6 +11,7 @@ import arrow
 import copy
 import helpers.utilityfunctions as util
 import data.database as db
+from operator import itemgetter
 
 
 class Info(commands.Cog):
@@ -142,6 +143,26 @@ totaling **{membercount}** unique users.
             i += 1
         pages.append(content)
         await util.page_switcher(ctx, pages)
+
+    @commands.command()
+    async def commandstats(self, ctx, _global_=None):
+        content = discord.Embed(color=discord.Color.teal())
+        if _global_ == 'global':
+            content.title = f"`>_` Most used commands"
+            data = db.query("SELECT command, count FROM command_usage")
+        else:
+            content.title = f"`>_` Most used commands in {ctx.guild}"
+            data = db.query("SELECT command, count FROM command_usage WHERE guild_id = ?", (ctx.guild.id,))
+
+        rows = []
+        total = 0
+        for command, count in sorted(data, key=itemgetter(1), reverse=True):
+            total += count
+            rows.append(f"**x{count}** `{command}`")
+
+        content.set_footer(text=f"Total {total} commands used since 11/08/2019")
+
+        await util.send_as_pages(ctx, content, rows)
 
 
 def setup(client):
