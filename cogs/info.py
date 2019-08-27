@@ -157,18 +157,18 @@ totaling **{membercount}** unique users.
         if globaldata:
             if mydata:
                 data = db.query("SELECT command, SUM(count) FROM command_usage WHERE user_id = ?"
-                                "GROUP BY command, user_id", (ctx.author.id,))
+                                "GROUP BY command", (ctx.author.id,))
             else:
                 data = db.query("SELECT command, SUM(count) FROM command_usage "
-                                "GROUP BY command, user_id")
+                                "GROUP BY command")
         else:
             if mydata:
                 data = db.query("SELECT command, SUM(count) FROM command_usage WHERE guild_id = ? AND user_id = ?"
-                                "GROUP BY command, user_id",
+                                "GROUP BY command",
                                 (ctx.guild.id, ctx.author.id))
             else:
                 data = db.query("SELECT command, SUM(count) FROM command_usage WHERE guild_id = ? "
-                                "GROUP BY command, user_id",
+                                "GROUP BY command",
                                 (ctx.guild.id,))
 
         rows = []
