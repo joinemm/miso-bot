@@ -145,20 +145,49 @@ totaling **{membercount}** unique users.
         await util.page_switcher(ctx, pages)
 
     @commands.command()
-    async def commandstats(self, ctx, _global_=None):
+    async def commandstats(self, ctx, *args):
         content = discord.Embed(color=discord.Color.teal())
-        if _global_ == 'global':
-            content.title = f"`>_` Most used commands"
-            data = db.query("SELECT command, count FROM command_usage")
+        globaldata = 'global' in args
+        mydata = 'my' in args
+
+        content.title = f"`>_` Most used commands" \
+                        + ("" if globaldata else f" in {ctx.guild}") \
+                        + (f" by {ctx.author}" if mydata else "")
+
+        if globaldata:
+            if mydata:
+                data = db.query("SELECT command, SUM(count) FROM command_usage WHERE user_id = ?"
+                                "GROUP BY command, user_id", (ctx.author.id,))
+            else:
+                data = db.query("SELECT command, SUM(count) FROM command_usage "
+                                "GROUP BY command, user_id")
         else:
-            content.title = f"`>_` Most used commands in {ctx.guild}"
-            data = db.query("SELECT command, count FROM command_usage WHERE guild_id = ?", (ctx.guild.id,))
+            if mydata:
+                data = db.query("SELECT command, SUM(count) FROM command_usage WHERE guild_id = ? AND user_id = ?"
+                                "GROUP BY command, user_id",
+                                (ctx.guild.id, ctx.author.id))
+            else:
+                data = db.query("SELECT command, SUM(count) FROM command_usage WHERE guild_id = ? "
+                                "GROUP BY command, user_id",
+                                (ctx.guild.id,))
 
         rows = []
         total = 0
         for command, count in sorted(data, key=itemgetter(1), reverse=True):
             total += count
-            rows.append(f"**x{count}** `{command}`")
+            user = None
+            biggest_user = (None, None)
+            if not mydata:
+                if globaldata:
+                    biggest_user = db.query("SELECT user_id, MAX(count) AS highest FROM command_usage "
+                                            "WHERE command = ?", (command,))[0]
+                else:
+                    biggest_user = db.query("SELECT user_id, MAX(count) AS highest FROM command_usage "
+                                            "WHERE command = ? AND guild_id = ?", (command, ctx.guild.id))[0]
+                user = self.client.get_user(biggest_user[0])
+
+            rows.append(f"**x{count} {command}**"
+                        + (f" - most uses by `{user}` (**{biggest_user[1]}**)" if not mydata else ""))
 
         content.set_footer(text=f"Total {total} commands used since 11/08/2019")
 
