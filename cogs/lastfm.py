@@ -34,7 +34,7 @@ class LastFm(commands.Cog):
     async def fmartist(self, ctx):
         await ctx.send(f"This command has been deprecated. Please use `{ctx.message.content.replace('fm', 'fm ')}`")
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     async def fm(self, ctx):
         """Lastfm commands"""
         userdata = db.userdata(ctx.author.id)
@@ -531,6 +531,7 @@ def parse_arguments(args):
 def parse_chart_arguments(args):
     parsed = {"period": None, "amount": None, "width": None, "height": None, "method": None, "path": None}
     for a in args:
+        a = a.lower()
         if parsed['amount'] is None:
             try:
                 size = a.split('x')

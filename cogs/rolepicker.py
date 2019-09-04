@@ -11,7 +11,7 @@ class Rolepicker(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     @commands.has_permissions(manage_roles=True)
     async def rolepicker(self, ctx):
         """Setup the role picker"""

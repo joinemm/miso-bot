@@ -65,7 +65,7 @@ class Miscellaneous(commands.Cog):
         choice = random.choice(choices).strip()
         await ctx.send(f"I choose **{choice}**")
 
-    @commands.group(invoke_without_command=True)
+    @commands.group(invoke_without_command=True, case_insensitive=True)
     async def stan(self, ctx):
         """Get a random kpop artist to stan"""
         artist_list = db.get_from_data_json(['artists'])
@@ -185,7 +185,7 @@ class Miscellaneous(commands.Cog):
                                   "Minecraft-icon-file-gzpvzfll.png/revision/latest?cb=20140813205910")
         await ctx.send(embed=content)
 
-    @commands.group(aliases=['hs'])
+    @commands.group(aliases=['hs'], case_insensitive=True)
     async def horoscope(self, ctx):
         """Get your daily horoscope"""
         if ctx.invoked_subcommand is not None:

@@ -188,7 +188,7 @@ class User(commands.Cog):
         content.description += "```"
         await ctx.send(embed=content)
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     async def leaderboard(self, ctx):
         """Show various leaderboards"""
         await util.command_group_help(ctx)
