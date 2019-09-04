@@ -36,7 +36,7 @@ class CustomCommands(commands.Cog):
                     command_list.add(alias)
         return command_list
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     async def command(self, ctx):
         """Server specific custom commmands"""
         await util.command_group_help(ctx)

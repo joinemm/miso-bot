@@ -56,7 +56,7 @@ class Notifications(commands.Cog):
                 # create and send notification message
                 await send_notification(user, message, pattern)
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     async def notification(self, ctx):
         """Add keyword notifications on this server"""
         await util.command_group_help(ctx)

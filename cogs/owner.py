@@ -42,7 +42,7 @@ class Owner(commands.Cog):
         await ctx.send("Shutting down... :wave:")
         await self.client.logout()
 
-    @commands.group(hidden=True)
+    @commands.group(hidden=True, case_insensitive=True)
     @commands.is_owner()
     async def patron(self, ctx):
         await util.command_group_help(ctx)

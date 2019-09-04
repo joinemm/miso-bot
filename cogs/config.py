@@ -27,7 +27,7 @@ class Config(commands.Cog):
                 pages.append(this_page)
         await util.page_switcher(ctx, pages)
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     @commands.has_permissions(manage_channels=True)
     async def welcomeconfig(self, ctx):
         """Configure welcome message"""
@@ -66,7 +66,7 @@ class Config(commands.Cog):
         db.update_setting(ctx.guild.id, "welcome_toggle", 0)
         await ctx.send("Welcome messages **disabled**")
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     @commands.has_permissions(manage_channels=True)
     async def starboard(self, ctx):
         """Configure the starboard"""
@@ -105,7 +105,7 @@ class Config(commands.Cog):
         db.update_setting(ctx.guild.id, "starboard_toggle", 0)
         await ctx.send("Starboard **disabled**")
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     @commands.has_permissions(manage_channels=True)
     async def votechannel(self, ctx):
         """Configure voting channels"""
