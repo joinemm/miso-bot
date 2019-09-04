@@ -16,12 +16,13 @@ body {
 }
 
 .label {
-  font-family: sans-serif;
+  font-family: roboto;
+  font-weight: 600;
   position: absolute;
   bottom: -10px;
   left: 5px;
   z-index: 100;
   color: white;
   text-shadow:
-   1px 1px 0 #000
+   1px 1px 1px #000
 }
