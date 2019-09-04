@@ -123,7 +123,8 @@ class LastFm(commands.Cog):
             try:
                 trackdata = trackdata['track']
                 playcount = int(trackdata['userplaycount'])
-                content.description += f"\n`{playcount} play{'s' if playcount > 1 else ''}`"
+                if playcount > 0:
+                    content.description += f"\n{playcount} total play{'s' if playcount == 1 else ''}"
                 for tag in trackdata['toptags']['tag']:
                     tags.append(tag['name'])
                 content.set_footer(text=", ".join(tags))
@@ -160,7 +161,7 @@ class LastFm(commands.Cog):
         for i, artist in enumerate(artists):
             name = util.escape_md(artist['name'])
             plays = artist['playcount']
-            rows.append(f"`{i+1}.` **{plays}** plays — **{name}**")
+            rows.append(f"`{i+1}.` **{plays}** play{'s' if plays == 1 else ''} — **{name}**")
 
         image_url = scrape_artist_image(artists[0]['name'])  # artists[0]['image'][-1]['#text']
         image_url_small = artists[0]['image'][1]['#text']
@@ -195,7 +196,7 @@ class LastFm(commands.Cog):
             name = util.escape_md(album['name'])
             artist_name = util.escape_md(album['artist']['name'])
             plays = album['playcount']
-            rows.append(f"`{i + 1}.` **{plays}** plays - **{artist_name}** — ***{name}***")
+            rows.append(f"`{i + 1}.` **{plays}** play{'s' if plays == 1 else ''} - **{artist_name}** — ***{name}***")
 
         image_url = albums[0]['image'][-1]['#text']
         image_url_small = albums[0]['image'][1]['#text']
@@ -230,7 +231,7 @@ class LastFm(commands.Cog):
             name = util.escape_md(track['name'])
             artist_name = util.escape_md(track['artist']['name'])
             plays = track['playcount']
-            rows.append(f"`{i + 1}.` **{plays}** plays - **{artist_name}** — ***{name}***")
+            rows.append(f"`{i + 1}.` **{plays}** play{'s' if plays == 1 else ''} - **{artist_name}** — ***{name}***")
 
         trackdata = api_request({"user": ctx.username,
                                  "method": "track.getInfo",
@@ -334,11 +335,11 @@ class LastFm(commands.Cog):
         rows = []
         total_plays = 0
         for i, name in enumerate(artist_data):
-            line = f"`{i + 1}`. **{artist_data[name]}** plays - **{name}**"
+            line = f"`{i + 1}`. **{artist_data[name]}** play{'s' if total_plays == 1 else ''} - **{name}**"
             total_plays += artist_data[name]
             rows.append(line)
 
-        content.set_footer(text=f"Total {total_plays} plays")
+        content.set_footer(text=f"Total {total_plays} play{'s' if total_plays == 1 else ''}")
         content.title = f"{ctx.username}'s top " \
                         f"{'tracks' if method == 'user.gettoptracks' else 'albums'}" \
                         f" for {formatted_name}"
@@ -366,7 +367,7 @@ class LastFm(commands.Cog):
                 name = album['name']
                 artist = album['artist']['name']
                 plays = album['playcount']
-                chart.append((f"{plays} plays<br>{name} - {artist}", album['image'][3]['#text']))
+                chart.append((f"{plays} play{'s' if plays == 1 else ''}<br>{name} - {artist}", album['image'][3]['#text']))
 
         elif arguments['method'] == "user.gettopartists":
             chart_type = "top artist"
@@ -428,7 +429,7 @@ class LastFm(commands.Cog):
                 db.add_crown(artistname, ctx.guild.id, x[1].id, x[0])
             else:
                 rank = f"`{i + 1}.`"
-            rows.append(f"{rank} **{x[1].name}** — **{x[0]}** plays")
+            rows.append(f"{rank} **{x[1].name}** — **{x[0]}** play{'s' if x[0] == 1 else ''}")
 
         if not rows:
             return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
@@ -449,7 +450,7 @@ class LastFm(commands.Cog):
                                   "Use the `>whoknows` command to claim your crowns")
         rows = []
         for artist, playcount in sorted(crownartists, key=itemgetter(1), reverse=True):
-            rows.append(f"**{artist}** with **{playcount}** plays")
+            rows.append(f"**{artist}** with **{playcount}** play{'s' if playcount == 1 else ''}")
 
         content = discord.Embed(color=discord.Color.gold())
         content.title = f"Artist crowns for {ctx.author.name} - Total {len(crownartists)} crowns"
@@ -570,9 +571,7 @@ def parse_chart_arguments(args):
 def api_request(url_parameters, ignore_errors=False):
     """Get json data from the lastfm api"""
     url = f"http://ws.audioscrobbler.com/2.0/?api_key={LASTFM_APPID}&format=json"
-    for parameter in url_parameters:
-        url += f"&{parameter}={url_parameters[parameter]}"
-    response = requests.get(url)
+    response = requests.get(url, params=url_parameters)
     if response.status_code == 200:
         fm_data = json.loads(response.content.decode('utf-8'))
         return fm_data
