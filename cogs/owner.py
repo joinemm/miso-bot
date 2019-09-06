@@ -18,7 +18,7 @@ class Owner(commands.Cog):
     @commands.is_owner()
     async def say(self, ctx, channel, *, message):
         """Make the bot say something in a given channel"""
-        channel = await util.get_textchannel(ctx, channel)
+        channel = self.client.get_channel(int(channel))
         await channel.send(message)
 
     @commands.command(hidden=True)
