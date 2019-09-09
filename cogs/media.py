@@ -356,7 +356,7 @@ class Media(commands.Cog):
         async def randomize():
             await msg.edit(content=f"**{query}**: {random.choice(urls)}")
 
-        await util.reaction_buttons(ctx, msg, {"❌": msg.delete, "🔁": randomize})
+        await util.reaction_buttons(ctx, msg, {"❌": msg.delete, "🔁": randomize}, only_author=True)
 
     @commands.command()
     async def melon(self, ctx, timeframe=None):
