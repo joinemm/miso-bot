@@ -399,6 +399,7 @@ class LastFm(commands.Cog):
                            f" {chart_type} chart`", file=discord.File(img))
 
     @commands.command()
+    @commands.cooldown(2, 60)
     async def whoknows(self, ctx, *, artistname):
         """Check who has listened to a given artist the most"""
         await ctx.message.channel.trigger_typing()
