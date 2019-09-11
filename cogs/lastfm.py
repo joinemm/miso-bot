@@ -399,7 +399,7 @@ class LastFm(commands.Cog):
                            f" {chart_type} chart`", file=discord.File(img))
 
     @commands.command()
-    @commands.cooldown(1, 10, type=commands.BucketType.user)
+    @commands.cooldown(3, 10, type=commands.BucketType.user)
     async def whoknows(self, ctx, *, artistname):
         """Check who has listened to a given artist the most"""
         await ctx.message.channel.trigger_typing()
@@ -424,10 +424,15 @@ class LastFm(commands.Cog):
                     listeners.append((playcount, user))
 
         rows = []
+        old_king = None
+        new_king = None
         for i, x in enumerate(sorted(listeners, key=lambda p: p[0], reverse=True)):
             if i == 0:
                 rank = ":crown:"
-                db.add_crown(artistname, ctx.guild.id, x[1].id, x[0])
+                old_king = db.add_crown(artistname, ctx.guild.id, x[1].id, x[0])
+                if old_king is not None:
+                    old_king = ctx.guild.get_member(old_king)
+                new_king = x[1]
             else:
                 rank = f"`{i + 1}.`"
             rows.append(f"{rank} **{x[1].name}** — **{x[0]}** play{'' if x[0] == 1 else 's'}")
@@ -440,6 +445,8 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image)
 
         await util.send_as_pages(ctx, content, rows)
+        if old_king is not None and new_king is not None and old_king.id != new_king.id:
+            await ctx.send(f"> **{new_king.name}** just stole the **{artistname}** crown from **{old_king.name}**")
 
     @commands.command()
     async def crowns(self, ctx, _global=None):
