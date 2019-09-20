@@ -124,7 +124,7 @@ class LastFm(commands.Cog):
                 trackdata = trackdata['track']
                 playcount = int(trackdata['userplaycount'])
                 if playcount > 0:
-                    content.description += f"\n{playcount} total play{'' if playcount == 1 else 's'}"
+                    content.description += f"\n> {playcount} play{'' if playcount == 1 else 's'}"
                 for tag in trackdata['toptags']['tag']:
                     tags.append(tag['name'])
                 content.set_footer(text=", ".join(tags))
@@ -132,7 +132,7 @@ class LastFm(commands.Cog):
                 pass
 
         # play state
-        state = "— Most recent track"
+        state = "⏸ Most recent track"
         if '@attr' in tracks[0]:
             if "nowplaying" in tracks[0]['@attr']:
                 state = "▶ Now Playing"
@@ -172,7 +172,8 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique artists: {user_attr['total']}")
         content.set_author(name=f"{user_attr['user']} — {arguments['amount']} "
-                                f"Most played artists {arguments['period']}", icon_url=ctx.message.author.avatar_url)
+                                f"{humanized_period(arguments['period']).capitalize()} top artists",
+                           icon_url=ctx.message.author.avatar_url)
 
         await util.send_as_pages(ctx, content, rows, 15)
 
@@ -207,7 +208,8 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique albums: {user_attr['total']}")
         content.set_author(name=f"{user_attr['user']} — {arguments['amount']} "
-                                f"Most played albums {arguments['period']}", icon_url=ctx.message.author.avatar_url)
+                                f"{humanized_period(arguments['period']).capitalize()} top albums",
+                           icon_url=ctx.message.author.avatar_url)
 
         await util.send_as_pages(ctx, content, rows, 15)
 
@@ -252,7 +254,8 @@ class LastFm(commands.Cog):
 
         content.set_footer(text=f"Total unique tracks: {user_attr['total']}")
         content.set_author(name=f"{user_attr['user']} — {arguments['amount']} "
-                                f"Most played tracks {arguments['period']}", icon_url=ctx.message.author.avatar_url)
+                                f"{humanized_period(arguments['period']).capitalize()} top tracks",
+                           icon_url=ctx.message.author.avatar_url)
 
         await util.send_as_pages(ctx, content, rows, 15)
 
@@ -290,8 +293,13 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @fm.command()
-    async def artist(self, ctx, datatype, *, artistname):
+    async def artist(self, ctx, timeframe, datatype, *, artistname=""):
         """Top tracks / albums for specific artist"""
+        period = get_period(timeframe)
+        if period is None:
+            artistname = " ".join([datatype, artistname]).strip()
+            datatype = timeframe
+            period = 'overall'
         if datatype in ["toptracks", "tt", "tracks", "track"]:
             method = "user.gettoptracks"
             path = ["toptracks", "track"]
@@ -301,6 +309,9 @@ class LastFm(commands.Cog):
         else:
             return await util.send_command_help(ctx)
 
+        if artistname == "":
+            return await ctx.send("Missing artist name!")
+
         def filter_artist(artist_dict, items):
             for item in items:
                 item_artist = item['artist']['name']
@@ -308,25 +319,30 @@ class LastFm(commands.Cog):
                     artist_dict[item['name']] = int(item['playcount'])
             return artist_dict
 
-        data = api_request({"method": method, "user": ctx.username, "limit": 200})
+        data = api_request({"method": method, "user": ctx.username, "limit": 200, "period": period})
         total_pages = int(data[path[0]]['@attr']['totalPages'])
         artist_data = filter_artist({}, data[path[0]][path[1]])
+        username = data[path[0]]["@attr"]['user']
+
         if total_pages > 1:
-            parameters = [[{"method": method, "user": ctx.username, "limit": 200, "page": i}]
+            parameters = [[{"method": method, "user": ctx.username, "limit": 200, "period": period, "page": i}]
                           for i in range(2, total_pages + 1)]
             gather = await self.client.loop.create_task(threaded(api_request, parameters, len(parameters)))
             for datapacket in gather:
                 artist_data = filter_artist(artist_data, datapacket[path[0]][path[1]])
 
         if not artist_data:
-            return await ctx.send(f"You have never listened to **{artistname}**!")
+            if period == 'overall':
+                return await ctx.send(f"You have never listened to **{artistname}**!")
+            else:
+                return await ctx.send(f"You have not listened to **{artistname}** "
+                                      f"in the past {period}s!")
 
         artist_info = api_request({"method": "artist.getinfo", "artist": artistname})['artist']
         image_url = scrape_artist_image(artistname)
-        image_url_small = scrape_artist_image(artistname)
         formatted_name = artist_info['name']
 
-        image_colour = util.color_from_image_url(image_url_small)
+        image_colour = util.color_from_image_url(image_url)
 
         content = discord.Embed()
         content.set_thumbnail(url=image_url)
@@ -340,8 +356,8 @@ class LastFm(commands.Cog):
             rows.append(line)
 
         content.set_footer(text=f"Total {total_plays} play{'' if total_plays == 1 else 's'}")
-        content.title = f"{ctx.username}'s top " \
-                        f"{'tracks' if method == 'user.gettoptracks' else 'albums'}" \
+        content.title = f"{username} — " + (f"{humanized_period(period)} " if period != 'overall' else '') + \
+                        f"top {'tracks' if method == 'user.gettoptracks' else 'albums'}" \
                         f" for {formatted_name}"
 
         await util.send_as_pages(ctx, content, rows)
@@ -350,13 +366,14 @@ class LastFm(commands.Cog):
     async def chart(self, ctx, *args):
         """Visual chart of your top albums or artists"""
         arguments = parse_chart_arguments(args)
+
+        if arguments['width'] + arguments['height'] > 31:
+            return await ctx.send("Size too big! Chart `width` + `height` total must not exceed `31`")
+
         data = api_request({"user": ctx.username,
                             "method": arguments['method'],
                             "period": arguments['period'],
                             "limit": arguments['amount']})
-
-        if arguments['width'] + arguments['height'] > 30:
-            return await ctx.send("**ERROR:** Size too big. Chart `width + height` must not exceed `30`")
 
         chart = []
         chart_type = "ERROR"
@@ -395,8 +412,9 @@ class LastFm(commands.Cog):
         imgkit.from_string(formatted_html, "downloads/fmchart.png", options=options,
                            css='html/fm_chart_style.css')
         with open("downloads/fmchart.png", "rb") as img:
-            await ctx.send(f"`{ctx.message.author.name} {arguments['period']} {dimensions[0]//300}x{dimensions[1]//300}"
-                           f" {chart_type} chart`", file=discord.File(img))
+            await ctx.send(f"`{ctx.message.author.name} {humanized_period(arguments['period'])} "
+                           f"{dimensions[0]//300}x{dimensions[1]//300} {chart_type} chart`",
+                           file=discord.File(img))
 
     @commands.command()
     @commands.cooldown(3, 10, type=commands.BucketType.user)
@@ -441,8 +459,11 @@ class LastFm(commands.Cog):
             return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
 
         content = discord.Embed(title=f"Who knows **{artistname}**?")
-        image = scrape_artist_image(artistname)
-        content.set_thumbnail(url=image)
+        image_url = scrape_artist_image(artistname)
+        content.set_thumbnail(url=image_url)
+
+        image_colour = util.color_from_image_url(image_url)
+        content.colour = int(image_colour, 16)
 
         await util.send_as_pages(ctx, content, rows)
         if old_king is not None and new_king is not None and old_king.id != new_king.id:
@@ -507,14 +528,31 @@ def get_period(timeframe):
         period = "3month"
     elif timeframe in ["180day", "180days", "6months", "6month", "halfyear"]:
         period = "6month"
-    elif timeframe in ["365day", "365days", "1year", "year", "yr", "12months", "12month", "yearly"]:
+    elif timeframe in ["365day", "365days", "1year", "year", "12months", "12month"]:
         period = "12month"
-    elif timeframe in ["at", "alltime", "forever", "overall"]:
+    elif timeframe in ["at", "alltime", "overall"]:
         period = "overall"
     else:
         period = None
 
     return period
+
+
+def humanized_period(period):
+    if period == "7day":
+        humanized = "weekly"
+    elif period == "1month":
+        humanized = "monthly"
+    elif period == "3month":
+        humanized = "past 3 months"
+    elif period == "6month":
+        humanized = "past 6 months"
+    elif period == "12month":
+        humanized = "yearly"
+    else:
+        humanized = None
+
+    return humanized
 
 
 def parse_arguments(args):
@@ -532,7 +570,7 @@ def parse_arguments(args):
     if parsed['period'] is None:
         parsed['period'] = 'overall'
     if parsed['amount'] is None:
-        parsed['amount'] = 30
+        parsed['amount'] = 15
     return parsed
 
 
