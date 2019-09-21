@@ -40,7 +40,8 @@ class LastFm(commands.Cog):
         userdata = db.userdata(ctx.author.id)
         ctx.username = userdata.lastfm_username if userdata is not None else None
         if ctx.username is None and str(ctx.invoked_subcommand) not in ['fm set']:
-            raise LastFMError(f"No lastfm username saved. Please use {self.client.command_prefix}fm set <lastfm username>")
+            raise LastFMError("No lastfm username saved. "
+                              f"Please use {self.client.command_prefix}fm set <lastfm username>")
 
         if ctx.invoked_subcommand is None:
             await util.command_group_help(ctx)
@@ -171,9 +172,10 @@ class LastFm(commands.Cog):
         content.colour = int(image_colour, 16)
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique artists: {user_attr['total']}")
-        content.set_author(name=f"{user_attr['user']} — {arguments['amount']} "
-                                f"{humanized_period(arguments['period']).capitalize()} top artists",
-                           icon_url=ctx.message.author.avatar_url)
+        content.set_author(
+            name=f"{user_attr['user']} — {humanized_period(arguments['period']).capitalize()} top artists",
+            icon_url=ctx.message.author.avatar_url
+        )
 
         await util.send_as_pages(ctx, content, rows, 15)
 
@@ -207,9 +209,10 @@ class LastFm(commands.Cog):
         content.colour = int(image_colour, 16)
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique albums: {user_attr['total']}")
-        content.set_author(name=f"{user_attr['user']} — {arguments['amount']} "
-                                f"{humanized_period(arguments['period']).capitalize()} top albums",
-                           icon_url=ctx.message.author.avatar_url)
+        content.set_author(
+            name=f"{user_attr['user']} — {humanized_period(arguments['period']).capitalize()} top albums",
+            icon_url=ctx.message.author.avatar_url
+        )
 
         await util.send_as_pages(ctx, content, rows, 15)
 
@@ -253,9 +256,10 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
 
         content.set_footer(text=f"Total unique tracks: {user_attr['total']}")
-        content.set_author(name=f"{user_attr['user']} — {arguments['amount']} "
-                                f"{humanized_period(arguments['period']).capitalize()} top tracks",
-                           icon_url=ctx.message.author.avatar_url)
+        content.set_author(
+            name=f"{user_attr['user']} — {humanized_period(arguments['period']).capitalize()} top tracks",
+            icon_url=ctx.message.author.avatar_url
+        )
 
         await util.send_as_pages(ctx, content, rows, 15)
 
@@ -288,7 +292,7 @@ class LastFm(commands.Cog):
         content.colour = int(image_colour, 16)
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total scrobbles: {user_attr['total']}")
-        content.set_author(name=f"{user_attr['user']} — {size} Recent tracks", icon_url=ctx.message.author.avatar_url)
+        content.set_author(name=f"{user_attr['user']} — Recent tracks", icon_url=ctx.message.author.avatar_url)
 
         await util.send_as_pages(ctx, content, rows, 15)
 
