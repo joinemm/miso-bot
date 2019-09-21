@@ -550,7 +550,7 @@ def humanized_period(period):
     elif period == "12month":
         humanized = "yearly"
     else:
-        humanized = None
+        humanized = "alltime"
 
     return humanized
 
