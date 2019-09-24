@@ -102,7 +102,12 @@ def get_setting(guild_id, setting, default=None):
 
 
 def add_crown(artist, guild_id, user_id, playcount):
+    data = query("SELECT user_id FROM crowns WHERE artist = ? and guild_id = ?", (artist, guild_id))
     execute("REPLACE INTO crowns VALUES (?, ?, ?, ?)", (artist, guild_id, user_id, playcount))
+    if data is None:
+        return None
+    else:
+        return data[0][0]
 
 
 def rolepicker_role(guild_id, rolename, caps=True):
@@ -147,9 +152,9 @@ def getter(d, key):
 
 def log_command_usage(ctx):
     execute("INSERT OR IGNORE INTO command_usage VALUES(?, ?, ?, ?)",
-            (ctx.guild.id, ctx.author.id, str(ctx.command), 0))
+            ((ctx.guild.id if ctx.guild is not None else 'DM'), ctx.author.id, str(ctx.command), 0))
     execute("UPDATE command_usage SET count = count + 1 WHERE (guild_id = ? AND user_id = ? AND command = ?)",
-            (ctx.guild.id, ctx.author.id, str(ctx.command)))
+            ((ctx.guild.id if ctx.guild is not None else 'DM'), ctx.author.id, str(ctx.command)))
 
 
 def pp(cursor, data=None, rowlens=0):
