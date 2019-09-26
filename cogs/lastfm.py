@@ -470,7 +470,7 @@ class LastFm(commands.Cog):
         content.colour = int(image_colour, 16)
 
         await util.send_as_pages(ctx, content, rows)
-        if old_king is not None and new_king is not None and old_king.id != new_king.id:
+        if old_king is not None and not (old_king.id == new_king.id):
             await ctx.send(f"> **{new_king.name}** just stole the **{artistname}** crown from **{old_king.name}**")
 
     @commands.command()
