@@ -60,7 +60,7 @@ async def page_switcher(ctx, pages):
     functions = {"⬅": previous_page,
                  "➡": next_page}
 
-    await reaction_buttons(ctx, msg, functions)
+    asyncio.ensure_future(reaction_buttons(ctx, msg, functions))
 
 
 def create_pages(content, rows, maxrows=15):
