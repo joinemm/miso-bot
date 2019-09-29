@@ -16,6 +16,8 @@ class CustomCommands(commands.Cog):
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         """only for CommandNotFound"""
+        if ctx.guild is None:
+            return
         error = getattr(error, 'original', error)
         if isinstance(error, commands.CommandNotFound):
             keyword = ctx.message.content.split(' ', 1)[0][len(self.client.command_prefix):]
@@ -37,6 +39,7 @@ class CustomCommands(commands.Cog):
         return command_list
 
     @commands.group(case_insensitive=True)
+    @commands.guild_only()
     async def command(self, ctx):
         """Server specific custom commmands"""
         await util.command_group_help(ctx)
@@ -49,8 +52,6 @@ class CustomCommands(commands.Cog):
         elif name in custom_command_list(ctx.guild.id):
             return await ctx.send(f"Sorry, the custom command `{self.client.command_prefix}{name}` "
                                   f"already exists on this server!")
-        if len(response) < 1:
-            return await ctx.send(errormsg.missing_parameter('response'))
 
         db.execute("REPLACE INTO customcommands VALUES (?, ?, ?)", (ctx.guild.id, name, response))
         await ctx.send(f"Custom command `{self.client.command_prefix}{name}` "

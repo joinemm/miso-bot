@@ -87,7 +87,7 @@ class LastFm(commands.Cog):
             if "nowplaying" in tracks[0]['@attr']:
                 state = "Now Playing"
 
-        await ctx.send(f'**{user_attr["user"]} - {state}**\nhttp://www.youtube.com/watch?v={video_ids[0]}')
+        await ctx.send(f'**{user_attr["user"]} — {state}**\nhttp://www.youtube.com/watch?v={video_ids[0]}')
 
     @fm.command(aliases=['np'])
     async def nowplaying(self, ctx):
@@ -199,7 +199,7 @@ class LastFm(commands.Cog):
             name = util.escape_md(album['name'])
             artist_name = util.escape_md(album['artist']['name'])
             plays = album['playcount']
-            rows.append(f"`{i + 1}.` **{plays}** play{'' if plays == 1 else 's'} - **{artist_name}** — ***{name}***")
+            rows.append(f"`{i + 1}.` **{plays}** play{'' if plays == 1 else 's'} — **{artist_name}** — ***{name}***")
 
         image_url = albums[0]['image'][-1]['#text']
         image_url_small = albums[0]['image'][1]['#text']
@@ -236,7 +236,7 @@ class LastFm(commands.Cog):
             name = util.escape_md(track['name'])
             artist_name = util.escape_md(track['artist']['name'])
             plays = track['playcount']
-            rows.append(f"`{i + 1}.` **{plays}** play{'' if plays == 1 else 's'} - **{artist_name}** — ***{name}***")
+            rows.append(f"`{i + 1}.` **{plays}** play{'' if plays == 1 else 's'} — **{artist_name}** — ***{name}***")
 
         trackdata = api_request({"user": ctx.username,
                                  "method": "track.getInfo",
@@ -355,7 +355,7 @@ class LastFm(commands.Cog):
         rows = []
         total_plays = 0
         for i, name in enumerate(artist_data):
-            line = f"`{i + 1}`. **{artist_data[name]}** play{'' if total_plays == 1 else 's'} - **{name}**"
+            line = f"`{i + 1}`. **{artist_data[name]}** play{'' if total_plays == 1 else 's'} — **{name}**"
             total_plays += artist_data[name]
             rows.append(line)
 
@@ -388,7 +388,8 @@ class LastFm(commands.Cog):
                 name = album['name']
                 artist = album['artist']['name']
                 plays = album['playcount']
-                chart.append((f"{plays} play{'' if plays == 1 else 's'}<br>{name} - {artist}", album['image'][3]['#text']))
+                chart.append((f"{plays} play{'' if plays == 1 else 's'}<br>"
+                              f"{name} - {artist}", album['image'][3]['#text']))
 
         elif arguments['method'] == "user.gettopartists":
             chart_type = "top artist"
@@ -421,7 +422,8 @@ class LastFm(commands.Cog):
                            file=discord.File(img))
 
     @commands.command()
-    @commands.cooldown(3, 10, type=commands.BucketType.user)
+    @commands.guild_only()
+    @commands.cooldown(2, 10, type=commands.BucketType.user)
     async def whoknows(self, ctx, *, artistname):
         """Check who has listened to a given artist the most"""
         await ctx.message.channel.trigger_typing()
@@ -474,6 +476,7 @@ class LastFm(commands.Cog):
             await ctx.send(f"> **{new_king.name}** just stole the **{artistname}** crown from **{old_king.name}**")
 
     @commands.command()
+    @commands.guild_only()
     async def crowns(self, ctx, _global=None):
         """Check your current whoknows crowns"""
         crownartists = db.query("""SELECT artist, playcount FROM crowns WHERE guild_id = ? AND user_id = ?""",
@@ -486,7 +489,7 @@ class LastFm(commands.Cog):
             rows.append(f"**{artist}** with **{playcount}** play{'' if playcount == 1 else 's'}")
 
         content = discord.Embed(color=discord.Color.gold())
-        content.title = f"Artist crowns for {ctx.author.name} - Total {len(crownartists)} crowns"
+        content.title = f"Artist crowns for {ctx.author.name} — Total {len(crownartists)} crowns"
         await util.send_as_pages(ctx, content, rows)
 
 
@@ -689,4 +692,3 @@ def scrape_artists_for_chart(username, period, amount):
         imagedivs = soup.findAll("td", {"class": "chartlist-image"})
         images += [div.find("img")['src'].replace("/avatar70s/", "/300x300/") for div in imagedivs]
     return images[:amount]
-

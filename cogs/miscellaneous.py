@@ -29,12 +29,9 @@ class Miscellaneous(commands.Cog):
         self.client = client
 
     @commands.command(aliases=['random'])
-    async def rng(self, ctx, cap=1):
+    async def rng(self, ctx, cap: int):
         """Random number generator"""
-        try:
-            choice = random.randint(0, int(cap))
-        except ValueError:
-            return await ctx.send(f"**ERROR:** `{cap}` is not a valid number")
+        choice = random.randint(0, cap)
         await ctx.send(f"Random number [0-{cap}]: **{choice}**")
 
     @commands.command()
@@ -143,7 +140,10 @@ class Miscellaneous(commands.Cog):
             return await ctx.send(f"Minecraft server of this discord set to `{address}:{port}`")
 
         if address is None:
-            serverdata = db.query("""SELECT address, port FROM minecraft WHERE guild_id = ?""", (ctx.guild.id,))
+            if ctx.guild is None:
+                return await ctx.send("missing address!")
+            else:
+                serverdata = db.query("""SELECT address, port FROM minecraft WHERE guild_id = ?""", (ctx.guild.id,))
             if serverdata is None:
                 return await ctx.send("No minecraft server saved for this discord server!")
             else:

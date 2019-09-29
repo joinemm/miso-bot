@@ -178,9 +178,8 @@ def pp(cursor, data=None, rowlens=0):
             rls = [len(row[col]) for row in data if row[col]]
             lengths[col] = max([lengths[col]]+rls)
         rules.append("-"*lengths[col])
-    format = " ".join(["%%-%ss" % l for l in lengths])
-    result = [format % tuple(names)]
-    result.append(format % tuple(rules))
+    print_format = " ".join(["%%-%ss" % l for l in lengths])
+    result = [print_format % tuple(names), print_format % tuple(rules)]
     for row in data:
-        result.append(format % row)
+        result.append(print_format % row)
     return "\n".join(result)
