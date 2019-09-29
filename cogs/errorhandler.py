@@ -28,30 +28,32 @@ class Events(commands.Cog):
 
         if isinstance(error, commands.DisabledCommand):
             logger.error(str(error))
-            return await ctx.send(f'{ctx.command} has been disabled.')
+            return await ctx.send(f'`{ctx.command}` has been disabled!')
 
         elif isinstance(error, commands.NoPrivateMessage):
             logger.error(str(error))
-            return await ctx.author.send(f'{ctx.command} can not be used in Private Messages.')
+            return await ctx.author.send(f'`{ctx.command}` can not be used in DMs!')
 
         elif isinstance(error, commands.NotOwner):
             logger .error(str(error))
-            return await ctx.send(f"Sorry, this command usable by the bot owner only! "
-                                  f"(**{self.client.appinfo.owner}**)")
+            return await ctx.send(f"Sorry, you are not authorized to use this command!")
 
         elif isinstance(error, commands.MissingPermissions):
             logger.error(str(error))
-            perms = ', '.join([f"**{x}**" for x in error.missing_perms])
-            return await ctx.send(f"You are missing the required permissions to use this command: {perms}")
+            perms = ', '.join([f"`{x}`" for x in error.missing_perms])
+            return await ctx.send(f"You require {perms} permissions to use this command!")
 
         elif isinstance(error, commands.BotMissingPermissions):
             logger.error(str(error))
-            perms = ', '.join([f"**{x}**" for x in error.missing_perms])
-            return await ctx.send(f"I am missing the required permissions to execute this command: {perms}")
+            perms = ', '.join([f"`{x}`" for x in error.missing_perms])
+            return await ctx.send(f"Cannot execute command! Missing permissions {perms}")
 
         elif isinstance(error, commands.MissingRequiredArgument):
             logger.error(str(error))
             return await util.send_command_help(ctx)
+
+        elif isinstance(error, commands.BadArgument):
+            return await ctx.send(f"```{str(error)}```")
 
         else:
             logger.error(f"Ignoring exception in command {ctx.command}:")
