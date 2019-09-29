@@ -124,27 +124,6 @@ class Miscellaneous(commands.Cog):
         content.description = text
         await ctx.send(embed=content)
 
-    @commands.command(aliases=['pewds'])
-    async def pewdiepie(self, ctx):
-        """Pewdiepie VS T-series"""
-        pewdiepie = get_subcount("UC-lHJZR3Gqxm24_Vd_AJ5Yw")
-        tseries = get_subcount("UCq-Fj5jknLsUf-MWSy4_brA")
-
-        content = discord.Embed(color=discord.Color.magenta(), title="PewDiePie VS T-Series live subscriber count:",
-                                url="https://www.youtube.com/channel/UC-lHJZR3Gqxm24_Vd_AJ5Yw?sub_confirmation=1")
-        content.add_field(name="Pewdiepie", value="**{:,}**".format(pewdiepie))
-        content.add_field(name="T-Series", value="**{:,}**".format(tseries))
-        if pewdiepie >= tseries:
-            desc = "PewDiePie is currently {:,} subscribers ahead of T-Series!".format(pewdiepie - tseries)
-            content.set_thumbnail(
-                url="https://yt3.ggpht.com/a-/AAuE7mAPBVgUYqlLw9SvJyKAVWmgkQ2-KrkgSv4_5A=s288-mo-c-c0xffffffff-rj-k-no")
-        else:
-            desc = "T-Series is currently {:,} subscribers ahead of PewDiePie!".format(tseries - pewdiepie)
-            content.set_thumbnail(
-                url="https://yt3.ggpht.com/a-/AAuE7mBlVCRJawuU4QYf21y-Fx-cc8c9HhExSiAPtQ=s288-mo-c-c0xffffffff-rj-k-no")
-        content.set_footer(text=desc)
-        await ctx.send(embed=content)
-
     @commands.command(aliases=['mc'])
     async def minecraft(self, ctx, address=None, port=None):
         """Get the status of a minecraft server"""
