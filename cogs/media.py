@@ -36,13 +36,22 @@ class Media(commands.Cog):
         """Get a hex color, the color of discord user, or a random color."""
         if not sources:
             return await ctx.send("Missing color source. Valid color sources are:\n"
-                                  "`[@mention | @rolemention | hex | image_url | random]`\n"
+                                  "`[@mention | @rolemention | hex | image_url | discord default color | random]`\n"
                                   "These can be chained together to create patterns")
 
         colors = []
         i = 0
         while i < len(sources):
             source = sources[i]
+
+            result = getattr(discord.Color, source)
+            if result is not None:
+                hexcolor = str(result())
+                print(hexcolor)
+                colors.append(hexcolor)
+                i += 1
+                continue
+
             if source.lower() == "random":
                 try:
                     amount = int(sources[i+1])
