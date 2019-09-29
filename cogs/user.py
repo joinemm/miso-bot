@@ -13,6 +13,33 @@ class User(commands.Cog):
     def __init__(self, client):
         self.client = client
 
+    def get_rank(self, ctx, user, table, _global=False):
+        if user.bot:
+            return 'BOT'
+        users = []
+        if _global:
+            user_ids = db.query("SELECT DISTINCT user_id FROM %s" % table)
+            for user_id in [x[0] for x in user_ids]:
+                rows = db.query("SELECT * FROM %s WHERE user_id = ?" % table, (user_id,))
+                this_user = self.client.get_user(user_id)
+                if this_user is None or this_user.bot:
+                    continue
+
+                users.append((user_id, sum(sum(row[3:]) for row in rows)))
+        else:
+            data = db.query("SELECT * FROM %s WHERE guild_id = ?" % table, (ctx.guild.id,))
+            for row in data:
+                this_user = ctx.guild.get_member(row[1])
+                if this_user is None or this_user.bot:
+                    continue
+                users.append((row[1], sum(row[3:])))
+
+        ranking = "N/A"
+        for i, (userid, xp) in enumerate(sorted(users, key=itemgetter(1), reverse=True), start=1):
+            if userid == user.id:
+                ranking = f"# {i}"
+        return ranking
+
     @commands.command(aliases=['dp'])
     async def avatar(self, ctx, *, user=None):
         """Get user's profile picture"""
@@ -170,19 +197,7 @@ class User(commands.Cog):
         content.description = "```"
         for table, label in zip(['activity_day', 'activity_week', 'activity_month', 'activity'],
                                 ["Daily  ", "Weekly ", "Monthly", "Overall"]):
-            users = []
-            data = db.query("SELECT * FROM %s WHERE guild_id = ?" % table, (ctx.guild.id,))
-            for row in data:
-                this_user = ctx.guild.get_member(row[1])
-                if this_user is None or this_user.bot:
-                    continue
-                users.append((row[1], sum(row[3:])))
-
-            ranking = "N/A"
-            for i, (userid, xp) in enumerate(sorted(users, key=itemgetter(1), reverse=True), start=1):
-                if userid == user.id:
-                    ranking = f"#{i}"
-
+            ranking = self.get_rank(ctx, user, table)
             content.description += f"\n{label} : {ranking}"
 
         content.description += "```"

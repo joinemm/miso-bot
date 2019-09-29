@@ -91,7 +91,7 @@ async def reaction_buttons(ctx, message, functions, timeout=600.0, only_author=F
     """Handler for reaction buttons
     :param message     : message to add reactions to
     :param functions   : dictionary of {emoji : function} pairs. functions must be async. return True to exit
-    :param timeout     : time in seconds for how long the buttons work for default 10 minutes (600.0)
+    :param timeout     : time in seconds for how long the buttons work for. default 10 minutes (600.0)
     :param only_author : only allow the user who used the command use the buttons
     :param single_use  : delete buttons after one is used
     """
@@ -362,6 +362,29 @@ def create_welcome_embed(user, guild, messageformat):
     content.description = messageformat.format(mention=user.mention, user=user, id=user.id,
                                                server=guild.name, username=user.name)
     return content
+
+
+def activityhandler(activity_tuple):
+    """
+    :param activity_tuple : Discord activity tuple (None, Spotify, Streaming, Playing)
+    :return               : String representation of the activity type
+    """
+    if not activity_tuple:
+        return "doin nothing bro"
+
+    activity = activity_tuple[0]
+
+    if isinstance(activity, discord.Spotify):
+        return f"Listening to {activity.title} by {activity.artist}"
+    elif isinstance(activity, discord.Game):
+        return f"Playing {activity.name}\n" \
+               f"for{stringfromtime((datetime.datetime.utcnow() - activity.start).totalseconds(), accuracy=1)}"
+    elif isinstance(activity, discord.Streaming):
+        return f"Streaming {activity.details} as {activity.twitch_name}\n" \
+               f"{activity.name}"
+    else:
+        print(f"idk what it is u tell me {activity.type} / {activity}")
+        return "dunno what it is check console"
 
 
 class TwoWayIterator:
