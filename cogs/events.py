@@ -164,7 +164,7 @@ class Events(commands.Cog):
 
                 board_msg_id = db.query("select starboard_message_id from starboard where message_id = ?",
                                         (reaction.message.id,))
-                board_msg = await channel.fetch_message(board_msg_id)
+                board_msg = await channel.fetch_message(board_msg_id) if board_msg_id is not None else None
 
                 if board_msg is None:
                     if reaction.count == db.get_setting(reaction.message.guild.id, "starboard_amount"):
