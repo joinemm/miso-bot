@@ -2,14 +2,16 @@ import sqlite3
 from collections import namedtuple
 import json
 from functools import reduce
+import random
 
 
 SQLDATABASE = 'data/database.db'
+SQLKPOPDB = 'data/kpop.db'
 JSONDATABASE = 'data/data.json'
 
 
-def query(command, parameters=(), maketuple=False):
-    connection = sqlite3.connect(SQLDATABASE)
+def query(command, parameters=(), maketuple=False, database=SQLDATABASE):
+    connection = sqlite3.connect(database)
     cursor = connection.cursor()
     cursor.execute(command, parameters)
     data = cursor.fetchall()
@@ -17,17 +19,20 @@ def query(command, parameters=(), maketuple=False):
         return None
 
     if maketuple:
-        names = [description[0] for description in cursor.description]
+        names = [description[0].lower().replace(' ', '_').replace('.', '') for description in cursor.description]
         NT = namedtuple('Data', names)
-        result = NT._make(data[0])
+        if len(data) > 1:
+            result = [NT._make(row) for row in data]
+        else:
+            result = NT._make(data[0])
     else:
         result = data
     connection.close()
     return result
 
 
-def execute(command, parameters=()):
-    connection = sqlite3.connect(SQLDATABASE)
+def execute(command, parameters=(), database=SQLDATABASE):
+    connection = sqlite3.connect(database)
     cursor = connection.cursor()
     cursor.execute(command, parameters)
     connection.commit()
@@ -120,6 +125,14 @@ def rolepicker_role(guild_id, rolename, caps=True):
         return None
     else:
         return data[0][0]
+
+
+def random_kpop_idol(gender=None):
+    if gender is None:
+        data = query("SELECT * FROM idols", database=SQLKPOPDB, maketuple=True)
+    else:
+        data = query("SELECT * FROM idols WHERE gender = ?", (gender,), database=SQLKPOPDB, maketuple=True)
+    return random.choice(data)
 
 
 def get_from_data_json(keys):

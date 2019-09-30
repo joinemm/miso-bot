@@ -6,6 +6,12 @@ import requests
 from bs4 import BeautifulSoup
 import json
 from libraries import minestat
+import helpers.utilityfunctions as util
+import os
+from google_images_search import GoogleImagesSearch
+
+
+GCS_DEVELOPER_KEY = os.environ.get('GOOGLE_KEY')
 
 hs_colors = {
             "aries": discord.Color.red(),
@@ -46,7 +52,7 @@ class Miscellaneous(commands.Cog):
         """Ask a yes/no question"""
         if question:
             choices = ["Yes, definitely.", "Yes.", "Most likely yes.", "I think so, yes.", "Absolutely",
-                       "Maybe.", "Perhaps.", "Possibly.", "idk."
+                       "Maybe.", "Perhaps.", "Possibly.", "idk"
                        "I don't think so.", "No.", "Most likely not.", "Definitely not.", "No way."]
             answer = random.choice(choices)
             await ctx.send(f"**{answer}**")
@@ -62,7 +68,7 @@ class Miscellaneous(commands.Cog):
         choice = random.choice(choices).strip()
         await ctx.send(f"I choose **{choice}**")
 
-    @commands.group(invoke_without_command=True, case_insensitive=True)
+    @commands.group(invoke_without_command=True)
     async def stan(self, ctx):
         """Get a random kpop artist to stan"""
         artist_list = db.get_from_data_json(['artists'])
@@ -233,28 +239,50 @@ class Miscellaneous(commands.Cog):
         content.description = sign_list
         return await ctx.send(embed=content)
 
+    @commands.group(case_insensitive=True)
+    async def idol(self, ctx):
+        await util.command_group_help(ctx)
+
+    @idol.command()
+    async def random(self, ctx, gender=None):
+        if gender is not None:
+            gender = gender.lower()
+            if gender in ['f', 'girl', 'girls']:
+                gender = 'F'
+            elif gender in ['m', 'boy', 'boys']:
+                gender = 'M'
+            else:
+                gender = None
+        data = db.random_kpop_idol(gender)
+
+        image = image_search(data.stage_name + ' ' + (data.group or ''))
+        content = discord.Embed(color=await util.get_color(ctx, util.color_from_image_url(image)))
+        content.set_image(url=image)
+        content.title = (f'{data.group} ' if data.group is not None else '') + data.stage_name
+        content.description = f"**Full name:** {data.full_name}\n" \
+            f"**Korean name:** {data.k_stage_name} ({data.korean_name})\n" \
+            f"**Birthday:** {data.date_of_birth}\n" \
+            f"**Country:** {data.country}\n"\
+                              + (f'**Birthplace:** {data.birthplace}' if data.birthplace is not None else '')
+        await ctx.send(embed=content)
+
 
 def setup(client):
     client.add_cog(Miscellaneous(client))
 
 
-def get_subcount(query_id):
-    url = f"https://bastet.socialblade.com/youtube/lookup?query={query_id}"
-    maxtries = 20
-    tries = 0
-    while True:
-        try:
-            response = requests.get(url=url, headers={
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0",
-                "Origin": "https://socialblade.com",
-                "Host": "bastet.socialblade.com"}, timeout=1)
-        except requests.exceptions.ReadTimeout:
-            continue
-        if response.status_code == 200:
-            try:
-                return int(response.content.decode('utf-8'))
-            except ValueError:
-                continue
-        tries += 1
-        if tries > maxtries:
-            return 0
+def image_search(query):
+    print('searching for', query)
+    gis = GoogleImagesSearch(GCS_DEVELOPER_KEY, '016720228003584159752:xwo6ysur40a')
+    _search_params = {
+        'q': query,
+        'safe': 'off',
+    }
+
+    try:
+        # this will only search for images:
+        gis.search(search_params=_search_params)
+        img = gis.results()[0].url
+        return img
+    except Exception as e:
+        return ''
