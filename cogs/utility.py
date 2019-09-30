@@ -5,6 +5,7 @@ import requests
 import json
 import os
 import urllib.request
+import urllib
 import html
 import arrow
 import asyncio
@@ -26,6 +27,7 @@ GFYCAT_CLIENT_ID = os.environ.get('GFYCAT_CLIENT_ID')
 GFYCAT_SECRET = os.environ.get('GFYCAT_SECRET')
 STREAMABLE_USER = os.environ.get('STREAMABLE_USER')
 STREAMABLE_PASSWORD = os.environ.get('STREAMABLE_PASSWORD')
+BORING_TOKEN = os.environ.get('BORING_TOKEN')
 
 
 papago_pairs = ['ko/en', 'ko/ja', 'ko/zh-cn', 'ko/zh-tw', 'ko/vi', 'ko/id', 'ko/de', 'ko/ru', 'ko/es', 'ko/it',
@@ -82,7 +84,7 @@ class Utility(commands.Cog):
         current = json_data['currently']
         hourly = json_data['hourly']
         daily = json_data['daily']
-        time = get_timezone({'lat': lat, 'lon': lon})
+        localtime = get_timezone({'lat': lat, 'lon': lon})
 
         content = discord.Embed(color=discord.Color.teal())
         content.set_thumbnail(url=f"http://flagpedia.net/data/flags/w580/{country}.png")
@@ -97,7 +99,7 @@ class Utility(commands.Cog):
         content.add_field(name="Weekly forecast:",
                           value=" ".join(f"**{x}**" if "°C" in x else x for x in daily['summary'].split(" ")))
 
-        content.set_footer(text=f"Local time: {time}")
+        content.set_footer(text=f"Local time: {localtime}")
         await ctx.send(embed=content)
 
     @commands.command()
@@ -136,8 +138,8 @@ class Utility(commands.Cog):
                             definitions_value += this_top_level_definition
                             try:
                                 for y in range(len(entry['entries'][0]['senses'][i]['subsenses'])):
-                                    for subdefinition in entry['entries'][0]['senses'][i]['subsenses'][y]['definitions']:
-                                        this_definition = f"\n**└{i + 1}.{y + 1}.** {subdefinition}"
+                                    for subdef in entry['entries'][0]['senses'][i]['subsenses'][y]['definitions']:
+                                        this_definition = f"\n**└{i + 1}.{y + 1}.** {subdef}"
                                         if len(definitions_value + this_definition) > 1024:
                                             break
                                         definitions_value += this_definition
@@ -181,7 +183,7 @@ class Utility(commands.Cog):
                 for entry in data['list']:
                     definition = entry['definition'].replace("]", "**").replace("[", "**")
                     example = entry['example'].replace("]", "**").replace("[", "**")
-                    time = entry['written_on']
+                    timestamp = entry['written_on']
                     content = discord.Embed(colour=discord.Colour.orange())
                     content.description = f"{definition}"
 
@@ -189,7 +191,7 @@ class Utility(commands.Cog):
                         content.add_field(name="Example", value=example)
                     content.set_footer(text=f"by {entry['author']} • "
                                             f"{entry.get('thumbs_up')} 👍 {entry.get('thumbs_down')} 👎")
-                    content.timestamp = arrow.get(time).datetime
+                    content.timestamp = arrow.get(timestamp).datetime
                     content.set_author(name=word.capitalize(), icon_url="https://i.imgur.com/yMwpnBe.png",
                                        url=entry.get('permalink'))
                     pages.append(content)
@@ -333,6 +335,46 @@ class Utility(commands.Cog):
             await asyncio.sleep(1 + int(i/8))
             i += 1
 
+    @commands.command()
+    async def host(self, ctx, image_url=None):
+        """Upload an image to host on boring.host"""
+        if image_url is None:
+            if ctx.message.attachments:
+                image_url = ctx.message.attachments[0].url
+            else:
+                await ctx.send("Give image url or attachment to upload!")
+
+        data = boring_host(image_url)
+        await ctx.send(f"{data.get('url') or data.get('status')}")
+
+
+def boring_host(image_url):
+    """Upload image to boring.host"""
+
+    path = f'downloads/{os.path.basename(image_url)}'
+    with open(path, 'wb') as f:
+        resource = requests.get(image_url, stream=True)
+        for block in resource.iter_content(1024):
+            if not block:
+                break
+
+            f.write(block)
+
+    with open(path, 'rb') as f:
+        response = requests.post('https://api.boring.host/api/upload',
+                                 data=[('token', BORING_TOKEN)],
+                                 files={'file': f})
+        os.remove(path)
+        response.raise_for_status()
+        data = response.json()
+
+        response_dict = {
+            'status': data.get('status'),
+            'url': data['data'].get('direct_url')
+        }
+
+        return response_dict
+
 
 def setup(client):
     client.add_cog(Utility(client))
@@ -344,8 +386,8 @@ def get_timezone(coord):
     response = requests.get(url)
     if response.status_code == 200:
         json_data = json.loads(response.content.decode('utf-8'))
-        time = json_data['formatted'].split(" ")
-        return ":".join(time[1].split(":")[:2])
+        timestring = json_data['formatted'].split(" ")
+        return ":".join(timestring[1].split(":")[:2])
     else:
         return f"[error_{response.status_code}]"
 
