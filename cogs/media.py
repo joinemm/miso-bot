@@ -88,38 +88,32 @@ class Media(commands.Cog):
             i += 1
 
         content = discord.Embed(colour=await util.get_color(ctx, colors[0]))
+
+        if len(colors) > 50:
+            await ctx.send("Maximum amount of colors is 50, ignoring rest...")
+            colors = colors[:50]
+
+        colors = [x.strip("#") for x in colors]
+        colordata = requests.get(f"https://api.color.pizza/v1/{','.join(colors)}").json().get('colors')
+
         if len(colors) == 1:
-            color = colors[0].strip('#')
-            url = f"http://thecolorapi.com/id?hex={color}&format=json"
-            response = requests.get(url=url)
-            response.raise_for_status()
-            data = json.loads(response.content.decode('utf-8'))
-            hexvalue = data['hex']['value']
-            rgbvalue = data['rgb']['value']
-            name = data['name']['value']
-            image_url = f"http://www.colourlovers.com/img/{color}/200/200/color.png"
+            discord_color = await util.get_color(ctx, colors[0])
+            hexvalue = colordata[0]['requestedHex']
+            rgbvalue = discord_color.to_rgb()
+            name = colordata[0]['name']
+            luminance = colordata[0]['luminance']
+            image_url = f"http://www.colourlovers.com/img/{colors[0]}/200/200/color.png"
             content.title = name
-            content.description = f"{hexvalue} - {rgbvalue}"
+            content.description = f"**HEX:** `{hexvalue}`\n**RGB:** {rgbvalue}\n**Luminance:** {luminance:.4f}"
         else:
-            if len(colors) > 12:
-                await ctx.send("Maximum amount of colors is 12, ignoring rest...")
-                await ctx.trigger_typing()
-                colors = colors[:12]
+            content.description = ""
             palette = ""
-            for color in colors:
-                try:
-                    url = f"http://thecolorapi.com/id?hex={color.strip('#')}&format=json"
-                    response = requests.get(url=url)
-                    response.raise_for_status()
-                    data = json.loads(response.content.decode('utf-8'))
-                    hexvalue = data['hex']['value']
-                    # rgbvalue = data['rgb']['value']
-                    name = data['name']['value']
-                    content.add_field(name=name, value=f"{hexvalue}")
-                    palette += color.strip('#') + "/"
-                except Exception as e:
-                    print(e)
-                    await ctx.send(f"Skipping color {color} because of error `{e}`")
+            for i, color in enumerate(colors):
+                hexvalue = colordata[i]['requestedHex']
+                name = colordata[i]['name']
+                content.description += f"`{hexvalue}` **| {name}**\n"
+                palette += color.strip('#') + "/"
+
             image_url = f"https://www.colourlovers.com/paletteImg/{palette}palette.png"
 
         content.set_image(url=image_url)
