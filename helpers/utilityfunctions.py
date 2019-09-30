@@ -116,6 +116,8 @@ async def reaction_buttons(ctx, message, functions, timeout=600.0, only_author=F
                 await message.remove_reaction(reaction.emoji, user)
             except discord.errors.NotFound:
                 pass
+            except discord.errors.Forbidden:
+                await ctx.send("`error: missing discord permission [ manage messages ]`")
             if single_use or exits is True:
                 break
 
