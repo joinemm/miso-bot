@@ -44,13 +44,15 @@ class Media(commands.Cog):
         while i < len(sources):
             source = sources[i]
 
-            result = getattr(discord.Color, source)
-            if result is not None:
+            try:
+                result = getattr(discord.Color, source)
                 hexcolor = str(result())
                 print(hexcolor)
                 colors.append(hexcolor)
                 i += 1
                 continue
+            except AttributeError:
+                pass
 
             if source.lower() == "random":
                 try:
