@@ -454,7 +454,10 @@ class Media(commands.Cog):
             try:
                 reaction, user = await self.client.wait_for('reaction_add', timeout=300.0, check=check)
             except asyncio.TimeoutError:
-                await msg.clear_reactions()
+                try:
+                    await msg.clear_reactions()
+                except discord.errors.NotFound:
+                    pass
                 return
             else:
                 if reaction.emoji == "⬅" and i > 0:
