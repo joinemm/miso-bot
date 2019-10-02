@@ -329,6 +329,9 @@ class User(commands.Cog):
 
             users.append((user, wpm, timestamp))
 
+        if not users:
+            return await ctx.send("No typing tests have been taken yet!")
+
         rows = []
         rank_icon = [':first_place:', ':second_place:', ':third_place:']
         for i, (user, wpm, timestamp) in enumerate(sorted(users, key=itemgetter(1), reverse=True), start=1):
