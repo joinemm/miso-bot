@@ -6,6 +6,7 @@ import asyncio
 from operator import itemgetter
 import helpers.utilityfunctions as util
 import arrow
+import itertools
 
 
 class Typing(commands.Cog):
@@ -14,6 +15,8 @@ class Typing(commands.Cog):
         self.client = client
         self.all_words = db.get_from_data_json(['wordlists', 'english'])
         self.separator = ' '
+        self.fancy_font = '𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣'
+        self.fancy_font_2 = '𝘢𝘣𝘤𝘥𝘦𝘧𝘨𝘩𝘪𝘫𝘬𝘭𝘮𝘯𝘰𝘱𝘲𝘳𝘴𝘵𝘶𝘷𝘸𝘹𝘺𝘻'
 
     def get_wordlist(self, wordcount):
         wordlist = []
@@ -28,7 +31,7 @@ class Typing(commands.Cog):
         user_words = message.content.split()
         total_keys = 0
         corrent_keys = 0
-        for user_word, correct_word in zip(user_words, wordlist):
+        for user_word, correct_word in itertools.zip_longest(user_words, wordlist):
             total_keys += len(correct_word) + 1
             if user_word == correct_word:
                 corrent_keys += len(correct_word) + 1
@@ -36,6 +39,14 @@ class Typing(commands.Cog):
         wpm = (corrent_keys / 5) / (time.total_seconds() / 60)
         accuracy = (corrent_keys / total_keys) * 100
         return wpm, accuracy
+
+    def obfuscate(self, text):
+        letter_dict = dict(zip('abcdefghijklmnopqrstuvwxyz', self.fancy_font))
+        return ''.join([letter_dict.get(letter, letter) for letter in text])
+
+    def anticheat(self, message):
+        remainder = ''.join(set(message.content).intersection(self.fancy_font + self.separator))
+        return remainder != ''
 
     @commands.group()
     async def typing(self, ctx):
@@ -50,7 +61,7 @@ class Typing(commands.Cog):
             return await ctx.send("Maximum word count is 250!")
 
         wordlist = self.get_wordlist(wordcount)
-        og_msg = await ctx.send(f"```\n{self.separator.join(wordlist)}\n```")
+        og_msg = await ctx.send(f"```\n{self.obfuscate(self.separator.join(wordlist))}\n```")
 
         def check(_message):
             return _message.author == ctx.author and _message.channel == ctx.channel
@@ -61,7 +72,7 @@ class Typing(commands.Cog):
             return await ctx.send("Too slow.")
 
         else:
-            if self.separator in message.content:
+            if self.anticheat(message):
                 return await ctx.send(f"{ctx.author.mention} Stop cheating >:(")
 
             wpm, accuracy = self.calculate_entry(message, og_msg, wordlist)
@@ -144,7 +155,7 @@ class Typing(commands.Cog):
         await asyncio.sleep(1)
 
         wordlist = self.get_wordlist(wordcount)
-        await words_message.edit(content=f"```\n{self.separator.join(wordlist)}\n```")
+        await words_message.edit(content=f"```\n{self.obfuscate(self.separator.join(wordlist))}\n```")
 
         results = {}
         for player in players:
@@ -164,7 +175,7 @@ class Typing(commands.Cog):
                 race_in_progress = False
 
             else:
-                if self.separator in message.content:
+                if self.anticheat(message):
                     results[str(message.author.id)] = 0
                     completed_players.add(message.author)
                     await ctx.send(f"{message.author.mention} Stop cheating >:(")
