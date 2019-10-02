@@ -316,9 +316,9 @@ class User(commands.Cog):
         users = []
         for userid in userids:
             userid = userid[0]
-            wpm = db.query("SELECT MAX(wpm) FROM typingdata WHERE user_id = ?", (userid,))[0][0]
-            wpm_list = [x[0] for x in db.query("SELECT wpm FROM typingdata WHERE user_id = ?", (userid,))]
-            wpm_avg = sum(wpm_list)/len(wpm_list)
+            data = db.query("SELECT MAX(wpm), `timestamp` FROM typingdata WHERE user_id = ?", (userid,))[0]
+            wpm = data[0]
+            timestamp = data[1]
 
             if _global_:
                 user = self.client.get_user(userid)
@@ -327,16 +327,16 @@ class User(commands.Cog):
             if user is None:
                 continue
 
-            users.append((user, wpm, wpm_avg, len(wpm_list)))
+            users.append((user, wpm, timestamp))
 
         rows = []
         rank_icon = [':first_place:', ':second_place:', ':third_place:']
-        for i, (user, wpm, wpm_avg, games) in enumerate(sorted(users, key=itemgetter(1), reverse=True), start=1):
+        for i, (user, wpm, timestamp) in enumerate(sorted(users, key=itemgetter(1), reverse=True), start=1):
             if i <= len(rank_icon):
                 ranking = rank_icon[i - 1]
             else:
                 ranking = f"`{i}.`"
-            rows.append(f"{ranking} **{int(wpm)}** WPM — **{user.name}** ({int(wpm_avg)} wpm avg. over {games} games)")
+            rows.append(f"{ranking} **{int(wpm)}** WPM — **{user.name}** ( {arrow.get(timestamp).humanize()} )")
         content = discord.Embed(title=":keyboard: WPM Leaderboard", color=discord.Color.orange())
         await util.send_as_pages(ctx, content, rows)
 

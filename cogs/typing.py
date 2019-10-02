@@ -13,6 +13,7 @@ class Typing(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.all_words = db.get_from_data_json(['wordlists', 'english'])
+        self.separator = ' '
 
     def get_wordlist(self, wordcount):
         wordlist = []
@@ -49,7 +50,7 @@ class Typing(commands.Cog):
             return await ctx.send("Maximum word count is 250!")
 
         wordlist = self.get_wordlist(wordcount)
-        og_msg = await ctx.send(f"```\n{' '.join(wordlist)}\n```")
+        og_msg = await ctx.send(f"```\n{self.separator.join(wordlist)}\n```")
 
         def check(_message):
             return _message.author == ctx.author and _message.channel == ctx.channel
@@ -60,7 +61,7 @@ class Typing(commands.Cog):
             return await ctx.send("Too slow.")
 
         else:
-            if ' ' in message.content:
+            if self.separator in message.content:
                 return await ctx.send(f"{ctx.author.mention} Stop cheating >:(")
 
             wpm, accuracy = self.calculate_entry(message, og_msg, wordlist)
@@ -74,7 +75,8 @@ class Typing(commands.Cog):
         if wordcount > 250:
             return await ctx.send("Maximum word count is 250!")
 
-        content = discord.Embed(title=f":keyboard: Starting a new typing race | {wordcount} words", color=discord.Color.gold())
+        content = discord.Embed(title=f":keyboard:  Starting a new typing race | {wordcount} words",
+                                color=discord.Color.gold())
         content.description = "React with :notepad_spiral: to enter the race.\n" \
                               "React with :white_check_mark: to start the race."
         content.add_field(name="Participants", value=f"**{ctx.author}**")
@@ -100,26 +102,37 @@ class Typing(commands.Cog):
                 reaction, user = await ctx.bot.wait_for('reaction_add', timeout=300.0, check=check)
             except asyncio.TimeoutError:
                 try:
-                    for emoji in []:
+                    for emoji in [note_emoji, check_emoji]:
                         await enter_message.remove_reaction(emoji, ctx.bot.user)
                 except discord.errors.NotFound:
                     pass
+                except discord.errors.Forbidden:
+                    await ctx.send("`error: i'm missing required discord permission [ manage messages ]`")
                 break
             else:
                 if reaction.emoji == note_emoji:
+                    if user in players:
+                        continue
                     players.add(user)
                     content.remove_field(0)
                     content.add_field(name="Participants", value='\n'.join(f"**{x}**" for x in players))
                     await enter_message.edit(embed=content)
                 elif reaction.emoji == check_emoji:
                     if len(players) < 2:
-                        await ctx.send("You can't race alone!")
-                        await enter_message.remove_reaction(check_emoji, user)
+                        cant_race_alone = await ctx.send("You can't race alone!")
+                        await asyncio.sleep(1)
+                        try:
+                            await cant_race_alone.delete()
+                            await enter_message.remove_reaction(check_emoji, user)
+                        except discord.errors.Forbidden:
+                            await ctx.send("`error: i'm missing required discord permission [ manage messages ]`")
                     else:
                         race_in_progress = True
 
         if not race_in_progress:
-            return await ctx.send("Race aborted. Not enough players or timed out.")
+            content.remove_field(0)
+            content.add_field(name="Race timed out", value="Not enough players")
+            return await enter_message.edit(embed=content)
 
         words_message = await ctx.send("Starting race in 3...")
         i = 2
@@ -131,7 +144,7 @@ class Typing(commands.Cog):
         await asyncio.sleep(1)
 
         wordlist = self.get_wordlist(wordcount)
-        await words_message.edit(content=f"```\n{' '.join(wordlist)}\n```")
+        await words_message.edit(content=f"```\n{self.separator.join(wordlist)}\n```")
 
         results = {}
         for player in players:
@@ -143,7 +156,7 @@ class Typing(commands.Cog):
             def check(_message):
                 return _message.author in players \
                        and _message.channel == ctx.channel \
-                       and _message.author.id not in completed_players
+                       and _message.author not in completed_players
 
             try:
                 message = await self.client.wait_for('message', timeout=300.0, check=check)
@@ -151,8 +164,11 @@ class Typing(commands.Cog):
                 race_in_progress = False
 
             else:
-                if ' ' in message.content:
-                    return await ctx.send(f"{message.author} Stop cheating >:(")
+                if self.separator in message.content:
+                    results[str(message.author.id)] = 0
+                    completed_players.add(message.author)
+                    await ctx.send(f"{message.author.mention} Stop cheating >:(")
+                    continue
 
                 wpm, accuracy = self.calculate_entry(message, words_message, wordlist)
                 await ctx.send(f"{message.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
@@ -164,7 +180,7 @@ class Typing(commands.Cog):
                 if completed_players == players:
                     race_in_progress = False
 
-        content = discord.Embed(title=":keyboard: Race complete!", color=discord.Color.green())
+        content = discord.Embed(title=":checkered_flag: Race complete!", color=discord.Color.green())
         rows = []
         for i, player in enumerate(sorted(results.items(), key=itemgetter(1), reverse=True), start=1):
             member = ctx.guild.get_member(int(player[0]))
@@ -232,5 +248,7 @@ def setup(client):
 
 
 def save_wpm(user, wpm, accuracy, wordcount, race):
+    if wpm == 0:
+        return
     db.execute("INSERT INTO typingdata VALUES (?, ?, ?, ?, ?, ?)",
                (arrow.utcnow().timestamp, user.id, wpm, accuracy, wordcount, race))
