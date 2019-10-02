@@ -272,7 +272,6 @@ def setup(client):
 
 
 def image_search(query):
-    print('searching for', query)
     gis = GoogleImagesSearch(GCS_DEVELOPER_KEY, '016720228003584159752:xwo6ysur40a')
     _search_params = {
         'q': query,
