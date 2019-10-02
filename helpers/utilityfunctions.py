@@ -117,7 +117,7 @@ async def reaction_buttons(ctx, message, functions, timeout=600.0, only_author=F
             except discord.errors.NotFound:
                 pass
             except discord.errors.Forbidden:
-                await ctx.send("`error: missing discord permission [ manage messages ]`")
+                await ctx.send("`error: i'm missing required discord permission [ manage messages ]`")
             if single_use or exits is True:
                 break
 
