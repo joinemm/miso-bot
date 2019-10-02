@@ -42,7 +42,7 @@ class Typing(commands.Cog):
         await util.command_group_help(ctx)
 
     @typing.command(name='test')
-    async def typing_test(self, ctx, wordcount: int = 50):
+    async def typing_test(self, ctx, wordcount: int = 25):
         if wordcount < 10:
             return await ctx.send("Minimum word count is 10!")
         if wordcount > 250:
@@ -68,7 +68,7 @@ class Typing(commands.Cog):
             save_wpm(ctx.author, wpm, accuracy, wordcount, 0)
 
     @typing.command(name='race')
-    async def typing_race(self, ctx, wordcount: int = 50):
+    async def typing_race(self, ctx, wordcount: int = 25):
         if wordcount < 10:
             return await ctx.send("Minimum word count is 10!")
         if wordcount > 250:
@@ -152,7 +152,7 @@ class Typing(commands.Cog):
 
             else:
                 if ' ' in message.content:
-                    return await ctx.send(f"{ctx.author.mention} Stop cheating >:(")
+                    return await ctx.send(f"{message.author} Stop cheating >:(")
 
                 wpm, accuracy = self.calculate_entry(message, words_message, wordlist)
                 await ctx.send(f"{message.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
