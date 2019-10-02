@@ -42,7 +42,8 @@ class Events(commands.Cog):
     async def on_member_join(self, member):
         """Called when a new member joins a server"""
         if not util.int_to_bool(db.get_setting(member.guild.id, "welcome_toggle")):
-            return logger.info(f"{member.name} just joined {member.guild.name}, but welcome messages are disabled!")
+            return
+            # return logger.info(f"{member.name} just joined {member.guild.name}, but welcome messages are disabled!")
 
         message_format = db.get_setting(member.guild.id, "welcome_message")
         if message_format is None:
@@ -50,7 +51,7 @@ class Events(commands.Cog):
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:
-            return logger.warning(f"No welcome channel set for [{member.guild.name}]")
+            return logger.warning(f"No welcome channel set for [{member.guild.name}] or cannot access")
 
         await channel.send(embed=util.create_welcome_embed(member, member.guild, message_format))
         logger.info(f"Welcomed {member.name} to {member.guild.name}")
@@ -64,13 +65,14 @@ class Events(commands.Cog):
     async def on_member_ban(self, guild, user):
         """Called when user gets banned from a server"""
         if not util.int_to_bool(db.get_setting(guild.id, "welcome_toggle")):
-            return logger.info(f"{user.name} just got banned from {guild.name}, but welcome messages are disabled!")
+            return
+            # return logger.info(f"{user.name} just got banned from {guild.name}, but welcome messages are disabled!")
 
         channel_id = db.get_setting(guild.id, "welcome_channel")
         channel = guild.get_channel(channel_id)
         if channel is None:
-            logger.warning(f"No welcome channel set for [{guild.name}]")
-            return
+            return logger.warning(f"No welcome channel set for [{guild.name}] or cannot access")
+
         message = "**{name}** has been permanently banned"
         await channel.send(message.format(mention=user.mention, name=user.name))
         logger.info(f"{user.name} was just banned from {guild.name}")
@@ -79,13 +81,13 @@ class Events(commands.Cog):
     async def on_member_remove(self, member):
         """Called when member leaves a guild or is kicked"""
         if not util.int_to_bool(db.get_setting(member.guild.id, "welcome_toggle")):
-            return logger.info(f"{member.name} just left {member.guild.name}, but welcome messages are disabled!")
+            return
+            # return logger.info(f"{member.name} just left {member.guild.name}, but welcome messages are disabled!")
 
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:
-            logger.warning(f"No welcome channel set for [{member.guild.name}] or cannot access")
-            return
+            return logger.warning(f"No welcome channel set for [{member.guild.name}] or cannot access")
 
         await channel.send(f"Goodbye {member.mention} ( **{member.name}#{member.discriminator}** )")
         logger.info(f"Said goodbye to {member.name} from {member.guild.name}")
