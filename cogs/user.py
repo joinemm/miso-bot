@@ -313,6 +313,9 @@ class User(commands.Cog):
     async def leaderboard_wpm(self, ctx, scope=''):
         _global_ = scope == 'global'
         userids = db.query("SELECT DISTINCT user_id FROM typingdata")
+        if userids is None:
+            return await ctx.send("No typing data exists yet!")
+        
         users = []
         for userid in userids:
             userid = userid[0]
