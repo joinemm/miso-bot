@@ -34,7 +34,9 @@ class Fishy(commands.Cog):
         else:
             time_since_fishy = COOLDOWN
 
-        if time_since_fishy < COOLDOWN:
+        TESTING = False
+
+        if time_since_fishy < COOLDOWN and not TESTING:
             not_yet_quotes = [
                 "Bro chill, you can't fish yet! You gotta wait like",
                 "You can't fish yet, fool! Please wait",
@@ -55,10 +57,11 @@ class Fishy(commands.Cog):
         globaldata = mention == 'global'
         if not globaldata:
             user = await util.get_user(ctx, mention, fallback=ctx.author)
-        else:
-            user = ctx.author
+            fishdata = db.fishdata(user.id)
+            owner = user.name
 
-        if globaldata:
+        else:
+            owner = 'global'
             fishdata = None
             users = db.query("select user_id from fishy")
             for user_id in users:
@@ -75,23 +78,22 @@ class Fishy(commands.Cog):
                         rare=fishdata.rare + user_fishdata.rare,
                         legendary=fishdata.legendary + user_fishdata.legendary)
 
-        else:
-            fishdata = db.fishdata(user.id)
-        content = discord.Embed(title=f"{'global' if globaldata else user.name} fishy stats")
+        content = discord.Embed(title=f":fishing_pole_and_fish: {owner} fishy stats", color=discord.Color.blue())
         if fishdata is not None:
             total = fishdata.trash + fishdata.common + fishdata.uncommon + fishdata.rare + fishdata.legendary
             content.description = f"""
 Total fishy: **{fishdata.fishy}**
 Fishy gifted: **{fishdata.fishy_gifted}**
+Total fish count: **{total}**
+
+Biggest fish: **{fishdata.biggest} Kg**
+Average fishy: **{fishdata.fishy / total:.2f}**
 
 Trash: **{fishdata.trash}** - {(fishdata.trash / total) * 100:.1f}%
 Common: **{fishdata.common}** - {(fishdata.common / total) * 100:.1f}%
 Uncommon: **{fishdata.uncommon}** - {(fishdata.uncommon / total) * 100:.1f}%
 Rare: **{fishdata.rare}** - {(fishdata.rare / total) * 100:.1f}%
 Legendary: **{fishdata.legendary}** - {(fishdata.legendary / total) * 100:.1f}%
-
-Total fish count: **{total}**
-Average fishy: **{fishdata.fishy / total:.2f}**
 """
         await ctx.send(embed=content)
 

@@ -242,6 +242,29 @@ class User(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
+    @leaderboard.command(name='fishysize')
+    async def leaderboard_fishysize(self, ctx):
+        data = db.query("SELECT * FROM fishysize ORDER BY size DESC")
+        content = discord.Embed(title="Biggest fishies caught :fish:", color=discord.Color.blue())
+        rows = []
+        rank_icon = [':first_place:', ':second_place:', ':third_place:']
+        for i, row in enumerate(data, start=1):
+            fisher = self.client.get_user(row[2] or '')
+            receiver = self.client.get_user(row[3])
+            if fisher is None:
+                fisher = receiver
+                receiver = None
+
+            if i <= len(rank_icon):
+                rank = rank_icon[i - 1]
+            else:
+                rank = f"`{i}.`"
+
+            rows.append(f"{rank} **{row[4]} Kg** caught by **{fisher}**"
+                        + (f" for **{receiver}**" if receiver is not None else ""))
+
+        await util.send_as_pages(ctx, content, rows)
+
     @leaderboard.command(name='levels')
     async def leaderboard_levels(self, ctx, scope='', timeframe=''):
         _global_ = scope == 'global'
