@@ -163,10 +163,6 @@ class User(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.command(aliases=['levels'], hidden=True)
-    async def toplevels(self, ctx):
-        await ctx.send(f"This command has been deprecated. Please use `>leaderboard levels [timeframe]`")
-
     @commands.command(aliases=["level"])
     async def activity(self, ctx, user=None):
         """See your hourly server activity chart (GMT)"""
@@ -311,6 +307,37 @@ class User(commands.Cog):
         content.title = f"{'Global' if _global_ else guild.name} levels leaderboard"
         if time is not None:
             content.title += f" - {time}"
+        await util.send_as_pages(ctx, content, rows)
+
+    @leaderboard.command(name='wpm')
+    async def leaderboard_wpm(self, ctx, scope=''):
+        _global_ = scope == 'global'
+        userids = db.query("SELECT DISTINCT user_id FROM typingdata")
+        users = []
+        for userid in userids:
+            userid = userid[0]
+            wpm = db.query("SELECT MAX(wpm) FROM typingdata WHERE user_id = ?", (userid,))[0][0]
+            wpm_list = [x[0] for x in db.query("SELECT wpm FROM typingdata WHERE user_id = ?", (userid,))]
+            wpm_avg = sum(wpm_list)/len(wpm_list)
+
+            if _global_:
+                user = self.client.get_user(userid)
+            else:
+                user = ctx.guild.get_member(userid)
+            if user is None:
+                continue
+
+            users.append((user, wpm, wpm_avg, len(wpm_list)))
+
+        rows = []
+        rank_icon = [':first_place:', ':second_place:', ':third_place:']
+        for i, (user, wpm, wpm_avg, games) in enumerate(sorted(users, key=itemgetter(1), reverse=True), start=1):
+            if i <= len(rank_icon):
+                ranking = rank_icon[i - 1]
+            else:
+                ranking = f"`{i}.`"
+            rows.append(f"{ranking} **{int(wpm)}** WPM — **{user.name}** ({int(wpm_avg)} wpm avg. over {games} games)")
+        content = discord.Embed(title=":keyboard: WPM Leaderboard", color=discord.Color.orange())
         await util.send_as_pages(ctx, content, rows)
 
     @leaderboard.command(name='crowns')
