@@ -92,8 +92,8 @@ def add_fishy(user_id, fishtype, amount, timestamp, fisher_id=None):
         if amount > biggest:
             execute("UPDATE fishy SET biggest = ? WHERE user_id = ?", (amount, user_id))
 
-        leaderboard = query("SELECT min(size) FROM fishysize")
-        if leaderboard[0][0] is None or amount >= leaderboard[0][0]:
+        leaderboard = query("SELECT size FROM fishysize ORDER BY size")
+        if leaderboard[0][0] is None or amount >= leaderboard[0][0] or len(leaderboard) < 15:
             execute("INSERT INTO fishysize VALUES (null, ?, ?, ?, ?)", (timestamp, fisher_id, user_id, amount))
 
             execute("delete from fishysize where id = (select * from ("
