@@ -42,7 +42,12 @@ class Typing(commands.Cog):
         await util.command_group_help(ctx)
 
     @typing.command(name='test')
-    async def typing_test(self, ctx, wordcount: int=25):
+    async def typing_test(self, ctx, wordcount: int = 50):
+        if wordcount < 10:
+            return await ctx.send("Minimum word count is 10!")
+        if wordcount > 250:
+            return await ctx.send("Maximum word count is 250!")
+
         wordlist = self.get_wordlist(wordcount)
         og_msg = await ctx.send(f"```\n{' '.join(wordlist)}\n```")
 
@@ -63,7 +68,12 @@ class Typing(commands.Cog):
             save_wpm(ctx.author, wpm, accuracy, wordcount, 0)
 
     @typing.command(name='race')
-    async def typing_race(self, ctx, wordcount: int=25):
+    async def typing_race(self, ctx, wordcount: int = 50):
+        if wordcount < 10:
+            return await ctx.send("Minimum word count is 10!")
+        if wordcount > 250:
+            return await ctx.send("Maximum word count is 250!")
+
         content = discord.Embed(title=f":keyboard: Starting a new typing race | {wordcount} words", color=discord.Color.gold())
         content.description = "React with :notepad_spiral: to enter the race.\n" \
                               "React with :white_check_mark: to start the race."
