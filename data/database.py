@@ -87,6 +87,18 @@ def add_fishy(user_id, fishtype, amount, timestamp, fisher_id=None):
         execute("update fishy set fishy_gifted = fishy_gifted + ?, timestamp = ? where user_id = ?",
                 (amount, timestamp, fisher_id))
 
+    if amount > 0:
+        biggest = query("SELECT biggest FROM fishy WHERE user_id = ?", (user_id,))[0][0] or 0
+        if amount > biggest:
+            execute("UPDATE fishy SET biggest = ? WHERE user_id = ?", (amount, user_id))
+
+        leaderboard = query("SELECT min(size) FROM fishysize")
+        if leaderboard[0][0] is None or amount >= leaderboard[0][0]:
+            execute("INSERT INTO fishysize VALUES (null, ?, ?, ?, ?)", (timestamp, fisher_id, user_id, amount))
+
+            execute("delete from fishysize where id = (select * from ("
+                    "select id from fishysize order by size desc limit 15,1) as t)")
+
 
 def get_keywords(guild_id):
     data = query("select keyword, user_id from notifications where guild_id = ?", (guild_id,))
