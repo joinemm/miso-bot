@@ -32,6 +32,8 @@ class Typing(commands.Cog):
         total_keys = 0
         corrent_keys = 0
         for user_word, correct_word in itertools.zip_longest(user_words, wordlist):
+            if correct_word is None:
+                continue
             total_keys += len(correct_word) + 1
             if user_word == correct_word:
                 corrent_keys += len(correct_word) + 1
