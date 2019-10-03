@@ -5,6 +5,7 @@ import helpers.utilityfunctions as util
 import data.database as db
 import sqlite3
 import arrow
+import time
 
 logger = log.get_logger(__name__)
 
@@ -80,17 +81,31 @@ class Owner(commands.Cog):
                    (util.bool_to_int(not current), discord_user.id))
         await ctx.send(f"**{discord_user}** patreon activity set to **{not current}**")
 
-    @commands.command(hidden=True)
+    @commands.group(hidden=True)
     @commands.is_owner()
-    async def sql(self, ctx, *, statement):
+    async def sql(self, ctx):
+        await util.command_group_help(ctx)
+
+    @sql.command(name='query')
+    @commands.is_owner()
+    async def sql_query(self, ctx,  *, statement):
         connection = sqlite3.connect(db.SQLDATABASE)
         cursor = connection.cursor()
         cursor.execute(statement)
-
         pretty_table = db.pp(cursor)
+        connection.close()
         await ctx.send(f"```{pretty_table}```")
 
+    @sql.command(name='execute')
+    @commands.is_owner()
+    async def sql_execute(self, ctx, *, statement):
+        start = time.time()
+        connection = sqlite3.connect(db.SQLDATABASE)
+        cursor = connection.cursor()
+        cursor.execute(statement)
+        connection.commit()
         connection.close()
+        await ctx.send(f"```OK. Took {time.time() - start}```")
 
 
 def setup(client):
