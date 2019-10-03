@@ -41,9 +41,11 @@ def get_command_logger(showlevel=False):
 
 
 def log_command(ctx):
-    text = f"{(str(ctx.command)+'()'):>15} | {(ctx.guild.name if ctx.guild is not None else 'DM'):15} ] " \
-           f"{ctx.author:15} \"{ctx.message.content}\""
-    return text
+    command = str(ctx.command)+'()'
+    guild = ctx.guild.name if ctx.guild is not None else 'DM'
+    user = str(ctx.author)
+    text = f"{command:>15} | {guild:15} ] {user:15} \"{ctx.message.content}\""
+    return str(text)
 
 
 def custom_command_format(ctx, keyword):
