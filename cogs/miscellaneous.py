@@ -106,11 +106,13 @@ class Miscellaneous(commands.Cog):
     @commands.command()
     async def ship(self, ctx, *, names):
         """Ship two people, separate names with 'and'"""
-        names = names.split(' and ')
-        if not len(names) == 2:
-            return await ctx.send("Please give two names separated with `and`")
+        nameslist = names.split(' and ')
+        if not len(nameslist) == 2:
+            nameslist = names.split(" ", 1)
+            if len(nameslist) < 1:
+                return await ctx.send("Please give two names separated with `and`")
 
-        url = f"https://www.calculator.net/love-calculator.html?cnameone={names[0]}&x=0&y=0&cnametwo={names[1]}"
+        url = f"https://www.calculator.net/love-calculator.html?cnameone={nameslist[0]}&x=0&y=0&cnametwo={nameslist[1]}"
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
         percentage = soup.find("font", {'color': 'green'}).find('b').text
@@ -123,7 +125,8 @@ class Miscellaneous(commands.Cog):
             emoji = ":sparkling_heart:"
         else:
             emoji = ":hearts:"
-        content = discord.Embed(title=f"{names[0]} {emoji} {names[1]} - {percentage}", colour=discord.Colour.magenta())
+        content = discord.Embed(title=f"{nameslist[0]} {emoji} {nameslist[1]} - {percentage}",
+                                colour=discord.Colour.magenta())
         content.description = text
         await ctx.send(embed=content)
 
@@ -255,14 +258,14 @@ class Miscellaneous(commands.Cog):
                 gender = None
         data = db.random_kpop_idol(gender)
 
-        image = image_search(data.stage_name + ' ' + (data.group or ''))
-        content = discord.Embed(color=await util.get_color(ctx, util.color_from_image_url(image)))
+        image = await image_search(data.stage_name + ' ' + (data.group or ''))
+        content = discord.Embed(color=discord.Color.blurple())
         content.set_image(url=image)
         content.title = (f'{data.group} ' if data.group is not None else '') + data.stage_name
         content.description = f"**Full name:** {data.full_name}\n" \
-            f"**Korean name:** {data.k_stage_name} ({data.korean_name})\n" \
-            f"**Birthday:** {data.date_of_birth}\n" \
-            f"**Country:** {data.country}\n"\
+                              f"**Korean name:** {data.k_stage_name} ({data.korean_name})\n" \
+                              f"**Birthday:** {data.date_of_birth}\n" \
+                              f"**Country:** {data.country}\n" \
                               + (f'**Birthplace:** {data.birthplace}' if data.birthplace is not None else '')
         await ctx.send(embed=content)
 
