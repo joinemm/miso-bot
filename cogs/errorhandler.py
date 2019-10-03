@@ -1,10 +1,11 @@
 from discord.ext import commands
 import helpers.log as log
 import traceback
+from cogs.lastfm import LastFMError
 from helpers import utilityfunctions as util
 
 logger = log.get_logger(__name__)
-command_logger = log.get_command_logger()
+command_logger = log.get_command_logger(showlevel=True)
 
 
 class Events(commands.Cog):
@@ -27,34 +28,42 @@ class Events(commands.Cog):
             return
 
         if isinstance(error, commands.DisabledCommand):
+            command_logger.error(log.log_command(ctx))
             logger.error(str(error))
-            return await ctx.send(f'`{ctx.command}` has been disabled!')
+            await ctx.send(f'`{ctx.command}` has been disabled!')
 
         elif isinstance(error, commands.NoPrivateMessage):
+            command_logger.error(log.log_command(ctx))
             logger.error(str(error))
-            return await ctx.author.send(f'`{ctx.command}` can not be used in DMs!')
+            await ctx.author.send(f'`{ctx.command}` can not be used in DMs!')
 
         elif isinstance(error, commands.NotOwner):
+            command_logger.error(log.log_command(ctx))
             logger .error(str(error))
-            return await ctx.send(f"Sorry, you are not authorized to use this command!")
+            await ctx.send(f"Sorry, you are not authorized to use this command!")
 
         elif isinstance(error, commands.MissingPermissions):
+            command_logger.error(log.log_command(ctx))
             logger.error(str(error))
             perms = ', '.join([f"`{x}`" for x in error.missing_perms])
-            return await ctx.send(f"You require {perms} permissions to use this command!")
+            await ctx.send(f"You require {perms} permission to use this command!")
 
         elif isinstance(error, commands.BotMissingPermissions):
             logger.error(str(error))
             perms = ', '.join([f"`{x}`" for x in error.missing_perms])
-            return await ctx.send(f"Cannot execute command! Missing permissions {perms}")
+            await ctx.send(f"Cannot execute command! Missing permission {perms}")
 
         elif isinstance(error, commands.MissingRequiredArgument):
+            command_logger.error(log.log_command(ctx))
             logger.error(str(error))
-            return await util.send_command_help(ctx)
+            await util.send_command_help(ctx)
 
         elif isinstance(error, commands.BadArgument):
-            return await ctx.send(f"```{str(error)}```")
+            command_logger.error(log.log_command(ctx))
+            await ctx.send(f"```{str(error)}```")
 
+        elif isinstance(error, LastFMError):
+            await ctx.send(f"```{str(error)}```")
         else:
             logger.error(f"Ignoring exception in command {ctx.command}:")
             traceback.print_exception(type(error), error, error.__traceback__)
