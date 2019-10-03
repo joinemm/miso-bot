@@ -7,21 +7,26 @@ from operator import itemgetter
 import helpers.utilityfunctions as util
 import arrow
 import itertools
+import json
 
 
 class Typing(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-        self.all_words = db.get_from_data_json(['wordlists', 'english'])
-        self.separator = ' '
+        self.separators = [' ', ' ', ' ', '  ', '  ', ' ']
         self.fancy_font = '𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣'
         self.fancy_font_2 = '𝘢𝘣𝘤𝘥𝘦𝘧𝘨𝘩𝘪𝘫𝘬𝘭𝘮𝘯𝘰𝘱𝘲𝘳𝘴𝘵𝘶𝘷𝘸𝘹𝘺𝘻'
 
-    def get_wordlist(self, wordcount):
+    def get_wordlist(self, wordcount, language):
+        with open('data/wordlist.json') as f:
+            data = json.load(f)
+            all_words = data.get(language.lower())
+            if all_words is None:
+                return None, [str(lang) for lang in data]
         wordlist = []
         while len(wordlist) < wordcount:
-            word = random.choice(self.all_words)
+            word = random.choice(all_words)
             if not wordlist or not wordlist[-1] == word:
                 wordlist.append(word)
         return wordlist
@@ -43,11 +48,13 @@ class Typing(commands.Cog):
         return wpm, accuracy
 
     def obfuscate(self, text):
+        while ' ' in text:
+            text = text.replace(' ', random.choice(self.separators), 1)
         letter_dict = dict(zip('abcdefghijklmnopqrstuvwxyz', self.fancy_font))
         return ''.join([letter_dict.get(letter, letter) for letter in text])
 
     def anticheat(self, message):
-        remainder = ''.join(set(message.content).intersection(self.fancy_font + self.separator))
+        remainder = ''.join(set(message.content).intersection(self.fancy_font + ''.join(self.separators)))
         return remainder != ''
 
     @commands.group()
@@ -56,14 +63,26 @@ class Typing(commands.Cog):
         await util.command_group_help(ctx)
 
     @typing.command(name='test')
-    async def typing_test(self, ctx, wordcount: int = 25):
+    async def typing_test(self, ctx, language=None, wordcount: int = 25):
+        if language is None:
+            language = wordcount
+        try:
+            wordcount = int(language)
+            language = 'english'
+        except ValueError:
+            pass
+
         if wordcount < 10:
             return await ctx.send("Minimum word count is 10!")
         if wordcount > 250:
             return await ctx.send("Maximum word count is 250!")
 
-        wordlist = self.get_wordlist(wordcount)
-        og_msg = await ctx.send(f"```\n{self.obfuscate(self.separator.join(wordlist))}\n```")
+        wordlist = self.get_wordlist(wordcount, language)
+        if wordlist[0] is None:
+            langs = '\n'.join(wordlist[1])
+            return await ctx.send(f"Unsupported language `{language}`.\nCurrently supported languages are:\n>>> {langs}")
+
+        og_msg = await ctx.send(f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
 
         def check(_message):
             return _message.author == ctx.author and _message.channel == ctx.channel
@@ -79,10 +98,18 @@ class Typing(commands.Cog):
 
             wpm, accuracy = self.calculate_entry(message, og_msg, wordlist)
             await ctx.send(f"{ctx.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
-            save_wpm(ctx.author, wpm, accuracy, wordcount, 0)
+            save_wpm(ctx.author, wpm, accuracy, wordcount, language, 0)
 
     @typing.command(name='race')
-    async def typing_race(self, ctx, wordcount: int = 25):
+    async def typing_race(self, ctx, language=None, wordcount: int = 25):
+        if language is None:
+            language = wordcount
+        try:
+            wordcount = int(language)
+            language = 'english'
+        except ValueError:
+            pass
+
         if wordcount < 10:
             return await ctx.send("Minimum word count is 10!")
         if wordcount > 250:
@@ -156,8 +183,13 @@ class Typing(commands.Cog):
 
         await asyncio.sleep(1)
 
-        wordlist = self.get_wordlist(wordcount)
-        await words_message.edit(content=f"```\n{self.obfuscate(self.separator.join(wordlist))}\n```")
+        wordlist = self.get_wordlist(wordcount, language)
+        if wordlist[0] is None:
+            langs = '\n'.join(wordlist[1])
+            return await ctx.send(
+                f"Unsupported language `{language}`.\nCurrently supported languages are:\n>>> {langs}")
+
+        await words_message.edit(content=f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
 
         results = {}
         for player in players:
@@ -185,7 +217,7 @@ class Typing(commands.Cog):
 
                 wpm, accuracy = self.calculate_entry(message, words_message, wordlist)
                 await ctx.send(f"{message.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
-                save_wpm(ctx.author, wpm, accuracy, wordcount, 1)
+                save_wpm(ctx.author, wpm, accuracy, wordcount, language, 1)
 
                 results[str(message.author.id)] = wpm
                 completed_players.add(message.author)
@@ -260,8 +292,8 @@ def setup(client):
     client.add_cog(Typing(client))
 
 
-def save_wpm(user, wpm, accuracy, wordcount, race):
+def save_wpm(user, wpm, accuracy, wordcount, language, race):
     if wpm == 0:
         return
-    db.execute("INSERT INTO typingdata VALUES (?, ?, ?, ?, ?, ?)",
-               (arrow.utcnow().timestamp, user.id, wpm, accuracy, wordcount, race))
+    db.execute("INSERT INTO typingdata VALUES (?, ?, ?, ?, ?, ?, ?)",
+               (arrow.utcnow().timestamp, user.id, wpm, accuracy, wordcount, race, language))
