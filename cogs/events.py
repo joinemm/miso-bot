@@ -4,6 +4,7 @@ import helpers.log as log
 import helpers.utilityfunctions as util
 import data.database as db
 import re
+import random
 
 logger = log.get_logger(__name__)
 
@@ -51,7 +52,7 @@ class Events(commands.Cog):
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:
-            return logger.warning(f"No welcome channel set for [{member.guild.name}] or cannot access")
+            return logger.warning(f"Cannot welcome {user} to {guild.name}")
 
         await channel.send(embed=util.create_welcome_embed(member, member.guild, message_format))
         logger.info(f"Welcomed {member.name} to {member.guild.name}")
@@ -59,7 +60,10 @@ class Events(commands.Cog):
         # add autorole
         role = member.guild.get_role(db.get_setting(member.guild.id, "autorole"))
         if role is not None:
-            await member.add_roles(role)
+            try:
+                await member.add_roles(role)
+            except discord.errors.Forbidden:
+                logger.error(f"Trying to add autorole failed in {guild.name}")
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
@@ -71,7 +75,7 @@ class Events(commands.Cog):
         channel_id = db.get_setting(guild.id, "welcome_channel")
         channel = guild.get_channel(channel_id)
         if channel is None:
-            return logger.warning(f"No welcome channel set for [{guild.name}] or cannot access")
+            return logger.warning(f"Cannot say goodbye to banned member {user} from {guild.name}")
 
         message = "**{name}** has been permanently banned"
         await channel.send(message.format(mention=user.mention, name=user.name))
@@ -87,14 +91,14 @@ class Events(commands.Cog):
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:
-            return logger.warning(f"No welcome channel set for [{member.guild.name}] or cannot access")
+            return logger.warning(f"Cannot say goodbye to {member} from {member.guild.name}")
 
         await channel.send(f"Goodbye {member.mention} ( **{member.name}#{member.discriminator}** )")
         logger.info(f"Said goodbye to {member.name} from {member.guild.name}")
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """Listened that gets called on every message"""
+        """Listener that gets called on every message"""
 
         # ignore DMs
         if message.guild is None:
@@ -110,34 +114,36 @@ class Events(commands.Cog):
 
         # stfu
         pattern = re.compile(r'(?:^|\W){0}(?:$|\W)'.format('stfu'), flags=re.IGNORECASE)
-        if not message.author.bot and pattern.findall(message.content):
+        if not message.author.bot and pattern.findall(message.content) and random.randint(0, 2) == 0:
             await message.channel.send("no u")
+
+        if message.content.lower().strip("!.?~ ") == "hi" and random.randint(0, 19) == 0:
+            await message.channel.send('hi')
 
         # git gud
         if not message.author.bot and message.content.lower().startswith("git"):
-            gitcommand = re.search(r'git (\S+)', message.content).group(1)
-            if gitcommand == "--help":
-                msg = "```\n" \
-                      "usage: git [--version] [--help] [-C <path>] [-c <name>=<value>]\n" \
-                      "           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n" \
-                      "           [-p | --paginate | --no-pager] [--no-replace-objects] [--bare]\n" \
-                      "           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]\n" \
-                      "           <command> [<args>]```"
-                await message.channel.send(msg)
-            elif gitcommand == "--version":
-                await message.channel.send("`git version 2.17.1`")
-            elif gitcommand in ["commit", "push", "pull", "checkout", "status", "init", "add"]:
-                pass
-            else:
-                await message.channel.send(f"`git: '{gitcommand}' is not a git command. See 'git --help'.`")
+            gitcommand = re.search(r'git (\S+)', message.content)
+            if gitcommand is not None:
+                gitcommand = gitcommand.group(1)
+                if gitcommand == "--help":
+                    msg = "```\n" \
+                          "usage: git [--version] [--help] [-C <path>] [-c <name>=<value>]\n" \
+                          "           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n" \
+                          "           [-p | --paginate | --no-pager] [--no-replace-objects] [--bare]\n" \
+                          "           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]\n" \
+                          "           <command> [<args>]```"
+                    await message.channel.send(msg)
+                elif gitcommand == "--version":
+                    await message.channel.send("`git version 2.17.1`")
+                elif gitcommand in ["commit", "push", "pull", "checkout", "status", "init", "add"]:
+                    pass
+                else:
+                    await message.channel.send(f"`git: '{gitcommand}' is not a git command. See 'git --help'.`")
 
         # xp gain
         message_xp = util.xp_from_message(message)
         currenthour = message.created_at.hour
         db.add_activity(message.guild.id, message.author.id, message_xp, currenthour)
-
-        # pinged
-        # if not message.author.bot and self.client.user in message.mentions:
 
         # leveups
         if not message.author.bot:
