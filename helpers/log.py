@@ -1,12 +1,14 @@
 import logging
 import sys
 
-FORMATTER = logging.Formatter("[ %(asctime)s | %(levelname)-7s | %(funcName)s() ]:: %(message)s",
-                              datefmt='%d/%m/%y %H:%M:%S')
-FORMATTER_COMMANDS = logging.Formatter("[ %(asctime)s | COMMAND | %(message)s",
-                                       datefmt='%d/%m/%y %H:%M:%S')
-FORMATTER_COMMANDS_LEVELS = logging.Formatter("[ %(asctime)s | %(levelname)-7s | %(message)s",
-                                              datefmt='%d/%m/%y %H:%M:%S')
+FORMATTER = logging.Formatter(fmt="{asctime} | {levelname:7} | {module:>17}.{funcName:17} | {message}",
+                              datefmt='%d/%m/%y %H:%M:%S', style='{')
+
+FORMATTER_COMMANDS = logging.Formatter(fmt="{asctime} | COMMAND | {message}",
+                                       datefmt='%d/%m/%y %H:%M:%S', style='{')
+
+FORMATTER_COMMANDS_LEVELS = logging.Formatter(fmt="{asctime} | {levelname:7} | {message}",
+                                              datefmt='%d/%m/%y %H:%M:%S', style='{')
 
 
 def get_logger(logger_name):
@@ -44,11 +46,10 @@ def log_command(ctx):
     command = str(ctx.command)+'()'
     guild = ctx.guild.name if ctx.guild is not None else 'DM'
     user = str(ctx.author)
-    text = f"{command:>15} | {guild:15} ] {user:15} \"{ctx.message.content}\""
-    return str(text)
+    return f"{command:>16} > {guild:16} | {user:20} \"{ctx.message.content}\""
 
 
 def custom_command_format(ctx, keyword):
     guild = ctx.guild.name if ctx.guild is not None else 'DM'
     user = str(ctx.author)
-    return f"{f'custom({keyword})':>15} | {guild:15} ] {user:15} \"{ctx.message.content}\""
+    return f"{f'custom({keyword})':>16} > {guild:16} | {user:20} \"{ctx.message.content}\""
