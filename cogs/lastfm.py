@@ -8,7 +8,6 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import data.database as db
 import arrow
-import imgkit
 from bs4 import BeautifulSoup
 import re
 import urllib.parse
@@ -29,10 +28,6 @@ class LastFm(commands.Cog):
         self.client = client
         with open("html/fm_chart_flex.html", "r", encoding="utf-8") as file:
             self.chart_html_flex = file.read().replace('\n', '')
-
-    @commands.command(hidden=True, aliases=['fmchart'])
-    async def fmartist(self, ctx):
-        await ctx.send(f"This command has been deprecated. Please use `{ctx.message.content.replace('fm', 'fm ')}`")
 
     @commands.group(case_insensitive=True)
     async def fm(self, ctx):
@@ -411,11 +406,22 @@ class LastFm(commands.Cog):
         img_divs = ''.join(['<div class="art"><img src="{' + str(i) + '[1]}"><p class="label">{'
                             + str(i) + '[0]}</p></div>' for i in range(len(chart))])
         dimensions = (300*arguments['width'], 300*arguments['height'])
-        options = {"xvfb": "", 'quiet': '', 'format': 'jpeg', 'crop-h': dimensions[1], 'crop-w': dimensions[0]}
         formatted_html = self.chart_html_flex.format(width=dimensions[0], height=dimensions[1],
                                                      arts=img_divs).format(*chart)
-        imgkit.from_string(formatted_html, "downloads/fmchart.png", options=options,
-                           css='html/fm_chart_style.css')
+        
+        response = requests.post('http://localhost:3000/html', data={'html': formatted_html,
+                                                                     'width': dimensions[0],
+                                                                     'height': dimensions[1],
+                                                                     'imageformat': 'jpeg',
+                                                                     'quality': 100}, stream=True)
+
+        with open("downloads/fmchart.jpeg", "wb") as f:
+            for block in response.iter_content(1024):
+                if not block:
+                    break
+
+                f.write(block)
+        
         with open("downloads/fmchart.png", "rb") as img:
             await ctx.send(f"`{ctx.message.author.name} {humanized_period(arguments['period'])} "
                            f"{dimensions[0]//300}x{dimensions[1]//300} {chart_type} chart`",
@@ -450,6 +456,7 @@ class LastFm(commands.Cog):
         rows = []
         old_king = None
         new_king = None
+        total = 0
         for i, x in enumerate(sorted(listeners, key=lambda p: p[0], reverse=True)):
             if i == 0:
                 rank = ":crown:"
@@ -460,6 +467,7 @@ class LastFm(commands.Cog):
             else:
                 rank = f"`{i + 1}.`"
             rows.append(f"{rank} **{x[1].name}** — **{x[0]}** play{'' if x[0] == 1 else 's'}")
+            total += x[0]
 
         if not rows:
             return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
@@ -467,6 +475,8 @@ class LastFm(commands.Cog):
         content = discord.Embed(title=f"Who knows **{artistname}**?")
         image_url = scrape_artist_image(artistname)
         content.set_thumbnail(url=image_url)
+        if len(listeners) > 1:
+            content.set_footer(text=f"Collective plays: {total}")
 
         image_colour = util.color_from_image_url(image_url)
         content.colour = int(image_colour, 16)
@@ -633,12 +643,17 @@ def api_request(url_parameters, ignore_errors=False):
         if ignore_errors:
             return None
         else:
-            content = json.loads(response.content.decode('utf-8'))
+            try:
+                content = json.loads(response.content.decode('utf-8'))
+            except JSONDecodeError:
+                return None
             raise LastFMError(f"Error {content.get('error')} : {content.get('message')}")
 
 
 def get_userinfo_embed(username):
     data = api_request({"user": username, "method": "user.getinfo"})
+    if data is None:
+        return None
     username = data['user']['name']
     playcount = data['user']['playcount']
     profile_url = data['user']['url']
