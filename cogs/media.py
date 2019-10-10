@@ -77,6 +77,9 @@ class Media(commands.Cog):
                 continue
 
             await ctx.send(f"Error parsing `{source}`")
+        
+        if not colors:
+            return await ctx.send("No valid colors to show")
 
         content = discord.Embed(colour=await util.get_color(ctx, colors[0]))
 
@@ -245,9 +248,6 @@ class Media(commands.Cog):
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx, *, query):
         """Search for a random gif"""
-        if not query:
-            return await ctx.send("Give me something to search!")
-
         scripts = []
         if len(query.split(" ")) == 1:
             url = f"https://gfycat.com/gifs/tag/{query}"
@@ -308,7 +308,7 @@ class Media(commands.Cog):
         image = soup.find('img', {'onerror': 'WEBPOCIMG.defaultAlbumImg(this);'}).get('src')
 
         content = discord.Embed(title=f"Melon top {len(song_titles)}" +
-                                      ("" if timeframe is None else f" - {timeframe.capitalize()}"),
+                                      ("" if timeframe == '' else f" - {timeframe.capitalize()}"),
                                 colour=discord.Colour.green())
         content.set_thumbnail(url=image)
         content.timestamp = ctx.message.created_at
