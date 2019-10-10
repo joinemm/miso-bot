@@ -419,7 +419,7 @@ class LastFm(commands.Cog):
         response = requests.post('http://localhost:3000/html', data={'html': formatted_html,
                                                                      'width': dimensions[0],
                                                                      'height': dimensions[1],
-                                                                     'imageformat': 'jpeg',
+                                                                     'imageFormat': 'jpeg',
                                                                      'quality': 70}, stream=True)
 
         with open("downloads/fmchart.jpeg", "wb") as f:
