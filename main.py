@@ -2,6 +2,7 @@ from discord.ext import commands
 import os
 import helpers.log as log
 import data.database as db
+import traceback
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
@@ -11,7 +12,7 @@ client = commands.Bot(command_prefix='>', case_insensitive=True)
 
 extensions = ['cogs.events', 'cogs.config', 'cogs.errorhandler', 'cogs.customcommands', 'cogs.fishy', 'cogs.info',
               'cogs.rolepicker', 'cogs.mod', 'cogs.owner', 'cogs.notifications', 'cogs.miscellaneous', 'cogs.media',
-              'cogs.lastfm', 'cogs.user', 'cogs.images', 'cogs.utility', 'cogs.wordcloud', 'cogs.typing'
+              'cogs.lastfm', 'cogs.user', 'cogs.images', 'cogs.utility', 'cogs.wordcloud', 'cogs.typings'
               ]
 
 
@@ -35,5 +36,6 @@ if __name__ == "__main__":
             logger.info(f"{extension} loaded successfully")
         except Exception as error:
             logger.error(f"{extension} loading failed [{error}]")
-
+            traceback.print_exception(type(error), error, error.__traceback__)
+            
     client.run(TOKEN)
