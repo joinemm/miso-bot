@@ -404,16 +404,23 @@ class LastFm(commands.Cog):
                 chart.append((f"{name} - {artist}", track['image'][3]['#text']))
 
         img_divs = ''.join(['<div class="art"><img src="{' + str(i) + '[1]}"><p class="label">{'
-                            + str(i) + '[0]}</p></div>' for i in range(len(chart))])
+                            + str(i) + '[0]}</p></div>' for i in range(len(chart))]).format(*chart)
         dimensions = (300*arguments['width'], 300*arguments['height'])
-        formatted_html = self.chart_html_flex.format(width=dimensions[0], height=dimensions[1],
-                                                     arts=img_divs).format(*chart)
+        
+        replacements = {'WIDTH': dimensions[0],
+                        'HEIGHT': dimensions[1],
+                        'ARTS': img_divs}
+
+        def dictsub(m):
+            return str(replacements[m.group().strip('%')])
+
+        formatted_html = re.sub(r'%%(\S*)%%', dictsub, self.chart_html_flex)
         
         response = requests.post('http://localhost:3000/html', data={'html': formatted_html,
                                                                      'width': dimensions[0],
                                                                      'height': dimensions[1],
                                                                      'imageformat': 'jpeg',
-                                                                     'quality': 100}, stream=True)
+                                                                     'quality': 70}, stream=True)
 
         with open("downloads/fmchart.jpeg", "wb") as f:
             for block in response.iter_content(1024):
@@ -422,7 +429,7 @@ class LastFm(commands.Cog):
 
                 f.write(block)
         
-        with open("downloads/fmchart.png", "rb") as img:
+        with open("downloads/fmchart.jpeg", "rb") as img:
             await ctx.send(f"`{ctx.message.author.name} {humanized_period(arguments['period'])} "
                            f"{dimensions[0]//300}x{dimensions[1]//300} {chart_type} chart`",
                            file=discord.File(img))
