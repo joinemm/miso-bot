@@ -19,19 +19,14 @@ class Info(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.start_time = time.time()
-        self.version = '2.0'
-        # self.client.remove_command('help')
-
-    # @commands.command()
-    # async def help(self, ctx):
-    #     """Get help"""
-    #     await ctx.send("https://misobot.xyz")
+        self.version = str(get_version())
 
     @commands.command()
     async def invite(self, ctx):
         """Invite miso to your server!"""
-        url = discordutils.oauth_url('500385855072894982', permissions=discord.Permissions(506981447))
-        await ctx.send(url)
+        url = discordutils.oauth_url('500385855072894982', permissions=discord.Permissions(269347911))
+        await ctx.send(f">>> Use this link to invite me to your server!\n"
+                       f"The selected permissions are **required** for everything to function properly, make sure not to disable any!\n<{url}>")
 
     @commands.command()
     async def patreon(self, ctx):
@@ -78,6 +73,10 @@ totaling **{membercount}** unique users.
         content.add_field(name='Github', value='https://github.com/joinemm/misobot2', inline=False)
         content.add_field(name='Documentation', value="https://misobot.xyz", inline=False)
         content.add_field(name='Patreon', value="https://www.patreon.com/joinemm", inline=False)
+
+        data = get_commits("joinemm", "misobot2")
+        last_update = data[0]['commit']['author'].get('date')
+        content.set_footer(text=f"Latest update: {arrow.get(last_update).humanize()}")
 
         await ctx.send(embed=content)
 
@@ -197,6 +196,9 @@ totaling **{membercount}** unique users.
 def setup(client):
     client.add_cog(Info(client))
 
+def get_version():
+    data = requests.get("https://api.github.com/repos/joinemm/misobot2/contributors").json()
+    return (data[0].get('contributions')+1) * 0.01
 
 def get_commits(author, repository):
     url = f"https://api.github.com/repos/{author}/{repository}/commits"
