@@ -10,7 +10,7 @@ import itertools
 import json
 
 
-class Typing(commands.Cog):
+class Typings(commands.Cog):
 
     def __init__(self, client):
         self.client = client
@@ -289,7 +289,7 @@ class Typing(commands.Cog):
 
 
 def setup(client):
-    client.add_cog(Typing(client))
+    client.add_cog(Typings(client))
 
 
 def save_wpm(user, wpm, accuracy, wordcount, language, race):
