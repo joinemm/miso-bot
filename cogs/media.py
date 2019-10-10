@@ -11,11 +11,8 @@ import wikipedia
 import tweepy
 from tweepy import OAuthHandler
 import os
-# import arrow
-from helpers import utilityfunctions as util
+import helpers.utilityfunctions as util
 import copy
-import spotipy
-from spotipy import util as spotipyutil
 
 TWITTER_CKEY = os.environ.get('TWITTER_CONSUMER_KEY')
 TWITTER_CSECRET = os.environ.get('TWITTER_CONSUMER_SECRET')
@@ -43,13 +40,12 @@ class Media(commands.Cog):
         i = 0
         while i < len(sources):
             source = sources[i]
-
+            i += 1
             try:
                 result = getattr(discord.Color, source)
                 hexcolor = str(result())
                 print(hexcolor)
                 colors.append(hexcolor)
-                i += 1
                 continue
             except AttributeError:
                 pass
@@ -62,30 +58,25 @@ class Media(commands.Cog):
                     amount = 1
                 for x in range(amount):
                     colors.append("{:06x}".format(random.randint(0, 0xFFFFFF)))
-                i += 1
                 continue
 
             role_or_user = await util.get_member(ctx, source) or await util.get_role(ctx, source)
             if role_or_user is not None:
                 colors.append(str(role_or_user.color).strip("#"))
-                i += 1
                 continue
 
             if 'http' in source or 'https' in source:
                 url_color = util.color_from_image_url(source)
                 if url_color is not None:
                     colors.append(url_color)
-                    i += 1
                     continue
 
             color = await util.get_color(ctx, source)
             if color is not None:
                 colors.append(str(color))
-                i += 1
                 continue
 
-            await ctx.send(f"Could not parse input [{source}]")
-            i += 1
+            await ctx.send(f"Error parsing `{source}`")
 
         content = discord.Embed(colour=await util.get_color(ctx, colors[0]))
 
@@ -118,78 +109,6 @@ class Media(commands.Cog):
 
         content.set_image(url=image_url)
         await ctx.send(embed=content)
-
-    @commands.command()
-    async def spotify(self, ctx, url, amount=15):
-        """Analyze a spotify playlist"""
-        try:
-            if url.startswith("https://open."):
-                # its playlist link
-                user_id = re.search(r'user/(.*?)/playlist', url).group(1)
-                playlist_id = re.search(r'playlist/(.*?)\?', url).group(1)
-            else:
-                # its URI (probably)
-                data = url.split(":")
-                playlist_id = data[4]
-                user_id = data[2]
-        except IndexError:
-            return await ctx.send("**ERROR:** Invalid playlist url/URI.\n"
-                                  "How to get Spotify URI? Right click playlist -> `Share` -> `Copy Spotify URI`")
-
-        if amount > 50:
-            amount = 50
-
-        token = spotipyutil.oauth2.SpotifyClientCredentials(client_id=SPOTIFY_CLIENT_ID,
-                                                            client_secret=SPOTIFY_CLIENT_SECRET)
-        cache_token = token.get_access_token()
-        spotify = spotipy.Spotify(cache_token)
-        tracks_per_request = 100
-        results = []
-
-        playlist_data = spotify.user_playlist(user_id, playlist_id)
-        playlist_name = playlist_data['name']
-        playlist_owner = playlist_data['owner']['display_name']
-        playlist_image = playlist_data['images'][0]['url']
-
-        this_request_results = spotify.user_playlist_tracks(user_id, playlist_id, limit=tracks_per_request,
-                                                            offset=0)["items"]
-        for i in range(len(this_request_results)):
-            results.append(this_request_results[i])
-        while len(this_request_results) >= tracks_per_request:
-            this_request_results = spotify.user_playlist_tracks(user_id, playlist_id, limit=tracks_per_request,
-                                                                offset=len(results))["items"]
-            for i in range(len(this_request_results)):
-                results.append(this_request_results[i])
-
-        artists_dict = {}
-        total = 0
-        for i in range(len(results)):
-            artist = results[i]["track"]["artists"][0]["name"]
-            if artist in artists_dict:
-                artists_dict[artist] += 1
-            else:
-                artists_dict[artist] = 1
-            total += 1
-
-        count = 0
-        description = ""
-        for item in sorted(artists_dict.items(), key=lambda v: v[1], reverse=True):
-            if count < amount:
-                percentage = (item[1] / total) * 100
-                description += f"**{item[1]}** tracks ({percentage:.2f}%) — **{item[0]}**\n"
-                count += 1
-            else:
-                break
-
-        message = discord.Embed(colour=discord.Colour.green())
-        message.set_author(name=f"{playlist_name} · by {playlist_owner}",
-                           icon_url="https://i.imgur.com/tN20ywg.png")
-        message.set_thumbnail(url=playlist_image)
-        message.title = "Artist distribution:"
-        message.set_footer(text=f"Total: {total} tracks from {len(artists_dict)} different artists")
-        message.description = description
-
-        await ctx.send(embed=message)
 
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx, *, query):
@@ -229,9 +148,9 @@ class Media(commands.Cog):
 
         await util.reaction_buttons(ctx, msg, functions, only_author=True)
 
-    @commands.command()
-    async def ig(self, ctx, url):
-        """Get the source images from an instagram post"""
+    @commands.command(aliases=['ig'])
+    async def instagram(self, ctx, url):
+        """Get all the images from an instagram post"""
         result = re.findall('/p/(.*?)(/|\\Z)', url)
         if result:
             url = f"https://www.instagram.com/p/{result[0][0]}"
@@ -276,10 +195,10 @@ class Media(commands.Cog):
                 content._author = None
 
         else:
-            await ctx.send("No media found")
+            await ctx.send("No media found!")
 
-    @commands.command()
-    async def twitter(self, ctx, tweet_url, delete=None):
+    @commands.command(aliases=['twt'])
+    async def twitter(self, ctx, tweet_url):
         """Get all the images from a tweet"""
         if "status" in tweet_url:
             tweet_url = re.search(r'status/(\d+)', tweet_url).group(1)
@@ -289,7 +208,7 @@ class Media(commands.Cog):
         try:
             media = tweet.extended_entities.get('media', [])
         except AttributeError:
-            await ctx.send("This tweet appears to contain no media!")
+            await ctx.send("No media found!")
             return
         hashtags = []
         for hashtag in tweet.entities.get('hashtags', []):
@@ -322,9 +241,6 @@ class Media(commands.Cog):
                 await ctx.send(file[2])
 
             content._author = None
-
-        if delete == "delete":
-            await ctx.message.delete()
 
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx, *, query):
@@ -365,18 +281,22 @@ class Media(commands.Cog):
 
     @commands.command()
     async def melon(self, ctx, timeframe=None):
-        """Get realtime / daily / monthly chart from Melon"""
-        if timeframe not in ["day", "month", "rise", None]:
+        """Melon music charts"""
+        if timeframe not in ["day", "month"]:
             if timeframe == "realtime":
-                timeframe = None
+                timeframe = ""
+            elif timeframe == "rising":
+                timeframe = "rise"
             else:
-                return await ctx.send(f"ERROR: Invalid timeframe `{timeframe}`\ntry `[realtime | day | month | rise]`")
-
-        url = f"https://www.melon.com/chart/{timeframe or ''}/index.htm"
+                return await ctx.send(f"```{self.client.command_prefix}melon [ realtime | day | month | rising ]"
+                                      "\n\nMelon music charts```")
+        
+        url = f"https://www.melon.com/chart/{timeframe}/index.htm"
 
         response = requests.get(url, headers={
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0"})
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0"
+        })
 
         soup = BeautifulSoup(response.text, 'html.parser')
         song_titles = [util.escape_md(x.find('span').find('a').text)

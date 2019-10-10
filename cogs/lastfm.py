@@ -645,7 +645,7 @@ def api_request(url_parameters, ignore_errors=False):
         else:
             try:
                 content = json.loads(response.content.decode('utf-8'))
-            except JSONDecodeError:
+            except json.decoder.JSONDecodeError:
                 return None
             raise LastFMError(f"Error {content.get('error')} : {content.get('message')}")
 
