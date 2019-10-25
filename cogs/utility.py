@@ -30,10 +30,26 @@ STREAMABLE_PASSWORD = os.environ.get('STREAMABLE_PASSWORD')
 BORING_TOKEN = os.environ.get('BORING_TOKEN')
 
 
-papago_pairs = ['ko/en', 'ko/ja', 'ko/zh-cn', 'ko/zh-tw', 'ko/vi', 'ko/id', 'ko/de', 'ko/ru', 'ko/es', 'ko/it',
-                'ko/fr', 'en/ja', 'ja/zh-cn', 'ja/zh-tw', 'zh-cn/zh-tw', 'en/ko', 'ja/ko', 'zh-cn/ko', 'zh-tw/ko',
-                'vi/ko', 'id/ko', 'th/ko', 'de/ko', 'ru/ko', 'es/ko', 'it/ko', 'fr/ko', 'ja/en', 'zh-cn/ja',
-                'zh-tw/ja', 'zh-tw/zh-tw']
+papago_pairs = [
+    'ko/en', 'ko/ja', 'ko/zh-cn', 'ko/zh-tw', 'ko/vi', 'ko/id', 'ko/de', 'ko/ru', 'ko/es', 'ko/it',
+    'ko/fr', 'en/ja', 'ja/zh-cn', 'ja/zh-tw', 'zh-cn/zh-tw', 'en/ko', 'ja/ko', 'zh-cn/ko', 'zh-tw/ko',
+    'vi/ko', 'id/ko', 'th/ko', 'de/ko', 'ru/ko', 'es/ko', 'it/ko', 'fr/ko', 'ja/en', 'zh-cn/ja',
+    'zh-tw/ja', 'zh-tw/zh-tw'
+]
+
+weather_icons = {
+    'clear-day': ':sunny:',
+    'clear-night': ':night_with_stars:',
+    'fog': ':foggy:',
+    'hail': ':cloud_snow:',
+    'sleet': ':cloud_snow:',
+    'snow': ':cloud_snow:',
+    'partly-cloudy-day': ':partly_sunny:',
+    'cloudy': ':cloud:',
+    'partly-cloudy-night': ':cloud:',
+    'tornado': ':cloud_tornado:',
+    'wind': ':wind_blowing_face:'
+}
 
 logger = log.get_logger(__name__)
 
@@ -59,10 +75,11 @@ class Utility(commands.Cog):
 
         else:
             location = "+".join(address)
-        url = f"https://maps.googleapis.com/maps/api/geocode/json?address={location}&key={GOOGLE_API_KEY}"
-        response = requests.get(url=url)
+        url = "https://maps.googleapis.com/maps/api/geocode/json"
+        params = {'address': location, 'key': GOOGLE_API_KEY}
+        response = requests.get(url, params=params)
         response.raise_for_status()
-        json_data = json.loads(response.content.decode('utf-8'))
+        json_data = response.json()
         try:
             json_data = json_data['results'][0]
         except IndexError:
@@ -86,99 +103,99 @@ class Utility(commands.Cog):
         daily = json_data['daily']
         localtime = get_timezone({'lat': lat, 'lon': lon})
 
-        content = discord.Embed(color=discord.Color.teal())
-        content.set_thumbnail(url=f"http://flagpedia.net/data/flags/w580/{country}.png")
-        content.set_author(name=formatted_name, icon_url=ctx.author.avatar_url)
-        content.add_field(name=hourly['summary'],
-                          value=f"**{current['temperature']} °C** "
-                          f"({current['temperature'] * (9.0 / 5.0) + 32:.2f} °F) **|** Feels like "
-                          f"**{current['apparentTemperature']} °C** "
-                          f"({current['apparentTemperature'] * (9.0 / 5.0) + 32:.2f} °F)\n"
-                          f"Wind speed: **{current['windSpeed']} m/s**")
+        content = discord.Embed(color=await util.get_color(ctx, '#e1e8ed'))
+        #content.set_thumbnail(url=f"http://flagpedia.net/data/flags/w580/{country}.png")
+        content.title = f":flag_{country}: {formatted_name}"
+        content.add_field(name=f"{weather_icons.get(current['icon'], '')} {hourly['summary']}",
+                          value=f":thermometer: Currently **{current['temperature']} °C** "
+                          f"( {current['temperature'] * (9.0 / 5.0) + 32:.2f} °F )\n"
+                          f":neutral_face: Feels like **{current['apparentTemperature']} °C** "
+                          f"( {current['apparentTemperature'] * (9.0 / 5.0) + 32:.2f} °F )\n"
+                          f":dash: Wind speed **{current['windSpeed']} m/s** with gusts of **{current['windGust']} m/s**\n"
+                          f":sweat_drops: Humidity **{int(current['humidity'] * 100)}%**")
 
-        content.add_field(name="Weekly forecast:",
-                          value=" ".join(f"**{x}**" if "°C" in x else x for x in daily['summary'].split(" ")))
+        #content.add_field(name="Weekly forecast:",
+        #                  value=" ".join(f"**{x}**" if "°C" in x else x for x in daily['summary'].split(" ")))
 
-        content.set_footer(text=f"Local time: {localtime}")
+        content.set_footer(text=f"🕐 Local time {localtime}")
         await ctx.send(embed=content)
 
     @commands.command()
     async def define(self, ctx, *, word):
         """Search from oxford dictionary"""
         api_url = 'https://od-api.oxforddictionaries.com/api/v2/'
-        response = requests.get(api_url + "lemmas/en/" + word, headers={
+        
+        headers = {
             'Accept': 'application/json',
             'app_id': OXFORD_APPID,
             'app_key': OXFORD_TOKEN,
-        })
-        if response.status_code == 200:
+        }
+
+        response = requests.get(api_url + "lemmas/en/" + word, headers=headers)
+        data = response.json()
+       
+        # searched for word id, now use the word id to get definition
+        all_entries = []
+        
+        if data.get('results'):
+            definitions_embed = discord.Embed(colour=discord.Colour.blue())
+            definitions_embed.description = ""
+
+            found_word = data['results'][0]['id']
+            response = requests.get(api_url + "entries/en-gb/" + found_word, 
+                                    params={'strictMatch': False}, headers=headers)
             data = json.loads(response.content.decode('utf-8'))
-            # searched for word id, now use the word id to get definition
-            all_entries = []
-            if data['results']:
-                definitions_embed = discord.Embed(colour=discord.Colour.blue())
-                definitions_embed.description = ""
+            for entry in data['results'][0]['lexicalEntries']:
+                definitions_value = ""
+                name = data['results'][0]['word']
 
-                found_word = data['results'][0]['id']
-                response = requests.get(api_url + f"entries/en-gb/{found_word}?strictMatch=false", headers={
-                    'Accept': 'application/json',
-                    'app_id': OXFORD_APPID,
-                    'app_key': OXFORD_TOKEN,
-                })
-                data = json.loads(response.content.decode('utf-8'))
-                for entry in data['results'][0]['lexicalEntries']:
-                    definitions_value = ""
-                    name = data['results'][0]['word']
+                for i in range(len(entry['entries'][0]['senses'])):
+                    for definition in entry['entries'][0]['senses'][i].get('definitions', []):
+                        this_top_level_definition = f"\n**{i + 1}.** {definition}"
+                        if len(definitions_value + this_top_level_definition) > 1024:
+                            break
+                        definitions_value += this_top_level_definition
+                        try:
+                            for y in range(len(entry['entries'][0]['senses'][i]['subsenses'])):
+                                for subdef in entry['entries'][0]['senses'][i]['subsenses'][y]['definitions']:
+                                    this_definition = f"\n**└ {i + 1}.{y + 1}.** {subdef}"
+                                    if len(definitions_value + this_definition) > 1024:
+                                        break
+                                    definitions_value += this_definition
 
-                    for i in range(len(entry['entries'][0]['senses'])):
-                        for definition in entry['entries'][0]['senses'][i].get('definitions', []):
-                            this_top_level_definition = f"\n**{i + 1}.** {definition}"
-                            if len(definitions_value + this_top_level_definition) > 1024:
-                                break
-                            definitions_value += this_top_level_definition
-                            try:
-                                for y in range(len(entry['entries'][0]['senses'][i]['subsenses'])):
-                                    for subdef in entry['entries'][0]['senses'][i]['subsenses'][y]['definitions']:
-                                        this_definition = f"\n**└{i + 1}.{y + 1}.** {subdef}"
-                                        if len(definitions_value + this_definition) > 1024:
-                                            break
-                                        definitions_value += this_definition
+                            definitions_value += "\n"
+                        except KeyError:
+                            pass
 
-                                definitions_value += "\n"
-                            except KeyError:
-                                pass
+                    for reference in entry['entries'][0]['senses'][i].get('crossReferenceMarkers', []):
+                        definitions_value += reference
 
-                        for reference in entry['entries'][0]['senses'][i].get('crossReferenceMarkers', []):
-                            definitions_value += reference
+                word_type = entry['lexicalCategory']['text']
+                this_entry = {"id": name, "definitions": definitions_value, "type": word_type}
+                all_entries.append(this_entry)
 
-                    word_type = entry['lexicalCategory']['text']
-                    this_entry = {"id": name, "definitions": definitions_value, "type": word_type}
-                    all_entries.append(this_entry)
+            if not all_entries:
+                return await ctx.send(f"No definitions found for `{word}`")
 
-                if not all_entries:
-                    return await ctx.send(f"No definitions found for `{word}`")
+            definitions_embed.set_author(name=all_entries[0]['id'], icon_url="https://i.imgur.com/vDvSmF3.png")
 
-                definitions_embed.set_author(name=all_entries[0]['id'], icon_url="https://i.imgur.com/vDvSmF3.png")
+            for entry in all_entries:
+                definitions_embed.add_field(name=f"{entry['type']}", inline=False,
+                                            value=entry["definitions"])
 
-                for entry in all_entries:
-                    definitions_embed.add_field(name=f"{entry['type']}", inline=False,
-                                                value=entry["definitions"])
-
-                await ctx.send(embed=definitions_embed)
-            else:
-                await ctx.send(f"```ERROR: {data['error']}```")
+            await ctx.send(embed=definitions_embed)
         else:
-            data = json.loads(response.content.decode('utf-8'))
             await ctx.send(f"```ERROR: {data['error']}```")
-
+            
     @commands.command()
     async def urban(self, ctx, *, word):
         """Search from urban dictionary"""
-        url = "https://api.urbandictionary.com/v0/define?term="
-        response = requests.get(url + word)
+        url = "https://api.urbandictionary.com/v0/define"
+        response = requests.get(url, params={'term': word})
         if response.status_code == 200:
-            data = json.loads(response.content.decode('utf-8'))
+            data = response.json()
             pages = []
+
             if data['list']:
                 for entry in data['list']:
                     definition = entry['definition'].replace("]", "**").replace("[", "**")
@@ -189,21 +206,25 @@ class Utility(commands.Cog):
 
                     if not example == "":
                         content.add_field(name="Example", value=example)
+
                     content.set_footer(text=f"by {entry['author']} • "
                                             f"{entry.get('thumbs_up')} 👍 {entry.get('thumbs_down')} 👎")
                     content.timestamp = arrow.get(timestamp).datetime
-                    content.set_author(name=word.capitalize(), icon_url="https://i.imgur.com/yMwpnBe.png",
+                    content.set_author(name=entry['word'], icon_url="https://i.imgur.com/yMwpnBe.png",
                                        url=entry.get('permalink'))
                     pages.append(content)
+
                 await util.page_switcher(ctx, pages)
+
             else:
                 await ctx.send(f"No definitions found for `{word}`")
         else:
             await ctx.send(f"ERROR `{response.status_code}`")
 
-    @commands.command(aliases=['tr', 'trans'])
+    @commands.command(aliases=['tr', 'trans'], rest_is_raw=True)
     async def translate(self, ctx, *, text):
         """Naver/Google translator"""
+        text = text.strip(' ')
         languages = text.partition(" ")[0]
         if "/" in languages:
             source, target = languages.split("/")
@@ -219,41 +240,54 @@ class Utility(commands.Cog):
             else:
                 target = "en"
         language_pair = f"{source}/{target}"
+
+        if text.strip() == '':
+            return await ctx.send("Give me something to translate!")
+        elif len(text) > 1000:
+            return await ctx.send("Sorry, the maximum length is 1000 characters!")
+
         # we have language and query, now choose the appropriate translator
 
         if language_pair in papago_pairs:
             # use papago
-            query = f"source={source}&target={target}&text={text}"
-            api_url = 'https://openapi.naver.com/v1/papago/n2mt'
-            request = urllib.request.Request(api_url)
-            request.add_header('X-Naver-Client-Id', NAVER_APPID)
-            request.add_header('X-Naver-Client-Secret', NAVER_TOKEN)
-            response = urllib.request.urlopen(request, data=query.encode('utf-8'))
-            data = json.loads(response.read().decode('utf-8'))
-            translation = data['message']['result']['translatedText']
+            params = {'source': source, 'target': target, 'text': text}
+            url = "https://openapi.naver.com/v1/papago/n2mt"
+            headers = {'X-Naver-Client-Id': NAVER_APPID,
+                       'X-Naver-Client-Secret': NAVER_TOKEN}
+
+            response = requests.post(headers=headers, url=url, data=params)
+            response.raise_for_status()
+            translation = response.json()['message']['result']['translatedText']
 
         else:
             # use google
-            url = f"https://translation.googleapis.com/language/translate/v2?key={GOOGLE_API_KEY}" \
-                f"&model=nmt&target={target}&source={source}&q={text}"
-            response = requests.get(url)
-            data = json.loads(response.content.decode('utf-8'))
+            url = "https://translation.googleapis.com/language/translate/v2"
+            params = {'key': GOOGLE_API_KEY, 
+                      'model': 'nmt', 
+                      'target': target, 
+                      'source': source, 
+                      'q': text}
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
             try:
                 translation = html.unescape(data['data']['translations'][0]['translatedText'])
             except KeyError:
                 return await ctx.send("Sorry, I could not translate this :(")
-
-        await ctx.send(f"`{source}->{target}` " + translation)
+       
+        await ctx.send(f"`{source}->{target}` {translation}")
 
     @commands.command(aliases=['q', 'question'])
     async def wolfram(self, ctx, *, query):
         """Ask something from wolfram alpha"""
-        url = f"http://api.wolframalpha.com/v1/result?appid={WOLFRAM_APPID}&i={query}&output=json"
-        response = requests.get(url.replace("+", "%2B"))
+        url = "http://api.wolframalpha.com/v1/result"
+        params = {'appid': WOLFRAM_APPID, 'i': query, 'output': 'json', 'units': 'metric'}
+        response = requests.get(url, params=params)
+
         if response.status_code == 200:
-            result = f"**{response.content.decode('utf-8')}**"
+            result = f":mag_right: {response.content.decode('utf-8')}"
         else:
-            result = "Sorry, I don't have an answer to that :("
+            result = ":shrug:"
 
         await ctx.send(result)
 
@@ -262,14 +296,17 @@ class Utility(commands.Cog):
         """Create a gfycat from video url"""
         starttimer = time()
         auth_headers = gfycat_oauth()
-        response = requests.post("https://api.gfycat.com/v1/gfycats", json={"fetchUrl": media_url.strip("`")},
+        response = requests.post("https://api.gfycat.com/v1/gfycats", 
+                                 json={"fetchUrl": media_url.strip("`")},
                                  headers=auth_headers)
-        data = json.loads(response.content.decode('utf-8'))
+
+        response.raise_for_status()
+        data = response.json()
         try:
             gfyname = data['gfyname']
         except KeyError:
             logger.error(data)
-            return await ctx.send("Cannot create gif from this file!")
+            return await ctx.send("Cannot create gif from this link!")
 
         message = await ctx.send("Encoding")
 
@@ -298,8 +335,14 @@ class Utility(commands.Cog):
     async def streamable(self, ctx, media_url):
         """Create a streamable from video url"""
         starttimer = time()
-        url = f"https://api.streamable.com/import?url={media_url.strip('`')}"
-        response = requests.get(url, auth=(STREAMABLE_USER, STREAMABLE_PASSWORD))
+        
+        url = "https://api.streamable.com/import"
+        
+        params = {
+            'url': media_url.strip('`')
+        }
+
+        response = requests.get(url, params=params, auth=(STREAMABLE_USER, STREAMABLE_PASSWORD))
 
         if response.status_code != 200:
             try:
@@ -325,11 +368,13 @@ class Utility(commands.Cog):
         while True:
             status = requests.get(link)
             soup = BeautifulSoup(status.text, 'html.parser')
-            meta = soup.find('meta', {'property': 'og:url'})
+            meta = soup.find('meta', {'property': 'og:url'})            
+
             if meta:
-                await message.edit(content=f"Streamable created in **{util.stringfromtime(time() - starttimer, 2)}**\n"
-                                           + meta.get('content'))
+                timestring = util.stringfromtime(time() - starttimer, 2)
+                await message.edit(content=f"Streamable created in **{timestring}**\n{meta.get('content')}")
                 break
+
             error = soup.find('h1').text + '.' * (i % 4)
             await message.edit(content=error)
             await asyncio.sleep(1 + int(i/8))
@@ -361,13 +406,14 @@ def boring_host(image_url):
             f.write(block)
 
     with open(path, 'rb') as f:
-        response = requests.post('https://api.boring.host/api/upload',
-                                 data=[('token', BORING_TOKEN)],
-                                 files={'file': f})
+        response = requests.post('https://api.boring.host/api/v1/upload',
+                                 data={'api_token': BORING_TOKEN, 'file': f})
+
         os.remove(path)
+        print(response.content)
         response.raise_for_status()
         data = response.json()
-
+        print(data)
         response_dict = {
             'status': data.get('status'),
             'url': data['data'].get('direct_url')
@@ -380,36 +426,62 @@ def setup(client):
     client.add_cog(Utility(client))
 
 
-def get_timezone(coord):
-    url = f"http://api.timezonedb.com/v2.1/get-time-zone?key={TIMEZONE_API_KEY}&format=json&by=position&" \
-          f"lat={coord['lat']}&lng={coord['lon']}"
-    response = requests.get(url)
+def get_timezone(coord, clocktype='12hour'):
+    url = "http://api.timezonedb.com/v2.1/get-time-zone"
+    
+    params = {
+        'key': TIMEZONE_API_KEY, 
+        'format': 'json', 
+        'by': 'position', 
+        'lat': coord['lat'], 
+        'lng': coord['lon']
+    }
+
+    response = requests.get(url, params=params)
     if response.status_code == 200:
-        json_data = json.loads(response.content.decode('utf-8'))
-        timestring = json_data['formatted'].split(" ")
-        return ":".join(timestring[1].split(":")[:2])
+        timestring = response.json().get('formatted').split(" ")
+        hours, minutes = [int(x) for x in timestring[1].split(":")[:2]]
+        if clocktype == '24hour':
+            return f"{hours}:{minutes:02d}"
+        elif clocktype == '12hour':
+            if hours > 12:
+                suffix = 'PM'
+                hours -= 12
+            else:
+                suffix = 'AM'
+                if hours == 0:
+                    hours = 12
+            return f"{hours}:{minutes:02d} {suffix}"
+        else:
+            return 'Invalid clocktype'
     else:
-        return f"[error_{response.status_code}]"
+        return f"HTTP ERROR {response.status_code}"
 
 
 def detect_language(string):
-    url = f"https://translation.googleapis.com/language/translate/v2/detect?key={GOOGLE_API_KEY}" \
-          f"&q={string}"
-    response = requests.get(url)
+    url = "https://translation.googleapis.com/language/translate/v2/detect"
+    
+    params = {
+        'key': GOOGLE_API_KEY, 
+        'q': string[:1000]    
+    }
+
+    response = requests.get(url, params=params)
     response.raise_for_status()
-    data = json.loads(response.content.decode('utf-8'))
+    data = response.json()
     return data['data']['detections'][0][0]['language']
 
 
 def gfycat_oauth():
+    url = "https://api.gfycat.com/v1/oauth/token"
+
     params = {
         "grant_type": "client_credentials",
         "client_id": GFYCAT_CLIENT_ID,
         "client_secret": GFYCAT_SECRET
     }
 
-    token = requests.post("https://api.gfycat.com/v1/oauth/token", json=params, timeout=3).json()
-
+    token = requests.post(url, json=params, timeout=3).json()
     access_token = token["access_token"]
 
     auth_headers = {
