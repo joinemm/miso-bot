@@ -12,7 +12,7 @@ client = commands.Bot(command_prefix='>', case_insensitive=True)
 
 extensions = ['cogs.events', 'cogs.config', 'cogs.errorhandler', 'cogs.customcommands', 'cogs.fishy', 'cogs.info',
               'cogs.rolepicker', 'cogs.mod', 'cogs.owner', 'cogs.notifications', 'cogs.miscellaneous', 'cogs.media',
-              'cogs.lastfm', 'cogs.user', 'cogs.images', 'cogs.utility', 'cogs.wordcloud', 'cogs.typings'
+              'cogs.lastfm', 'cogs.user', 'cogs.images', 'cogs.utility', 'cogs.wordcloud', 'cogs.typings', 'cogs.reminders'
               ]
 
 
