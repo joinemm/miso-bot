@@ -61,20 +61,27 @@ class Utility(commands.Cog):
 
     @commands.command()
     async def weather(self, ctx, *address):
-        """Get weather of a location"""
+        """
+        Get weather of a location
+
+        Usage:
+            >weather
+            >weather <location>
+            >weather save <location>
+        """
         if len(address) == 0:
             userdata = db.userdata(ctx.author.id)
             location = userdata.location if userdata is not None else None
             if location is None:
-                return await ctx.send(f"```{self.client.command_prefix}weather <location>\n"
-                                      f"{self.client.command_prefix}weather save <location>\n\n"
-                                      f"Get weather of a location```")
+                return await util.send_command_help(ctx)
+
         elif address[0] == "save":
-            db.update_user(ctx.author.id, "location", "+".join(address[1:]))
+            db.update_user(ctx.author.id, "location", " ".join(address[1:]))
             return await ctx.send(f"Saved your location as `{' '.join(address[1:])}`")
 
         else:
-            location = "+".join(address)
+            location = " ".join(address)
+            
         url = "https://maps.googleapis.com/maps/api/geocode/json"
         params = {'address': location, 'key': GOOGLE_API_KEY}
         response = requests.get(url, params=params)
@@ -94,7 +101,7 @@ class Utility(commands.Cog):
                 country = comp['short_name'].lower()
 
         # we have lat and lon now, plug them into dark sky
-        response = requests.get(url=f"https://api.darksky.net/forecast/{DARKSKY_API_KEY}/{lat},{lon}?units=si")
+        response = requests.get(f"https://api.darksky.net/forecast/{DARKSKY_API_KEY}/{lat},{lon}?units=si")
         response.raise_for_status()
 
         json_data = json.loads(response.content.decode('utf-8'))
@@ -106,16 +113,16 @@ class Utility(commands.Cog):
         content = discord.Embed(color=await util.get_color(ctx, '#e1e8ed'))
         #content.set_thumbnail(url=f"http://flagpedia.net/data/flags/w580/{country}.png")
         content.title = f":flag_{country}: {formatted_name}"
-        content.add_field(name=f"{weather_icons.get(current['icon'], '')} {hourly['summary']}",
-                          value=f":thermometer: Currently **{current['temperature']} °C** "
-                          f"( {current['temperature'] * (9.0 / 5.0) + 32:.2f} °F )\n"
-                          f":neutral_face: Feels like **{current['apparentTemperature']} °C** "
-                          f"( {current['apparentTemperature'] * (9.0 / 5.0) + 32:.2f} °F )\n"
-                          f":dash: Wind speed **{current['windSpeed']} m/s** with gusts of **{current['windGust']} m/s**\n"
-                          f":sweat_drops: Humidity **{int(current['humidity'] * 100)}%**")
-
-        #content.add_field(name="Weekly forecast:",
-        #                  value=" ".join(f"**{x}**" if "°C" in x else x for x in daily['summary'].split(" ")))
+        content.add_field(
+            name=f"{weather_icons.get(current['icon'], '')} {hourly['summary']}",
+            value=f":thermometer: Currently **{current['temperature']} °C** "
+            f"( {current['temperature'] * (9.0 / 5.0) + 32:.2f} °F )\n"
+            f":neutral_face: Feels like **{current['apparentTemperature']} °C** "
+            f"( {current['apparentTemperature'] * (9.0 / 5.0) + 32:.2f} °F )\n"
+            f":dash: Wind speed **{current['windSpeed']} m/s** with gusts of **{current['windGust']} m/s**\n"
+            f":sweat_drops: Humidity **{int(current['humidity'] * 100)}%**\n"
+            f":map: [See on map](https://www.google.com/maps/search/?api=1&query={lat},{lon})"
+        )
 
         content.set_footer(text=f"🕐 Local time {localtime}")
         await ctx.send(embed=content)
@@ -262,14 +269,18 @@ class Utility(commands.Cog):
         else:
             # use google
             url = "https://translation.googleapis.com/language/translate/v2"
-            params = {'key': GOOGLE_API_KEY, 
-                      'model': 'nmt', 
-                      'target': target, 
-                      'source': source, 
-                      'q': text}
+            params = {
+                'key': GOOGLE_API_KEY, 
+                'model': 'nmt', 
+                'target': target, 
+                'source': source, 
+                'q': text
+            }
+
             response = requests.get(url, params=params)
             response.raise_for_status()
             data = response.json()
+
             try:
                 translation = html.unescape(data['data']['translations'][0]['translatedText'])
             except KeyError:
@@ -281,7 +292,13 @@ class Utility(commands.Cog):
     async def wolfram(self, ctx, *, query):
         """Ask something from wolfram alpha"""
         url = "http://api.wolframalpha.com/v1/result"
-        params = {'appid': WOLFRAM_APPID, 'i': query, 'output': 'json', 'units': 'metric'}
+        params = {
+            'appid': WOLFRAM_APPID, 
+            'i': query, 
+            'output': 'json', 
+            'units': 'metric'
+        }
+
         response = requests.get(url, params=params)
 
         if response.status_code == 200:
@@ -296,12 +313,17 @@ class Utility(commands.Cog):
         """Create a gfycat from video url"""
         starttimer = time()
         auth_headers = gfycat_oauth()
-        response = requests.post("https://api.gfycat.com/v1/gfycats", 
-                                 json={"fetchUrl": media_url.strip("`")},
-                                 headers=auth_headers)
+        response = requests.post(
+            url="https://api.gfycat.com/v1/gfycats", 
+            json={
+                "fetchUrl": media_url.strip("`")
+            },
+            headers=auth_headers
+        )
 
         response.raise_for_status()
         data = response.json()
+
         try:
             gfyname = data['gfyname']
         except KeyError:
@@ -342,7 +364,11 @@ class Utility(commands.Cog):
             'url': media_url.strip('`')
         }
 
-        response = requests.get(url, params=params, auth=(STREAMABLE_USER, STREAMABLE_PASSWORD))
+        response = requests.get(
+            url=url, 
+            params=params, 
+            auth=(STREAMABLE_USER, STREAMABLE_PASSWORD)
+        )
 
         if response.status_code != 200:
             try:
