@@ -31,11 +31,11 @@ class LastFm(commands.Cog):
 
     @commands.group(case_insensitive=True)
     async def fm(self, ctx):
-        """Lastfm commands"""
+        """Last.fm commands"""
         userdata = db.userdata(ctx.author.id)
         ctx.username = userdata.lastfm_username if userdata is not None else None
         if ctx.username is None and str(ctx.invoked_subcommand) not in ['fm set']:
-            raise LastFMError("No lastfm username saved. "
+            raise LastFMError("No last.fm username saved. "
                               f"Please use {self.client.command_prefix}fm set <lastfm username>")
 
         if ctx.invoked_subcommand is None:
@@ -43,7 +43,7 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def set(self, ctx, username):
-        """Save your lastfm username"""
+        """Save your last.fm username"""
         content = get_userinfo_embed(username)
         if content is None:
             await ctx.send(f"Invalid LastFM username `{username}`")
@@ -58,7 +58,7 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['yt'])
     async def youtube(self, ctx):
-        """Searches for currently playing song on youtube"""
+        """Search for currently playing song on youtube"""
         data = api_request({"user": ctx.username,
                             "method": "user.getrecenttracks",
                             "limit": 1})
@@ -86,7 +86,7 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['np'])
     async def nowplaying(self, ctx):
-        """Currently playing song / most recent song"""
+        """Currently playing song or most recent song"""
         data = api_request({"user": ctx.username,
                             "method": "user.getrecenttracks",
                             "limit": 1})
@@ -140,7 +140,12 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['ta'])
     async def topartists(self, ctx, *args):
-        """Most listened artists"""
+        """
+        Most listened artists
+
+        Usage:
+            >fm topartists [timeframe] [amount]
+        """
         arguments = parse_arguments(args)
         data = api_request({"user": ctx.username,
                             "method": "user.gettopartists",
@@ -176,7 +181,12 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['talb'])
     async def topalbums(self, ctx, *args):
-        """Most listened albums"""
+        """
+        Most listened albums
+
+        Usage:
+            >fm topalbums [timeframe] [amount]    
+        """
         arguments = parse_arguments(args)
         data = api_request({"user": ctx.username,
                             "method": "user.gettopalbums",
@@ -213,7 +223,12 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['tt'])
     async def toptracks(self, ctx, *args):
-        """Most listened tracks"""
+        """
+        Most listened tracks
+
+        Usage:
+            >fm toptracks [timeframe] [amount]
+        """
         arguments = parse_arguments(args)
         data = api_request({"user": ctx.username,
                             "method": "user.gettoptracks",
@@ -260,7 +275,12 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['recents', 're'])
     async def recent(self, ctx, size=15):
-        """Recently listened tracks"""
+        """
+        Recently listened tracks
+
+        Usage:
+            >fm recent [amount]
+        """
         data = api_request({"user": ctx.username,
                             "method": "user.getrecenttracks",
                             "limit": int(size)})
@@ -293,7 +313,13 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def artist(self, ctx, timeframe, datatype, *, artistname=""):
-        """Top tracks / albums for specific artist"""
+        """
+        Top tracks / albums for specific artist
+        
+        Usage:
+            >fm artist [timeframe] toptracks <artist name>
+            >fm artist [timeframe] topalbums <artist name>
+        """
         period = get_period(timeframe)
         if period is None:
             artistname = " ".join([datatype, artistname]).strip()
@@ -363,7 +389,12 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def chart(self, ctx, *args):
-        """Visual chart of your top albums or artists"""
+        """
+        Visual chart of your top albums or artists
+
+        Usage:
+            >fm chart [album | artist] [timeframe] [width]x[height]
+        """
         arguments = parse_chart_arguments(args)
 
         if arguments['width'] + arguments['height'] > 31:
@@ -438,7 +469,12 @@ class LastFm(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(2, 10, type=commands.BucketType.user)
     async def whoknows(self, ctx, *, artistname):
-        """Check who has listened to a given artist the most"""
+        """
+        Check who has listened to a given artist the most
+
+        Usage:
+            >whoknows <artist name>
+        """
         await ctx.message.channel.trigger_typing()
         listeners = []
         tasks = []
@@ -494,7 +530,7 @@ class LastFm(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def crowns(self, ctx, _global=None):
+    async def crowns(self, ctx):
         """Check your current whoknows crowns"""
         crownartists = db.query("""SELECT artist, playcount FROM crowns WHERE guild_id = ? AND user_id = ?""",
                                 (ctx.guild.id, ctx.author.id))
