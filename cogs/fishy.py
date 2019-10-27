@@ -20,7 +20,13 @@ class Fishy(commands.Cog):
 
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
     async def fishy(self, ctx, user=''):
-        """Go fishing and receive / give random fish"""
+        """
+        Go fishing and receive or give random fish
+
+        Usage:
+            >fishy
+            >fishy <user>
+        """
         receiver = await util.get_member(ctx, user, fallback=ctx.author)
         if receiver is not None and receiver is not ctx.author:
             gift = True
@@ -38,13 +44,16 @@ class Fishy(commands.Cog):
 
         if time_since_fishy < COOLDOWN and not TESTING:
             not_yet_quotes = [
-                "Bro chill, you can't fish yet! You gotta wait like",
-                "You can't fish yet, fool! Please wait",
-                "You're fishing too fast! Please wait",
-                "You're still on cooldown buddy. You need to wait"
+                "Bro chill, you can't fish yet! You still have to wait {time}",
+                "You can't fish yet, fool! Please wait {time}",
+                "You're fishing too fast! Please wait {time}",
+                "You're still on cooldown buddy. You need to wait {time}",
+                "Please wait {time} to fish again!",
+                "Sorry, but you still have to wait {time} to do that again",
+                "Bro... not so fast. Wait at least {time}"
             ]
-            return await ctx.send(f"{random.choice(not_yet_quotes)} "
-                                  f"**{util.stringfromtime(COOLDOWN - time_since_fishy, 2)}**")
+            wait_time = f"**{util.stringfromtime(COOLDOWN - time_since_fishy, 2)}**"
+            return await ctx.send(random.choice(not_yet_quotes).format(time=wait_time))
 
         catch = random.choices(list(self.__FISHTYPES.keys()), self.__WEIGHTS)[0]
         amount = await self.__FISHTYPES[catch](ctx, receiver, gift)
@@ -53,7 +62,13 @@ class Fishy(commands.Cog):
 
     @commands.command()
     async def fishystats(self, ctx, mention=''):
-        """Shows fishing statistics"""
+        """
+        Shows fishing statistics
+
+        Usage:
+            >fishystats
+            >fishystats <@user>
+        """
         globaldata = mention == 'global'
         if not globaldata:
             user = await util.get_user(ctx, mention, fallback=ctx.author)
