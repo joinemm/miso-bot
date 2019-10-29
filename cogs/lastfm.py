@@ -80,7 +80,7 @@ class LastFm(commands.Cog):
                                 params={'part': 'snippet',
                                         'type': 'video',
                                         'maxResults': 1,
-                                        'q': query,
+                                        'q': f"{artist} {track}",
                                         'key': GOOGLE_API_KEY}).json()
 
         video_item = response.get('items')[0]
