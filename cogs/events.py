@@ -52,7 +52,7 @@ class Events(commands.Cog):
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:
-            return logger.warning(f"Cannot welcome {user} to {guild.name}")
+            return logger.warning(f"Cannot welcome {member} to {guild.name}")
 
         await channel.send(embed=util.create_welcome_embed(member, member.guild, message_format))
         logger.info(f"Welcomed {member.name} to {member.guild.name}")
