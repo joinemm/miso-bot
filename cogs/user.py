@@ -49,6 +49,8 @@ class User(commands.Cog):
         image = user.avatar_url_as(static_format="png")
         content.set_author(name=user.name, url=image)
         content.set_image(url=image)
+        stats = util.image_info_from_url(image, nice_format=True)
+        content.set_footer(text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}")
 
         await ctx.send(embed=content)
 
@@ -315,7 +317,7 @@ class User(commands.Cog):
         userids = db.query("SELECT DISTINCT user_id FROM typingdata")
         if userids is None:
             return await ctx.send("No typing data exists yet!")
-        
+
         users = []
         for userid in userids:
             userid = userid[0]
@@ -333,7 +335,7 @@ class User(commands.Cog):
             users.append((user, wpm, timestamp))
 
         if not users:
-            return await ctx.send("No typing tests have been taken yet!")
+            return await ctx.send("No typing data yet on this server!")
 
         rows = []
         rank_icon = [':first_place:', ':second_place:', ':third_place:']

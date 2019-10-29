@@ -23,10 +23,10 @@ class Info(commands.Cog):
 
     @commands.command()
     async def invite(self, ctx):
-        """Invite miso to your server!"""
+        """Invite Miso to your server!"""
         url = discordutils.oauth_url('500385855072894982', permissions=discord.Permissions(269347911))
         await ctx.send(f">>> Use this link to invite me to your server!\n"
-                       f"The selected permissions are **required** for everything to function properly, make sure not to disable any!\n<{url}>")
+                       f"The selected permissions are **required** for everything to function properly, make sure to not disable any!\n<{url}>")
 
     @commands.command()
     async def patreon(self, ctx):
@@ -70,11 +70,11 @@ totaling **{membercount}** unique users.
 """
 
         content.set_thumbnail(url=self.client.user.avatar_url)
-        content.add_field(name='Github', value='https://github.com/joinemm/misobot2', inline=False)
+        content.add_field(name='Github', value='https://github.com/joinemm/miso-bot', inline=False)
         content.add_field(name='Documentation', value="https://misobot.xyz", inline=False)
         content.add_field(name='Patreon', value="https://www.patreon.com/joinemm", inline=False)
 
-        data = get_commits("joinemm", "misobot2")
+        data = get_commits("joinemm", "miso-bot")
         last_update = data[0]['commit']['author'].get('date')
         content.set_footer(text=f"Latest update: {arrow.get(last_update).humanize()}")
 
@@ -100,7 +100,7 @@ totaling **{membercount}** unique users.
         pid = os.getpid()
         memory_use = psutil.Process(pid).memory_info()[0]
 
-        content = discord.Embed(title=f"Miso Bot | version {self.version}")
+        content = discord.Embed(title=f"Miso Bot | version {self.version}", colour=discord.Colour.red())
         content.set_thumbnail(url=self.client.user.avatar_url)
 
         content.add_field(name="Bot process uptime", value=uptime_string)
@@ -116,7 +116,7 @@ totaling **{membercount}** unique users.
     async def changelog(self, ctx):
         """Github commit history"""
         author = "joinemm"
-        repo = "misobot2"
+        repo = "miso-bot"
         data = get_commits(author, repo)
         content = discord.Embed(color=discord.Color.from_rgb(46, 188, 79))
         content.set_author(name="Github commit history", icon_url=data[0]['author']['avatar_url'],
@@ -126,7 +126,7 @@ totaling **{membercount}** unique users.
         pages = []
         i = 0
         for commit in data:
-            if i == 5:
+            if i == 7:
                 pages.append(content)
                 content = copy.deepcopy(content)
                 content.clear_fields()
@@ -145,6 +145,14 @@ totaling **{membercount}** unique users.
 
     @commands.command()
     async def commandstats(self, ctx, *args):
+        """
+        See the most used commands fo you, the server, or globally
+
+        Usage:
+            >commandstats
+            >commandstats my
+            >commandstats global
+        """
         content = discord.Embed(color=discord.Color.teal())
         globaldata = 'global' in args
         mydata = 'my' in args
@@ -185,8 +193,8 @@ totaling **{membercount}** unique users.
                                             "WHERE command = ? AND guild_id = ?", (command, ctx.guild.id))[0]
                 user = self.client.get_user(biggest_user[0])
 
-            rows.append(f"**x{count} {command}**"
-                        + (f" - most uses by `{user}` (**{biggest_user[1]}**)" if not mydata else ""))
+            rows.append(f"**x**`{count}` **>{command}**"
+                        + (f" ( `{biggest_user[1]}` by `{user}` )" if not mydata else ""))
 
         content.set_footer(text=f"Total {total} commands used since 11/08/2019")
 
@@ -197,7 +205,7 @@ def setup(client):
     client.add_cog(Info(client))
 
 def get_version():
-    data = requests.get("https://api.github.com/repos/joinemm/misobot2/contributors").json()
+    data = requests.get("https://api.github.com/repos/joinemm/miso-bot/contributors").json()
     return (data[0].get('contributions')+1) * 0.01
 
 def get_commits(author, repository):
