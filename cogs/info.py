@@ -24,7 +24,7 @@ class Info(commands.Cog):
     @commands.command()
     async def invite(self, ctx):
         """Invite Miso to your server!"""
-        url = discordutils.oauth_url('500385855072894982', permissions=discord.Permissions(269347911))
+        url = discordutils.oauth_url('500385855072894982', permissions=discord.Permissions(1074654407))
         await ctx.send(f">>> Use this link to invite me to your server!\n"
                        f"The selected permissions are **required** for everything to function properly, make sure to not disable any!\n<{url}>")
 
