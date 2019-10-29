@@ -230,9 +230,13 @@ class Typings(commands.Cog):
         for i, player in enumerate(sorted(results.items(), key=itemgetter(1), reverse=True), start=1):
             member = ctx.guild.get_member(int(player[0]))
             if i == 1:
-                db.execute("INSERT OR IGNORE INTO typeracer VALUES(?, ?, ?)", (member.id, ctx.guild.id, 0))
-                db.execute("UPDATE typeracer SET wins = wins + 1 WHERE (guild_id = ? AND user_id = ?)",
-                           (ctx.guild.id, member.id))
+                wins = db.query("SELECT wins FROM typeracer WHERE guild_id = ? AND user_id = ?", 
+                                (ctx.guild.id, member.id))
+                if wins is None:
+                    new_wins = 1
+                else:
+                    new_wins = wins[0][0] + 1
+                db.execute("REPLACE INTO typeracer VALUES(?, ?, ?)", (member.id, ctx.guild.id, new_wins))
 
             rows.append(f"{f'`{i}.`' if i > 1 else ':crown:'} **{int(player[1])} WPM ** — "
                         f"{member.name}")
@@ -268,6 +272,7 @@ class Typings(commands.Cog):
                                   + " taken any typing tests yet!")
 
         racedata = db.query("SELECT wins FROM typeracer WHERE user_id = ?", (user.id,))
+        print(racedata, user.id)
         wpm_list = [x[2] for x in data]
         wpm_avg = sum(wpm_list) / len(wpm_list)
         acc_list = [x[3] for x in data]
@@ -276,7 +281,7 @@ class Typings(commands.Cog):
         wpm_avg_re = sum(wpm_list_re) / len(wpm_list_re)
         acc_list_re = [x[3] for x in data[:10]]
         acc_avg_re = sum(acc_list_re) / len(acc_list_re)
-        wins = racedata[0][0] if racedata is not None else 0
+        wins = sum(guildwins[0] for guildwins in racedata) if racedata is not None else 'N/A'
         content = discord.Embed(title=f":keyboard: {user.name} typing stats", color=discord.Color.gold())
         content.description = f"Tests taken: **{len(data)}**\n" \
                               f"Races won: **{wins}**\n" \
