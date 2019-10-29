@@ -33,8 +33,8 @@ A discord bot with almost 100 commands and features, including but not limited t
 - Wordcloud
 - Wikipedia
 
-...and many more that I won't bother listing here.
-Check out https://misobot.xyz for more! (If I remember to update it)
+...and many more that I won't bother listing here.    
+> Check out https://misobot.xyz for more! (If I remember to update it)
 
 ---
 
