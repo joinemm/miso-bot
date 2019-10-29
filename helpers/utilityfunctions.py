@@ -10,7 +10,7 @@ from PIL import Image
 import data.database as db
 import random
 import datetime
-
+import io
 
 async def send_as_pages(ctx, content, rows, maxrows=15):
     """
@@ -270,6 +270,16 @@ async def get_color(ctx, mention, fallback=None):
         return fallback
 
 
+async def get_emoji(ctx, mention, fallback=None):
+    """Try to get full emoji, fallback to partial emoji if not successfull"""
+    try:
+        return await commands.EmojiConverter().convert(ctx, mention)
+    except commands.errors.BadArgument:
+        try:
+            return await commands.PartialEmojiConverter().convert(ctx, mention)
+        except commands.errors.BadArgument:
+            return fallback
+
 async def command_group_help(ctx):
     """Sends default command help if group command is invoked on it's own"""
     if ctx.invoked_subcommand is None or isinstance(ctx.invoked_subcommand, commands.Group):
@@ -354,6 +364,30 @@ def int_to_bool(value):
     else:
         return True
 
+def image_info_from_url(url, nice_format=False):
+    """Return dictionary containing information about image"""
+    response = requests.get(url)
+    filesize = int(response.headers.get('Content-Length'))/1024
+    filetype = response.headers.get('Content-Type')
+    img = Image.open(io.BytesIO(response.content))
+    dimensions = img.size
+    if nice_format:
+        if filesize > 1024:
+            filesize = f"{filesize/1024:.2f}MB"
+        else:
+            filesize = f"{filesize:.2f}KB"
+
+        return {
+            'filesize': filesize,
+            'filetype': filetype,
+            'dimensions': f"{dimensions[0]}x{dimensions[1]}"
+        }
+    else:
+        return {
+            'filesize': filesize,
+            'filetype': filetype,
+            'dimensions': dimensions
+        }
 
 def create_welcome_embed(user, guild, messageformat):
     """Creates and returns embed for welcome message"""

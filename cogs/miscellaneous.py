@@ -9,6 +9,7 @@ from libraries import minestat
 import helpers.utilityfunctions as util
 import os
 from google_images_search import GoogleImagesSearch
+import arrow
 
 
 GCS_DEVELOPER_KEY = os.environ.get('GOOGLE_KEY')
@@ -267,6 +268,46 @@ class Miscellaneous(commands.Cog):
                               f"**Birthday:** {data.date_of_birth}\n" \
                               f"**Country:** {data.country}\n" \
                               + (f'**Birthplace:** {data.birthplace}' if data.birthplace is not None else '')
+        await ctx.send(embed=content)
+    
+
+
+    @commands.command(name="emoji")
+    async def big_emoji(self, ctx, emoji):
+        """
+        Get source image and stats of emoji
+
+        Will display additional info if Miso is in the server where the emoji is located in.
+        
+        Usage:
+            >emoji :emoji:
+        """
+        emoji = await util.get_emoji(ctx, emoji)
+        if emoji is None:
+            return await ctx.send(":warning: I don't know this emoji!")
+        
+        color_hex = util.color_from_image_url(str(emoji.url) + '?size=32')
+        content = discord.Embed(title=f"`:{emoji.name}:`", color=await util.get_color(ctx, color_hex))
+        content.set_image(url=emoji.url)
+        stats = util.image_info_from_url(emoji.url, nice_format=True)
+        content.set_footer(text=f"Type: {stats['filetype']}")
+
+        content.description = ""
+        if isinstance(emoji, discord.Emoji):
+            # is full emoji
+            fuller_emoji = await emoji.guild.fetch_emoji(emoji.id)
+            if fuller_emoji is not None and fuller_emoji.user is not None:     
+                content.description += f"Added by {fuller_emoji.user.mention}"
+            else:
+                content.description += f"Added"
+            
+            content.description += f" on `{arrow.get(emoji.created_at).format('D/M/YYYY')}`\nLocated in `{emoji.guild}`"
+        else:
+            # is partial emoji
+            pass
+
+        content.set_footer(text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}")
+
         await ctx.send(embed=content)
 
 
