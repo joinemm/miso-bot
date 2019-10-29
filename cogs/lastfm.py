@@ -14,8 +14,9 @@ import urllib.parse
 from operator import itemgetter
 
 
-LASTFM_APPID = os.environ['LASTFM_APIKEY']
-LASTFM_TOKEN = os.environ['LASTFM_SECRET']
+LASTFM_APPID = os.environ.get('LASTFM_APIKEY')
+LASTFM_TOKEN = os.environ.get('LASTFM_SECRET')
+GOOGLE_API_KEY = os.environ.get('GOOGLE_KEY')
 
 
 class LastFMError(Exception):
@@ -59,6 +60,8 @@ class LastFm(commands.Cog):
     @fm.command(aliases=['yt'])
     async def youtube(self, ctx):
         """Search for currently playing song on youtube"""
+        
+        
         data = api_request({"user": ctx.username,
                             "method": "user.getrecenttracks",
                             "limit": 1})
@@ -72,17 +75,23 @@ class LastFm(commands.Cog):
 
         artist = tracks[0]['artist']['#text']
         track = tracks[0]['name']
+        
+        response = requests.get(url='https://www.googleapis.com/youtube/v3/search',
+                                params={'part': 'snippet',
+                                        'type': 'video',
+                                        'maxResults': 1,
+                                        'q': query,
+                                        'key': GOOGLE_API_KEY}).json()
 
-        query = f"{artist} {track}"
-        response = requests.get(f"http://www.youtube.com/results?search_query={query}")
-        video_ids = re.findall('watch\\?v=(.{11})', response.content.decode('utf-8'))
+        video_item = response.get('items')[0]
+        video_url = f"https://youtube.com/watch?v={video_item['id']['videoId']}"
 
         state = "Most recent track"
         if '@attr' in tracks[0]:
             if "nowplaying" in tracks[0]['@attr']:
                 state = "Now Playing"
 
-        await ctx.send(f'**{user_attr["user"]} — {state}**\nhttp://www.youtube.com/watch?v={video_ids[0]}')
+        await ctx.send(f'**{user_attr["user"]} — {state}**\n{video_url}')
 
     @fm.command(aliases=['np'])
     async def nowplaying(self, ctx):
