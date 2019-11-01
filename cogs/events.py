@@ -52,7 +52,7 @@ class Events(commands.Cog):
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:
-            return logger.warning(f"Cannot welcome {member} to {guild.name}")
+            return logger.warning(f"Cannot welcome {member} to {member.guild.name} (welcome channel deleted)")
 
         await channel.send(embed=util.create_welcome_embed(member, member.guild, message_format))
         logger.info(f"Welcomed {member.name} to {member.guild.name}")
@@ -63,7 +63,7 @@ class Events(commands.Cog):
             try:
                 await member.add_roles(role)
             except discord.errors.Forbidden:
-                logger.error(f"Trying to add autorole failed in {guild.name}")
+                logger.error(f"Trying to add autorole failed in {member.guild.name} (no permissions)")
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
