@@ -1,5 +1,6 @@
 from discord.ext import commands
 import os
+import sys
 import helpers.log as log
 import data.database as db
 import traceback
@@ -7,35 +8,64 @@ import traceback
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
 
-TOKEN = os.environ.get('MISO_BOT_TOKEN')
-client = commands.Bot(command_prefix='>', case_insensitive=True)
+if len(sys.argv) > 1:
+    DEV = sys.argv[1] == 'dev'
+else:
+    DEV = False
 
-extensions = ['cogs.events', 'cogs.config', 'cogs.errorhandler', 'cogs.customcommands', 'cogs.fishy', 'cogs.info',
-              'cogs.rolepicker', 'cogs.mod', 'cogs.owner', 'cogs.notifications', 'cogs.miscellaneous', 'cogs.media',
-              'cogs.lastfm', 'cogs.user', 'cogs.images', 'cogs.utility', 'cogs.wordcloud', 'cogs.typings', 'cogs.reminders'
-              ]
+logger.info(f"Developer mode is {'ON' if DEV else 'OFF'}")
+
+TOKEN = os.environ['MISO_BOT_TOKEN_BETA' if DEV else 'MISO_BOT_TOKEN']
+bot = commands.Bot(
+    command_prefix='<' if DEV else '>', 
+    case_insensitive=True
+)
+
+extensions = [
+    'events',
+    'config',
+    'errorhandler',
+    'customcommands',
+    'fishy',
+    'info',
+    'rolepicker',
+    'mod',
+    'owner',
+    'notifications',
+    'miscellaneous',
+    'media',
+    'lastfm',
+    'user',
+    'images',
+    'utility',
+    'wordcloud',
+    'typings',
+    'reminders',
+]
 
 
-@client.event
+@bot.event
 async def on_ready():
-    client.appinfo = await client.application_info()
+    # cache owner from appinfo
+    bot.owner = (await bot.application_info()).owner
     logger.info("Loading complete")
 
 
-@client.before_invoke
+@bot.before_invoke
 async def before_any_command(ctx):
-    await ctx.trigger_typing()
+    # prevent double invocation for subcommands
     if ctx.invoked_subcommand is None:
+        await ctx.trigger_typing()
         command_logger.info(log.log_command(ctx))
         db.log_command_usage(ctx)
 
 if __name__ == "__main__":
     for extension in extensions:
         try:
-            client.load_extension(extension)
-            logger.info(f"{extension} loaded successfully")
+            bot.load_extension(f"cogs.{extension}")
+            logger.info(f"Loaded [ {extension} ]")
         except Exception as error:
-            logger.error(f"{extension} loading failed [{error}]")
+            logger.error(f"Error loading [ {extension} ]")
             traceback.print_exception(type(error), error, error.__traceback__)
             
-    client.run(TOKEN)
+    bot.run(TOKEN)
