@@ -1,6 +1,7 @@
-from PIL import Image, ImageDraw, ImageFont
-from discord.ext import commands
 import discord
+from discord.ext import commands
+from PIL import Image, ImageDraw, ImageFont
+from helpers import utilityfunctions as util
 
 
 class ImageObject:
@@ -18,11 +19,11 @@ class ImageObject:
     def save(self, filename=None):
         self.image.save(filename or self.filename)
 
-    def write_watermark(self):
-        font = ImageFont.truetype(self.font, 30)
-        self.draw.text((5, 5), "Created with Miso Bot", font=font, fill=(150, 150, 150, 100))
+    def write_watermark(self, size, color):
+        font = ImageFont.truetype(self.font, size)
+        self.draw.text((5, 5), "Created with Miso Bot", font=font, fill=color)
 
-    def write_box(self, x, y, width, height, color, text):
+    async def write_box(self, x, y, width, height, color, text):
 
         font_size = 300
 
@@ -78,7 +79,6 @@ class ImageObject:
 
         lines = [' '.join(line) for line in lines]
         font = ImageFont.truetype(self.font, font_size)
-        # print(lines)
 
         height = y
         for i, line in enumerate(lines):
@@ -88,25 +88,58 @@ class ImageObject:
             # print(f"Drawing line {i} : {line}")
             height += line_height
 
-        self.write_watermark()
-
 
 class Images(commands.Cog):
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot):
+        self.bot = bot
 
-    @commands.command()
+    @commands.command(name='olivia', hidden=True)
+    async def old_olivia(self, ctx):
+        await ctx.send(
+            ":warning: This command has moved to allow more variations!\n"
+            f"You can now find it at `{ctx.prefix}meme olivia`"
+        )
+
+    @commands.group()
+    async def meme(self, ctx):
+        """Input text into images."""
+        await util.command_group_help(ctx)
+
+    @meme.command()
     async def olivia(self, ctx, *, text):
-        """Olivia hye has something to say"""
+        """Olivia hye has something to say."""
         filename = "images/hye.jpg"
-        color = (40, 40, 40)
-        image = ImageObject(filename)
-        image.write_box(206, 480, 530, 400, color, text)
-        image.save("downloads/hye_out.jpg")
-        with open("downloads/hye_out.jpg", "rb") as img:
-            await ctx.send(file=discord.File(img))
+        await image_sender(ctx, filename, (206, 480, 530, 400), text)
+
+    @meme.command()
+    async def yyxy(self, ctx, *, text):
+        """YYXY has something to say."""
+        filename = "images/yyxy.png"
+        await image_sender(ctx, filename, (498, 92, 309, 467), text)
+
+    @meme.command()
+    async def haseul(self, ctx, *, text):
+        """Haseul has something to say."""
+        filename = "images/haseul.jpg"
+        await image_sender(ctx, filename, (228, 400, 266, 258), text, wm_size=20, wm_color=(50, 50 ,50 ,100))
+
+    @meme.command()
+    async def trump(self, ctx, *, text):
+        """Donald Trump has signed a new order."""
+        filename = "images/trump.jpg"
+        await image_sender(ctx, filename, (761, 579, 406, 600), text, wm_color=(255, 255 ,255 ,255))
 
 
-def setup(client):
-    client.add_cog(Images(client))
+async def image_sender(ctx, filename, boxdimensions, text, color=(40, 40, 40), wm_size=30, wm_color=(150, 150, 150, 100)):
+    image = ImageObject(filename)
+    await image.write_box(*boxdimensions, color, text)
+    image.write_watermark(wm_size, wm_color)
+    save_location = f"downloads/output_{filename.split('/')[-1]}"
+    image.save(save_location)
+    with open(save_location, "rb") as img:
+        await ctx.send(file=discord.File(img))
+
+
+def setup(bot):
+    bot.add_cog(Images(bot))
