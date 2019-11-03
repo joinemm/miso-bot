@@ -7,16 +7,16 @@ import helpers.utilityfunctions as util
 
 class Config(commands.Cog):
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot):
+        self.bot = bot
 
     @commands.command(hidden=True)
     @commands.is_owner()
     async def help2(self, ctx):
         """WIP"""
         pages = []
-        for cog in self.client.cogs:
-            this_cog_commands = self.client.get_cog(cog).get_commands()
+        for cog in self.bot.cogs:
+            this_cog_commands = self.bot.get_cog(cog).get_commands()
             if this_cog_commands:
                 this_page = discord.Embed(title=f"{cog}")
                 for command in this_cog_commands:
@@ -208,5 +208,5 @@ class Config(commands.Cog):
         await ctx.send(f"Levelup messages **{value}d**")
 
 
-def setup(client):
-    client.add_cog(Config(client))
+def setup(bot):
+    bot.add_cog(Config(bot))
