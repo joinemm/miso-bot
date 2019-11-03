@@ -70,7 +70,7 @@ class Info(commands.Cog):
         )
         content.set_thumbnail(url=self.bot.user.avatar_url)
         content.add_field(name='Github', value='https://github.com/joinemm/miso-bot', inline=False)
-        content.add_field(name='Documentation', value="https://misobot.xyz", inline=False)
+        content.add_field(name='Website', value="https://misobot.xyz", inline=False)
         content.add_field(name='Patreon', value="https://www.patreon.com/joinemm", inline=False)
 
         data = await get_commits("joinemm", "miso-bot")
