@@ -182,6 +182,22 @@ def log_command_usage(ctx):
             ((ctx.guild.id if ctx.guild is not None else 'DM'), ctx.author.id, str(ctx.command)))
 
 
+def log_emoji_usage(message, custom_emoji, unicode_emoji):
+    all_emoji = []
+    for emoji in custom_emoji:
+        all_emoji.append((emoji, 'custom'))
+    
+    for emoji in unicode_emoji:
+        all_emoji.append((emoji, 'unicode'))
+
+    for emoji, emojitype in all_emoji:
+        execute("INSERT OR IGNORE INTO emoji_usage VALUES(?, ?, ?, ?, ?)", 
+                (message.guild.id, message.author.id, emoji, emojitype, 0))
+        execute("UPDATE emoji_usage SET count = count + 1 "
+                "WHERE (guild_id = ? AND user_id = ? AND emoji = ? AND emojitype = ?)", 
+                (message.guild.id, message.author.id, emoji, emojitype))
+
+
 def pp(cursor, data=None, rowlens=0):
     d = cursor.description
     if not d:
