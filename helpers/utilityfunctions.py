@@ -5,7 +5,6 @@ import discord
 import copy
 import re
 import regex
-import requests
 import colorgram
 from PIL import Image
 import data.database as db
@@ -13,6 +12,7 @@ import random
 import datetime
 import io
 import emoji
+import aiohttp
 
 async def send_as_pages(ctx, content, rows, maxrows=15):
     """
@@ -342,7 +342,7 @@ def rgb_to_hex(rgb):
     return "{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
 
 
-def color_from_image_url(url, fallback='E74C3C'):
+async def color_from_image_url(url, fallback='E74C3C'):
     """
     :param url      : Url to an image to capture colors from
     :param fallback : The color to fallback to incase the operation fails
@@ -351,12 +351,11 @@ def color_from_image_url(url, fallback='E74C3C'):
     if url.strip() == "":
         return fallback
     try:
-        response = requests.get(url, stream=True)
-        response.raw.decode_content = True
-        image = Image.open(response.raw)
-
-        colors = colorgram.extract(image, 1)
-        dominant_color = colors[0].rgb
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                image = Image.open(io.BytesIO(await response.read()))
+                colors = colorgram.extract(image, 1)
+                dominant_color = colors[0].rgb
 
         return rgb_to_hex(dominant_color)
     except Exception as e:
@@ -397,8 +396,7 @@ def find_unicode_emojis(text):
             emoji_list.append(emoji.demojize(word))
     
     for i in range(math.floor(len(flags)/2)):
-        print("i", i*2)
-        print("flags be like", emoji.demojize(''.join(flags[i:i+2])))
+        emoji_list.append(''.join([emoji.demojize(x) for x in flags[i:i+2]]))
 
     return emoji_list
 
@@ -412,30 +410,24 @@ def find_custom_emojis(text):
     return emoji_list
 
 
-def image_info_from_url(url, nice_format=False):
+async def image_info_from_url(url):
     """Return dictionary containing information about image"""
-    response = requests.get(url)
-    filesize = int(response.headers.get('Content-Length'))/1024
-    filetype = response.headers.get('Content-Type')
-    img = Image.open(io.BytesIO(response.content))
-    dimensions = img.size
-    if nice_format:
-        if filesize > 1024:
-            filesize = f"{filesize/1024:.2f}MB"
-        else:
-            filesize = f"{filesize:.2f}KB"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(str(url)) as response:
+            filesize = int(response.headers.get('Content-Length'))/1024
+            filetype = response.headers.get('Content-Type')
+            image = Image.open(io.BytesIO(await response.read()))
+            dimensions = image.size
+            if filesize > 1024:
+                filesize = f"{filesize/1024:.2f}MB"
+            else:
+                filesize = f"{filesize:.2f}KB"
 
-        return {
-            'filesize': filesize,
-            'filetype': filetype,
-            'dimensions': f"{dimensions[0]}x{dimensions[1]}"
-        }
-    else:
-        return {
-            'filesize': filesize,
-            'filetype': filetype,
-            'dimensions': dimensions
-        }
+            return {
+                'filesize': filesize,
+                'filetype': filetype,
+                'dimensions': f"{dimensions[0]}x{dimensions[1]}"
+            }
 
 def create_welcome_embed(user, guild, messageformat):
     """Creates and returns embed for welcome message"""
