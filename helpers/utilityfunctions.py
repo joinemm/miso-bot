@@ -4,6 +4,7 @@ from discord.ext import commands
 import discord
 import copy
 import re
+import regex
 import requests
 import colorgram
 from PIL import Image
@@ -11,6 +12,7 @@ import data.database as db
 import random
 import datetime
 import io
+import emoji
 
 async def send_as_pages(ctx, content, rows, maxrows=15):
     """
@@ -223,62 +225,81 @@ def xp_from_message(message):
     return xp
 
 
-async def get_user(ctx, mention, fallback=None):
+async def get_user(ctx, argument, fallback=None):
     """Get a discord user from mention, name, or id"""
-    if mention is None:
+    if argument is None:
         return fallback
     try:
-        return await commands.UserConverter().convert(ctx, mention)
+        return await commands.UserConverter().convert(ctx, argument)
     except commands.errors.BadArgument:
         return fallback
 
 
-async def get_member(ctx, mention, fallback=None, try_user=False):
+async def get_member(ctx, argument, fallback=None, try_user=False):
     """Get a discord guild member from mention, name, or id"""
-    if mention is None:
+    if argument is None:
         return fallback
     try:
-        return await commands.MemberConverter().convert(ctx, mention)
+        return await commands.MemberConverter().convert(ctx, argument)
     except commands.errors.BadArgument:
         if try_user:
-            return await get_user(ctx, mention, fallback)
+            return await get_user(ctx, argument, fallback)
         else:
             return fallback
 
 
-async def get_textchannel(ctx, mention, fallback=None):
+async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
     """Get a discord text channel from mention, name, or id"""
-    try:
-        return await commands.TextChannelConverter().convert(ctx, mention)
-    except commands.errors.BadArgument:
+    if argument is None:
         return fallback
-
-
-async def get_role(ctx, mention, fallback=None):
-    """Get a discord role from mention, name, or id"""
-    try:
-        return await commands.RoleConverter().convert(ctx, mention)
-    except commands.errors.BadArgument:
-        return fallback
-
-
-async def get_color(ctx, mention, fallback=None):
-    """Get a discord color from hex value"""
-    try:
-        return await commands.ColourConverter().convert(ctx, mention)
-    except commands.errors.BadArgument:
-        return fallback
-
-
-async def get_emoji(ctx, mention, fallback=None):
-    """Try to get full emoji, fallback to partial emoji if not successfull"""
-    try:
-        return await commands.EmojiConverter().convert(ctx, mention)
-    except commands.errors.BadArgument:
+    if guildfilter is None:
         try:
-            return await commands.PartialEmojiConverter().convert(ctx, mention)
+            return await commands.TextChannelConverter().convert(ctx, argument)
         except commands.errors.BadArgument:
             return fallback
+    else:
+        result = discord.utils.find(lambda m: m.name == argument or m.id == argument, guildfilter.text_channels)
+        return result or fallback
+
+
+async def get_role(ctx, argument, fallback=None):
+    """Get a discord role from mention, name, or id"""
+    if argument is None:
+        return fallback
+    try:
+        return await commands.RoleConverter().convert(ctx, argument)
+    except commands.errors.BadArgument:
+        return fallback
+
+
+async def get_color(ctx, argument, fallback=None):
+    """Get a discord color from hex value"""
+    if argument is None:
+        return fallback
+    try:
+        return await commands.ColourConverter().convert(ctx, argument)
+    except commands.errors.BadArgument:
+        return fallback
+
+
+async def get_emoji(ctx, argument, fallback=None):
+    """Try to get full emoji, fallback to partial emoji if not successfull"""
+    if argument is None:
+        return fallback
+    try:
+        return await commands.EmojiConverter().convert(ctx, argument)
+    except commands.errors.BadArgument:
+        try:
+            return await commands.PartialEmojiConverter().convert(ctx, argument)
+        except commands.errors.BadArgument:
+            return fallback
+
+
+async def get_guild(ctx, argument, fallback=None):
+    """Get a guild that bot can see"""
+    result = discord.utils.find(lambda m: m.name == argument or m.id == argument, ctx.bot.guilds)
+    return result or fallback
+
 
 async def command_group_help(ctx):
     """Sends default command help if group command is invoked on it's own"""
@@ -364,6 +385,33 @@ def int_to_bool(value):
     else:
         return True
 
+
+def find_unicode_emojis(text):
+    emoji_list = []
+    data = regex.findall(r'\X', text)
+    flags = regex.findall(u'[\U0001F1E6-\U0001F1FF]', text)
+    for word in data:
+        if any(char in emoji.UNICODE_EMOJI for char in word):
+            if word in flags:
+                continue
+            emoji_list.append(emoji.demojize(word))
+    
+    for i in range(math.floor(len(flags)/2)):
+        print("i", i*2)
+        print("flags be like", emoji.demojize(''.join(flags[i:i+2])))
+
+    return emoji_list
+
+
+def find_custom_emojis(text):
+    emoji_list = []
+    data = regex.findall(r'<(a?):([a-zA-Z0-9\_]+):([0-9]+)>', text)
+    for a, emoji_name, emoji_id in data:
+        emoji_list.append(f"<{a}:{emoji_name}:{emoji_id}>")
+
+    return emoji_list
+
+
 def image_info_from_url(url, nice_format=False):
     """Return dictionary containing information about image"""
     response = requests.get(url)
@@ -403,24 +451,27 @@ def create_welcome_embed(user, guild, messageformat):
 def activityhandler(activity_tuple):
     """
     :param activity_tuple : Discord activity tuple (None, Spotify, Streaming, Playing)
-    :return               : String representation of the activity type
+    :return               : Activity dictionary
     """
     if not activity_tuple:
-        return "doin nothing bro"
+        return {'text': '', 'icon': ''}
 
     activity = activity_tuple[0]
-
+    
+    activity_dict = {}
     if isinstance(activity, discord.Spotify):
-        return f"Listening to {activity.title} by {activity.artist}"
+        activity_dict['text'] = f"Listening to <strong>{activity.title}</strong><br>by <strong>{activity.artist}</strong>"
+        activity_dict['icon'] = 'fab fa-spotify'
     elif isinstance(activity, discord.Game):
-        return f"Playing {activity.name}\n" \
-               f"for{stringfromtime((datetime.datetime.utcnow() - activity.start).totalseconds(), accuracy=1)}"
+        activity_dict['text'] = f"Playing {activity.name}<br>for{stringfromtime((datetime.datetime.utcnow() - activity.start).totalseconds(), accuracy=1)}"
+        activity_dict['icon'] = 'fas fa-gamepad'
     elif isinstance(activity, discord.Streaming):
-        return f"Streaming {activity.details} as {activity.twitch_name}\n" \
-               f"{activity.name}"
+        activity_dict['text'] = f"Streaming {activity.details} as {activity.twitch_name}<br>{activity.name}"
+        activity_dict['icon'] = 'fab fa-twitch'
     else:
-        print(f"idk what it is u tell me {activity.type} / {activity}")
-        return "dunno what it is check console"
+        activity_dict['text'] = "{activity}"
+        activity_dict['icon'] = ''
+    return activity_dict
 
 
 class TwoWayIterator:
