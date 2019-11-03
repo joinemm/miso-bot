@@ -26,6 +26,7 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
         """Remove codeblocks and empty lines, return lines."""
         text = text.strip(' `')
         lines = text.split('\n')
+        clean_lines = []
 
         if lines[0] in ['py', 'python']:
             lines = lines[1:]
@@ -152,7 +153,7 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
         except Exception as error:
             await ctx.send('```py\n' + ''.join(traceback.format_exception(None, error, None)) + '\n```')
         else:
-            logger.info("Reloaded {module}")
+            logger.info(f"Reloaded {module}")
             await ctx.send('\N{OK HAND SIGN}')
 
     @commands.group()
