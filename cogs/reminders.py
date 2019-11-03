@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from helpers import utilityfunctions as util
 from helpers import log
 import arrow
@@ -11,30 +11,23 @@ logger = log.get_logger(__name__)
 
 class Reminders(commands.Cog):
 
-    def __init__(self, client):
-        self.client = client
-        self.loop_active = False
+    def __init__(self, bot):
+        self.bot = bot
         self.reminder_list = []
         self.cache_needs_refreshing = True
+        self.reminder_loop.start()
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        if self.loop_active:
-            # prevent multiple loops when discord is lagging
-            return
+    def cog_unload(self):
+        self.reminder_loop.cancel()
 
-        else:
-            logger.info("Starting reminder loop")
-            self.loop_active = True
+    @tasks.loop(seconds=1.0)
+    async def reminder_loop(self):
+        await self.check_reminders()
 
-            while True:
-                try:
-                    await self.check_reminders()
-                except Exception as e:
-                    logger.error(e)
-
-                sleeptime = 60 - arrow.now().second
-                await asyncio.sleep(sleeptime)
+    @reminder_loop.before_loop
+    async def before_reminder_loop(self):
+        await self.bot.wait_until_ready()
+        logger.info("Starting reminder loop")
     
     async def check_reminders(self):
         """Checks all current reminders"""
@@ -44,69 +37,69 @@ class Reminders(commands.Cog):
 
         if not self.reminder_list:
             return
-
+        
+        now = arrow.utcnow().timestamp
         for reminder in self.reminder_list:
-            user_id, guild_id, created_on, timestamp, thing = reminder
-            if timestamp > arrow.utcnow().timestamp + 30:
+            # check if timestamp is in future
+            # don't set variables yet to make runs as lightweight as possible
+            if reminder[3] > now:
                 continue
             
-            user = self.client.get_user(user_id)
+            user_id, guild_id, created_on, timestamp, thing, message_link = reminder
+            user = self.bot.get_user(user_id)
             if user is not None:
-                guild = self.client.get_guild(guild_id)
+                guild = self.bot.get_guild(guild_id)
                 if guild is None:
                     guild = "Deleted guild"
                 date = arrow.get(created_on)
                 try:
                     await user.send(f":alarm_clock: The reminder you set {date.humanize()} `[ {date.format('DD/MM/YYYY HH:mm:ss')} ]` "
-                                    f"in **{guild}** has expired!\n> {thing}")
+                                    f"in **{guild}** has expired!\n> {thing}\nContext: {message_link}")
                     logger.info(f'reminded {user} to "{thing}"')
                 except discord.errors.Forbidden:
                     logger.warning(f'Unable to remind {user}, missing permissions')
             else:
                 logger.info(f'deleted expired reminder by unknown user {user_id}')
 
-            db.execute("""DELETE FROM reminders WHERE user_id = ? 
-                                                  AND guild_id = ? 
-                                                  AND created_on = ?
-                                                  AND timestamp = ? 
-                                                  AND thing = ?""", 
-                       (user_id, guild_id, created_on, timestamp, thing))
+            db.execute("""DELETE FROM reminders WHERE user_id = ? AND guild_id = ? AND message_link = ?""", 
+                       (user_id, guild_id, message_link))
             self.cache_needs_refreshing = True
 
     @commands.command()
     async def remindme(self, ctx, pre, *, arguments):
         """
         Set a reminder
-        Reminders are accurate to the minute
 
         Usage:
-            >remindme in <some time> to <do something>
-            >remindme on <YYYY/MM/DD> [HH:mm] to <do something>
+            >remindme in <some time> to <something>
+            >remindme on <YYYY/MM/DD> [HH:mm:ss] to <something>
         """
         try:
             time, thing = arguments.split(' to ')
         except ValueError:
             return await util.send_command_help(ctx)
+        
+        now = arrow.utcnow()
 
         if pre == 'on':
             # user inputs date
             date = arrow.get(time)
-            seconds = date.timestamp - arrow.utcnow().timestamp
+            seconds = date.timestamp - now.timestamp
 
         elif pre == 'in':
-            # user inputs time
+            # user inputs time delta
             seconds = util.timefromstring(time)
-            date = arrow.get(arrow.utcnow().timestamp + seconds)
+            date = now.shift(seconds=+seconds)
 
         else:
             return await ctx.send(f"Invalid prefix `{pre}`\nUse `on` for date and `in` for time")
         
-        db.execute("INSERT INTO reminders VALUES(?, ?, ?, ?, ?)", 
-                   (ctx.author.id, ctx.guild.id, arrow.utcnow().timestamp, date.timestamp, thing))
+        db.execute("INSERT INTO reminders VALUES(?, ?, ?, ?, ?, ?)", 
+                   (ctx.author.id, ctx.guild.id, now.timestamp, date.timestamp, thing, ctx.message.jump_url))
 
         self.cache_needs_refreshing = True
         await ctx.send(f":pencil: Reminding you in **{util.stringfromtime(seconds)}** "
-                       f"`[ {date.format('DD/MM/YYYY HH:mm')} UTC ]` to \n> {thing}")
+                       f"`[ {date.format('DD/MM/YYYY HH:mm:ss')} UTC ]` to \n> {thing}")
 
-def setup(client):
-    client.add_cog(Reminders(client))
+def setup(bot):
+    bot.add_cog(Reminders(bot))
