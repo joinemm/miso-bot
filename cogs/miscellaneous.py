@@ -233,8 +233,10 @@ class Miscellaneous(commands.Cog):
 
         sign = db.userdata(ctx.author.id).sunsign
         if sign is None:
-            return await ctx.send("Please save your sunsign using `>horoscope set <sign>`\n"
-                                  "use `>horoscope list` if you don't know which one you are.")
+            return await ctx.send(
+                "Please save your sunsign using `>horoscope set <sign>`\n"
+                "use `>horoscope list` if you don't know which one you are."
+            )
 
         params = {
             'sign': sign,
@@ -242,7 +244,7 @@ class Miscellaneous(commands.Cog):
         }
         async with aiohttp.ClientSession() as session:
             async with session.post('https://aztro.sameerkumar.website/', params=params) as response:
-                data = response.json()
+                data = await response.json()
 
         content = discord.Embed(color=hs_colors[sign])
         content.title = f"{sign.capitalize()} - {data['current_date']}"
