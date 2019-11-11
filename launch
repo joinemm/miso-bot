@@ -1,4 +1,4 @@
 #!/bin/sh
 
 BASE_PATH="$(dirname $0)"
-$BASE_PATH/venv/bin/python3 $BASE_PATH/main.py
+$BASE_PATH/venv/bin/python3 $BASE_PATH/main.py dev
