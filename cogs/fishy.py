@@ -99,7 +99,7 @@ class Fishy(commands.Cog):
             >fishystats
             >fishystats <user>
         """
-        globaldata = mention == 'global'
+        globaldata = user == 'global'
         if not globaldata:
             user = await util.get_user(ctx, user, fallback=ctx.author)
             fishdata = db.fishdata(user.id)
