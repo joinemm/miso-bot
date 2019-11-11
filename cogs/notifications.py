@@ -56,7 +56,7 @@ class Notifications(commands.Cog):
                     continue
 
                 # create and send notification message
-                await send_notification(user, message, pattern)
+                await send_notification(member, message, pattern)
 
     @commands.group(case_insensitive=True)
     async def notification(self, ctx):
