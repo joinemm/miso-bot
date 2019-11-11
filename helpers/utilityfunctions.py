@@ -1,18 +1,18 @@
 import math
 import asyncio
-from discord.ext import commands
 import discord
 import copy
-import re
 import regex
 import colorgram
-from PIL import Image
-import data.database as db
 import random
 import datetime
 import io
 import emoji
 import aiohttp
+from discord.ext import commands
+from PIL import Image
+from data import database as db
+
 
 async def send_as_pages(ctx, content, rows, maxrows=15):
     """
@@ -59,9 +59,10 @@ async def page_switcher(ctx, pages):
             return
         await switch_page(content)
 
-    functions = {"⬅": previous_page,
-                 "➡": next_page}
-
+    functions = {
+        "⬅": previous_page,
+        "➡": next_page
+    }
     asyncio.ensure_future(reaction_buttons(ctx, msg, functions))
 
 
@@ -124,19 +125,24 @@ async def reaction_buttons(ctx, message, functions, timeout=600.0, only_author=F
                 break
 
     try:
+        tasks = []
         for emoji in functions:
-            await message.remove_reaction(emoji, ctx.bot.user)
+            tasks.append(message.remove_reaction(emoji, ctx.bot.user))
+        await asyncio.gather(*tasks)
     except discord.errors.NotFound:
         pass
 
 
 def message_embed(message):
-    """
-    :param: message : Discord message object
-    :returns        : Discord embed object
+    """Creates a nice embed from message
+    :param: message : discord.Message you want to embed
+    :returns        : discord.Embed
     """
     content = discord.Embed()
-    content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
+    content.set_author(
+        name=f"{message.author}",
+        icon_url=message.author.avatar_url
+    )
     content.description = message.content
     content.set_footer(text=f"{message.guild.name} | #{message.channel.name}")
     content.timestamp = message.created_at
@@ -226,7 +232,11 @@ def xp_from_message(message):
 
 
 async def get_user(ctx, argument, fallback=None):
-    """Get a discord user from mention, name, or id"""
+    """
+    :param argument : name, nickname, id, mention
+    :param fallback : return this if not found
+    :returns        : discord.User
+    """
     if argument is None:
         return fallback
     try:
@@ -236,7 +246,12 @@ async def get_user(ctx, argument, fallback=None):
 
 
 async def get_member(ctx, argument, fallback=None, try_user=False):
-    """Get a discord guild member from mention, name, or id"""
+    """
+    :param argument : name, nickname, id, mention
+    :param fallback : return this if not found
+    :param try_user : try to get user if not found
+    :returns        : discord.Member | discord.User
+    """
     if argument is None:
         return fallback
     try:
@@ -249,7 +264,12 @@ async def get_member(ctx, argument, fallback=None, try_user=False):
 
 
 async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
-    """Get a discord text channel from mention, name, or id"""
+    """
+    :param argument    : name, id, mention
+    :param fallback    : return this if not found
+    :param guildfilter : guild to search for the channel in. defaults to ctx.guild
+    :returns           : discord.TextChannel
+    """
     if argument is None:
         return fallback
     if guildfilter is None:
@@ -263,7 +283,11 @@ async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
 
 
 async def get_role(ctx, argument, fallback=None):
-    """Get a discord role from mention, name, or id"""
+    """
+    :param argument : name, id, mention
+    :param fallback : return this if not found
+    :returns        : discord.Role
+    """
     if argument is None:
         return fallback
     try:
@@ -273,7 +297,11 @@ async def get_role(ctx, argument, fallback=None):
 
 
 async def get_color(ctx, argument, fallback=None):
-    """Get a discord color from hex value"""
+    """
+    :param argument : hex or discord color name
+    :param fallback : return this if not found
+    :returns        : discord.Color
+    """
     if argument is None:
         return fallback
     try:
@@ -283,7 +311,11 @@ async def get_color(ctx, argument, fallback=None):
 
 
 async def get_emoji(ctx, argument, fallback=None):
-    """Try to get full emoji, fallback to partial emoji if not successfull"""
+    """
+    :param argument : name, id, message representation
+    :param fallback : return this if not found
+    :returns        : discord.Emoji | discord.PartialEmoji
+    """
     if argument is None:
         return fallback
     try:
@@ -296,7 +328,11 @@ async def get_emoji(ctx, argument, fallback=None):
 
 
 async def get_guild(ctx, argument, fallback=None):
-    """Get a guild that bot can see"""
+    """
+    :param argument : name, id
+    :param fallback : return this if not found
+    :returns        : discord.Guild
+    """
     result = discord.utils.find(lambda m: m.name == argument or m.id == argument, ctx.bot.guilds)
     return result or fallback
 
@@ -318,14 +354,14 @@ def escape_md(s):
     :return  : The escaped string
     """
     transformations = {
-        re.escape(c): '\\' + c
+        regex.escape(c): '\\' + c
         for c in ('*', '`', '_', '~', '\\', '||')
     }
 
     def replace(obj):
-        return transformations.get(re.escape(obj.group(0)), '')
+        return transformations.get(regex.escape(obj.group(0)), '')
 
-    pattern = re.compile('|'.join(transformations.keys()))
+    pattern = regex.compile('|'.join(transformations.keys()))
     return pattern.sub(replace, s)
 
 
@@ -344,9 +380,9 @@ def rgb_to_hex(rgb):
 
 async def color_from_image_url(url, fallback='E74C3C'):
     """
-    :param url      : Url to an image to capture colors from
-    :param fallback : The color to fallback to incase the operation fails
-    :return         : Hex color code of the most dominant color in the image
+    :param url      : image url
+    :param fallback : the color to return in case the operation fails
+    :return         : hex color code of the most dominant color in the image
     """
     if url.strip() == "":
         return fallback
@@ -364,13 +400,13 @@ async def color_from_image_url(url, fallback='E74C3C'):
 
 
 def useragent():
-    """Returns random user agent to use in web scraping"""
+    """Returns random user agent to use in web scraping."""
     agents = db.get_from_data_json(['useragents'])
     return random.choice(agents)
 
 
 def bool_to_int(value: bool):
-    """Turn boolean into 1 or 0"""
+    """Turn boolean into 1 or 0."""
     if value is True:
         return 1
     else:
@@ -378,7 +414,7 @@ def bool_to_int(value: bool):
 
 
 def int_to_bool(value):
-    """Turn integer into boolean"""
+    """Turn integer into boolean."""
     if value is None or value == 0:
         return False
     else:
@@ -386,6 +422,7 @@ def int_to_bool(value):
 
 
 def find_unicode_emojis(text):
+    """Finds and returns all unicode emojis from a string"""
     emoji_list = []
     data = regex.findall(r'\X', text)
     flags = regex.findall(u'[\U0001F1E6-\U0001F1FF]', text)
@@ -402,6 +439,7 @@ def find_unicode_emojis(text):
 
 
 def find_custom_emojis(text):
+    """Finds and returns all custom discord emojis from a string"""
     emoji_list = []
     data = regex.findall(r'<(a?):([a-zA-Z0-9\_]+):([0-9]+)>', text)
     for a, emoji_name, emoji_id in data:
@@ -411,7 +449,7 @@ def find_custom_emojis(text):
 
 
 async def image_info_from_url(url):
-    """Return dictionary containing information about image"""
+    """Return dictionary containing filesize, filetype and dimensions of an image."""
     async with aiohttp.ClientSession() as session:
         async with session.get(str(url)) as response:
             filesize = int(response.headers.get('Content-Length'))/1024
@@ -431,12 +469,20 @@ async def image_info_from_url(url):
 
 def create_welcome_embed(user, guild, messageformat):
     """Creates and returns embed for welcome message"""
-    content = discord.Embed(title="New member! :wave:", color=discord.Color.green())
+    content = discord.Embed(
+        title="New member! :wave:",
+        color=discord.Color.green()
+    )
     content.set_thumbnail(url=user.avatar_url)
     content.timestamp = datetime.datetime.utcnow()
     content.set_footer(text=f"👤#{len(guild.members)}")
-    content.description = messageformat.format(mention=user.mention, user=user, id=user.id,
-                                               server=guild.name, username=user.name)
+    content.description = messageformat.format(
+        mention=user.mention,
+        user=user, 
+        id=user.id,
+        server=guild.name,
+        username=user.name
+    )
     return content
 
 
@@ -461,13 +507,14 @@ def activityhandler(activity_tuple):
         activity_dict['text'] = f"Streaming {activity.details} as {activity.twitch_name}<br>{activity.name}"
         activity_dict['icon'] = 'fab fa-twitch'
     else:
-        activity_dict['text'] = "{activity}"
-        activity_dict['icon'] = ''
+        print(str(activity))
+        activity_dict['text'] = f"{activity.type.name} {activity.name}"
+        activity_dict['icon'] = 'fab fa-discord'
     return activity_dict
 
 
 class TwoWayIterator:
-    """Two way iterator class that is used as the backend for paging"""
+    """Two way iterator class that is used as the backend for paging."""
 
     def __init__(self, list_of_stuff):
         self.items = list_of_stuff
