@@ -205,7 +205,7 @@ class Events(commands.Cog):
                     db.execute("INSERT INTO starboard values(?, ?)", (reaction.message.id, msg.id))
 
                 else:
-                    board_msg = await channel.fetch_message(board_msg_id)
+                    board_msg = await channel.fetch_message(board_msg_id[0][0])
                     content = board_msg.embeds[0]
                     content.set_footer(text=f"{reaction.count} ⭐ #{reaction.message.channel.name}")
                     await board_msg.edit(embed=content)
