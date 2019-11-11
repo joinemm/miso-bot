@@ -408,9 +408,106 @@ class User(commands.Cog):
         content.title = f"{ctx.guild.name} artist crowns leaderboard"
         await util.send_as_pages(ctx, content, rows)
 
+    @commands.command()
+    async def profile(self, ctx, user: discord.Member=None):
+        """Your personal customizable user profile."""
+        if user is None:
+            user = ctx.author
 
-def setup(client):
-    client.add_cog(User(client))
+        activity = str(db.get_user_activity(ctx.guild.id, user.id))
+        fishydata = db.fishdata(user.id)
+        local_xp_rows = db.query("SELECT * FROM activity WHERE user_id = ? AND guild_id = ?", (user.id, ctx.guild.id))
+        local_xp = 0
+        if local_xp_rows is not None:
+            local_xp = sum(list(local_xp_rows[0][3:]))
+        global_xp_rows = db.query("SELECT * FROM activity WHERE user_id = ?", (user.id,))
+        global_xp = 0
+        if global_xp_rows is not None:
+            global_xp = sum([sum(row[3:]) for row in global_xp_rows])
+        
+        patrons = db.query("select user_id from patrons where currently_active = 1")
+        if user.id == self.bot.owner.id:
+            corner_icon = 'fa-dev'
+        elif patrons is not None and user.id in [x[0] for x in patrons]:
+            corner_icon = 'fa-patreon'
+        else:
+            corner_icon = ''
+            
+        activity_formatted = util.activityhandler(user.activities)
+
+        description = db.query("SELECT description FROM profiles WHERE user_id = ?", (user.id,))
+        if description is None:
+            description = "use >editprofile to change your description"
+        else:
+            description = clean_html(description[0][0])
+
+        background_url = db.query("SELECT background_url FROM profiles WHERE user_id = ?", (user.id,))
+        if background_url is None:
+            background_url = ''
+        else:
+            background_url = background_url[0][0]
+
+        replacements = {
+            'BACKGROUND_IMAGE': background_url,
+            'ACCENT_COLOR': user.color,
+            'AVATAR_URL': user.avatar_url_as(size=128, format='png'),
+            'USERNAME': f"{user.name} #{user.discriminator}",
+            'DESCRIPTION': description,
+            'FISHY': fishydata.fishy if fishydata is not None else 0,
+            'LVL_LOCAL': util.get_level(local_xp),
+            'RANK_LOCAL': await self.get_rank(ctx, user, 'activity'),
+            'LVL_GLOBAL': util.get_level(global_xp),
+            'RANK_GLOBAL': await self.get_rank(ctx, user, 'activity', _global=True),
+            'ACTIVITY_ICON': activity_formatted.get('icon'),
+            'ACTIVITY_TEXT': activity_formatted.get('text'),
+            'ACTIVITY_DATA': activity,
+            'PATREON': corner_icon
+        }
+
+        def dictsub(m):
+            return str(replacements[m.group().strip('%')])
+
+        formatted_html = re.sub(r'%%(\S*)%%', dictsub, self.profile_html)
+        
+        async with aiohttp.ClientSession() as session:
+            data = {
+                'html': formatted_html,
+                'width': 512, 
+                'height': 512,
+                'imageFormat': 'png'
+            }
+            async with session.post('http://localhost:3000/html', data=data) as response: 
+                with open("downloads/profile.png", "wb") as f:
+                    while True:
+                        block = await response.content.read(1024)
+                        if not block:
+                            break
+                        f.write(block)
+
+        with open("downloads/profile.png", "rb") as f:
+            await ctx.send(file=discord.File(f))
+        
+    @commands.group()
+    async def editprofile(self, ctx):
+        await util.command_group_help(ctx)
+
+    @editprofile.command(name='description')
+    async def editprofile_description(self, ctx, *, text):
+        db.execute("INSERT OR IGNORE INTO profiles VALUES (?, ?, ?, ?)", (ctx.author.id, None, None, None))
+        db.execute("UPDATE profiles SET description = ? WHERE user_id = ?", (text, ctx.author.id))
+        await ctx.send("Description updated!")
+
+    @editprofile.command(name='background')
+    async def editprofile_background(self, ctx, url):
+        if ctx.author != self.bot.appinfo.owner or \
+                ctx.author.id not in [x[0] for x in db.query("SELECT user_id FROM patrons")]:
+            return await ctx.send("Sorry, only patreon supporters can use this feature!")
+        db.execute("INSERT OR IGNORE INTO profiles VALUES (?, ?, ?, ?)", (ctx.author.id, None, None, None))
+        db.execute("UPDATE profiles SET background_url = ? WHERE user_id = ?", (url, ctx.author.id))
+        await ctx.send("Background image updated!")
+
+def setup(bot):
+    bot.add_cog(User(bot))
 
 
 def get_activity_table(timeframe):
