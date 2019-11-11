@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src='https://cdn.jsdelivr.net/chartist.js/latest/chartist.min.js'></script>
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/chartist.js/latest/chartist.min.css'>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.9.0/css/all.min.css">
+
+<style type="text/css">
+    :root {
+  --bgimage: url('%%BACKGROUND_IMAGE%%');
+  --accentcolor: %%ACCENT_COLOR%%
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.wrapper {
+  width: 512px;
+  height: 512px;
+  background-color: var(--accentcolor);
+  background-size: cover;
+  background-position: center;
+  background-image: var(--bgimage);
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.sidebar {
+  position: absolute;
+  top: 162px;
+  z-index: 3;
+  background-color: rgba(0,0,0, 0.7);
+  width: 512px;
+  height: 350px;
+  border-radius: 0 0 10px 10px;
+}
+
+.sidebar-items {
+  width: 500px;
+  font-family: roboto;
+  color: white;
+}
+
+.chartcontainer {
+  width: 100%;
+  position: absolute;
+  bottom: 310px;
+  left: -50px;
+}
+
+.ct-series-a .ct-line {
+  /* Set the colour of this series line */
+  stroke: white;
+  /* Control the thikness of your lines */
+  stroke-width: 3px;
+}
+
+.ct-series .ct-area {
+  fill: rgba(0,0,0,0.7);
+  fill-opacity: 1;
+}
+
+.avatar-container {
+  position: absolute;
+  overflow: hidden;
+  transform: translate(-50%, -50%);
+  left: 100px;
+  top: 0px;
+  width: 128px;
+  height: 128px;
+  background-color: white;
+  border-radius: 50%;
+  border-width: 3px;
+  border-style: solid;
+  border-color: white;
+  #box-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+  z-index: 2;
+}
+
+.avatar {
+  width: 128px;
+  height: 128px;
+}
+
+.name-desc {
+  position: absolute;
+  left: 200px;
+  top: 1px;
+  width: 300px;
+}
+
+.username {
+  margin: 0;
+  padding-bottom: 5px;
+  border-bottom: 2px solid white;
+}
+
+.sidebar-list {
+  list-style: none;
+  position: absolute;
+  top: 70px;
+  font-size: 20px;
+  padding-left: 25px;
+}
+
+.sidebar-list-item {
+  margin-bottom: 15px;
+}
+
+.desc {
+  font-size: 18px;
+}
+
+.fas {
+  width: 22px;
+}
+
+.corner-icon {
+  color: white;
+  padding: 10px;
+  font-size: 30px;
+}
+
+.footer {
+  position: absolute;
+  bottom: -10px;
+  padding: 25px;
+  font-size: 15px;
+  white-space: nowrap;
+  float: left;
+}
+
+.activity-icon {
+  font-size: 40px;
+  padding-right: 10px;
+  position: absolute;
+  bottom: 45px;
+}
+
+.activity-text {
+  position: relative;
+  padding-left: 50px;
+}
+</style>
+</head>
+<body>
+    <div class="wrapper">
+  <i class="fab corner-icon %%PATREON%%"></i>
+  <div class="sidebar">
+     <div class='avatar-container'>
+      <img class='avatar' src='%%AVATAR_URL%%'>
+    </div>
+    <div class="chartcontainer">
+      <div class="ct-chart"></div>
+    </div>
+    <div class="sidebar-items">
+      <div class="name-desc">
+        <h1 class="username">%%USERNAME%%</h1>
+        <p class="desc">%%DESCRIPTION%%</p>
+      </div>
+      <ul class='sidebar-list'>
+        <li class='sidebar-list-item'><i class="fas fa-fish"></i> %%FISHY%%</li>
+        <li class='sidebar-list-item'>Local LVL %%LVL_LOCAL%%<br>└ %%RANK_LOCAL%%</li>
+        <li class='sidebar-list-item'>Global LVL %%LVL_GLOBAL%%<br>└ %%RANK_GLOBAL%%</li>
+      </ul>
+      <div class="footer">
+        <i class="%%ACTIVITY_ICON%% activity-icon"></i><h3 class="activity-text">%%ACTIVITY_TEXT%%</h3>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+<script>
+var data = {
+  // A labels array that can contain any sort of values
+  labels: [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23],
+  // Our series array that contains series objects or in this case series data arrays
+  series: [
+      %%ACTIVITY_DATA%%
+        ]
+
+};
+
+// As options we currently only set a static size of 300x200 px. We can also omit this and use aspect ratio containers
+// as you saw in the previous example
+var options = {
+  width: 599,
+  height: 150,
+  low: 0,
+  showArea: true,
+  showPoint: false,
+  axisX: {
+    // We can disable the grid for this axis
+    showGrid: false,
+    // and also don't show the label
+    showLabel: false
+  },
+  axisY: {
+    // We can disable the grid for this axis
+    showGrid: false,
+    // and also don't show the label
+    showLabel: false
+  },
+};
+
+// Create a new line chart object where as first parameter we pass in a selector
+// that is resolving to our chart container element. The Second parameter
+// is the actual data object. As a third parameter we pass in our custom options.
+new Chartist.Line('.ct-chart', data, options);
+
+    </script>
+</html>
