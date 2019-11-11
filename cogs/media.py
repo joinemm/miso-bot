@@ -1,18 +1,19 @@
 import discord
-from discord.ext import commands
-import requests
 import googlesearch
-from bs4 import BeautifulSoup
 import json
 import asyncio
 import random
 import re
 import wikipedia
 import tweepy
-from tweepy import OAuthHandler
 import os
-import helpers.utilityfunctions as util
 import copy
+import aiohttp
+import regex
+from discord.ext import commands
+from tweepy import OAuthHandler
+from bs4 import BeautifulSoup
+from helpers import utilityfunctions as util
 
 TWITTER_CKEY = os.environ.get('TWITTER_CONSUMER_KEY')
 TWITTER_CSECRET = os.environ.get('TWITTER_CONSUMER_SECRET')
@@ -24,17 +25,32 @@ GOOGLE_API_KEY = os.environ.get('GOOGLE_KEY')
 
 class Media(commands.Cog):
 
-    def __init__(self, client):
-        self.client = client
-        self.twt = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
+    def __init__(self, bot):
+        self.bot = bot
+        self.twitter_api = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
+        self.ig_colors = [
+            discord.Color.from_rgb(253, 213, 118),
+            discord.Color.from_rgb(88, 85, 203),
+            discord.Color.from_rgb(217, 47, 127),
+            discord.Color.from_rgb(247, 113, 46)
+        ]
 
     @commands.command(aliases=["colour"])
     async def color(self, ctx, *sources):
-        """Get a hex color, the color of discord user, or a random color."""
+        """Get colors.
+
+        Different color sources can be chained together to create patterns.
+
+        Usage:
+            >color <hex>
+            >color <@member>
+            >color <@role>
+            >color random [amount]
+            >color <image url>
+            >color <discord default color name>
+        """
         if not sources:
-            return await ctx.send("Missing color source. Valid color sources are:\n"
-                                  "`[@mention | @rolemention | hex | image_url | discord default color | random]`\n"
-                                  "These can be chained together to create patterns")
+            return await util.send_command_help(ctx)
 
         colors = []
         i = 0
@@ -44,7 +60,6 @@ class Media(commands.Cog):
             try:
                 result = getattr(discord.Color, source)
                 hexcolor = str(result())
-                print(hexcolor)
                 colors.append(hexcolor)
                 continue
             except AttributeError:
@@ -52,7 +67,7 @@ class Media(commands.Cog):
 
             if source.lower() == "random":
                 try:
-                    amount = int(sources[i+1])
+                    amount = int(sources[i])
                     i += 1
                 except (IndexError, ValueError):
                     amount = 1
@@ -65,7 +80,7 @@ class Media(commands.Cog):
                 colors.append(str(role_or_user.color).strip("#"))
                 continue
 
-            if 'http' in source or 'https' in source:
+            if source.startswith('http') or source.startswith('https'):
                 url_color = util.color_from_image_url(source)
                 if url_color is not None:
                     colors.append(url_color)
@@ -88,7 +103,10 @@ class Media(commands.Cog):
             colors = colors[:50]
 
         colors = [x.strip("#") for x in colors]
-        colordata = requests.get(f"https://api.color.pizza/v1/{','.join(colors)}").json().get('colors')
+        url = "https://api.color.pizza/v1/" + ','.join(colors)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                colordata = (await response.json()).get('colors')
 
         if len(colors) == 1:
             discord_color = await util.get_color(ctx, colors[0])
@@ -115,64 +133,77 @@ class Media(commands.Cog):
 
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx, *, query):
-        """Search youtube for the given search query and return first result"""
+        """Search videos from youtube.
 
-        response = requests.get(url='https://www.googleapis.com/youtube/v3/search',
-                                params={'part': 'snippet',
-                                        'type': 'video',
-                                        'maxResults': 25,
-                                        'q': query,
-                                        'key': GOOGLE_API_KEY}).json()
+        Usage:
+            >youtube <search term>
+        """
+        url = 'https://www.googleapis.com/youtube/v3/search'
+        params = {
+            'key': GOOGLE_API_KEY,
+            'part': 'snippet',
+            'type': 'video',
+            'maxResults': 25,
+            'q': query
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params) as response:
+                data = await response.json()
 
         urls = []
-        for item in response.get('items'):
+        for item in data.get('items'):
             urls.append(f"https://youtube.com/watch?v={item['id']['videoId']}")
 
         videos = util.TwoWayIterator(urls)
 
-        msg = await ctx.send(f"**#1:** {videos.current()}")
+        msg = await ctx.send(f"`#1` {videos.current()}")
 
         async def next_link():
             link = videos.next()
             if link is not None:
-                await msg.edit(content=f"**#{videos.index+1}:** {link}", embed=None)
+                await msg.edit(content=f"`#{videos.index+1}` {link}", embed=None)
 
         async def prev_link():
             link = videos.previous()
             if link is not None:
-                await msg.edit(content=f"**#{videos.index+1}:** {link}", embed=None)
+                await msg.edit(content=f"`#{videos.index+1}` {link}", embed=None)
 
         async def done():
             return True
 
-        functions = {"⬅": prev_link,
-                     "➡": next_link,
-                     "✅": done}
+        functions = {
+            "⬅": prev_link,
+            "➡": next_link,
+            "✅": done
+        }
 
         await util.reaction_buttons(ctx, msg, functions, only_author=True)
 
     @commands.command(aliases=['ig'])
     async def instagram(self, ctx, url):
-        """Get all the images from an instagram post"""
-        result = re.findall('/p/(.*?)(/|\\Z)', url)
+        """Get all the images from an instagram post."""
+        result = regex.findall('/p/(.*?)(/|\\Z)', url)
         if result:
             url = f"https://www.instagram.com/p/{result[0][0]}"
         else:
             url = f"https://www.instagram.com/p/{url}"
+        
+        headers = {
+            "Accept": "*/*",
+            "Host": "www.instagram.com",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en,en-US;q=0.5",
+            "Connection": "keep-alive",
+            "DNT": "1",
+            "Upgrade-Insecure-Requests": "1",
+            "Cookie": IG_COOKIE or '',
+            "User-Agent": 'Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0'
+        }
 
-        headers = {"Accept": "*/*",
-                   "Host": "www.instagram.com",
-                   "Accept-Encoding": "gzip, deflate, br",
-                   "Accept-Language": "en,en-US;q=0.5",
-                   "Connection": "keep-alive",
-                   "DNT": "1",
-                   "Upgrade-Insecure-Requests": "1",
-                   "Cookie": IG_COOKIE,
-                   "User-Agent": 'Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0'}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url.strip('/') + '/?__a=1', headers=headers) as response:
+                data = (await response.json())['graphql']['shortcode_media']
 
-        response = requests.get(url.strip("/") + "/?__a=1", headers=headers)
-        response.raise_for_status()
-        data = json.loads(response.content.decode('utf-8'))['graphql']['shortcode_media']
         medias = []
         try:
             for x in data['edge_sidecar_to_children']['edges']:
@@ -182,8 +213,12 @@ class Media(commands.Cog):
 
         avatar_url = data['owner']['profile_pic_url']
         username = data['owner']['username']
-        content = discord.Embed(color=discord.Color.magenta())
-        content.set_author(name='@' + username, url=url, icon_url=avatar_url)
+        content = discord.Embed(color=random.choice(self.ig_colors))
+        content.set_author(
+            name=f'@{username}',
+            icon_url=avatar_url,
+            url=url
+        )
 
         if medias:
             # there are images
@@ -198,24 +233,31 @@ class Media(commands.Cog):
                 content._author = None
 
         else:
-            await ctx.send("No media found!")
+            await ctx.send(":warning: Could not find any images")
 
     @commands.command(aliases=['twt'])
     async def twitter(self, ctx, tweet_url):
-        """Get all the images from a tweet"""
+        """Get all the images from a tweet."""
         if "status" in tweet_url:
             tweet_url = re.search(r'status/(\d+)', tweet_url).group(1)
-        tweet = self.twt.get_status(tweet_url, tweet_mode='extended')
+
+        tweet = await ctx.bot.loop.run_in_executor(None,
+            lambda: self.twitter_api.get_status(tweet_url, tweet_mode='extended')
+        )
 
         media_files = []
         try:
             media = tweet.extended_entities.get('media', [])
         except AttributeError:
-            await ctx.send("No media found!")
-            return
+            media = []
+        
+        if not media:
+            return await ctx.send(":warning: Could not find any images")
+
         hashtags = []
         for hashtag in tweet.entities.get('hashtags', []):
             hashtags.append(f"#{hashtag['text']}")
+
         for i in range(len(media)):
             media_url = media[i]['media_url']
             video_url = None
@@ -231,10 +273,11 @@ class Media(commands.Cog):
             media_files.append((" ".join(hashtags), media_url, video_url))
 
         content = discord.Embed(colour=int(tweet.user.profile_link_color, 16))
-        content.set_author(icon_url=tweet.user.profile_image_url,
-                           name=f"@{tweet.user.screen_name}\n{media_files[0][0]}",
-                           url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}")
-
+        content.set_author(
+            icon_url=tweet.user.profile_image_url,
+            name=f"@{tweet.user.screen_name}\n{media_files[0][0]}",
+            url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}"
+        )
         for file in media_files:
             content.set_image(url=file[1].replace('.jpg', '?format=jpg&name=orig'))
             await ctx.send(embed=content)
@@ -245,24 +288,23 @@ class Media(commands.Cog):
 
             content._author = None
 
+
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx, *, query):
         """Search for a random gif"""
         scripts = []
-        if len(query.split(" ")) == 1:
-            url = f"https://gfycat.com/gifs/tag/{query}"
-            response = requests.get(url)
-            soup = BeautifulSoup(response.text, 'html.parser')
-            scripts += soup.find_all('script')
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            if len(query.split(" ")) == 1:
+                tasks.append(extract_scripts(session, f"https://gfycat.com/gifs/tag/{query}"))
 
-        url = f"https://gfycat.com/gifs/search/{query}"
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        scripts += soup.find_all('script')
+            tasks.append(extract_scripts(session, f"https://gfycat.com/gifs/search/{query}"))
+            scripts = sum(await asyncio.gather(*tasks), [])
+
         urls = []
-        for i in range(len(scripts)):
+        for script in scripts:
             try:
-                data = json.loads(scripts[i].text, encoding='utf-8')
+                data = json.loads(script.text, encoding='utf-8')
                 for x in data["itemListElement"]:
                     if "url" in x:
                         urls.append(x['url'])
@@ -276,118 +318,137 @@ class Media(commands.Cog):
 
         async def randomize():
             await msg.edit(content=f"**{query}**: {random.choice(urls)}")
-
-        await util.reaction_buttons(ctx, msg, {"❌": msg.delete, "🔁": randomize}, only_author=True)
+        
+        buttons = {
+            "❌": msg.delete,
+            "🔁": randomize
+        }
+        await util.reaction_buttons(ctx, msg, buttons, only_author=True)
 
     @commands.command()
     async def melon(self, ctx, timeframe=None):
-        """Melon music charts"""
+        """Melon music charts.
+
+        Usage:
+            >melon [realtime | day | month | rising]
+        """
         if timeframe not in ["day", "month"]:
             if timeframe == "realtime":
                 timeframe = ""
             elif timeframe == "rising":
                 timeframe = "rise"
             else:
-                return await ctx.send(f"```{self.client.command_prefix}melon [ realtime | day | month | rising ]"
-                                      "\n\nMelon music charts```")
+                return await util.send_command_help(ctx)
         
         url = f"https://www.melon.com/chart/{timeframe}/index.htm"
+        async with aiohttp.ClientSession() as session:
+            headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0"
+            }
+            async with session.get(url, headers=headers) as response:
+                soup = BeautifulSoup(await response.text(), 'html.parser')
 
-        response = requests.get(url, headers={
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0"
-        })
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-        song_titles = [util.escape_md(x.find('span').find('a').text)
-                       for x in soup.find_all('div', {'class': 'ellipsis rank01'})]
-        artists = [util.escape_md(x.find('a').text)
-                   for x in soup.find_all('div', {'class': 'ellipsis rank02'})]
-        albums = [util.escape_md(x.find('a').text)
-                  for x in soup.find_all('div', {'class': 'ellipsis rank03'})]
+        song_titles = [util.escape_md(x.find('span').find('a').text) for x in soup.find_all('div', {'class': 'ellipsis rank01'})]
+        artists = [util.escape_md(x.find('a').text) for x in soup.find_all('div', {'class': 'ellipsis rank02'})]
+        albums = [util.escape_md(x.find('a').text) for x in soup.find_all('div', {'class': 'ellipsis rank03'})]
         image = soup.find('img', {'onerror': 'WEBPOCIMG.defaultAlbumImg(this);'}).get('src')
 
-        content = discord.Embed(title=f"Melon top {len(song_titles)}" +
-                                      ("" if timeframe == '' else f" - {timeframe.capitalize()}"),
-                                colour=discord.Colour.green())
+        content = discord.Embed(color=discord.Color.from_rgb(0, 205, 60))
+        content.set_author(
+            name=f"Melon top {len(song_titles)}" + ("" if timeframe == '' else f" - {timeframe.capitalize()}"),
+            url=url
+        )
         content.set_thumbnail(url=image)
         content.timestamp = ctx.message.created_at
 
         pages = []
-        x = 0
-        for i in range(len(song_titles)):
-            if x == 10:
+        for i, (song, album, artist) in enumerate(zip(song_titles, albums, artists)):
+            if i != 0 and i % 10 == 0:
                 pages.append(content)
                 content = copy.deepcopy(content)
                 content.clear_fields()
-                x = 0
-            content.add_field(name=f"**{i + 1}.** {song_titles[i]}",
-                              value=f"**{artists[i]}** — {albums[i]}",
-                              inline=False)
-            x += 1
 
-        pages.append(content)
+            content.add_field(
+                name=f"`#{i+1}` {song}",
+                value=f"*by* **{artist}** *on* **{album}**",
+                inline=False
+            )
+        
+        if content._fields:
+            pages.append(content)
+
         await util.page_switcher(ctx, pages)
 
     @commands.command()
     async def xkcd(self, ctx, comic_id=None):
         """Get a random xkcd comic"""
         if comic_id is None:
-            url = "https://c.xkcd.com/random/comic/"
-            response = requests.get(url, headers={
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Connection": "keep-alive",
-                "Referer": "https://xkcd.com/",
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0"})
-            location = response.url
+            async with aiohttp.ClientSession() as session:
+                url = "https://c.xkcd.com/random/comic"
+                headers={
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Connection": "keep-alive",
+                    "Referer": "https://xkcd.com/",
+                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0"
+                }
+                async with session.get(url, headers=headers) as response:
+                    location = response.url
         else:
             location = f"https://xkcd.com/{comic_id}/"
         await ctx.send(location)
 
     @commands.command()
-    async def wikipedia(self, ctx, *query):
-        """Search for a wikipedia page"""
-        if query[0] == 'random':
-            search_string = wikipedia.random()
-        else:
-            search_string = " ".join(query)
+    async def wikipedia(self, ctx, *, query):
+        """Search from wikipedia, or get random page.
+
+        Usage:
+            >wikipedia <query>
+            >wikipedia random
+        """
+        if query == 'random':
+            query = await self.bot.loop.run_in_executor(None, wikipedia.random)
+        
         try:
-            page = wikipedia.page(search_string)
+            page = await self.bot.loop.run_in_executor(None, lambda: wikipedia.page(query))
             await ctx.send(page.url)
         except wikipedia.exceptions.DisambiguationError as disabiguation_page:
             await ctx.send(f"```{str(disabiguation_page)}```")
 
     @commands.command()
     async def google(self, ctx, *, query):
-        """Search anything from google.com"""
-        results = list(googlesearch.search(query, stop=10, pause=1.0, only_standard=True))
-        msg = await ctx.send(f"**#{1}: **{results[0]}")
-
-        await msg.add_reaction("⬅")
-        await msg.add_reaction("➡")
-
-        def check(_reaction, _user):
-            return _reaction.message.id == msg.id and _reaction.emoji in ["⬅", "➡"] and _user == ctx.author
-
-        i = 0
-        while True:
-            try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=300.0, check=check)
-            except asyncio.TimeoutError:
-                try:
-                    await msg.clear_reactions()
-                except discord.errors.NotFound:
-                    pass
+        """Search from google."""
+        results = await self.bot.loop.run_in_executor(
+            None, lambda: googlesearch.search(query, stop=10, pause=1.0, only_standard=True)
+        )
+        pages = util.TwoWayIterator([f"`#{i+1}` {x}" for i, x in enumerate(list(results))])
+        msg = await ctx.send(pages.current())
+        
+        async def next_result():
+            new_content = pages.next()
+            if new_content is None:
                 return
-            else:
-                if reaction.emoji == "⬅" and i > 0:
-                    i -= 1
-                    await msg.remove_reaction("⬅", user)
-                elif reaction.emoji == "➡" and i < len(results) - 1:
-                    i += 1
-                    await msg.remove_reaction("➡", user)
-                await msg.edit(content=f"**#{i + 1}: **{results[i]}", embed=None)
+            await msg.edit(content=new_content, embed=None)
 
+        async def previous_result():
+            new_content = pages.previous()
+            if new_content is None:
+                return
+            await msg.edit(content=new_content, embed=None)
 
-def setup(client):
-    client.add_cog(Media(client))
+        functions = {
+            "⬅": previous_result,
+            "➡": next_result
+        }
+        await util.reaction_buttons(ctx, msg, functions, only_author=True)
+
+def setup(bot):
+    bot.add_cog(Media(bot))
+    
+
+async def extract_scripts(session, url):
+    async with session.get(url) as response:
+        data = await response.text()
+        soup = BeautifulSoup(data, 'html.parser')
+        return soup.find_all('script', {'type': 'application/ld+json'})
+
