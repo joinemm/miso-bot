@@ -3,6 +3,7 @@ import arrow
 import random
 import re
 import aiohttp
+from time import time
 from lxml.html.clean import clean_html
 from discord.ext import commands
 from operator import itemgetter
@@ -474,17 +475,17 @@ class User(commands.Cog):
                 'html': formatted_html,
                 'width': 512, 
                 'height': 512,
-                'imageFormat': 'png'
+                'imageFormat': 'jpeg'
             }
             async with session.post('http://localhost:3000/html', data=data) as response: 
-                with open("downloads/profile.png", "wb") as f:
+                with open("downloads/profile.jpeg", "wb") as f:
                     while True:
                         block = await response.content.read(1024)
                         if not block:
                             break
                         f.write(block)
 
-        with open("downloads/profile.png", "rb") as f:
+        with open("downloads/profile.jpeg", "rb") as f:
             await ctx.send(file=discord.File(f))
         
     @commands.group()
