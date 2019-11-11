@@ -1,9 +1,10 @@
-from discord.ext import commands
 import os
 import sys
 import helpers.log as log
 import data.database as db
 import traceback
+from discord.ext import commands
+from time import time
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
@@ -53,9 +54,17 @@ async def on_ready():
 
 @bot.before_invoke
 async def before_any_command(ctx):
+    ctx.timer = time()
+    try:
+        await ctx.trigger_typing()
+    except discord.errors.Forbidden:
+        pass
+
+
+@bot.event
+async def on_command_completion(ctx):
     # prevent double invocation for subcommands
     if ctx.invoked_subcommand is None:
-        await ctx.trigger_typing()
         command_logger.info(log.log_command(ctx))
         db.log_command_usage(ctx)
 
