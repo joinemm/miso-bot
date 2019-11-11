@@ -237,8 +237,8 @@ class Miscellaneous(commands.Cog):
                                   "use `>horoscope list` if you don't know which one you are.")
 
         params = {
-            'sign', sign,
-            'day', 'today'
+            'sign': sign,
+            'day': 'today'
         }
         async with aiohttp.ClientSession() as session:
             async with session.post('https://aztro.sameerkumar.website/', params=params) as response:
