@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 import data.database as db
-import helpers.errormessages as errormsg
 import helpers.utilityfunctions as util
 
 
@@ -38,7 +37,7 @@ class Config(commands.Cog):
         """Set the welcome channel"""
         channel = await util.get_textchannel(ctx, textchannel)
         if channel is None:
-            return await ctx.send(errormsg.channel_not_found(textchannel))
+            return await ctx.send(":warning: Unknown channel")
 
         db.update_setting(ctx.guild.id, "welcome_channel", channel.id)
         await ctx.send(f"Welcome channel set to {channel.mention}")
@@ -77,7 +76,7 @@ class Config(commands.Cog):
         """Set starboard channel"""
         channel = await util.get_textchannel(ctx, textchannel)
         if channel is None:
-            return await ctx.send(errormsg.channel_not_found(textchannel))
+            return await ctx.send(":warning: Unknown channel")
 
         db.update_setting(ctx.guild.id, "starboard_channel", channel.id)
         await ctx.send(f"{channel.mention} is now the starboard channel")
@@ -116,7 +115,7 @@ class Config(commands.Cog):
         """Set a channel to be a voting channel"""
         channel = await util.get_textchannel(ctx, textchannel)
         if channel is None:
-            return await ctx.send(errormsg.channel_not_found(textchannel))
+            return await ctx.send(":warning: Unknown channel")
 
         db.execute("INSERT OR IGNORE INTO votechannels values(?, ?)", (ctx.guild.id, channel.id))
         await ctx.send(f"{channel.mention} is now a voting channel")
@@ -129,7 +128,7 @@ class Config(commands.Cog):
             try:
                 channel_id = int(textchannel)
             except ValueError:
-                return await ctx.send(errormsg.channel_not_found(textchannel))
+                return await ctx.send(":warning: Unknown channel")
         else:
             channel_id = channel.id
 
@@ -172,7 +171,7 @@ class Config(commands.Cog):
 
         thisrole = await util.get_role(ctx, role)
         if thisrole is None:
-            return await ctx.send(errormsg.role_not_found(role))
+            return await ctx.send(":warning: Unknown role")
 
         db.update_setting(ctx.guild.id, "muterole", thisrole.id)
         await ctx.send(f"Muterole set to `@{thisrole.name} ({thisrole.id})`")
@@ -187,7 +186,7 @@ class Config(commands.Cog):
 
         thisrole = await util.get_role(ctx, role)
         if thisrole is None:
-            return await ctx.send(errormsg.role_not_found(role))
+            return await ctx.send(":warning: Unknown role")
 
         db.update_setting(ctx.guild.id, "autorole", thisrole.id)
         await ctx.send(f"Autorole set to **{thisrole.name}** (`{thisrole.id}`)")

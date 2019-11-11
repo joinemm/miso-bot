@@ -1,20 +1,20 @@
 import discord
-from discord.ext import commands
-from wordcloud import WordCloud, STOPWORDS
 import numpy as np
 from PIL import Image
-import helpers.utilityfunctions as util
+from helpers import utilityfunctions as util
+from discord.ext import commands
+from wordcloud import WordCloud, STOPWORDS
 
 
 class Wordcloud(commands.Cog):
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot):
+        self.bot = bot
         self.mask = np.array(Image.open("html/cloud.png"))
 
     @commands.command()
     async def wordcloud(self, ctx, user, messages=1000):
-        """Create a word cloud of messages in the channel used in"""
+        """Create a word cloud of messages in the channel used in."""
         if int(messages) > 10000:
             return await ctx.send("For performance reasons the amount of messages is limited to 10000 for now!")
         if user in ['all', 'channel']:
@@ -31,15 +31,17 @@ class Wordcloud(commands.Cog):
                 all_words += message.content.split(" ")
 
         stopwords = set(STOPWORDS)
+        
+        wc = WordCloud(
+                background_color="#36393F",
+                max_words=500,
+                mask=self.mask,
+                stopwords=stopwords
+            )
 
-        # create wordcloud object
-        wc = WordCloud(background_color="#36393F",
-                       max_words=500,
-                       mask=self.mask,
-                       stopwords=stopwords)
-
-        # generate wordcloud
-        wc.generate(" ".join(all_words))
+        self.bot.loop.run_in_executor(
+            None, lambda: wc.generate(" ".join(all_words))
+        )
 
         # save wordcloud
         wc.to_file("downloads/wordcloud.png")
@@ -48,5 +50,5 @@ class Wordcloud(commands.Cog):
             await ctx.send(file=discord.File(img))
 
 
-def setup(client):
-    client.add_cog(Wordcloud(client))
+def setup(bot):
+    bot.add_cog(Wordcloud(bot))

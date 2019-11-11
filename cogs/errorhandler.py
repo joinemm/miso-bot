@@ -27,7 +27,7 @@ class Events(commands.Cog):
         if isinstance(error, commands.CommandNotFound):
             return
 
-        logger.error(f"Error in command [{ctx.command}]; {ctx.author} >{ctx.message.content}")
+        logger.error(f"Error in command {ctx.command}; {ctx.author} \"{ctx.message.content}\"")
 
 
         if isinstance(error, commands.DisabledCommand):

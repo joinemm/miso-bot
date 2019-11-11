@@ -10,8 +10,8 @@ logger = log.get_logger(__name__)
 
 class Notifications(commands.Cog):
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot):
+        self.bot = bot
         self.emojis = {}
 
     @commands.Cog.listener()
@@ -21,8 +21,9 @@ class Notifications(commands.Cog):
     def cache_emojis(self):
         for emoji in ['vivismirk', 'hyunjinwtf']:
             try:
-                self.emojis[emoji] = self.client.get_emoji(db.query("select id from emojis where name = ?",
-                                                                    (emoji,))[0][0])
+                self.emojis[emoji] = self.bot.get_emoji(
+                    db.query("select id from emojis where name = ?", (emoji,))[0][0]
+                )
             except TypeError as e:
                 self.emojis[emoji] = None
 
@@ -35,7 +36,7 @@ class Notifications(commands.Cog):
         if message.guild is None:
             return
 
-        if message.author.id == self.client.user.id:
+        if message.author.id == self.bot.user.id:
             return
 
         keywords = db.get_keywords(message.guild.id)
@@ -45,12 +46,13 @@ class Notifications(commands.Cog):
         for word, user_id in keywords:
             if user_id == message.author.id:
                 continue
+
             pattern = re.compile(r'(?:^|\W){0}(?:$|\W)'.format(word), flags=re.IGNORECASE)
             if pattern.findall(message.content):
-                user = message.guild.get_member(user_id)
-                if user is None:
+                member = message.guild.get_member(user_id)
+                if member is None:
                     continue
-                if user not in message.channel.members:
+                if member not in message.channel.members:
                     continue
 
                 # create and send notification message
@@ -68,6 +70,7 @@ class Notifications(commands.Cog):
 
         check = db.query("SELECT * FROM notifications WHERE guild_id = ? and user_id = ? and keyword = ?",
                          (ctx.guild.id, ctx.author.id, keyword))
+
         if check is not None:
             return await ctx.send(f"You already have this notification {self.emojis.get('hyunjinwtf')}")
 
@@ -83,7 +86,7 @@ class Notifications(commands.Cog):
         check = db.query("SELECT * FROM notifications WHERE guild_id = ? and user_id = ? and keyword = ?",
                          (ctx.guild.id, ctx.author.id, keyword))
         if check is None:
-            return await ctx.send(f"You don't even have a notification for that {self.emojis.get('hyunjinwtf')}")
+            return await ctx.send(f"You don't have that notification {self.emojis.get('hyunjinwtf')}")
 
         db.execute("DELETE FROM notifications where guild_id = ? and user_id = ? and keyword = ?",
                    (ctx.guild.id, ctx.author.id, keyword))
@@ -105,7 +108,7 @@ class Notifications(commands.Cog):
 
         content = discord.Embed(title=":love_letter: Your notifications", color=discord.Color.red())
         for guild_id in guilds:
-            server = self.client.get_guild(guild_id)
+            server = self.bot.get_guild(guild_id)
             if server is None:
                 continue
             content.add_field(name=server.name, value='\n'.join([f"└`{x}`" for x in guilds.get(guild_id)]))
@@ -120,20 +123,26 @@ class Notifications(commands.Cog):
         await send_notification(ctx.author, ctx.message)
 
 
-def setup(client):
-    client.add_cog(Notifications(client))
+def setup(bot):
+    bot.add_cog(Notifications(bot))
 
 
 async def send_notification(user, message, pattern=None):
     content = discord.Embed(color=message.author.color)
-    content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
+    content.set_author(
+        name=f"{message.author}",
+        icon_url=message.author.avatar_url
+    )
     if pattern is not None:
         highlighted_text = re.sub(pattern, lambda x: f'**{x.group(0)}**', message.content)
     else:
         highlighted_text = message.content.replace(f">notifytest ", "")
-    content.description = f"> {highlighted_text}\n" \
-        f"[Go to message]({message.jump_url})"
-    content.set_footer(text=f"{message.guild.name} | #{message.channel.name}", icon_url=message.guild.icon_url)
+
+    content.description = f"> {highlighted_text}\n[Go to message]({message.jump_url})"
+    content.set_footer(
+        text=f"{message.guild.name} | #{message.channel.name}",
+        icon_url=message.guild.icon_url
+    )
     content.timestamp = message.created_at
 
     await user.send(embed=content)

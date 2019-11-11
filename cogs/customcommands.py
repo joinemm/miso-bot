@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 import data.database as db
-import helpers.errormessages as errormsg
 import helpers.utilityfunctions as util
 import helpers.log as log
 
