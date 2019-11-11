@@ -1,10 +1,11 @@
 import os
 import sys
-import helpers.log as log
-import data.database as db
+import discord
 import traceback
 from discord.ext import commands
 from time import time
+from helpers import log
+from data import database as db
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
