@@ -1,3 +1,4 @@
+from time import time
 import discord
 import arrow
 import random
@@ -21,34 +22,36 @@ class User(commands.Cog):
 
     async def get_rank(self, ctx, user, table, _global=False):
         """Get user's xp ranking from given table."""
+        ALLSUM = "SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23)"
         if user.bot:
             return 'BOT'
 
         users = []
         if _global:
-            user_ids = db.query("SELECT DISTINCT user_id FROM %s" % table)
-            for user_id in [x[0] for x in user_ids]:
-                rows = db.query("SELECT * FROM %s WHERE user_id = ?" % table, (user_id,))
-                this_user = self.bot.get_user(user_id)
-                if this_user is None or this_user.bot:
-                    continue
-
-                users.append((user_id, sum(sum(row[3:]) for row in rows)))
+            rows = db.query(
+                "SELECT user_id, %s FROM %s GROUP BY user_id ORDER BY %s DESC" % (ALLSUM, table, ALLSUM)
+            )
         else:
-            data = db.query("SELECT * FROM %s WHERE guild_id = ?" % table, (ctx.guild.id,))
-            for row in data:
-                this_user = ctx.guild.get_member(row[1])
-                if this_user is None or this_user.bot:
-                    continue
-                users.append((row[1], sum(row[3:])))
+            rows = db.query(
+                "SELECT user_id, %s FROM %s WHERE guild_id = ? GROUP BY user_id ORDER BY %s DESC" % (ALLSUM, table, ALLSUM),
+                (ctx.guild.id,)
+            )
 
-        ranking = "N/A"
-        for i, (userid, xp) in enumerate(sorted(users, key=itemgetter(1), reverse=True), start=1):
-            if userid == user.id:
-                ranking = f"#{i}/{len(users)}"
+        i = 1
+        total = 0
+        ranking = 'N/A'
+        for user_id, total_xp in rows:
+            this_user = self.bot.get_user(user_id)
+            if this_user is None or this_user.bot:
+                continue
+            else:
+                total += 1
 
-        return ranking
+            if user_id == user.id:
+                ranking = i
 
+        return f"#{ranking}/{total}"
+        
     @commands.command(aliases=['dp'])
     async def avatar(self, ctx, *, user: discord.User=None):
         """Get user's profile picture."""
@@ -417,15 +420,19 @@ class User(commands.Cog):
 
         activity = str(db.get_user_activity(ctx.guild.id, user.id))
         fishydata = db.fishdata(user.id)
+
         local_xp_rows = db.query("SELECT * FROM activity WHERE user_id = ? AND guild_id = ?", (user.id, ctx.guild.id))
         local_xp = 0
         if local_xp_rows is not None:
             local_xp = sum(list(local_xp_rows[0][3:]))
+            local_rank = await self.get_rank(ctx, user, 'activity')
+
         global_xp_rows = db.query("SELECT * FROM activity WHERE user_id = ?", (user.id,))
         global_xp = 0
         if global_xp_rows is not None:
             global_xp = sum([sum(row[3:]) for row in global_xp_rows])
-        
+            global_rank = await self.get_rank(ctx, user, 'activity', _global=True)
+         
         patrons = db.query("select user_id from patrons where currently_active = 1")
         if user.id == self.bot.owner.id:
             corner_icon = 'fa-dev'
@@ -456,9 +463,9 @@ class User(commands.Cog):
             'DESCRIPTION': description,
             'FISHY': fishydata.fishy if fishydata is not None else 0,
             'LVL_LOCAL': util.get_level(local_xp),
-            'RANK_LOCAL': await self.get_rank(ctx, user, 'activity'),
+            'RANK_LOCAL': local_rank,
             'LVL_GLOBAL': util.get_level(global_xp),
-            'RANK_GLOBAL': await self.get_rank(ctx, user, 'activity', _global=True),
+            'RANK_GLOBAL': global_rank,
             'ACTIVITY_ICON': activity_formatted.get('icon'),
             'ACTIVITY_TEXT': activity_formatted.get('text'),
             'ACTIVITY_DATA': activity,
@@ -475,17 +482,17 @@ class User(commands.Cog):
                 'html': formatted_html,
                 'width': 512, 
                 'height': 512,
-                'imageFormat': 'jpeg'
+                'imageFormat': 'png'
             }
             async with session.post('http://localhost:3000/html', data=data) as response: 
-                with open("downloads/profile.jpeg", "wb") as f:
+                with open("downloads/profile.png", "wb") as f:
                     while True:
                         block = await response.content.read(1024)
                         if not block:
                             break
                         f.write(block)
 
-        with open("downloads/profile.jpeg", "rb") as f:
+        with open("downloads/profile.png", "rb") as f:
             await ctx.send(file=discord.File(f))
         
     @commands.group()
