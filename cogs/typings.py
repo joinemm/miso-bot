@@ -1,19 +1,19 @@
 import discord
-from discord.ext import commands
-import data.database as db
 import random
 import asyncio
-from operator import itemgetter
-import helpers.utilityfunctions as util
 import arrow
 import itertools
 import json
+from discord.ext import commands
+from operator import itemgetter
+from helpers import utilityfunctions as util
+from data import database as db
 
 
 class Typings(commands.Cog):
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot):
+        self.bot = bot
         self.separators = [' ', ' ', ' ', '  ', '  ', ' ']
         self.fancy_font = '𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣'
         self.fancy_font_2 = '𝘢𝘣𝘤𝘥𝘦𝘧𝘨𝘩𝘪𝘫𝘬𝘭𝘮𝘯𝘰𝘱𝘲𝘳𝘴𝘵𝘶𝘷𝘸𝘹𝘺𝘻'
@@ -59,7 +59,7 @@ class Typings(commands.Cog):
 
     @commands.group()
     async def typing(self, ctx):
-        """typing speed competition"""
+        """Test your typing speed."""
         await util.command_group_help(ctx)
 
     @typing.command(name='test')
@@ -88,7 +88,7 @@ class Typings(commands.Cog):
             return _message.author == ctx.author and _message.channel == ctx.channel
 
         try:
-            message = await self.client.wait_for('message', timeout=300.0, check=check)
+            message = await self.bot.wait_for('message', timeout=300.0, check=check)
         except asyncio.TimeoutError:
             return await ctx.send("Too slow.")
 
@@ -102,6 +102,7 @@ class Typings(commands.Cog):
 
     @typing.command(name='race')
     async def typing_race(self, ctx, language=None, wordcount: int = 25):
+        """Race against other people."""
         if language is None:
             language = wordcount
         try:
@@ -115,10 +116,13 @@ class Typings(commands.Cog):
         if wordcount > 250:
             return await ctx.send("Maximum word count is 250!")
 
-        content = discord.Embed(title=f":keyboard:  Starting a new typing race | {wordcount} words",
-                                color=discord.Color.gold())
+        content = discord.Embed(
+            title=f":keyboard:  Starting a new typing race | {wordcount} words",
+            color=discord.Color.gold()
+        )
         content.description = "React with :notepad_spiral: to enter the race.\n" \
                               "React with :white_check_mark: to start the race."
+
         content.add_field(name="Participants", value=f"**{ctx.author}**")
         enter_message = await ctx.send(embed=content)
 
@@ -158,16 +162,19 @@ class Typings(commands.Cog):
                     content.add_field(name="Participants", value='\n'.join(f"**{x}**" for x in players))
                     await enter_message.edit(embed=content)
                 elif reaction.emoji == check_emoji:
-                    if len(players) < 2:
-                        cant_race_alone = await ctx.send("You can't race alone!")
-                        await asyncio.sleep(1)
-                        try:
-                            await cant_race_alone.delete()
-                            await enter_message.remove_reaction(check_emoji, user)
-                        except discord.errors.Forbidden:
-                            await ctx.send("`error: i'm missing required discord permission [ manage messages ]`")
+                    if user == ctx.author:
+                        if len(players) < 2:
+                            cant_race_alone = await ctx.send("You can't race alone!")
+                            await asyncio.sleep(1)
+                            try:
+                                await cant_race_alone.delete()
+                                await enter_message.remove_reaction(check_emoji, user)
+                            except discord.errors.Forbidden:
+                                await ctx.send("`error: i'm missing required discord permission [ manage messages ]`")
+                        else:
+                            race_in_progress = True
                     else:
-                        race_in_progress = True
+                        await enter_message.remove_reaction(check_emoji, user)
 
         if not race_in_progress:
             content.remove_field(0)
@@ -204,7 +211,7 @@ class Typings(commands.Cog):
                        and _message.author not in completed_players
 
             try:
-                message = await self.client.wait_for('message', timeout=300.0, check=check)
+                message = await self.bot.wait_for('message', timeout=300.0, check=check)
             except asyncio.TimeoutError:
                 race_in_progress = False
 
@@ -293,8 +300,8 @@ class Typings(commands.Cog):
         await ctx.send(embed=content)
 
 
-def setup(client):
-    client.add_cog(Typings(client))
+def setup(bot):
+    bot.add_cog(Typings(bot))
 
 
 def save_wpm(user, wpm, accuracy, wordcount, language, race):

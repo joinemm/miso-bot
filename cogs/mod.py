@@ -1,36 +1,33 @@
 import discord
-from discord.ext import commands
-import data.database as db
-import helpers.errormessages as errormsg
-import helpers.utilityfunctions as util
 import asyncio
+from discord.ext import commands
+from data import database as db
+from helpers import utilityfunctions as util
 
 
 class Mod(commands.Cog):
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot):
+        self.bot = bot
 
     @commands.command()
     @commands.has_permissions(manage_roles=True)
-    async def mute(self, ctx, user, *duration):
-        """Mute user"""
+    async def mute(self, ctx, user, *, duration):
+        """Mute user."""
         muterole = ctx.message.guild.get_role(db.get_setting(ctx.guild.id, "muterole"))
         if muterole is None:
-            await ctx.send(f"Muterole for this server is invalid or not set, please use `>muterole` to set it.")
-            return
+            return await ctx.send(f"Muterole for this server is invalid or not set, please use `>muterole` to set it.")
 
         member = await util.get_member(ctx, user)
         if member is None:
-            await ctx.send(errormsg.user_not_found(user))
-            return
+            return await ctx.send(":warning: User `{user}` not found")
 
         if member.id == 133311691852218378:
             return await ctx.send("no.")
 
         t = None
         if duration:
-            t = util.timefromstring(" ".join(duration))
+            t = util.timefromstring(duration)
 
         await member.add_roles(muterole)
         await ctx.send(f"Muted {member.mention}" + (f"for **{util.stringfromtime(t)}**" if t else ""))
@@ -44,62 +41,61 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_roles=True)
     async def unmute(self, ctx, user):
-        """Unmute user"""
+        """Unmute user."""
         muterole = ctx.message.guild.get_role(db.get_setting(ctx.guild.id, "muterole"))
         if muterole is None:
-            await ctx.send(f"Muterole for this server is invalid or not set, please use `>muterole` to set it.")
-            return
+            return await ctx.send(f"Muterole for this server is invalid or not set, please use `>muterole` to set it.")
+
         member = await util.get_member(ctx, user)
         if member is None:
-            await ctx.send(errormsg.user_not_found(user))
-            return
+            return await ctx.send(":warning: User `{user}` not found")
+
         await member.remove_roles(muterole)
         await ctx.send(f"Unmuted {member.mention}")
 
     @commands.command()
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, user):
-        """Ban user"""
+        """Ban user."""
         u = await util.get_user(ctx, user)
         if u is None:
             try:
-                u = await self.client.fetch_user(int(user))
-            except ValueError:
-                return await ctx.send(f"Invalid user or id `{user}`")
+                u = await self.bot.fetch_user(int(user))
+            except (ValueError, discord.NotFound):
+                return await ctx.send(f":warning: Invalid user or id `{user}`")
 
         if u.id == 133311691852218378:
             return await ctx.send("no.")
 
-        content = discord.Embed(title="Ban user?", color=discord.Color.red())
+        content = discord.Embed(
+            title=":hammer: Ban user?",
+            color=discord.Color.red()
+        )
         try:
             content.description = f"{u.mention}\n**{u.name}#{u.discriminator}**\n{u.id}"
         except AttributeError as e:
-            print(e)
             # unknown user, most likely not in guild so just ban without confirmation
             await ctx.guild.ban(u)
-            return await ctx.send(f"Banned `{u}`")
+            return await ctx.send(f":hammer: Banned `{u}`")
 
         # send confirmation message
         msg = await ctx.send(embed=content)
-        await msg.add_reaction("✅")
-        await msg.add_reaction("❌")
 
-        def check(_reaction, _user):
-            return _reaction.message.id == msg.id and _reaction.emoji in ["✅", "❌"] \
-                   and _user == ctx.author
-        try:
-            reaction, user = await self.client.wait_for('reaction_add', timeout=3600.0, check=check)
-        except asyncio.TimeoutError:
-            pass
-        else:
-            if reaction.emoji == "✅":
-                await ctx.guild.ban(u)
-            elif reaction.emoji == "❌":
-                pass
+        async def confirm_ban():
+            content.title = ":white_check_mark: User banned"
+            await msg.edit(embed=content)
+            await ctx.guild.ban(u)
 
-        await msg.remove_reaction("✅", self.client.user)
-        await msg.remove_reaction("❌", self.client.user)
+        async def cancel_ban():
+            content.title = ":x: Ban cancelled"
+            await msg.edit(embed=content)
 
+        functions = {
+            "✅": confirm_ban,
+            "❌": cancel_ban
+        }
 
-def setup(client):
-    client.add_cog(Mod(client))
+        await util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+
+def setup(bot):
+    bot.add_cog(Mod(bot))

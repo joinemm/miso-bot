@@ -1,8 +1,8 @@
 import sqlite3
-from collections import namedtuple
 import json
-from functools import reduce
 import random
+from collections import namedtuple
+from functools import reduce
 
 
 SQLDATABASE = 'data/database.db'
