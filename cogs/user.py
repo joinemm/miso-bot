@@ -3,7 +3,6 @@ import arrow
 import random
 import re
 import aiohttp
-from time import time
 from lxml.html.clean import clean_html
 from discord.ext import commands
 from operator import itemgetter
