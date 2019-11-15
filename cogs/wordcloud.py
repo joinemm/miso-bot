@@ -39,7 +39,7 @@ class Wordcloud(commands.Cog):
                 stopwords=stopwords
             )
 
-        self.bot.loop.run_in_executor(
+        await self.bot.loop.run_in_executor(
             None, lambda: wc.generate(" ".join(all_words))
         )
 
