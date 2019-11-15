@@ -153,7 +153,7 @@ class Miscellaneous(commands.Cog):
             'y': 0
         }
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as session:
+            async with session.get(url, params=params) as response:
                 soup = BeautifulSoup(await response.text(), 'html.parser')
 
         percentage = int(soup.find("font", {'color': 'green'}).find('b').text.strip('%'))

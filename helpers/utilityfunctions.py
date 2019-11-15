@@ -491,7 +491,7 @@ def activityhandler(activity_tuple):
     :param activity_tuple : Discord activity tuple (None, Spotify, Streaming, Playing)
     :return               : Activity dictionary
     """
-    if not activity_tuple:
+    if not activity_tuple or isinstance(activity_tuple, int):
         return {'text': '', 'icon': ''}
 
     activity = activity_tuple[0]
@@ -501,13 +501,12 @@ def activityhandler(activity_tuple):
         activity_dict['text'] = f"Listening to <strong>{activity.title}</strong><br>by <strong>{activity.artist}</strong>"
         activity_dict['icon'] = 'fab fa-spotify'
     elif isinstance(activity, discord.Game):
-        activity_dict['text'] = f"Playing {activity.name}<br>for{stringfromtime((datetime.datetime.utcnow() - activity.start).totalseconds(), accuracy=1)}"
+        activity_dict['text'] = f"Playing {activity.name}<br>for {stringfromtime((datetime.datetime.utcnow() - activity.start).total_seconds(), accuracy=1)}"
         activity_dict['icon'] = 'fas fa-gamepad'
     elif isinstance(activity, discord.Streaming):
         activity_dict['text'] = f"Streaming {activity.details} as {activity.twitch_name}<br>{activity.name}"
         activity_dict['icon'] = 'fab fa-twitch'
     else:
-        print(str(activity))
         activity_dict['text'] = f"{activity.type.name} {activity.name}"
         activity_dict['icon'] = 'fab fa-discord'
     return activity_dict
