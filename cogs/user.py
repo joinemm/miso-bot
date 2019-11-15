@@ -37,10 +37,9 @@ class User(commands.Cog):
                 (ctx.guild.id,)
             )
 
-        i = 1
         total = 0
         ranking = 'N/A'
-        for user_id, total_xp in rows:
+        for i, (user_id, total_x) in enumerate(rows, start=1):
             this_user = self.bot.get_user(user_id)
             if this_user is None or this_user.bot:
                 continue
