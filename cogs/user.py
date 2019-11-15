@@ -1,4 +1,3 @@
-from time import time
 import discord
 import arrow
 import random
