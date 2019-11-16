@@ -504,9 +504,10 @@ class User(commands.Cog):
 
     @editprofile.command(name='background')
     async def editprofile_background(self, ctx, url):
-        if ctx.author != self.bot.appinfo.owner or \
-                ctx.author.id not in [x[0] for x in db.query("SELECT user_id FROM patrons")]:
-            return await ctx.send("Sorry, only patreon supporters can use this feature!")
+        patrons = db.query("select user_id from patrons where currently_active = 1")
+        if ctx.author != self.bot.owner:
+            if ctx.author.id not in [x[0] for x in patrons]:
+                return await ctx.send("Sorry, only patreon supporters can use this feature!")
         db.execute("INSERT OR IGNORE INTO profiles VALUES (?, ?, ?, ?)", (ctx.author.id, None, None, None))
         db.execute("UPDATE profiles SET background_url = ? WHERE user_id = ?", (url, ctx.author.id))
         await ctx.send("Background image updated!")
