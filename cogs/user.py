@@ -3,7 +3,7 @@ import arrow
 import random
 import re
 import aiohttp
-from lxml.html.clean import clean_html
+from lxml.html import clean
 from discord.ext import commands
 from operator import itemgetter
 from libraries import plotter
@@ -36,13 +36,15 @@ class User(commands.Cog):
             )
 
         total = 0
+        i = 0
         ranking = 'N/A'
-        for i, (user_id, total_x) in enumerate(rows, start=1):
+        for user_id, total_x in rows:
             this_user = self.bot.get_user(user_id)
             if this_user is None or this_user.bot:
                 continue
             else:
                 total += 1
+                i += 1
 
             if user_id == user.id:
                 ranking = i
@@ -441,10 +443,11 @@ class User(commands.Cog):
         activity_formatted = util.activityhandler(user.activities)
 
         description = db.query("SELECT description FROM profiles WHERE user_id = ?", (user.id,))
-        if description is None:
-            description = "use >editprofile to change your description"
+        if description is None or description[0][0] is None:
+            description = "<p>use >editprofile to change your description</p>"
         else:
-            description = clean_html(description[0][0])
+            cleaner = clean.Cleaner(safe_attrs_only=True)
+            description = cleaner.clean_html(description[0][0].replace('\n', '<br>'))
 
         background_url = db.query("SELECT background_url FROM profiles WHERE user_id = ?", (user.id,))
         if background_url is None:
@@ -496,10 +499,12 @@ class User(commands.Cog):
     async def editprofile(self, ctx):
         await util.command_group_help(ctx)
 
-    @editprofile.command(name='description')
+    @editprofile.command(name='description', rest_is_raw=True)
     async def editprofile_description(self, ctx, *, text):
+        if text.strip() == '':
+            return await util.send_command_help(ctx)
         db.execute("INSERT OR IGNORE INTO profiles VALUES (?, ?, ?, ?)", (ctx.author.id, None, None, None))
-        db.execute("UPDATE profiles SET description = ? WHERE user_id = ?", (text, ctx.author.id))
+        db.execute("UPDATE profiles SET description = ? WHERE user_id = ?", (text[1:], ctx.author.id))
         await ctx.send("Description updated!")
 
     @editprofile.command(name='background')

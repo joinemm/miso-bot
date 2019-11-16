@@ -49,7 +49,7 @@ body {
 .chartcontainer {
   width: 100%;
   position: absolute;
-  bottom: 310px;
+  bottom: 311px;
   left: -50px;
 }
 
@@ -96,7 +96,7 @@ body {
 
 .username {
   margin: 0;
-  padding-bottom: 5px;
+  padding-bottom: 0px;
   border-bottom: 2px solid white;
 }
 
@@ -159,9 +159,11 @@ body {
       <div class="ct-chart"></div>
     </div>
     <div class="sidebar-items">
-      <div class="name-desc">
+      <div class="name-desc" >
         <h1 class="username">%%USERNAME%%</h1>
-        <p class="desc">%%DESCRIPTION%%</p>
+	<span class='desc'>
+	  %%DESCRIPTION%%
+	</span>
       </div>
       <ul class='sidebar-list'>
         <li class='sidebar-list-item'><i class="fas fa-fish"></i> %%FISHY%%</li>
@@ -213,7 +215,7 @@ var data = {
 // As options we currently only set a static size of 300x200 px. We can also omit this and use aspect ratio containers
 // as you saw in the previous example
 var options = {
-  width: 599,
+  width: 600,
   height: 150,
   low: 0,
   showArea: true,
