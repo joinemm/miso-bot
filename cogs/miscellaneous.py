@@ -36,48 +36,60 @@ class Miscellaneous(commands.Cog):
         self.bot = bot
 
     @commands.command(aliases=['random'])
-    async def rng(self, ctx, cap: int):
-        """Random number generator"""
-        choice = random.randint(0, cap)
-        await ctx.send(f"Random number [0-{cap}]: **{choice}**")
+    async def rng(self, ctx, *, number_range):
+        """Random number generator.
+
+        Usage:
+            >rng <n>
+            >rng <n-m>
+        """
+        values = [int(x) for x in number_range.split('-')]
+        if len(values) == 2:
+            start, end = values
+        else:
+            start = 0
+            end = values[0]
+        choice = random.randint(start, end)
+        await ctx.send(f"Random range `{start}-{end}`\n> **{choice}**")
 
     @commands.command()
     async def ascii(self, ctx, *, text):
-        """Turn text into fancy ascii art"""
+        """Turn text into fancy ascii art."""
         async with aiohttp.ClientSession() as session:
             async with session.get(f"https://artii.herokuapp.com/make?text={text}") as response:
                 content = await response.text()
 
-        await ctx.send(content)
+        await ctx.send(f"```\n{content}\n```")
 
     @commands.command(aliases=['8ball'])
     async def eightball(self, ctx, *, question):
-        """Ask a yes/no question"""
-        if question:
-            choices = [
-                "Yes, definitely",
-                "Yes",
-                "Most likely yes",
-                "I think so, yes",
-                "Absolutely!",
-                "Maybe",
-                "Perhaps",
-                "Possibly", 
-                "I don't think so",
-                "No",
-                "Most likely not",
-                "Absolutely not!",
-                "There is no way"
-            ]
-            answer = random.choice(choices)
-            question = question + ('?' if not question.endswith('?') else '')
-            await ctx.send(f"> {question}\n**{answer}**")
-        else:
-            await ctx.send("You must ask something to receive an answer!")
+        """Ask a yes/no question."""
+        choices = [
+            "Yes, definitely",
+            "Yes",
+            "Most likely yes",
+            "I think so, yes",
+            "Absolutely!",
+            "Maybe",
+            "Perhaps",
+            "Possibly", 
+            "I don't think so",
+            "No",
+            "Most likely not",
+            "Absolutely not!",
+            "There is no way"
+        ]
+        answer = random.choice(choices)
+        question = question + ('?' if not question.endswith('?') else '')
+        await ctx.send(f"> {question}\n**{answer}**")
 
     @commands.command()
     async def choose(self, ctx, *, choices):
-        """Choose from given options. Split options with 'or'"""
+        """Choose from given options.
+
+        Usage:
+            >choose <thing_1> or <thing_2> or ... or <thing_n>
+        """
         choices = choices.split(" or ")
         if len(choices) < 2:
             return await ctx.send("Give me at least 2 options to choose from! (separate options with `or`)")
@@ -98,7 +110,7 @@ class Miscellaneous(commands.Cog):
 
     @stan.command()
     async def update(self, ctx):
-        """Update the artist database"""
+        """Update the artist database."""
         artist_list_old = db.get_from_data_json(['artists'])
         artist_list_new = set()
         urls_to_scrape = [
@@ -138,7 +150,11 @@ class Miscellaneous(commands.Cog):
 
     @commands.command()
     async def ship(self, ctx, *, names):
-        """Ship two people, separate names with 'and'"""
+        """Ship two names.
+
+        Usage:
+            >ship <name> and <name>
+        """
         nameslist = names.split(' and ')
         if not len(nameslist) == 2:
             nameslist = names.split(" ", 1)
@@ -221,9 +237,9 @@ class Miscellaneous(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def clap(self, ctx, *words):
+    async def clap(self, ctx, *sentence):
         """Add a clap emoji between words."""
-        await ctx.send(' 👏 '.join(words) + ' 👏')
+        await ctx.send(' 👏 '.join(sentence) + ' 👏')
 
     @commands.group(aliases=['hs'])
     async def horoscope(self, ctx):
@@ -261,7 +277,7 @@ class Miscellaneous(commands.Cog):
 
     @horoscope.command()
     async def set(self, ctx, sign):
-        """Set your sunsign"""
+        """Set your sunsign."""
         hs = [
             'aries',
             'taurus',
@@ -285,7 +301,7 @@ class Miscellaneous(commands.Cog):
 
     @horoscope.command()
     async def list(self, ctx):
-        """Get list of all sunsigns"""
+        """Get list of all sunsigns."""
         sign_list = [
             "`(Mar 21-Apr 19)` **Aries**",
             "`(Apr 20-May 20)` **Taurus**",
@@ -301,16 +317,23 @@ class Miscellaneous(commands.Cog):
             "`(Feb 19-Mar 20)` **Pisces**"
         ]
         content = discord.Embed(color=discord.Color.gold())
-        content.title = f"Sunsign list"
+        content.title = "Sunsign list"
         content.description = '\n'.join(sign_list)
         return await ctx.send(embed=content)
 
     @commands.group(case_insensitive=True)
     async def idol(self, ctx):
+        """Kpop idols database."""
         await util.command_group_help(ctx)
 
     @idol.command()
     async def random(self, ctx, gender=None):
+        """Random kpop idol.
+
+        Usage:
+            >idol random
+            >idol random [girl | boy]
+        """
         if gender is not None:
             gender = gender.lower()
             if gender in ['f', 'girl', 'girls']:
@@ -335,13 +358,12 @@ class Miscellaneous(commands.Cog):
         
         await ctx.send(embed=content)
 
-    @commands.command(name="emoji")
+    @commands.command(name="emoji", aliases=['emote'])
     async def big_emoji(self, ctx, emoji):
-        """
-        Get source image and stats of emoji
+        """Get source image and stats of emoji.
 
         Will display additional info if Miso is in the server where the emoji is located in.
-        Displaying who added the emoji requires [manage_emojis] permission!
+        Displaying who added the emoji requires Miso to have manage emojis permission!
         
         Usage:
             >emoji :emoji:
@@ -368,7 +390,7 @@ class Miscellaneous(commands.Cog):
             else:
                 content.description += f"Added"
             
-            content.description += f" on `{arrow.get(emoji.created_at).format('D/M/YYYY')}`\nLocated in `{emoji.guild}`"
+            content.description += f" on {arrow.get(emoji.created_at).format('D/M/YYYY')}\nLocated in **{emoji.guild}**"
 
         else:
             # is partial emoji
