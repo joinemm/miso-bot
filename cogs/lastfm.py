@@ -615,7 +615,8 @@ async def get_playcount(artist, username, reference=None):
     data = await api_request({
         "method": "artist.getinfo", 
         "user": username, 
-        "artist": artist
+        "artist": artist,
+        "autocorrect": 1
     })
     try:
         count = int(data['artist']['stats']['userplaycount'])
