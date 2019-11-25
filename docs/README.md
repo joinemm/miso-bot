@@ -1,69 +1,35 @@
-# Miso Bot
----
-# Configuration
+# Info
 
-#### Member join and leave messages
+Get basic information about the bot.
 
-Set the channel where join and leave messages are sent in.
+> \>info
 
-> \>welcomeconfig channel <textchannel\>
+Patreon link and the list of supporters.
 
-Set a custom welcome message.   
-You can use these placeholders and they will be filled accordingly:
-- `{user}` = `username#1234`
-- `{username}` = `username`
-- `{mention}` = `@username`
-- `{guild}` = `servername`
+> \>patreon  
+> \>patrons
 
-> \>welcomeconfig message <text...>
+Get the bot's ping.
 
-Enables or disables the welcome messages.
+> \>ping
 
-> \>welcomeconfig [ enable | disable ]
+See statistics of the bot like uptime and memory usage.
 
-#### Starboard
+> \>status
 
-React to a message with a star.    
-Once it reaches certain amount of stars (default 3), it will be posted on the starboard!
+Github commit history.
 
-Set the starboard channel.
+> \>changelog
 
-> \>starboard channel <textchannel\>
+Statistics about command usage.
 
-Change the amount of required reactions.
+> \>commandstats server [user]    
+> \>commandstats global [user]    
+> \>commandstats <command\>
 
-> \>starbard amount <number\>
+See information about any discord ID.
 
-Enable or disable the starboard functionality
-
-> \>starboard [ enable | disable ]
-
-#### Votechannels
-
-Messages posted on votechannels will automatically get upvote and downvote reactions.    
-Useful in suggestion channels and such.
-
-> \>votechannel [ add | remove ] <textchannel\>    
-
-#### Roles
-
-Set the role added when muting someone.    
-For proper muterole configuration you must disable `send messages` for the role in every channel.
-
-> \>muterole <role\>   
-> \>muterole none
-
-Set the role applied automatically for new members who join the server.
-
-> \>autorole <role\>   
-> \>autorole none
-
-#### Other
-
-Disable or enable levelup messages.    
-Your levels will still be calculated in the background.
-
-> \>levelupmessages [ enable | disable ]
+> \>inspect <id\>
 
 ---
 
@@ -104,31 +70,6 @@ See statistics about your or other user's fishing.
 > \>fishystats    
 > \>fishystats <member\>  
 > \>fishystats global
-
----
-
-# Info
-
-Get basic information about the bot.
-
-> \>info
-
-Patreon link and the list of supporters.
-
-> \>patreon  
-> \>patrons
-
-Get the bot's ping.
-
-> \>ping
-
-See statistics of the bot like uptime and memory usage.
-
-> \>status
-
-Github commit history.
-
-> \>changelog
 
 ---
 
@@ -180,11 +121,7 @@ Lists all your notification keywords.
 
 # Media
 
-Analyze a spotify playlist from the URI or url.
-
-> \>spotify <URI\> [amount]
-
-Get realtime / daily / monthly chart from Melon.
+Melon music charts.
 
 > \>melon <timeframe\>
 
@@ -251,13 +188,13 @@ Then you can check various top lists.
 Show your most recently listened to tracks, or the one currently playing in embed or youtube link form.
 
 > \>fm recent  
-> \>fm nowplaying    
+> \>fm nowplaying
 > \>fm youtube
 
 Show artist specific data from your listens.
 
-> \>fm artist toptracks <artist\>    
-> \>fm artist topalbums <artist\>
+> \>fm artist [timeframe] toptracks <artist\>    
+> \>fm artist [timeframe] topalbums <artist\>
 
 Generate a visual chart of your data.    
 You can optionally specify datatype `( artist | album | recent )`, timeframe or size of the chart in any order.    
@@ -275,6 +212,10 @@ See your artist crowns on this server.
 
 > \>crowns
 
+Unlink you last.fm account.
+
+> \>fm unset
+
 ---
 
 # Users and levels
@@ -288,30 +229,36 @@ The bot will start counting xp from the moment it's invited, so past messages wo
 ---
 Shows your server activity graph per hour, along with your xp and level information.
 
-> \>activity    
-> \>activity <user\>
+> \>activity [user]
 
 Show your daily/weekly/monthly/overall xp ranking
 
-> \>rank    
-> \>rank <user\>
+> \>rank [user]
 
 Get user's profile picture.
 
-> \>avatar    
-> \>avatar <user\>
+> \>avatar [user] 
 
 User information.
 
-> \>userinfo    
-> \>userinfo <user>
+> \>userinfo [user]
 
 Show various leaderboards
 
 > \>leaderboard levels [global] <timeframe\>    
 > \>leaderboard fishy [global]    
-> \>leaderboard crowns
+> \>leaderboard crowns    
+> \>leaderboard wpm [global]    
+> \>leaderboard fishysize
 
+Your personal profile.
+
+> \>profile [user]
+
+Edit your profile.
+
+> \>editprofile description <text...\>    
+> \>editprofile background <image url\>
 ---
 
 # Server
@@ -332,9 +279,9 @@ Get list of all roles on the server, and information about them.
 
 # Images
 
-Input text into various meme images. (currently just one).
+Input text into various meme images.
 
-> \>olivia <text...>
+> \>meme <variant\> <text...\>
 
 ---
 
@@ -382,19 +329,34 @@ You can also save your location so you dont have to specify it every time.
 > \>weather save <location\>
 
 Ask something from wolfram alpha.    
-Currency and unit conversion, math equations etc.
 
-> \>question <your question...\>
+> \>wolfram <query...>
+
+---
+
+# Typing tests
+
+Take a typing test.
+
+> \>typing test [language] [wordcount]
+
+Race against other people.
+
+> \>typing race [language] [wordcount]
+
+See your stats or history.
+
+> \>typing stats    
+> \>typing history
 
 ---
 
 # Miscellaneous Commands
 
 Gets random number between 0 and the max value.  
-When used without max value, will return either 0 or 1.
+When used without values, will return either 0 or 1.
 
-> \>rng  
-> \>rng <max\>
+> \>rng [min] [max]
 
 Turn text into fancy ascii art.
 
@@ -420,14 +382,23 @@ Ship two people and get their love% from 0% to 100%. Separate the names with 'an
 
 > \>ship <name\> and <name\>
 
-Pewdiepie VS T-series current subscribers.
+See word cloud of messages.
 
-> \>pewdiepie
+> \>wordcloud channel    
+> \>wordcloud <user>
 
 Get the current status of any minecraft server.  
 You can usually not specify any port and it will work with the default.
 
 > \>minecraft <address\> <port\>
+
+Add clap emojis between words.
+
+> \>clap <message...\>
+
+Get big image and info about some emoji.
+
+> \>emoji <:emoji:\>
 
 #### Horoscope
 
@@ -437,3 +408,71 @@ List all sunsigns and their ranges by using `list`.
 > \>horoscope  
 > \>horoscope set  
 > \>horoscope list
+
+---
+
+# Configuration
+
+#### Member join and leave messages
+
+Set the channel where join and leave messages are sent in.
+
+> \>welcomeconfig channel <textchannel\>
+
+Set a custom welcome message.   
+You can use these placeholders and they will be filled accordingly:
+- `{user}` = `username#1234`
+- `{username}` = `username`
+- `{mention}` = `@username`
+- `{guild}` = `servername`
+
+> \>welcomeconfig message <text...>
+
+Enables or disables the welcome messages.
+
+> \>welcomeconfig [ enable | disable ]
+
+#### Starboard
+
+React to a message with a star.    
+Once it reaches certain amount of stars (default 3), it will be posted on the starboard!
+
+Set the starboard channel.
+
+> \>starboard channel <textchannel\>
+
+Change the amount of required reactions.
+
+> \>starbard amount <number\>
+
+Enable or disable the starboard functionality
+
+> \>starboard [ enable | disable ]
+
+#### Votechannels
+
+Messages posted on votechannels will automatically get upvote and downvote reactions.    
+Useful in suggestion channels and such.
+
+> \>votechannel [ add | remove ] <textchannel\>    
+
+#### Roles
+
+Set the role added when muting someone.    
+For proper muterole configuration you must disable `send messages` for the role in every channel.
+
+> \>muterole <role\>   
+> \>muterole none
+
+Set the role applied automatically for new members who join the server.
+
+> \>autorole <role\>   
+> \>autorole none
+
+#### Other
+
+Disable or enable levelup messages.    
+Your levels will still be calculated in the background.
+
+> \>levelupmessages [ enable | disable ]
+
