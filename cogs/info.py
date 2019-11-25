@@ -315,31 +315,33 @@ class Info(commands.Cog):
         content = discord.Embed(
             title=f"`>{command}`"
         )
+
+        command_name = str(command)
         
         # get data from database
         usage_data = db.query(
             "SELECT SUM(count) FROM command_usage WHERE command = ?",
-            (command.name,)
+            (command_name,)
         )[0][0]
 
         usage_data_server = db.query(
             "SELECT SUM(count) FROM command_usage WHERE command = ? AND guild_id = ?",
-            (command.name, ctx.guild.id)
+            (command_name, ctx.guild.id)
         )[0][0]
 
         most_uses_server = db.query(
             """SELECT guild_id, MAX(countsum) FROM (
                 SELECT guild_id, SUM(count) as countsum FROM command_usage WHERE command = ? GROUP BY guild_id
             )""",
-            (command.name,)
+            (command_name,)
         )[0]
 
         most_uses_user = db.query(
             """SELECT user_id, MAX(countsum) FROM (
                 SELECT user_id, SUM(count) as countsum FROM command_usage WHERE command = ? GROUP BY user_id
             )""",
-            (command.name,)
-        )[0][0]
+            (command_name,)
+        )[0]
         
         # show the data in embed fields
         content.add_field(
@@ -357,7 +359,7 @@ class Info(commands.Cog):
         )
         content.add_field(
             name="Most total uses by",
-            value=str(self.bot.get_user(most_uses_user))
+            value=f"{self.bot.get_user(most_uses_user[0])} ({most_uses_user[1]})"
         )
 
         # additional data for command groups
