@@ -50,6 +50,7 @@ extensions = [
 async def on_ready():
     # cache owner from appinfo
     bot.owner = (await bot.application_info()).owner
+    bot.start_time = time()
     logger.info("Loading complete")
 
 
