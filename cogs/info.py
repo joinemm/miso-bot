@@ -315,6 +315,8 @@ class Info(commands.Cog):
         content = discord.Embed(
             title=f"`>{command}`"
         )
+
+        command_name = str(command)
         
         # get data from database
         usage_data = db.query(
@@ -332,14 +334,14 @@ class Info(commands.Cog):
                 SELECT guild_id, SUM(count) as countsum FROM command_usage WHERE command = ? GROUP BY guild_id
             )""",
             (command_name,)
-        )[0][0]
+        )[0]
 
         most_uses_user = db.query(
             """SELECT user_id, MAX(countsum) FROM (
                 SELECT user_id, SUM(count) as countsum FROM command_usage WHERE command = ? GROUP BY user_id
             )""",
             (command_name,)
-        )[0][0]
+        )[0]
         
         # show the data in embed fields
         content.add_field(
@@ -352,18 +354,18 @@ class Info(commands.Cog):
         )
         content.add_field(
             name="Server most used in",
-            value=str(self.bot.get_guild(most_uses_server)),
+            value=f"{self.bot.get_guild(most_uses_server[0])} ({most_uses_server[1]})",
             inline=False
         )
         content.add_field(
             name="Most total uses by",
-            value=str(self.bot.get_user(most_uses_user))
+            value=f"{self.bot.get_user(most_uses_user[0])} ({most_uses_user[1]})"
         )
 
         # additional data for command groups
         if hasattr(command, "commands"):
             content.description = "command group"
-            subcommands_string = ', '.join([f"'{x.name}'" for x in command.commands])
+            subcommands_string = ', '.join([f"'{command.name} {x.name}'" for x in command.commands])
             subcommand_usage = db.query(
                 "SELECT SUM(count) FROM command_usage WHERE command IN (%s)" % subcommands_string
             )[0][0]
