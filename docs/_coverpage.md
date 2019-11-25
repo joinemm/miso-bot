@@ -1,10 +1,11 @@
-![logo](assets/icon.jpg)
+![logo](assets/icon.png)
 
-# Miso bot <small>2.0</small>
+# Miso bot <small>3.0</small>
 
-- 80+ commands
-- Twitter, Instagram, Lastfm, Gfycat, Melon
+- 100+ commands
+- Twitter, Instagram, Last.fm, Gfycat, Melon
 - Levels and moderation
+- © 2019 Joinemm
 
-[Commands](/#miso-bot)
-[Invite](https://discordapp.com/api/oauth2/authorize?client_id=500385855072894982&permissions=8&scope=bot)
+[Commands](/#configuration)
+[Invite](https://discordapp.com/oauth2/authorize?client_id=500385855072894982&scope=bot&permissions=1074654407)

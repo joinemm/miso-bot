@@ -1,11 +1,11 @@
 :root {
 
   --main-background: #F0EBf4;
-  --accent-color: #e7c9c9;
+  --accent-color: #ffffff;
   --accent-color-2: #f63d7e;
   --text: #838d8a;
-  --sidebar-text: #a1413b;
-  --button-hover: #ed0054;
+  --sidebar-text: #ff00aa;
+  --button-hover: #dd00aa;
 
 
   --theme-color: #1FC5BF;
@@ -24,6 +24,15 @@ body {
   font-size: 100%;
   line-height: 1.5;
   font-family: 'Source Sans Pro','Open Sans','Helvetica Neue',Arial,sans-serif;
+  background-color: var(--main-background)
+}
+
+.github-corner svg {
+    color: var(--main-background)
+}
+
+section.cover.show {
+    background: none !important;
 }
 
 * {
@@ -36,27 +45,36 @@ a {
 
 aside.sidebar {
   border: none;
-  background-color: var(--accent-color);
+  background-color: var(--main-background);
   color: #fff;
 }
 
 .sidebar ul li a {
-  color: var(--sidebar-text);
+  color: var(--text);
   font-size: 1rem;
+  padding-left: 10px;
+  outline:none;
+  text-decoration:none;
 }
 
 .sidebar ul li.active>a {
   border-width: 0.1rem;
 }
 
+.sidebar li.active {
+  background-color: #fff;
+  border-radius: 10px;
+  outline:none;
+  text-decoration:none;
+}
+
 .sidebar ul li a:hover {
   text-decoration: none;
-  color: rgba(255,255,255,1);
+  color: var(--button-hover);
 }
 
 .sidebar .sidebar-nav ul li.active>a {
-  color: #fff;
-  border-right: 0.2rem solid var(--accent-color,#29D0CA);
+  color: var(--button-hover)
 }
 
 .sidebar > h1 {
@@ -119,7 +137,7 @@ th {
   text-align: left;
 }
 
-.markdown-section blockquote {
+.markdown-section blockqu/?id=configurationote {
   margin: 1em 0;
 }
 
