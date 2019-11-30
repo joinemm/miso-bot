@@ -14,6 +14,18 @@ from PIL import Image
 from data import database as db
 
 
+async def determine_prefix(bot, message):
+    """Get the prefix used in the invocation context."""
+    guild = message.guild
+    prefix = bot.default_prefix
+    if guild:
+        data = db.query("SELECT prefix FROM prefixes WHERE guild_id = ?", (guild.id,))
+        if data is not None:
+            prefix = data[0][0]
+    
+    return prefix
+
+
 async def send_as_pages(ctx, content, rows, maxrows=15):
     """
     :param ctx     : Context
