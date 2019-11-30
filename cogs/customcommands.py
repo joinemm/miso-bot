@@ -1,4 +1,5 @@
 import discord
+import arrow
 from discord.ext import commands
 import data.database as db
 import helpers.utilityfunctions as util
@@ -19,12 +20,16 @@ class CustomCommands(commands.Cog):
             return
         error = getattr(error, 'original', error)
         if isinstance(error, commands.CommandNotFound):
-            keyword = ctx.message.content.split(' ', 1)[0][len(ctx.prefix):]
-            data = db.query("SELECT response FROM customcommands WHERE guild_id = ? and command = ?",
-                            (ctx.guild.id, keyword), maketuple=True)
+            prefix = await util.determine_prefix(self.bot, ctx.message)
+            keyword = ctx.message.content[len(prefix):].split(' ', 1)[0]
+            data = db.query(
+                "SELECT response FROM customcommands WHERE guild_id = ? and command = ?",
+                (ctx.guild.id, keyword)
+            )
             if data is not None:
                 command_logger.info(log.custom_command_format(ctx, keyword))
-                return await ctx.send(data.response)
+                await ctx.send(data[0][0])
+                db.log_custom_command_usage(ctx, keyword)
 
     def bot_command_list(self, match=""):
         """Returns list of bot commands."""
@@ -52,18 +57,31 @@ class CustomCommands(commands.Cog):
             return await ctx.send(f"Sorry, the custom command `{ctx.prefix}{name}` "
                                   f"already exists on this server!")
 
-        db.execute("REPLACE INTO customcommands VALUES (?, ?, ?)", (ctx.guild.id, name, response))
+        db.execute(
+            "INSERT INTO customcommands VALUES (?, ?, ?, ?, ?)",
+            (ctx.guild.id, name, response, arrow.utcnow().timestamp, ctx.author.id)
+        )
         await ctx.send(f"Custom command `{ctx.prefix}{name}` "
                        f"successfully added with the response `{response}`")
 
     @command.command()
-    @commands.has_permissions()
     async def remove(self, ctx, name):
         """Remove a custom command."""
         if name not in custom_command_list(ctx.guild.id):
             return await ctx.send(f"Cannot delete command `{ctx.prefix}{name}` as it does not exist")
 
-        db.execute("DELETE FROM customcommands WHERE guild_id = ? and command = ?", (ctx.guild.id, name))
+        owner = db.query("SELECT added_by FROM customcommands WHERE command = ?", (name,))
+        if owner is not None and owner != ctx.author.id:
+            if not ctx.author.guild_permissions.manage_guild:
+                return await ctx.send(
+                    ":warning: You can only remove commands you have added " \
+                    "unless you have the 'manage_guild' permission."
+                )
+
+        db.execute(
+            "DELETE FROM customcommands WHERE guild_id = ? and command = ?",
+            (ctx.guild.id, name)
+        )
         await ctx.send(f"Custom command `{ctx.prefix}{name}` successfully deleted")
 
     @command.command()

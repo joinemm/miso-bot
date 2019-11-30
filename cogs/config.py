@@ -26,7 +26,23 @@ class Config(commands.Cog):
                 pages.append(this_page)
         await util.page_switcher(ctx, pages)
 
-    @commands.group(case_insensitive=True)
+    @commands.command()
+    @commands.has_permissions(administrator=True)
+    async def prefix(self, ctx, prefix):
+        """Set a custom command prefix for this server.
+        
+        Usage:
+            >prefix <text>
+            >prefix \"<text with spaces>\"
+        """
+        if prefix.strip() == "":
+            return await ctx.send(":warning: Invalid prefix `prefix`")
+        
+        prefix = prefix.lstrip()
+        db.execute("REPLACE INTO prefixes VALUES (?, ?)", (ctx.guild.id, prefix))
+        await ctx.send(f"Command prefix for this server set to `{prefix}`\nExample command usage: {prefix}help")
+
+    @commands.group()
     @commands.has_permissions(manage_channels=True)
     async def welcomeconfig(self, ctx):
         """Configure welcome message"""
@@ -104,7 +120,7 @@ class Config(commands.Cog):
         db.update_setting(ctx.guild.id, "starboard_toggle", 0)
         await ctx.send("Starboard **disabled**")
 
-    @commands.group(case_insensitive=True)
+    @commands.group()
     @commands.has_permissions(manage_channels=True)
     async def votechannel(self, ctx):
         """Configure voting channels"""

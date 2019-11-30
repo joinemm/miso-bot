@@ -5,6 +5,7 @@ import traceback
 from discord.ext import commands
 from time import time
 from helpers import log
+from helpers import utilityfunctions as util
 from data import database as db
 
 logger = log.get_logger(__name__)
@@ -19,9 +20,11 @@ logger.info(f"Developer mode is {'ON' if DEV else 'OFF'}")
 
 TOKEN = os.environ['MISO_BOT_TOKEN_BETA' if DEV else 'MISO_BOT_TOKEN']
 bot = commands.Bot(
-    command_prefix='<' if DEV else '>', 
+    command_prefix=util.determine_prefix,
     case_insensitive=True
 )
+
+bot.default_prefix = '<' if DEV else '>'
 
 extensions = [
     'events',
@@ -69,6 +72,7 @@ async def on_command_completion(ctx):
     if ctx.invoked_subcommand is None:
         command_logger.info(log.log_command(ctx))
         db.log_command_usage(ctx)
+
 
 if __name__ == "__main__":
     for extension in extensions:
