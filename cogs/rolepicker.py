@@ -55,11 +55,16 @@ class Rolepicker(commands.Cog):
         data = db.query("select rolename, role_id from roles where guild_id = ?", (ctx.guild.id,))
         content = discord.Embed(title=f"Available roles in {ctx.guild.name}")
         if data is not None:
+            roleslist = []
             content.description = ""
             for name, role_id in data:
                 role = ctx.guild.get_role(role_id)
                 if role is not None:
-                    content.description += f"\n`{name}` : {role.mention if role is not None else 'None'}"
+                   roleslist.append((name, role))
+
+            for name, role in sorted(roleslist, key=lambda x: x[1].position, reverse=True):
+                content.description += f"\n`{name}` : {role.mention if role is not None else 'None'}"
+
         else:
             content.description = "No roles set on this server"
         await ctx.send(embed=content)
