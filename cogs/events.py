@@ -17,7 +17,23 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        self.logchannel = self.bot.get_channel(598783743959891968)
+        settings = db.get_from_data_json(['bot_settings'])
+        self.logchannel = self.bot.get_channel(settings['log_channel'])
+        activity_type, activity_text = settings['status']
+        activities = {
+            'playing': 0,
+            'streaming': 1,
+            'listening': 2,
+            'watching': 3
+        }
+
+        await self.bot.change_presence(
+            activity=discord.Activity(
+                type=discord.ActivityType(activities[activity_type]),
+                name=activity_text
+            )
+        )
+        logger.info(f"Changed presence to {activity_type} {activity_text}")
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
@@ -25,7 +41,8 @@ class Events(commands.Cog):
         logger.info(f"New guild : {guild}")
         content = discord.Embed(color=discord.Color.green())
         content.title = "New guild!"
-        content.description = f"Miso just joined **{guild}**\nWith **{guild.member_count}** members"
+        content.description = f"Miso just joined **{guild}**\nWith **{guild.member_count-1}** members"
+        content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")
         await self.logchannel.send(embed=content)
 
@@ -35,26 +52,26 @@ class Events(commands.Cog):
         logger.info(f"Left guild : {guild}")
         content = discord.Embed(color=discord.Color.red())
         content.title = "Left guild!"
-        content.description = f"Miso just left **{guild}**\nWith **{guild.member_count}** members :("
+        content.description = f"Miso just left **{guild}**\nWith **{guild.member_count-1}** members :("
+        content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")
         await self.logchannel.send(embed=content)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        """Called when a new member joins a server."""
-        if not util.int_to_bool(db.get_setting(member.guild.id, "welcome_toggle")):
+        """Called when a new member joins a guild."""
+        channel_id = db.get_setting(member.guild.id, "welcome_channel")
+        if channel_id is None:
             return
-            # return logger.info(f"{member.name} just joined {member.guild.name}, but welcome messages are disabled!")
+
+        channel = member.guild.get_channel(channel_id)
+        if channel is None:
+            return logger.warning(f"Cannot welcome {member} to {member.guild.name} (invalid channel)")
 
         message_format = db.get_setting(member.guild.id, "welcome_message")
         if message_format is None:
             message_format = "Welcome **{username}** {mention} to **{server}**"
-
-        channel_id = db.get_setting(member.guild.id, "welcome_channel")
-        channel = member.guild.get_channel(channel_id)
-        if channel is None:
-            return logger.warning(f"Cannot welcome {member} to {member.guild.name} (welcome channel deleted)")
-
+        
         await channel.send(embed=util.create_welcome_embed(member, member.guild, message_format))
         logger.info(f"Welcomed {member.name} to {member.guild.name}")
 
@@ -69,38 +86,55 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         """Called when user gets banned from a server."""
-        if not util.int_to_bool(db.get_setting(guild.id, "welcome_toggle")):
+        channel_id = db.get_setting(guild.id, "bans_channel")
+        if channel_id is None:
             return
-            # return logger.info(f"{user.name} just got banned from {guild.name}, but welcome messages are disabled!")
 
-        channel_id = db.get_setting(guild.id, "welcome_channel")
         channel = guild.get_channel(channel_id)
         if channel is None:
-            return logger.warning(f"Cannot say goodbye to banned member {user} from {guild.name}")
+            return logger.warning(f"Cannot announce ban of {user} from {guild.name} (invalid channel)")
 
-        message = "**{name}** has been permanently banned"
-        await channel.send(message.format(mention=user.mention, name=user.name))
-        logger.info(f"{user.name} was just banned from {guild.name}")
+        await channel.send("**{user.name}** (`{user.id}`) has been permanently banned")
+        logger.info(f"{user} was just banned from {guild.name}")
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        """Called when member leaves a guild or is kicked"""
-        if not util.int_to_bool(db.get_setting(member.guild.id, "welcome_toggle")):
+        """Called when member leaves a guild."""
+        channel_id = db.get_setting(member.guild.id, "goodbye_channel")
+        if channel_id is None:
             return
-            # return logger.info(f"{member.name} just left {member.guild.name}, but welcome messages are disabled!")
 
-        channel_id = db.get_setting(member.guild.id, "welcome_channel")
         channel = member.guild.get_channel(channel_id)
         if channel is None:
-            return logger.warning(f"Cannot say goodbye to {member} from {member.guild.name}")
+            return logger.warning(f"Cannot say goodbye to {member} from {member.guild.name} (invalid channel)")
+        
+        message_format = db.get_setting(member.guild.id, "goodbye_message")
+        if message_format is None:
+            message_format = "Goodbye {mention} ( **{user}** )"
 
-        await channel.send(f"Goodbye {member.mention} ( **{member.name}#{member.discriminator}** )")
+        await channel.send(util.create_goodbye_message(member, member.guild, message_format))
         logger.info(f"Said goodbye to {member.name} from {member.guild.name}")
+    
+    @commands.Cog.listener()
+    async def on_message_delete(self, message):
+        """Listener that gets called when any message is deleted."""
+        # ignore DMs
+        if message.guild is None:
+            return
+        
+        channel_id = db.get_setting(message.guild.id, "deleted_messages_channel")
+        if channel_id is None:
+            return
+        
+        channel = message.guild.get_channel(channel_id)
+        if channel is None:
+            return
+        
+        await channel.send(embed=util.message_embed(message))
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """Listener that gets called on every message"""
-
+        """Listener that gets called on every message."""
         # ignore DMs
         if message.guild is None:
             return
@@ -113,7 +147,6 @@ class Events(commands.Cog):
             await message.add_reaction(self.bot.get_emoji(
                 db.query("select id from emojis where name = 'downvote'")[0][0]))
 
-        
         # xp gain
         message_xp = util.xp_from_message(message)
         currenthour = message.created_at.hour

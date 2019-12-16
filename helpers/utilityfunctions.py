@@ -158,6 +158,11 @@ def message_embed(message):
     content.description = message.content
     content.set_footer(text=f"{message.guild.name} | #{message.channel.name}")
     content.timestamp = message.created_at
+    content.color = message.author.color
+    if message.attachments:
+        content.set_image(url=message.attachments[0].proxy_url)
+
+    return content
 
 
 def timefromstring(s):
@@ -351,7 +356,7 @@ async def get_guild(ctx, argument, fallback=None):
 
 async def command_group_help(ctx):
     """Sends default command help if group command is invoked on it's own"""
-    if ctx.invoked_subcommand is None or isinstance(ctx.invoked_subcommand, commands.Group):
+    if ctx.invoked_subcommand is None:
         await send_command_help(ctx)
 
 
@@ -479,8 +484,9 @@ async def image_info_from_url(url):
                 'dimensions': f"{dimensions[0]}x{dimensions[1]}"
             }
 
+
 def create_welcome_embed(user, guild, messageformat):
-    """Creates and returns embed for welcome message"""
+    """Creates and returns embed for welcome message."""
     content = discord.Embed(
         title="New member! :wave:",
         color=discord.Color.green()
@@ -496,6 +502,17 @@ def create_welcome_embed(user, guild, messageformat):
         username=user.name
     )
     return content
+
+
+def create_goodbye_message(user, guild, messageformat):
+    """Formats a goodbye message."""
+    return messageformat.format(
+        mention=user.mention,
+        user=user,
+        id=user.id,
+        server=guild.name,
+        username=user.name
+    )
 
 
 def activityhandler(activity_tuple):
