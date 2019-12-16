@@ -36,6 +36,31 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
                 clean_lines.append(line)
 
         return clean_lines
+
+    @commands.command()
+    async def setstatus(self, ctx, activity_type, *, message):
+        """Change presence.
+
+        Activities: playing, streaming, listening, watching
+        """
+        if activity_type.lower() == 'streaming':
+            message, url = message.rsplit(' ', 1)
+            activity = discord.Streaming(name=message, url=url)
+
+        else:
+            activities = {
+                'playing': 0,
+                'listening': 2,
+                'watching': 3
+            }
+            activity = discord.Activity(
+                type=discord.ActivityType(activities[activity_type.lower()]),
+                name=message
+            )
+
+        await self.bot.change_presence(activity=activity)
+        db.save_into_data_json(['status'], (activity_type, message))
+        await ctx.send(':ok_hand:')
     
     @commands.command(rest_is_raw=True)
     async def say(self, ctx, channel, *, message):
