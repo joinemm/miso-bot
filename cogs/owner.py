@@ -76,7 +76,7 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
             guild = await util.get_guild(ctx, guild)
             channel = await util.get_textchannel(ctx, channel, guildfilter=guild)
         else:
-            channel = await util.get_textchannel(ctx, channel)
+            channel = await self.bot.get_channel(int(channel))
             guild = channel.guild
         
         await ctx.send(f"Sending message to **{guild}** <#{channel.id}>\n> {message}")
