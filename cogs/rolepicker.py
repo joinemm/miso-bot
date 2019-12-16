@@ -24,7 +24,7 @@ class Rolepicker(commands.Cog):
             return await ctx.send(":warning: Could not get this role")
 
         db.execute("REPLACE INTO roles VALUES(?, ?, ?)", (ctx.guild.id, name, role_to_add.id))
-        await ctx.send(f"Role `@{role_to_add.name} added to picker as `{name}`")
+        await ctx.send(embed=discord.Embed(description=f"{role_to_add.mention} added to picker as `{name}`"))
 
     @rolepicker.command()
     async def remove(self, ctx, name):
@@ -44,8 +44,10 @@ class Rolepicker(commands.Cog):
             return await ctx.send(":warning: Could not get this channel")
 
         db.update_setting(ctx.guild.id, "rolepicker_channel", this_channel.id)
+        db.update_setting(ctx.guild.id, "rolepicker_enabled", 0)
+
         await ctx.send(f"Rolepicker channel set to {this_channel.mention}\n"
-                       f"New messages in the channel will be deleted automatically.")
+                       f"Now enable the rolepicker once you want messages in the channel to be deleted.")
 
     @rolepicker.command()
     async def list(self, ctx):
