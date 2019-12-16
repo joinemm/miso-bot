@@ -61,6 +61,12 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
         await self.bot.change_presence(activity=activity)
         db.save_into_data_json(['status'], (activity_type, message))
         await ctx.send(':ok_hand:')
+
+    @commands.command()
+    async def resetstatus(self, ctx):
+        """Remove any status presence."""
+        await self.bot.change_presence(activity=None)
+        await ctx.send(":ok_hand:")
     
     @commands.command(rest_is_raw=True)
     async def say(self, ctx, channel, *, message):
