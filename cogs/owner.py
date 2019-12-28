@@ -59,7 +59,7 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
             )
 
         await self.bot.change_presence(activity=activity)
-        db.save_into_data_json(['status'], (activity_type, message))
+        db.save_into_data_json(['bot_settings', 'status'], (activity_type, message))
         await ctx.send(':ok_hand:')
 
     @commands.command()
