@@ -32,7 +32,7 @@ class Info(commands.Cog):
             f"make sure to not disable any!\n<{url}>"
         )
 
-    @commands.command()
+    @commands.command(aliases=['donate'])
     async def patreon(self, ctx):
         """Link to the patreon page."""
         await ctx.send("https://www.patreon.com/joinemm")
@@ -81,6 +81,7 @@ class Info(commands.Cog):
         content.add_field(name='Website', value="https://misobot.xyz", inline=False)
         content.add_field(name='Github', value='https://github.com/joinemm/miso-bot', inline=False)
         content.add_field(name='Patreon', value="https://www.patreon.com/joinemm", inline=False)
+        #content.add_field(name='Discord server', value='https://discord.gg/fdeCeNN', inline=False)
 
         data = await get_commits("joinemm", "miso-bot")
         last_update = data[0]['commit']['author'].get('date')
@@ -256,7 +257,7 @@ class Info(commands.Cog):
 
             rows.append(
                 f"**{count}** x `>{command}`" + (
-                    '' if biggest_user is None else f" ( {biggest_user[1]} by {biggest_user[0].name} )"
+                    '' if biggest_user is None else f" ( {biggest_user[1]} by {biggest_user[0]} )"
                 )
             )
 
@@ -299,7 +300,7 @@ class Info(commands.Cog):
 
             rows.append(
                 f"**{count}** x `>{command}`" + (
-                    '' if biggest_user is None else f" ( {biggest_user[1]} by {biggest_user[0].name} )"
+                    '' if biggest_user is None else f" ( {biggest_user[1]} by {biggest_user[0]} )"
                 )
             )
 
