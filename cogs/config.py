@@ -258,7 +258,7 @@ class Config(commands.Cog):
             return await ctx.send(":warning: Unknown role")
 
         db.update_setting(ctx.guild.id, "autorole", thisrole.id)
-        await ctx.send(discord.Embed(
+        await ctx.send(embed=discord.Embed(
             description=f"New members will now automatically get {thisrole.mention}"
         ))
 

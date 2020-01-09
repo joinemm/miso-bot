@@ -12,7 +12,7 @@ class Mod(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_roles=True)
-    async def mute(self, ctx, user, *, duration):
+    async def mute(self, ctx, user, *duration):
         """Mute user."""
         muterole = ctx.message.guild.get_role(db.get_setting(ctx.guild.id, "muterole"))
         if muterole is None:
@@ -27,7 +27,7 @@ class Mod(commands.Cog):
 
         t = None
         if duration:
-            t = util.timefromstring(duration)
+            t = util.timefromstring(" ".join(duration))
 
         await member.add_roles(muterole)
         await ctx.send(f"Muted {member.mention}" + (f"for **{util.stringfromtime(t)}**" if t else ""))
