@@ -245,8 +245,7 @@ class Typings(commands.Cog):
                     new_wins = wins[0][0] + 1
                 db.execute("REPLACE INTO typeracer VALUES(?, ?, ?)", (member.id, ctx.guild.id, new_wins))
 
-            rows.append(f"{f'`{i}.`' if i > 1 else ':crown:'} **{int(player[1])} WPM ** — "
-                        f"{member.name}")
+            rows.append(f"{f'`{i}.`' if i > 1 else ':crown:'} **{int(player[1])} WPM ** — {member.name}")
 
         content.description = '\n'.join(rows)
         await ctx.send(embed=content)

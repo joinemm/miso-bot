@@ -19,6 +19,9 @@ class Events(commands.Cog):
     async def on_ready(self):
         settings = db.get_from_data_json(['bot_settings'])
         self.logchannel = self.bot.get_channel(settings['log_channel'])
+        if settings['status'] is None:
+            return
+
         activity_type, activity_text = settings['status']
         activities = {
             'playing': 0,
@@ -127,7 +130,7 @@ class Events(commands.Cog):
             return
         
         channel = message.guild.get_channel(channel_id)
-        if channel is None:
+        if channel is None or message.channel == channel:
             return
         
         await channel.send(embed=util.message_embed(message))

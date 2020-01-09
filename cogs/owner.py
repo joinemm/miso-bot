@@ -66,6 +66,7 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
     async def resetstatus(self, ctx):
         """Remove any status presence."""
         await self.bot.change_presence(activity=None)
+        db.save_into_data_json(['bot_settings', 'status'], None)
         await ctx.send(":ok_hand:")
     
     @commands.command(rest_is_raw=True)
