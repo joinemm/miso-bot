@@ -97,7 +97,7 @@ class Events(commands.Cog):
         if channel is None:
             return logger.warning(f"Cannot announce ban of {user} from {guild.name} (invalid channel)")
 
-        await channel.send("**{user.name}** (`{user.id}`) has been permanently banned")
+        await channel.send(f"**{user.name}** (`{user.id}`) has been permanently banned")
         logger.info(f"{user} was just banned from {guild.name}")
 
     @commands.Cog.listener()
