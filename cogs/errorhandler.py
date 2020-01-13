@@ -1,4 +1,5 @@
 import traceback
+import discord
 from discord.ext import commands
 from helpers import log, utilityfunctions as util
 from cogs.lastfm import LastFMError
@@ -62,6 +63,10 @@ class Events(commands.Cog):
         elif isinstance(error, commands.CommandOnCooldown):
             await ctx.send(f":warning: This command has a cooldown! Please retry in `{error.retry_after:.2f}s` and spam less next time!")
         
+        elif isinstance(error, discord.errors.Forbidden):
+            logger.error(str(error))
+            await ctx.message.add_reaction('🙊')
+
         elif isinstance(error, LastFMError):
             await ctx.send(f"```{str(error)}```")
         else:
