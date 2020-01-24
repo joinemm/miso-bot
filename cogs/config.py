@@ -142,7 +142,7 @@ class Config(commands.Cog):
     async def logmessages_levelups(self, ctx, state: bool):
         """Enable or disable levelup messages."""
         db.update_setting(ctx.guild.id, "levelup_toggle", (1 if state else 0))
-        await ctx.send(f"Levelup messages **{('enabled' if value else 'disabled')}**")
+        await ctx.send(f"Levelup messages **{('enabled' if state else 'disabled')}**")
 
     @commands.group()
     @commands.has_permissions(manage_channels=True)
