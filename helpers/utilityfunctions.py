@@ -26,14 +26,15 @@ async def determine_prefix(bot, message):
     return prefix
 
 
-async def send_as_pages(ctx, content, rows, maxrows=15):
+async def send_as_pages(ctx, content, rows, maxrows=15, maxpages=10):
     """
     :param ctx     : Context
     :param content : Base embed
     :param rows    : Embed description rows
-    :param maxrows : Max amount of rows per page
+    :param maxrows : Maximum amount of rows per page
+    :param maxpages: Maximum amount of pages untill cut off
     """
-    pages = create_pages(content, rows, maxrows)
+    pages = create_pages(content, rows, maxrows, maxpages)
     if len(pages) > 1:
         await page_switcher(ctx, pages)
     else:
@@ -61,15 +62,13 @@ async def page_switcher(ctx, pages):
 
     async def previous_page():
         content = pages.previous()
-        if content is None:
-            return
-        await switch_page(content)
+        if content is not None:
+            await switch_page(content)
 
     async def next_page():
         content = pages.next()
-        if content is None:
-            return
-        await switch_page(content)
+        if content is not None:
+            await switch_page(content)
 
     functions = {
         "⬅": previous_page,
@@ -78,31 +77,43 @@ async def page_switcher(ctx, pages):
     asyncio.ensure_future(reaction_buttons(ctx, msg, functions))
 
 
-def create_pages(content, rows, maxrows=15):
+def create_pages(content, rows, maxrows=15, maxpages=10):
     """
     :param content : Embed object to use as the base
     :param rows    : List of rows to use for the embed description
     :param maxrows : Maximum amount of rows per page
+    :param maxpages: Maximu amount of pages until cut off
     :returns       : List of Embed objects
     """
     pages = []
     content.description = ""
     thisrow = 0
+    rowcount = len(rows)
     for row in rows:
         thisrow += 1
         if len(content.description) + len(row) < 2000 and thisrow < maxrows+1:
             content.description += f"\n{row}"
+            rowcount -= 1
         else:
             thisrow = 1
+            if len(pages) == maxpages-1:
+                content.description += f"\n*+ {rowcount} more entries...*"
+                pages.append(content)
+                content = None
+                break
+
             pages.append(content)
             content = copy.deepcopy(content)
             content.description = f"{row}"
-    if not content.description == "":
+            rowcount -= 1
+
+    if content is not None and not content.description == "":
         pages.append(content)
+    
     return pages
 
 
-async def reaction_buttons(ctx, message, functions, timeout=600.0, only_author=False, single_use=False):
+async def reaction_buttons(ctx, message, functions, timeout=300.0, only_author=False, single_use=False):
     """Handler for reaction buttons
     :param message     : message to add reactions to
     :param functions   : dictionary of {emoji : function} pairs. functions must be async. return True to exit
@@ -132,7 +143,7 @@ async def reaction_buttons(ctx, message, functions, timeout=600.0, only_author=F
             except discord.errors.NotFound:
                 pass
             except discord.errors.Forbidden:
-                await ctx.send("`error: i'm missing required discord permission [ manage messages ]`")
+                await ctx.send("`error: I'm missing required discord permission [ manage messages ]`")
             if single_use or exits is True:
                 break
 

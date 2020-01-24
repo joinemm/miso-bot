@@ -12,7 +12,7 @@ class Wordcloud(commands.Cog):
         self.bot = bot
         self.mask = np.array(Image.open("html/cloud.png"))
 
-    @commands.command()
+    @commands.command(enabled=False)
     async def wordcloud(self, ctx, user, messages=1000):
         """Create a word cloud of messages in the channel used in."""
         if int(messages) > 10000:
