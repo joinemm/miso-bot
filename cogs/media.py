@@ -10,6 +10,7 @@ import os
 import copy
 import aiohttp
 import regex
+import arrow
 from discord.ext import commands
 from tweepy import OAuthHandler
 from bs4 import BeautifulSoup
@@ -236,13 +237,29 @@ class Media(commands.Cog):
             await ctx.send(":warning: Could not find any images")
 
     @commands.command(aliases=['twt'])
-    async def twitter(self, ctx, tweet_url):
+    async def twitter(self, ctx, *tweet_url):
         """Get all the images from a tweet."""
+        flags = []
+        for param in tweet_url:
+            if param.startswith('-'):
+                # short flags
+                flags += param.strip('-').split()
+            elif param.startswith('--'):
+                # long flag
+                flags.append(param.strip('--'))
+            else:
+                tweet_url = param
+        
+        upload = any(x in ['U', 'u', 'upload'] for x in flags)
+        
+
         if "status" in tweet_url:
-            tweet_url = re.search(r'status/(\d+)', tweet_url).group(1)
+            tweet_id = re.search(r'status/(\d+)', tweet_url).group(1)
+        else:
+            tweet_id = tweet_url
 
         tweet = await ctx.bot.loop.run_in_executor(None,
-            lambda: self.twitter_api.get_status(tweet_url, tweet_mode='extended')
+            lambda: self.twitter_api.get_status(tweet_id, tweet_mode='extended')
         )
 
         media_files = []
@@ -271,22 +288,55 @@ class Media(commands.Cog):
                             video_url = video_urls[x]['url']
                             media_url = video_urls[x]['url']
             media_files.append((" ".join(hashtags), media_url, video_url))
-
+        
         content = discord.Embed(colour=int(tweet.user.profile_link_color, 16))
         content.set_author(
             icon_url=tweet.user.profile_image_url,
             name=f"@{tweet.user.screen_name}\n{media_files[0][0]}",
             url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}"
         )
-        for file in media_files:
-            content.set_image(url=file[1].replace('.jpg', '?format=jpg&name=orig'))
-            await ctx.send(embed=content)
 
-            if file[2] is not None:
-                # contains a video/gif, send it separately
-                await ctx.send(file[2])
+        if upload:
+            # download file and rename, upload to discord
+            async with aiohttp.ClientSession() as session:
+                await ctx.send(f"<{tweet.full_text.split(' ')[-1]}>")
+                for n, file in enumerate(media_files, start=1):
+                    async with ctx.typing():
+                        # is image not video
+                        timestamp = arrow.get(tweet.created_at).format('YYMMDD')
+                        if file[2] is None:
+                            extension = 'jpeg'
+                        else:
+                            extension = 'mp4'
 
-            content._author = None
+                        filename = f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
+                        url = file[1].replace('.jpg', '?format=jpg&name=orig')
+                        async with session.get(url) as response:
+                            with open(filename, 'wb') as f:
+                                while True:
+                                    block = await response.content.read(1024)
+                                    if not block:
+                                        break
+                                    f.write(block)
+
+                        with open(filename, 'rb')as f:
+                            await ctx.send(file=discord.File(f))
+                        
+                        os.remove(filename)
+                            
+        else:
+            # just send link in embed
+            
+            for file in media_files:
+                url=file[1].replace('.jpg', '?format=jpg&name=orig')
+                content.set_image(url=url)
+                await ctx.send(embed=content)
+
+                if file[2] is not None:
+                    # contains a video/gif, send it separately
+                    await ctx.send(file[2])
+
+                content._author = None
 
 
     @commands.command(aliases=["gif", "gfy"])
