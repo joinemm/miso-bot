@@ -742,17 +742,30 @@ async def api_request(params):
     url = "http://ws.audioscrobbler.com/2.0/"
     params['api_key'] = LASTFM_APPID
     params['format'] = 'json'
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, params=params) as response:
-            try:
-                content = await response.json()
-                if response.status == 200:
-                    return content
-                else:
-                    raise LastFMError(f"Error {content.get('error')} : {content.get('message')}")
+    tries = 0
+    max_tries = 2
+    trying = True
+    while trying:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params) as response:
+                try:
+                    content = await response.json()
+                    if response.status == 200:
+                        trying = False
+                        return content
+                    else:
+                        if int(content.get('error')) in [6, 8]:
+                            tries += 1
+                            if tries < max_tries:
+                                print("Error occured. Trying again...")
+                                continue
+                            else:
+                                trying = False
 
-            except aiohttp.client_exceptions.ContentTypeError:
-                return None
+                        raise LastFMError(f"Error {content.get('error')} : {content.get('message')}")
+
+                except aiohttp.client_exceptions.ContentTypeError:
+                    return None
 
 
 async def get_userinfo_embed(username):
