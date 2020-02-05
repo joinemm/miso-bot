@@ -313,19 +313,21 @@ class User(commands.Cog):
             timeframe = scope
         users = []
         guild = ctx.guild
+        ALLSUM = "SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23)"
 
+        time, table = get_activity_table(timeframe)
         if _global_:
-            time, table = get_activity_table(timeframe)
-            user_ids = db.query("SELECT DISTINCT user_id FROM %s" % table)
-            for user_id in [x[0] for x in user_ids]:
-                rows = db.query("SELECT * FROM %s WHERE user_id = ?" % table, (user_id,))
+            user_rows = db.query(
+                "SELECT user_id, %s, SUM(messages) FROM %s GROUP BY user_id " 
+                "ORDER BY %s DESC" % (ALLSUM, table, ALLSUM)
+            )
+            for user_id, xp, messages in user_rows:
                 user = self.bot.get_user(user_id)
                 if user is None or user.bot:
                     continue
 
-                users.append((user, sum(row[2] for row in rows), sum(sum(row[3:]) for row in rows)))
+                users.append((user, messages, xp))
         else:
-            time, table = get_activity_table(timeframe)
             # guild selector for owner only
             if ctx.author.id == 133311691852218378 and scope != '':
                 try:
@@ -345,7 +347,7 @@ class User(commands.Cog):
 
         rows = []
         for i, (user, messages, xp) in enumerate(sorted(users, key=itemgetter(2), reverse=True), start=1):
-            rows.append(f"`{i}:`" + (f"LVL **{util.get_level(xp)}** - " if time is None else '') +
+            rows.append(f"`#{i:2}` " + (f"LVL **{util.get_level(xp)}** - " if time is None else '') +
                         f"**{user.name}** `[{xp} XP | {messages} messages]`")
 
         content = discord.Embed(color=discord.Color.teal())
