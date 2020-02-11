@@ -31,6 +31,10 @@ See information about any discord ID.
 
 > \>inspect <id\>
 
+Get invite link
+
+> \>invite
+
 ---
 
 # Rolepicker
@@ -152,6 +156,11 @@ You can use full url, or just the post id. (eg. `1156225603470688261` for twitte
 > \>twitter <url\>  
 > \>twitter <id\>
 
+You can use `-U` flag with twitter to download and reupload the images instead of posting the urls in embeds.
+These images are named for easy downloading and will not stop working in case the original tweet is deleted.
+
+> \>twitter -U <id\>
+
 #### Web search
 
 Search various places on the web like gfycat and youtube.
@@ -184,6 +193,8 @@ Then you can check various top lists.
 > \>fm toptracks <timeframe\>    
 > \>fm topartists <timeframe\>    
 > \>fm topalbums <timeframe\>    
+
+Valid timeframes are `[day | week | month | 3month | 6month | year | alltime]`
 
 Show your most recently listened to tracks, or the one currently playing in embed or youtube link form.
 
@@ -413,24 +424,43 @@ List all sunsigns and their ranges by using `list`.
 
 # Configuration
 
-#### Member join and leave messages
+#### Change prefix
 
-Set the channel where join and leave messages are sent in.
+Don't like `>`? Don't worry you can now change it to whatever you want.
 
-> \>welcomeconfig channel <textchannel\>
+> \>prefix <something\>
 
-Set a custom welcome message.   
-You can use these placeholders and they will be filled accordingly:
+#### Member messages
+
+Logger sends various automatic messages.
+
+> \>logger
+
+Welcome and goodbye messages.
+
+> \>logger welcome channel <textchannel\>    
+> \>logger goodbye channel <textchannel\>
+
+> \>logger welcome message <message...\>    
+> \>logger goodbye message <message...\>    
+
+You can use these placeholders in message and they will be filled accordingly:
 - `{user}` = `username#1234`
 - `{username}` = `username`
 - `{mention}` = `@username`
 - `{guild}` = `servername`
 
-> \>welcomeconfig message <text...>
+Log deleted messages.
 
-Enables or disables the welcome messages.
+> \>logger deletedmessages <textchannel\>
 
-> \>welcomeconfig [ enable | disable ]
+Send message when user gets banned.
+
+> \>logger bans <textchannel\>
+
+Enable or disable levelup messages.
+
+> \>logger levelups <state\>
 
 #### Starboard
 
@@ -468,11 +498,3 @@ Set the role applied automatically for new members who join the server.
 
 > \>autorole <role\>   
 > \>autorole none
-
-#### Other
-
-Disable or enable levelup messages.    
-Your levels will still be calculated in the background.
-
-> \>levelupmessages [ enable | disable ]
-
