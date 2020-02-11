@@ -8,5 +8,5 @@
 - © 2020 Joinemm
 
 [Commands](/#info)
-[Invite](https://discordapp.com/oauth2/authorize?client_id=500385855072894982&scope=bot&permissions=1074654407)
 [Discord](https://discord.gg/fdeCeNN)
+[Invite](https://discordapp.com/oauth2/authorize?client_id=500385855072894982&scope=bot&permissions=1074654407)
