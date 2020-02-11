@@ -182,7 +182,7 @@ class LastFm(commands.Cog):
                 "limit": arguments['amount']
             })
         user_attr = data['topartists']['@attr']
-        artists = data['topartists']['artist']
+        artists = data['topartists']['artist'][:arguments['amount']]
 
         if not artists:
             return await ctx.send("You have not listened to any artists yet!")
@@ -225,7 +225,7 @@ class LastFm(commands.Cog):
                 "limit": arguments['amount']
             })
         user_attr = data['topalbums']['@attr']
-        albums = data['topalbums']['album']
+        albums = data['topalbums']['album'][:arguments['amount']]
 
         if not albums:
             return await ctx.send("You have not listened to any albums yet!")
@@ -270,7 +270,7 @@ class LastFm(commands.Cog):
                 "limit": arguments['amount']
             })
         user_attr = data['toptracks']['@attr']
-        tracks = data['toptracks']['track']
+        tracks = data['toptracks']['track'][:arguments['amount']]
 
         if not tracks:
             return await ctx.send("You have not listened to anything yet!")
