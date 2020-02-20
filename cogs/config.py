@@ -45,7 +45,11 @@ class Config(commands.Cog):
             >prefix \"<text with spaces>\"
         """
         if prefix.strip() == "":
-            return await ctx.send(":warning: Invalid prefix `prefix`")
+            return await ctx.send(":warning: Prefix cannot be empty.")
+        elif prefix.startswith(" "):
+            return await ctx.send(":warning: Prefix cannot start with a space.")
+        elif len(prefix) > 32:
+            return await ctx.send(":warning: Prefix cannot be over 32 characters.")
         
         prefix = prefix.lstrip()
         db.execute("REPLACE INTO prefixes VALUES (?, ?)", (ctx.guild.id, prefix))
