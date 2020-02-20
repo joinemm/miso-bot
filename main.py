@@ -46,6 +46,7 @@ extensions = [
     'wordcloud',
     'typings',
     'reminders',
+    'bangs',
 ]
 
 
