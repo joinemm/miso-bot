@@ -39,9 +39,13 @@ class Events(commands.Cog):
             logger.error(str(error))
             await ctx.author.send(f':warning: `{ctx.command}` can not be used in DMs!')
 
-        elif isinstance(error, (commands.NotOwner, commands.CheckFailure)):
-            logger .error(str(error))
+        elif isinstance(error, commands.NotOwner):
+            logger.error(str(error))
             await ctx.send(f":warning: Sorry, you are not authorized to use this command!")
+
+        elif isinstance(error, commands.CheckFailure):
+            logger.error(str(error))
+            await ctx.send(f":warning: {error}")
 
         elif isinstance(error, commands.MissingPermissions):
             logger.error(str(error))
@@ -54,7 +58,7 @@ class Events(commands.Cog):
             await ctx.send(f":warning: Cannot execute command! Bot is missing permission {perms}")
 
         elif isinstance(error, commands.MissingRequiredArgument):
-            logger.error(str(error))
+            #logger.error(str(error))
             await util.send_command_help(ctx)
 
         elif isinstance(error, commands.BadArgument):
