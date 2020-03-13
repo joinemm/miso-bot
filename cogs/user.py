@@ -139,17 +139,21 @@ class User(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def hug(self, ctx, *, huggable=""):
+    async def hug(self, ctx, *, huggable=None):
         """hug someone or something."""
-        parsed_words = []
-        for word in huggable.split(" "):
-            user = await util.get_user(ctx, word)
-            parsed_words.append(user.mention if user is not None else word)
-
-        text = " ".join(parsed_words)
         emojis = db.query("select id from emojis where type = 'hug'")
         emoji = self.bot.get_emoji(random.choice(emojis)[0])
-        await ctx.send(f"{text} {emoji}")
+
+        if huggable is not None:
+            parsed_words = []
+            for word in huggable.split(" "):
+                user = await util.get_user(ctx, word)
+                parsed_words.append(user.mention if user is not None else word)
+
+            text = " ".join(parsed_words)
+            await ctx.send(f"{text} {emoji}")
+        else:
+            await ctx.send(f"{emoji}")
 
     @commands.command()
     async def members(self, ctx):
