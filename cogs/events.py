@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import helpers.log as log
 import helpers.utilityfunctions as util
 import data.database as db
@@ -14,29 +14,55 @@ class Events(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.stfu_regex = re.compile(r'(?:^|\W){0}(?:$|\W)'.format('stfu'), flags=re.IGNORECASE)
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        settings = db.get_from_data_json(['bot_settings'])
-        self.logchannel = self.bot.get_channel(settings['log_channel'])
-        if settings['status'] is None:
-            return
-
-        activity_type, activity_text = settings['status']
-        activities = {
+        self.statuses = [
+            ("watching", lambda: f"{len(self.bot.guilds)} servers"),
+            ("listening", lambda: f"to {len(set(self.bot.get_all_members()))} users"),
+            ("playing", lambda: "misobot.xyz")
+        ]
+        self.activities = {
             'playing': 0,
             'streaming': 1,
             'listening': 2,
             'watching': 3
         }
+        self.current_status = None
+        self.status_loop.start()
+    
+    def cog_unload(self):
+        self.status_loop.cancel()
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        settings = db.get_from_data_json(['bot_settings'])
+        self.logchannel = self.bot.get_channel(settings['log_channel'])
+    
+    @tasks.loop(minutes=3.0)
+    async def status_loop(self):
+        try:
+            await self.next_status()
+        except Exception as e:
+            logger.error(e)
+    
+    @status_loop.before_loop
+    async def before_status_loop(self):
+        await self.bot.wait_until_ready()
+        logger.info("Starting status loop")
+
+    async def next_status(self):
+        """switch to the next status message"""
+        new_status_id = self.current_status
+        while new_status_id == self.current_status:
+            new_status_id = random.randrange(0, len(self.statuses))
+        
+        status = self.statuses[new_status_id]
+        self.current_status = new_status_id
+        
         await self.bot.change_presence(
             activity=discord.Activity(
-                type=discord.ActivityType(activities[activity_type]),
-                name=activity_text
+                type=discord.ActivityType(self.activities[status[0]]),
+                name=status[1]()
             )
         )
-        logger.info(f"Changed presence to {activity_type} {activity_text}")
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
