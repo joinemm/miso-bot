@@ -11,6 +11,9 @@ from data import database as db
 from helpers import utilityfunctions as util
 
 
+ALLSUM = "SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23)"
+
+
 class User(commands.Cog):
 
     def __init__(self, bot):
@@ -20,7 +23,6 @@ class User(commands.Cog):
 
     async def get_rank(self, ctx, user, table, _global=False):
         """Get user's xp ranking from given table."""
-        ALLSUM = "SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23)"
         if user.bot:
             return 'BOT'
 
@@ -246,6 +248,32 @@ class User(commands.Cog):
 
         content.description += "```"
         await ctx.send(embed=content)
+
+    @commands.command()
+    async def topservers(self, ctx):
+        """See your top servers with miso bot."""
+        data = db.query(
+                "SELECT guild_id, %s FROM activity WHERE user_id = ? GROUP BY guild_id ORDER BY %s DESC" % (ALLSUM, ALLSUM),
+                (ctx.author.id,)
+            )
+        rows = []
+        total_xp = 0
+        for i, (guild_id, xp) in enumerate(data, start=1):
+            guild = self.bot.get_guild(guild_id)
+            if guild is None:
+                guild = guild_id
+            else:
+                guild = guild.name
+
+            level = util.get_level(xp)
+            total_xp += xp
+            rows.append(f"`#{i}` **{guild}** — Level **{level}**")
+        
+        content = discord.Embed()
+        content.set_author(name=f"{ctx.author.name}'s top servers", icon_url=ctx.author.avatar_url)
+        content.set_footer(text=f"Global level {util.get_level(total_xp)}")
+        content.color = ctx.author.color
+        await util.send_as_pages(ctx, content, rows)
 
     @commands.group(case_insensitive=True)
     async def leaderboard(self, ctx):
