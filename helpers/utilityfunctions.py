@@ -121,9 +121,13 @@ async def reaction_buttons(ctx, message, functions, timeout=300.0, only_author=F
     :param only_author : only allow the user who used the command use the buttons
     :param single_use  : delete buttons after one is used
     """
-
-    for emoji in functions:
-        await message.add_reaction(emoji)
+    
+    try:
+        for emoji in functions:
+            await message.add_reaction(emoji)
+    except discord.errors.Forbidden:
+        print("Adding reactions forbidden; returning...")
+        return
 
     def check(_reaction, _user):
         return _reaction.message.id == message.id \
@@ -524,6 +528,14 @@ def create_goodbye_message(user, guild, messageformat):
         server=guild.name,
         username=user.name
     )
+
+
+def get_full_class_name(obj):
+    """Gets full class name of any python object. Used for error names"""
+    module = obj.__class__.__module__
+    if module is None or module == str.__class__.__module__:
+        return obj.__class__.__name__
+    return module + '.' + obj.__class__.__name__
 
 
 def activityhandler(activity_tuple):

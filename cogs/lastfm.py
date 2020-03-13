@@ -786,7 +786,7 @@ async def api_request(params):
                         if int(content.get('error')) in [6, 8]:
                             tries += 1
                             if tries < max_tries:
-                                print("Error occured. Trying again...")
+                                #print("Error occured. Trying again...")
                                 continue
                             else:
                                 trying = False
