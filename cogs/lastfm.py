@@ -34,10 +34,20 @@ class LastFm(commands.Cog):
     @commands.group(case_insensitive=True)
     async def fm(self, ctx):
         """Last.fm commands"""
-        userdata = db.userdata(ctx.author.id)
+        if ctx.message.mentions:
+            ctx.foreign_target = True
+            ctx.usertarget = ctx.message.mentions[0]
+        else:
+            ctx.foreign_target = False
+            ctx.usertarget = ctx.author
+
+        userdata = db.userdata(ctx.usertarget.id)
         ctx.username = userdata.lastfm_username if userdata is not None else None
         if ctx.username is None and str(ctx.invoked_subcommand) not in ['fm set']:
-            return await ctx.send(f":warning: No last.fm username saved. Please use `{ctx.prefix}fm set <lastfm username>`")
+            if not ctx.foreign_target:
+                return await ctx.send(f":warning: No last.fm username saved. Please use `{ctx.prefix}fm set <lastfm username>`")
+            else:
+                return await ctx.send(f":warning: **{ctx.usertarget.name}** has not saved their lastfm username.")
 
         if ctx.invoked_subcommand is None:
             await util.command_group_help(ctx)
@@ -45,16 +55,22 @@ class LastFm(commands.Cog):
     @fm.command()
     async def set(self, ctx, username):
         """Save your last.fm username."""
+        if ctx.foreign_target:
+            return await ctx.send(":warning: You cannot set lastfm username for someone else!")
+
         content = await get_userinfo_embed(username)
         if content is None:
             return await ctx.send(f":warning: Invalid Last.fm username `{username}`")
 
         db.update_user(ctx.author.id, "lastfm_username", username)
-        await ctx.send(f"{ctx.message.author.mention} Username saved as `{username}`", embed=content)
+        await ctx.send(f"{ctx.author.mention} Username saved as `{username}`", embed=content)
 
     @fm.command()
     async def unset(self, ctx):
         """Unlink your last.fm."""
+        if ctx.foreign_target:
+            return await ctx.send(":warning: You cannot unset someone else's lastfm username!")
+
         db.update_user(ctx.author.id, "lastfm_username", None)
         await ctx.send(":broken_heart: Removed your last.fm username from the database")
 
@@ -159,7 +175,7 @@ class LastFm(commands.Cog):
 
         content.set_author(
             name=f"{user_attr['user']} {state}",
-            icon_url=ctx.message.author.avatar_url
+            icon_url=ctx.usertarget.avatar_url
         )
 
         await ctx.send(embed=content)
@@ -202,7 +218,7 @@ class LastFm(commands.Cog):
         content.set_footer(text=f"Total unique artists: {user_attr['total']}")
         content.set_author(
             name=f"{user_attr['user']} — {humanized_period(arguments['period']).capitalize()} top artists",
-            icon_url=ctx.message.author.avatar_url
+            icon_url=ctx.usertarget.avatar_url
         )
 
         await util.send_as_pages(ctx, content, rows, 15)
@@ -247,7 +263,7 @@ class LastFm(commands.Cog):
         content.set_footer(text=f"Total unique albums: {user_attr['total']}")
         content.set_author(
             name=f"{user_attr['user']} — {humanized_period(arguments['period']).capitalize()} top albums",
-            icon_url=ctx.message.author.avatar_url
+            icon_url=ctx.usertarget.avatar_url
         )
 
         await util.send_as_pages(ctx, content, rows, 15)
@@ -303,7 +319,7 @@ class LastFm(commands.Cog):
         content.set_footer(text=f"Total unique tracks: {user_attr['total']}")
         content.set_author(
             name=f"{user_attr['user']} — {humanized_period(arguments['period']).capitalize()} top tracks",
-            icon_url=ctx.message.author.avatar_url
+            icon_url=ctx.usertarget.avatar_url
         )
 
         await util.send_as_pages(ctx, content, rows, 15)
@@ -342,7 +358,7 @@ class LastFm(commands.Cog):
         content.colour = int(image_colour, 16)
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total scrobbles: {user_attr['total']}")
-        content.set_author(name=f"{user_attr['user']} — Recent tracks", icon_url=ctx.message.author.avatar_url)
+        content.set_author(name=f"{user_attr['user']} — Recent tracks", icon_url=ctx.usertarget.avatar_url)
 
         await util.send_as_pages(ctx, content, rows, 15)
 
@@ -438,7 +454,7 @@ class LastFm(commands.Cog):
         content.set_footer(text=f"Total {total_plays} {format_plays(total_plays)}")
         content.set_author(name=f"{username} — " + (f"{humanized_period(period)} " if period != 'overall' else '') + \
                                 f"top {'tracks' if method == 'user.gettoptracks' else 'albums'}" \
-                                f" for {formatted_name}", icon_url=ctx.message.author.avatar_url)
+                                f" for {formatted_name}", icon_url=ctx.usertarget.avatar_url)
 
         await util.send_as_pages(ctx, content, rows)
 
@@ -594,7 +610,7 @@ class LastFm(commands.Cog):
     async def crowns(self, ctx):
         """Check your artist crowns."""
         crownartists = db.query("""SELECT artist, playcount FROM crowns WHERE guild_id = ? AND user_id = ?""",
-                                (ctx.guild.id, ctx.author.id))
+                                (ctx.guild.id, ctx.usertarget.id))
         if crownartists is None:
             return await ctx.send("You haven't acquired any crowns yet! Use the `>whoknows` command to claim crowns :crown:")
 
@@ -603,7 +619,7 @@ class LastFm(commands.Cog):
             rows.append(f"**{artist}** with **{playcount}** {format_plays(playcount)}")
 
         content = discord.Embed(
-            title=f"Artist crowns for {ctx.author.name} — Total {len(crownartists)} crowns",
+            title=f"Artist crowns for {ctx.usertarget.name} — Total {len(crownartists)} crowns",
             color=discord.Color.gold()
         )
         await util.send_as_pages(ctx, content, rows)
