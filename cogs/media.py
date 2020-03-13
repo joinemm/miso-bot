@@ -178,7 +178,7 @@ class Media(commands.Cog):
             "✅": done
         }
 
-        await util.reaction_buttons(ctx, msg, functions, only_author=True)
+        asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions, only_author=True))
 
     @commands.command(aliases=['ig'])
     async def instagram(self, ctx, url):
@@ -373,7 +373,7 @@ class Media(commands.Cog):
             "❌": msg.delete,
             "🔁": randomize
         }
-        await util.reaction_buttons(ctx, msg, buttons, only_author=True)
+        asyncio.ensure_future(util.reaction_buttons(ctx, msg, buttons, only_author=True))
 
     @commands.command()
     async def melon(self, ctx, timeframe=None):
@@ -490,7 +490,7 @@ class Media(commands.Cog):
             "⬅": previous_result,
             "➡": next_result
         }
-        await util.reaction_buttons(ctx, msg, functions, only_author=True)
+        asyncio.ensure_future(await util.reaction_buttons(ctx, msg, functions, only_author=True))
 
 def setup(bot):
     bot.add_cog(Media(bot))
