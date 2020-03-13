@@ -94,14 +94,7 @@ class Images(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='olivia', hidden=True)
-    async def old_olivia(self, ctx):
-        await ctx.send(
-            ":warning: This command has moved to allow more variations!\n"
-            f"You can now find it at `{ctx.prefix}meme olivia`"
-        )
-
-    @commands.group()
+    @commands.group(case_insensitive=True)
     async def meme(self, ctx):
         """Input text into images."""
         await util.command_group_help(ctx)
