@@ -133,7 +133,10 @@ class Events(commands.Cog):
         if channel is None or message.channel == channel:
             return
         
-        await channel.send(embed=util.message_embed(message))
+        try:
+            await channel.send(embed=util.message_embed(message))
+        except discord.errors.Forbidden:
+            pass
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -161,31 +164,40 @@ class Events(commands.Cog):
         
         # stfu
         if self.stfu_regex.findall(message.content) and random.randint(0, 1) == 0:
-            await message.channel.send("no u")
+            try:
+                await message.channel.send("no u")
+            except discord.errors.Forbidden:
+                pass
         
         # hi
         if message.content.lower().strip("!.?~ ") == "hi" and random.randint(0, 19) == 0:
-            await message.channel.send('hi')
+            try:
+                await message.channel.send('hi')
+            except discord.errors.Forbidden:
+                pass
 
         # git gud
         if message.content.lower().startswith("git "):
             gitcommand = re.search(r'git (\S+)', message.content)
             if gitcommand is not None:
-                gitcommand = gitcommand.group(1)
-                if gitcommand == "--help":
-                    msg = "```\n" \
-                          "usage: git [--version] [--help] [-C <path>] [-c <name>=<value>]\n" \
-                          "           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n" \
-                          "           [-p | --paginate | --no-pager] [--no-replace-objects] [--bare]\n" \
-                          "           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]\n" \
-                          "           <command> [<args>]```"
-                    await message.channel.send(msg)
-                elif gitcommand == "--version":
-                    await message.channel.send("`git version 2.17.1`")
-                elif gitcommand in ["commit", "push", "pull", "checkout", "status", "init", "add"]:
+                try:
+                    gitcommand = gitcommand.group(1)
+                    if gitcommand == "--help":
+                        msg = "```\n" \
+                              "usage: git [--version] [--help] [-C <path>] [-c <name>=<value>]\n" \
+                              "           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n" \
+                              "           [-p | --paginate | --no-pager] [--no-replace-objects] [--bare]\n" \
+                              "           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]\n" \
+                              "           <command> [<args>]```"
+                        await message.channel.send(msg)
+                    elif gitcommand == "--version":
+                        await message.channel.send("`git version 2.17.1`")
+                    elif gitcommand in ["commit", "push", "pull", "checkout", "status", "init", "add"]:
+                        pass
+                    else:
+                        await message.channel.send(f"`git: '{gitcommand}' is not a git command. See 'git --help'.`")
+                except discord.errors.Forbidden:
                     pass
-                else:
-                    await message.channel.send(f"`git: '{gitcommand}' is not a git command. See 'git --help'.`")
 
         # log emojis
         unicode_emojis = util.find_unicode_emojis(message.content)
@@ -205,7 +217,10 @@ class Events(commands.Cog):
             level_now = util.get_level(xp)
 
             if level_now > level_before:
-                await message.channel.send(f"{message.author.mention} just leveled up! (level **{level_now}**)")
+                try:
+                    await message.channel.send(f"{message.author.mention} just leveled up! (level **{level_now}**)")
+                except discord.errors.Forbidden:
+                    pass
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, _):
