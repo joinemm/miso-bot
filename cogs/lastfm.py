@@ -325,12 +325,17 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @fm.command(aliases=['recents', 're'])
-    async def recent(self, ctx, size: int=15):
+    async def recent(self, ctx, size="15"):
         """Recently listened tracks.
 
         Usage:
             >fm recent [amount]
         """
+        try:
+            size = int(size)
+        except ValueError:
+            size = 15
+
         data = await api_request({
             "user": ctx.username,
             "method": "user.getrecenttracks",
@@ -610,7 +615,7 @@ class LastFm(commands.Cog):
     async def crowns(self, ctx):
         """Check your artist crowns."""
         crownartists = db.query("""SELECT artist, playcount FROM crowns WHERE guild_id = ? AND user_id = ?""",
-                                (ctx.guild.id, ctx.usertarget.id))
+                                (ctx.guild.id, ctx.author.id))
         if crownartists is None:
             return await ctx.send("You haven't acquired any crowns yet! Use the `>whoknows` command to claim crowns :crown:")
 
@@ -619,7 +624,7 @@ class LastFm(commands.Cog):
             rows.append(f"**{artist}** with **{playcount}** {format_plays(playcount)}")
 
         content = discord.Embed(
-            title=f"Artist crowns for {ctx.usertarget.name} — Total {len(crownartists)} crowns",
+            title=f"Artist crowns for {ctx.author.name} — Total {len(crownartists)} crowns",
             color=discord.Color.gold()
         )
         await util.send_as_pages(ctx, content, rows)

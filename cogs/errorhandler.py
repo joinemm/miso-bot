@@ -24,14 +24,14 @@ class Events(commands.Cog):
         if hasattr(ctx.command, 'on_error'):
             return
 
+        if isinstance(error, commands.CommandNotFound):
+            return
+
         error = getattr(error, 'original', error)
 
         command_logger.error(f"{util.get_full_class_name(error):25} > {ctx.guild} ? {ctx.author} \"{ctx.message.content}\"")
 
-        if isinstance(error, commands.CommandNotFound):
-            return
-
-        elif isinstance(error, commands.MissingPermissions):
+        if isinstance(error, commands.MissingPermissions):
             perms = ', '.join([f"`{x}`" for x in error.missing_perms])
             return await ctx.send(f":warning: You require {perms} permission to use this command!")
 
