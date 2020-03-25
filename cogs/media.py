@@ -149,14 +149,19 @@ class Media(commands.Cog):
         }
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
-                data = await response.json()
+                if response.status == 403:
+                    return await ctx.send("```Error: Daily quota reached.```")
+                else:
+                    data = await response.json()
 
         urls = []
         for item in data.get('items'):
             urls.append(f"https://youtube.com/watch?v={item['id']['videoId']}")
+        
+        if not urls:
+            return await ctx.send("No results found!")
 
         videos = util.TwoWayIterator(urls)
-
         msg = await ctx.send(f"`#1` {videos.current()}")
 
         async def next_link():
