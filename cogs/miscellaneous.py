@@ -246,13 +246,13 @@ class Miscellaneous(commands.Cog):
         """Get your daily horoscope."""
         if ctx.invoked_subcommand is not None:
             return
-
-        sign = db.userdata(ctx.author.id).sunsign
-        if sign is None:
+        userdata = db.userdata(ctx.author.id)
+        if userdata is None or userdata.sunsign is None:
             return await ctx.send(
                 "Please save your sunsign using `>horoscope set <sign>`\n"
                 "use `>horoscope list` if you don't know which one you are."
             )
+        sign = userdata.sunsign
 
         params = {
             'sign': sign,
