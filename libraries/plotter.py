@@ -45,3 +45,4 @@ def create_graph(data, usercolor, title=None, dimensions=(6, 3), draw=False):
     if draw:
         plt.show()
     plt.savefig('downloads/graph.png', facecolor='#1D1E22', bbox_inches='tight')
+    plt.close()
