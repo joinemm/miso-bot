@@ -10,6 +10,36 @@ class Mod(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.command(aliases=['clean'])
+    @commands.has_permissions(manage_messages=True)
+    async def purge(self, ctx, amount: int):
+        """Delete some amount of messages in current channel. 
+        If users are mentioned, only messages by those users are deleted.
+
+        Usage:
+            >purge <amount> [mentions...]"""
+        if amount > 100:
+            return await ctx.send(":warning: You cannot bulk delete more than 100 messages.")
+
+        await ctx.message.delete()
+
+        if ctx.message.mentions:
+            def user_check(m):
+                return m.author in ctx.message.mentions
+
+            deleted = []
+            async for message in ctx.channel.history(limit=500):
+                if user_check(message):
+                    deleted.append(message)
+                    if len(deleted) >= amount:
+                        break
+
+            await ctx.channel.delete_messages(deleted)
+        else:
+            deleted = await ctx.channel.purge(limit=amount)
+
+        await ctx.send(f":put_litter_in_its_place: Deleted `{len(deleted)}` messages.", delete_after=4)
+
     @commands.command()
     @commands.has_permissions(manage_roles=True)
     async def mute(self, ctx, user, *duration):
