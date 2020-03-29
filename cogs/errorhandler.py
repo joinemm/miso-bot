@@ -21,15 +21,19 @@ class Events(commands.Cog):
         error : Exception
         """
 
+
         if hasattr(ctx.command, 'on_error'):
             return
 
+        error = getattr(error, 'original', error)
+        
         if isinstance(error, commands.CommandNotFound):
             return
 
-        error = getattr(error, 'original', error)
-
         command_logger.error(f"{util.get_full_class_name(error):25} > {ctx.guild} ? {ctx.author} \"{ctx.message.content}\"")
+        
+        if isinstance(error, util.ErrorMessage):
+            return await ctx.send(str(error))
 
         if isinstance(error, commands.MissingPermissions):
             perms = ', '.join([f"`{x}`" for x in error.missing_perms])

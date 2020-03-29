@@ -45,9 +45,9 @@ class LastFm(commands.Cog):
         ctx.username = userdata.lastfm_username if userdata is not None else None
         if ctx.username is None and str(ctx.invoked_subcommand) not in ['fm set']:
             if not ctx.foreign_target:
-                return await ctx.send(f":warning: No last.fm username saved. Please use `{ctx.prefix}fm set <lastfm username>`")
+                raise util.ErrorMessage(f":warning: No last.fm username saved. Please use `{ctx.prefix}fm set <lastfm username>`")
             else:
-                return await ctx.send(f":warning: **{ctx.usertarget.name}** has not saved their lastfm username.")
+                raise util.ErrorMessage(f":warning: **{ctx.usertarget.name}** has not saved their lastfm username.")
 
         if ctx.invoked_subcommand is None:
             await util.command_group_help(ctx)
@@ -388,6 +388,8 @@ class LastFm(commands.Cog):
             path = ["topalbums", "album"]
         else:
             return await util.send_command_help(ctx)
+
+        artistname = remove_mentions(artistname)
 
         if artistname == "":
             return await ctx.send("Missing artist name!")
@@ -984,3 +986,7 @@ async def scrape_artists_for_chart(username, period, amount):
 
     return images
 
+
+def remove_mentions(text):
+    """Remove mentions from string."""
+    return (re.sub(r'<@\!?[0-9]+>', '', text)).strip()
