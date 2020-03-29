@@ -14,6 +14,10 @@ from PIL import Image
 from data import database as db
 
 
+class ErrorMessage(Exception):
+    pass
+
+
 async def determine_prefix(bot, message):
     """Get the prefix used in the invocation context."""
     guild = message.guild
@@ -123,8 +127,8 @@ async def reaction_buttons(ctx, message, functions, timeout=300.0, only_author=F
     """
     
     try:
-        for emoji in functions:
-            await message.add_reaction(emoji)
+        for emojiname in functions:
+            await message.add_reaction(emojiname)
     except discord.errors.Forbidden:
         print("Adding reactions forbidden; returning...")
         return
@@ -153,8 +157,8 @@ async def reaction_buttons(ctx, message, functions, timeout=300.0, only_author=F
 
     try:
         tasks = []
-        for emoji in functions:
-            tasks.append(message.remove_reaction(emoji, ctx.bot.user))
+        for emojiname in functions:
+            tasks.append(message.remove_reaction(emojiname, ctx.bot.user))
         await asyncio.gather(*tasks)
     except discord.errors.NotFound:
         pass
