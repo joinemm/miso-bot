@@ -43,9 +43,6 @@ class Events(commands.Cog):
             perms = ', '.join([f"`{x}`" for x in error.missing_perms])
             return await ctx.send(f":warning: Cannot execute command! Bot is missing permission {perms}")
 
-        elif isinstance(error, commands.MissingRequiredArgument):
-            return await util.send_command_help(ctx)
-        
         elif isinstance(error, commands.CommandOnCooldown):
             return await ctx.send(f":hourglass: This command is on a cooldown! (`{error.retry_after:.2f}s` remaining)")
         
@@ -67,9 +64,12 @@ class Events(commands.Cog):
         
         elif isinstance(error, discord.errors.Forbidden):
             try:
-                await ctx.message.add_reaction('🙊')
+                await ctx.send(f"```{str(error)}```")
             except discord.errors.Forbidden:
-                logger.error(str(error))
+                try:
+                    await ctx.message.add_reaction('🙊')
+                except discord.errors.Forbidden:
+                    logger.error(str(error))
 
         elif isinstance(error, LastFMError):
             await ctx.send(f"```{str(error)}```")
