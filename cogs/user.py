@@ -240,13 +240,16 @@ class User(commands.Cog):
             name=f"XP Rankings for {user.name}",
             icon_url=user.avatar_url
         )
-        content.description = "```"
-        for table, label in zip(['activity_day', 'activity_week', 'activity_month', 'activity'],
-                                ["Daily  ", "Weekly ", "Monthly", "Overall"]):
-            ranking = await self.get_rank(ctx, user, table)
-            content.description += f"\n{label} : {ranking}"
+        
+        for globalrank in [False, True]:
+            textbox = "```"
+            for table, label in zip(['activity_day', 'activity_week', 'activity_month', 'activity'],
+                                    ["Daily  ", "Weekly ", "Monthly", "Overall"]):
+                ranking = await self.get_rank(ctx, user, table, globalrank)
+                textbox += f"\n{label} : {ranking}"
+            
+            content.add_field(name='Global' if globalrank else 'Server', value=textbox + '```')
 
-        content.description += "```"
         await ctx.send(embed=content)
 
     @commands.command()
