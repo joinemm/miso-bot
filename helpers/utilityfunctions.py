@@ -313,7 +313,7 @@ async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
         except commands.errors.BadArgument:
             return fallback
     else:
-        result = discord.utils.find(lambda m: m.name == argument or m.id == argument, guildfilter.text_channels)
+        result = discord.utils.find(lambda m: argument in (m.name, m.id), guildfilter.text_channels)
         return result or fallback
 
 
@@ -368,7 +368,7 @@ async def get_guild(ctx, argument, fallback=None):
     :param fallback : return this if not found
     :returns        : discord.Guild
     """
-    result = discord.utils.find(lambda m: m.name == argument or m.id == argument, ctx.bot.guilds)
+    result = discord.utils.find(lambda m: argument in (m.name, m.id), ctx.bot.guilds)
     return result or fallback
 
 
