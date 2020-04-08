@@ -130,7 +130,6 @@ async def reaction_buttons(ctx, message, functions, timeout=300.0, only_author=F
         for emojiname in functions:
             await message.add_reaction(emojiname)
     except discord.errors.Forbidden:
-        print("Adding reactions forbidden; returning...")
         return
 
     def check(_reaction, _user):
@@ -534,12 +533,14 @@ def create_goodbye_message(user, guild, messageformat):
     )
 
 
-def get_full_class_name(obj):
+def get_full_class_name(obj, limit=2):
     """Gets full class name of any python object. Used for error names"""
     module = obj.__class__.__module__
     if module is None or module == str.__class__.__module__:
-        return obj.__class__.__name__
-    return module + '.' + obj.__class__.__name__
+        name = obj.__class__.__name__
+    else:
+        name = module + '.' + obj.__class__.__name__
+    return '.'.join(name.split('.')[-limit:])
 
 
 def activityhandler(activity_tuple):

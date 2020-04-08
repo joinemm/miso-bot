@@ -33,7 +33,7 @@ class Events(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             return await util.send_command_help(ctx)
 
-        command_logger.error(f"{util.get_full_class_name(error):25} > {ctx.guild} ? {ctx.author} \"{ctx.message.content}\"")
+        command_logger.error(f"{util.get_full_class_name(error):25} > {ctx.guild} ? {ctx.author} \"{ctx.message.content}\" > {str(error)}")
         
         if isinstance(error, util.ErrorMessage):
             return await ctx.send(str(error))
