@@ -64,7 +64,7 @@ class User(commands.Cog):
         content.set_image(url=user.avatar_url_as(static_format='png'))
         stats = await util.image_info_from_url(user.avatar_url)
         color = await util.color_from_image_url(str(user.avatar_url_as(size=128, format='png')))
-        content.color = await util.get_color(ctx, color)
+        content.colour = await util.get_color(ctx, color)
         content.set_footer(text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}")
 
         await ctx.send(embed=content)
@@ -275,7 +275,7 @@ class User(commands.Cog):
         content = discord.Embed()
         content.set_author(name=f"{ctx.author.name}'s top servers", icon_url=ctx.author.avatar_url)
         content.set_footer(text=f"Global level {util.get_level(total_xp)}")
-        content.color = ctx.author.color
+        content.colour = ctx.author.color
         await util.send_as_pages(ctx, content, rows)
 
     @commands.group(case_insensitive=True)
