@@ -55,12 +55,12 @@ class Info(commands.Cog):
         if current:
             content.add_field(
                 name="Current patrons",
-                value="\n".join([f"**{x}**" for x in current])
+                value="\n".join(f"**{x}**" for x in current)
             )
         if past:
             content.add_field(
                 name="Inactive patrons",
-                value="\n".join([f"**{x}**" for x in past])
+                value="\n".join(f"{x}" for x in past)
             )
 
         await ctx.send(embed=content)
@@ -366,7 +366,7 @@ class Info(commands.Cog):
         # additional data for command groups
         if hasattr(command, "commands"):
             content.description = "command group"
-            subcommands_string = ', '.join([f"'{command.name} {x.name}'" for x in command.commands])
+            subcommands_string = ', '.join(f"'{command.name} {x.name}'" for x in command.commands)
             subcommand_usage = db.query(
                 "SELECT SUM(count) FROM command_usage WHERE command IN (%s)" % subcommands_string
             )[0][0]

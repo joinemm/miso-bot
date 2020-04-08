@@ -39,11 +39,11 @@ class Events(commands.Cog):
             return await ctx.send(str(error))
 
         if isinstance(error, commands.MissingPermissions):
-            perms = ', '.join([f"`{x}`" for x in error.missing_perms])
+            perms = ', '.join(f"`{x}`" for x in error.missing_perms)
             return await ctx.send(f":warning: You require {perms} permission to use this command!")
 
         elif isinstance(error, commands.BotMissingPermissions):
-            perms = ', '.join([f"`{x}`" for x in error.missing_perms])
+            perms = ', '.join(f"`{x}`" for x in error.missing_perms)
             return await ctx.send(f":warning: Cannot execute command! Bot is missing permission {perms}")
 
         elif isinstance(error, commands.CommandOnCooldown):

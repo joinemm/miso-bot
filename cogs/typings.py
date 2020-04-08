@@ -18,40 +18,11 @@ class Typings(commands.Cog):
         self.fancy_font = '𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣'
         self.fancy_font_2 = '𝘢𝘣𝘤𝘥𝘦𝘧𝘨𝘩𝘪𝘫𝘬𝘭𝘮𝘯𝘰𝘱𝘲𝘳𝘴𝘵𝘶𝘷𝘸𝘹𝘺𝘻'
 
-    def get_wordlist(self, wordcount, language):
-        with open('data/wordlist.json') as f:
-            data = json.load(f)
-            all_words = data.get(language.lower())
-            if all_words is None:
-                return None, [str(lang) for lang in data]
-        wordlist = []
-        while len(wordlist) < wordcount:
-            word = random.choice(all_words)
-            if not wordlist or not wordlist[-1] == word:
-                wordlist.append(word)
-        return wordlist
-
-    def calculate_entry(self, message, words_message, wordlist):
-        time = message.created_at - words_message.created_at
-        user_words = message.content.split()
-        total_keys = 0
-        corrent_keys = 0
-        for user_word, correct_word in itertools.zip_longest(user_words, wordlist):
-            if correct_word is None:
-                continue
-            total_keys += len(correct_word) + 1
-            if user_word == correct_word:
-                corrent_keys += len(correct_word) + 1
-
-        wpm = (corrent_keys / 5) / (time.total_seconds() / 60)
-        accuracy = (corrent_keys / total_keys) * 100
-        return wpm, accuracy
-
     def obfuscate(self, text):
         while ' ' in text:
             text = text.replace(' ', random.choice(self.separators), 1)
         letter_dict = dict(zip('abcdefghijklmnopqrstuvwxyz', self.fancy_font))
-        return ''.join([letter_dict.get(letter, letter) for letter in text])
+        return ''.join(letter_dict.get(letter, letter) for letter in text)
 
     def anticheat(self, message):
         remainder = ''.join(set(message.content).intersection(self.fancy_font + ''.join(self.separators)))
@@ -77,7 +48,7 @@ class Typings(commands.Cog):
         if wordcount > 250:
             return await ctx.send("Maximum word count is 250!")
 
-        wordlist = self.get_wordlist(wordcount, language)
+        wordlist = get_wordlist(wordcount, language)
         if wordlist[0] is None:
             langs = '\n'.join(wordlist[1])
             return await ctx.send(f"Unsupported language `{language}`.\nCurrently supported languages are:\n>>> {langs}")
@@ -96,7 +67,7 @@ class Typings(commands.Cog):
             if self.anticheat(message):
                 return await ctx.send(f"{ctx.author.mention} Stop cheating >:(")
 
-            wpm, accuracy = self.calculate_entry(message, og_msg, wordlist)
+            wpm, accuracy = calculate_entry(message, og_msg, wordlist)
             await ctx.send(f"{ctx.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
             save_wpm(ctx.author, wpm, accuracy, wordcount, language, 0)
 
@@ -190,7 +161,7 @@ class Typings(commands.Cog):
 
         await asyncio.sleep(1)
 
-        wordlist = self.get_wordlist(wordcount, language)
+        wordlist = get_wordlist(wordcount, language)
         if wordlist[0] is None:
             langs = '\n'.join(wordlist[1])
             return await ctx.send(
@@ -222,7 +193,7 @@ class Typings(commands.Cog):
                     await ctx.send(f"{message.author.mention} Stop cheating >:(")
                     continue
 
-                wpm, accuracy = self.calculate_entry(message, words_message, wordlist)
+                wpm, accuracy = calculate_entry(message, words_message, wordlist)
                 await ctx.send(f"{message.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
                 save_wpm(ctx.author, wpm, accuracy, wordcount, language, 1)
 
@@ -301,6 +272,37 @@ class Typings(commands.Cog):
 
 def setup(bot):
     bot.add_cog(Typings(bot))
+
+
+def get_wordlist(wordcount, language):
+    with open('data/wordlist.json') as f:
+        data = json.load(f)
+        all_words = data.get(language.lower())
+        if all_words is None:
+            return None, [str(lang) for lang in data]
+    wordlist = []
+    while len(wordlist) < wordcount:
+        word = random.choice(all_words)
+        if not wordlist or not wordlist[-1] == word:
+            wordlist.append(word)
+    return wordlist
+
+
+def calculate_entry(message, words_message, wordlist):
+    time = message.created_at - words_message.created_at
+    user_words = message.content.split()
+    total_keys = 0
+    corrent_keys = 0
+    for user_word, correct_word in itertools.zip_longest(user_words, wordlist):
+        if correct_word is None:
+            continue
+        total_keys += len(correct_word) + 1
+        if user_word == correct_word:
+            corrent_keys += len(correct_word) + 1
+
+    wpm = (corrent_keys / 5) / (time.total_seconds() / 60)
+    accuracy = (corrent_keys / total_keys) * 100
+    return wpm, accuracy
 
 
 def save_wpm(user, wpm, accuracy, wordcount, language, race):

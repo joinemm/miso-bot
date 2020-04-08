@@ -131,7 +131,7 @@ class User(commands.Cog):
             for role in user.roles:
                 roles_names.append(role.mention)
 
-            role_string = " ".join([role.mention for role in user.roles])
+            role_string = " ".join(role.mention for role in user.roles)
             content.add_field(
                 name="Roles",
                 value=role_string,
@@ -466,7 +466,7 @@ class User(commands.Cog):
         global_xp_rows = db.query("SELECT * FROM activity WHERE user_id = ?", (user.id,))
         global_xp = 0
         if global_xp_rows is not None:
-            global_xp = sum([sum(row[3:]) for row in global_xp_rows])
+            global_xp = sum(sum(row[3:]) for row in global_xp_rows)
             global_rank = await self.get_rank(ctx, user, 'activity', _global=True)
          
         patrons = db.query("select user_id from patrons where currently_active = 1")

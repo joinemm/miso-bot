@@ -216,18 +216,18 @@ def pp(cursor, data=None, rowlens=0):
     if not data:
         data = cursor.fetchall(  )
     for dd in d:    # iterate over description
-        l = dd[1]
+        ll = dd[1]
         if not l:
-            l = 12             # or default arg ...
-        l = max(l, len(dd[0])) # Handle long names
+            ll = 12             # or default arg ...
+        ll = max(ll, len(dd[0])) # Handle long names
         names.append(dd[0])
-        lengths.append(l)
+        lengths.append(ll)
     for col in range(len(lengths)):
         if rowlens:
             rls = [len(row[col]) for row in data if row[col]]
             lengths[col] = max([lengths[col]]+rls)
         rules.append("-"*lengths[col])
-    print_format = " ".join(["%%-%ss" % l for l in lengths])
+    print_format = " ".join("%%-%ss" % ll for ll in lengths)
     result = [print_format % tuple(names), print_format % tuple(rules)]
     for row in data:
         result.append(print_format % row)

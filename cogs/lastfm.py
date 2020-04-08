@@ -588,10 +588,8 @@ class LastFm(commands.Cog):
                 artist = track['artist']['#text']
                 chart.append((f"{name} - {artist}", track['image'][3]['#text']))
 
-        img_divs = ''.join(
-            ['<div class="art"><img src="{' + str(i) + '[1]}"><p class="label">{'
-            + str(i) + '[0]}</p></div>' for i in range(len(chart))]
-        ).format(*chart)
+        img_divs = ''.join('<div class="art"><img src="{' + str(i) + '[1]}"><p class="label">{' + str(i) + '[0]}</p></div>' 
+                           for i in range(len(chart))).format(*chart)
 
         dimensions = (300*arguments['width'], 300*arguments['height'])
         replacements = {

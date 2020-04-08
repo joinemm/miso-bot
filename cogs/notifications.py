@@ -111,7 +111,7 @@ class Notifications(commands.Cog):
             server = self.bot.get_guild(guild_id)
             if server is None:
                 continue
-            content.add_field(name=server.name, value='\n'.join([f"└`{x}`" for x in guilds.get(guild_id)]))
+            content.add_field(name=server.name, value='\n'.join(f"└`{x}`" for x in guilds.get(guild_id)))
 
         await ctx.author.send(embed=content)
         if ctx.guild is not None:

@@ -468,7 +468,7 @@ def find_unicode_emojis(text):
             emoji_list.append(emoji.demojize(word))
     
     for i in range(math.floor(len(flags)/2)):
-        emoji_list.append(''.join([emoji.demojize(x) for x in flags[i:i+2]]))
+        emoji_list.append(''.join(emoji.demojize(x) for x in flags[i:i+2]))
 
     return emoji_list
 
