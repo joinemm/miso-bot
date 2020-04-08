@@ -176,13 +176,13 @@ class Typings(commands.Cog):
         completed_players = set()
 
         while race_in_progress:
-            def check(_message):
+            def progress_check(_message):
                 return _message.author in players \
                        and _message.channel == ctx.channel \
                        and _message.author not in completed_players
 
             try:
-                message = await self.bot.wait_for('message', timeout=300.0, check=check)
+                message = await self.bot.wait_for('message', timeout=300.0, check=progress_check)
             except asyncio.TimeoutError:
                 race_in_progress = False
 

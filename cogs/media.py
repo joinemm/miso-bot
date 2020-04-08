@@ -474,7 +474,7 @@ class Media(commands.Cog):
     async def google(self, ctx, *, query):
         """Search from google."""
         results = await self.bot.loop.run_in_executor(
-            None, lambda: googlesearch.search(query, stop=10, pause=1.0, only_standard=True)
+            None, lambda: googlesearch.search(query, stop=10, pause=1.0)
         )
         pages = util.TwoWayIterator([f"`#{i+1}` {x}" for i, x in enumerate(list(results))])
         msg = await ctx.send(pages.current())
