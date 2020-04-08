@@ -1030,7 +1030,7 @@ async def scrape_artist_image(artist):
     return image['src'].replace("/avatar170s/", "/300x300/") if image else ""
 
 
-async def fetch(session, url, params={}, handling='json'):
+async def fetch(session, url, params=None, handling='json'):
     async with session.get(url, params=params) as response:
         if handling == 'json':
             return await response.json()
