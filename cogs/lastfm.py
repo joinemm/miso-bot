@@ -369,30 +369,33 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def artist(self, ctx, timeframe, datatype, *, artistname=""):
-        """Your top tracks or albums for specific artist.
+        """Artist specific playcounts and info.
 
         Usage:
             >fm artist [timeframe] toptracks <artist name>
             >fm artist [timeframe] topalbums <artist name>
+            >fm artist [timeframe] overview  <artist name>
         """
         period = get_period(timeframe)
-        if period is None:
+        if period in [None, 'today']:
             artistname = " ".join([datatype, artistname]).strip()
             datatype = timeframe
             period = 'overall'
+        
+        artistname = remove_mentions(artistname)
+        if artistname == "":
+            return await ctx.send("Missing artist name!")
+
         if datatype in ["toptracks", "tt", "tracks", "track"]:
             method = "user.gettoptracks"
             path = ["toptracks", "track"]
         elif datatype in ["topalbums", "talb", "albums", "album"]:
             method = "user.gettopalbums"
             path = ["topalbums", "album"]
+        elif datatype in ['overview', 'stats', 'ov']:
+            return await self.artist_overview(ctx, period, artistname)
         else:
             return await util.send_command_help(ctx)
-
-        artistname = remove_mentions(artistname)
-
-        if artistname == "":
-            return await ctx.send("Missing artist name!")
 
         async def extract_songs(items):
             songs = []
@@ -464,6 +467,80 @@ class LastFm(commands.Cog):
                                 f" for {formatted_name}", icon_url=ctx.usertarget.avatar_url)
 
         await util.send_as_pages(ctx, content, rows)
+
+    async def artist_overview(self, ctx, period, artistname):
+        """Overall artist view"""
+        albums = []
+        tracks = []
+        metadata = [None, None, None]
+        async with aiohttp.ClientSession() as session:
+            url = f"https://last.fm/user/{ctx.username}/library/music/{artistname}?date_preset={period_http_format(period)}"
+            data = await fetch(session, url, handling='text')
+            soup = BeautifulSoup(data, 'html.parser')
+            try:
+                albumsdiv, tracksdiv, _ = soup.findAll("tbody", {"data-playlisting-add-entries": ""})
+            except ValueError:
+                if period == 'overall':
+                    return await ctx.send(f"You have never listened to **{artistname}**!")
+                else:
+                    return await ctx.send(f"You have not listened to **{artistname}** in the past {period}s!")
+
+            for container, destination in zip([albumsdiv, tracksdiv], [albums, tracks]):
+                items = container.findAll("tr", {"class": "chartlist-row"})
+                for item in items:
+                    name = item.find("td", {"class": "chartlist-name"}).find("a").get('title')
+                    playcount = item.find("span", {"class": "chartlist-count-bar-value"}).text.replace('scrobbles', '').replace("scrobble", "").strip()
+                    destination.append((name, playcount))
+            
+            metadata_list = soup.find("ul", {"class": "metadata-list"})
+            for i, metadata_item in enumerate(metadata_list.findAll("p", {"class": "metadata-display"})):
+                metadata[i] = int(metadata_item.text.replace(",", ""))
+        
+        artist_info = await api_request({
+            "method": "artist.getinfo",
+            "artist": artistname
+        })
+        artist_info = artist_info.get('artist')
+        formatted_name = artist_info['name']
+        image_url = soup.find("span", {"class": "library-header-image"}).find('img').get('src').replace("avatar70s", "avatar300s")
+        image_colour = await util.color_from_image_url(image_url)
+
+        content = discord.Embed()
+        content.set_thumbnail(url=image_url)
+        content.colour = int(image_colour, 16)
+        content.set_author(
+            name=f"{ctx.usertarget.name} — {formatted_name} " + (f"{humanized_period(period)} " if period != 'overall' else '') + "Overview",
+            icon_url=ctx.usertarget.avatar_url
+        )
+        similar, listeners = await get_similar_artists(formatted_name)
+        content.set_footer(text=f"{listeners} Listeners | Similar to: {', '.join(similar)}")
+
+        crown_holder = db.query("SELECT user_id FROM crowns WHERE guild_id = ? AND artist = ?", (ctx.guild.id, formatted_name))
+        if crown_holder is None or crown_holder[0][0] != ctx.usertarget.id:
+            crownstate = ""
+        else:
+            crownstate = ":crown: "
+
+        content.add_field(
+            name='Scrobbles | Albums | Tracks', 
+            value=f"{crownstate}**{metadata[0]}** | **{metadata[1]}** | **{metadata[2]}**", 
+            inline=False
+        )
+        
+        content.add_field(
+            name="Top albums", 
+            value="\n".join(f"`#{i:2}` **{item}** ({playcount})" 
+                            for i, (item, playcount) in enumerate(albums, start=1)),
+            inline=True
+        )
+        content.add_field(
+            name="Top tracks", 
+            value="\n".join(f"`#{i:2}` **{item}** ({playcount})" 
+                            for i, (item, playcount) in enumerate(tracks, start=1)),
+            inline=True
+        )
+        await ctx.send(embed=content)
+
 
     @fm.command()
     async def chart(self, ctx, *args):
@@ -661,6 +738,18 @@ async def get_playcount(artist, username, reference=None):
         return count
     else:
         return count, reference, name
+
+
+async def get_similar_artists(artistname):
+    similar = []
+    url = f"https://last.fm/music/{artistname}"
+    async with aiohttp.ClientSession() as session:
+        data = await fetch(session, url, handling='text')
+        soup = BeautifulSoup(data, 'html.parser')
+        for artist in soup.findAll("h3", {"class": "artist-similar-artists-sidebar-item-name"}):
+            similar.append(artist.find("a").text)
+        listeners = soup.find("li", {"class": "header-metadata-tnew-item--listeners"}).find("abbr").text
+    return similar, listeners
 
 
 def get_period(timeframe):
@@ -953,7 +1042,7 @@ async def fetch(session, url, params={}, handling='json'):
             return await response
 
 
-async def scrape_artists_for_chart(username, period, amount):
+def period_http_format(period):
     period_format_map = {
         "7day": "LAST_7_DAYS",
         "1month": "LAST_30_DAYS",
@@ -962,12 +1051,16 @@ async def scrape_artists_for_chart(username, period, amount):
         "12month": "LAST_365_DAYS",
         "overall": "ALL"
     }
+    return period_format_map.get(period)
+
+
+async def scrape_artists_for_chart(username, period, amount):
     tasks = []
     url = f"https://www.last.fm/user/{username}/library/artists"
     async with aiohttp.ClientSession() as session:
         for i in range(1, math.ceil(amount/50)+1):
             params = {
-                'date_preset': period_format_map[period],
+                'date_preset': period_http_format(period),
                 'page': i
             }
             task = asyncio.ensure_future(fetch(session, url, params, handling='text'))
