@@ -22,21 +22,6 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
         """Check if command author is Owner."""
         return await self.bot.is_owner(ctx.author)
 
-    def clean_codeblock(self, text):
-        """Remove codeblocks and empty lines, return lines."""
-        text = text.strip(' `')
-        lines = text.split('\n')
-        clean_lines = []
-
-        if lines[0] in ['py', 'python']:
-            lines = lines[1:]
-
-        for line in lines:
-            if line.strip() != '':
-                clean_lines.append(line)
-
-        return clean_lines
-
     @commands.command(rest_is_raw=True)
     async def say(self, ctx, channel, *, message):
         """Make the bot say something in a given channel."""
@@ -118,7 +103,7 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
 
         stdout = io.StringIO()
 
-        python_lines = self.clean_codeblock(python_code)
+        python_lines = clean_codeblock(python_code)
         if not python_lines:
             return await util.send_command_help(ctx)
         
@@ -181,6 +166,22 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
         connection.commit()
         connection.close()
         await ctx.send(f"```OK. Took {time.time() - start}s```")
+
+
+def clean_codeblock(text):
+    """Remove codeblocks and empty lines, return lines."""
+    text = text.strip(' `')
+    lines = text.split('\n')
+    clean_lines = []
+
+    if lines[0] in ['py', 'python']:
+        lines = lines[1:]
+
+    for line in lines:
+        if line.strip() != '':
+            clean_lines.append(line)
+
+    return clean_lines
 
 
 def setup(bot):
