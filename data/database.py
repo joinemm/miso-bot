@@ -217,7 +217,7 @@ def pp(cursor, data=None, rowlens=0):
         data = cursor.fetchall(  )
     for dd in d:    # iterate over description
         ll = dd[1]
-        if not l:
+        if not ll:
             ll = 12             # or default arg ...
         ll = max(ll, len(dd[0])) # Handle long names
         names.append(dd[0])

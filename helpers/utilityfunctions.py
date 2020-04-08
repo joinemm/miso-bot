@@ -176,7 +176,7 @@ def message_embed(message):
     content.description = message.content
     content.set_footer(text=f"{message.guild.name} | #{message.channel.name}")
     content.timestamp = message.created_at
-    content.color = message.author.color
+    content.colour = message.author.color
     if message.attachments:
         content.set_image(url=message.attachments[0].proxy_url)
 
