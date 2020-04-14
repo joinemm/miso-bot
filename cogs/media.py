@@ -347,6 +347,13 @@ class Media(commands.Cog):
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx, *, query):
         """Search for a random gif"""
+
+        async def extract_scripts(session, url):
+            async with session.get(url) as response:
+                data = await response.text()
+                soup = BeautifulSoup(data, 'html.parser')
+                return soup.find_all('script', {'type': 'application/ld+json'})
+
         scripts = []
         async with aiohttp.ClientSession() as session:
             tasks = []
@@ -359,7 +366,7 @@ class Media(commands.Cog):
         urls = []
         for script in scripts:
             try:
-                data = json.loads(script.text, encoding='utf-8')
+                data = json.loads(script.contents[0], encoding='utf-8')
                 for x in data["itemListElement"]:
                     if "url" in x:
                         urls.append(x['url'])
@@ -369,10 +376,10 @@ class Media(commands.Cog):
         if not urls:
             return await ctx.send("Found nothing!")
 
-        msg = await ctx.send(f"**{query}**: {random.choice(urls)}")
+        msg = await ctx.send(f"**{query}** {random.choice(urls)}")
 
         async def randomize():
-            await msg.edit(content=f"**{query}**: {random.choice(urls)}")
+            await msg.edit(content=f"**{query}** {random.choice(urls)}")
         
         buttons = {
             "❌": msg.delete,
@@ -497,13 +504,7 @@ class Media(commands.Cog):
         }
         asyncio.ensure_future(await util.reaction_buttons(ctx, msg, functions, only_author=True))
 
+
 def setup(bot):
     bot.add_cog(Media(bot))
-    
-
-async def extract_scripts(session, url):
-    async with session.get(url) as response:
-        data = await response.text()
-        soup = BeautifulSoup(data, 'html.parser')
-        return soup.find_all('script', {'type': 'application/ld+json'})
 
