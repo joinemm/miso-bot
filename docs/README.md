@@ -27,11 +27,7 @@ Statistics about command usage.
 > \>commandstats global [user]    
 > \>commandstats <command\>
 
-See information about any discord ID.
-
-> \>inspect <id\>
-
-Get invite link
+Get Miso invite link.
 
 > \>invite
 
@@ -107,6 +103,9 @@ Permanently ban a user. Doesn't have to be a member of the server.
 
 > \>ban <user\>
 
+Bulk delete messages. Mention users at the end to only delete messages by them.
+
+> \>purge <amount\> [mentions...]
 ---
 
 # Notifications
@@ -173,12 +172,21 @@ Search various places on the web like gfycat and youtube.
 
 > \>google <search...\>
 
+#### DuckDuckGo
+
+Use any DuckDuckGo [bangs](https://duckduckgo.com/bang) to quickly search the internet!
+
+\>!<bang\> <search...\>
+
 ---
 
 # LastFM
 
 Integration with the music tracking service, last.fm.    
 For anything requiring artist name, the name must be formatted **exactly** as is shows up in the lastfm website.
+
+You can mention anyone in a command and you will see the mentioned user's stats instead, 
+as long as they have connected their last.fm username of course.
 
 First connect your lastfm account by using
 
@@ -206,6 +214,10 @@ Show artist specific data from your listens.
 
 > \>fm artist [timeframe] toptracks <artist\>    
 > \>fm artist [timeframe] topalbums <artist\>
+
+Show overview of your top tracks and albums for artist.
+
+> \>fm artist [timeframe] overview <artist\>
 
 Generate a visual chart of your data.    
 You can optionally specify datatype `( artist | album | recent )`, timeframe or size of the chart in any order.    
@@ -241,6 +253,10 @@ The bot will start counting xp from the moment it's invited, so past messages wo
 Shows your server activity graph per hour, along with your xp and level information.
 
 > \>activity [user]
+
+Shows your top servers with miso bot.
+
+> \>topservers
 
 Show your daily/weekly/monthly/overall xp ranking
 
@@ -343,6 +359,11 @@ Ask something from wolfram alpha.
 
 > \>wolfram <query...>
 
+Set a reminder, and Miso will remind you!
+
+> \>remindme in <some time\> to <something\>  
+> \>remindme on <YYYY/MM/DD\> [HH:mm:ss] to <something\>
+
 ---
 
 # Typing tests
@@ -393,11 +414,6 @@ Ship two people and get their love% from 0% to 100%. Separate the names with 'an
 
 > \>ship <name\> and <name\>
 
-See word cloud of messages.
-
-> \>wordcloud channel    
-> \>wordcloud <user>
-
 Get the current status of any minecraft server.  
 You can usually not specify any port and it will work with the default.
 
@@ -417,6 +433,7 @@ Get your daily horoscope. Save your sunsign by using `set`.
 List all sunsigns and their ranges by using `list`.
 
 > \>horoscope  
+> \>horoscope tomorrow  
 > \>horoscope set  
 > \>horoscope list
 
