@@ -1,10 +1,10 @@
 ![logo](assets/icon.png)
 
-# Miso bot <small>3.4</small>
+# Miso bot <small>3.8</small>
 
 - 100+ commands
 - Twitter, Instagram, Last.fm, Gfycat, Melon
-- Levels and moderation
+- Levels, moderation, statistics
 - © 2020 Joinemm
 
 [Commands](/#info)
