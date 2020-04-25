@@ -249,43 +249,63 @@ class Events(commands.Cog):
                     pass
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, _):
+    async def on_raw_reaction_add(self, payload):
         """Starboard"""
-        if reaction.emoji == "⭐":
-            if util.int_to_bool(db.get_setting(reaction.message.guild.id, "starboard_toggle")):
-                if reaction.count < db.get_setting(reaction.message.guild.id, "starboard_amount"):
-                    return
+        if payload.emoji.name == "⭐":
+            starboard_settings = db.query(
+                "SELECT starboard_toggle, starboard_amount, starboard_channel FROM guilds WHERE guild_id = ?",
+                (payload.guild_id,)
+            )
+            if starboard_settings is None:
+                # starboard not configured on this server
+                return
+            else:
+                starboard_settings = starboard_settings[0]
 
-                channel_id = db.get_setting(reaction.message.guild.id, "starboard_channel")
-                channel = reaction.message.guild.get_channel(channel_id)
-                if channel is None:
-                    return logger.warning(f"Can't get starboard channel in {reaction.message.guild.name}")
+            if not util.int_to_bool(starboard_settings[0]):
+                return
 
-                board_msg_id = db.query("select starboard_message_id from starboard where message_id = ?",
-                                        (reaction.message.id,))
+            message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+            for react in message.reactions:
+                if react.emoji == payload.emoji.name:
+                    if react.count < starboard_settings[1]:
+                        return
+                    else:
+                        reaction_count = react.count
+                        break
 
-                if board_msg_id is None:
-                    # message is not on board yet
-                    content = discord.Embed(color=discord.Color.gold())
-                    content.set_author(
-                        name=f"{reaction.message.author}",
-                        icon_url=reaction.message.author.avatar_url
-                    )
-                    jump = f"\n\n[context]({reaction.message.jump_url})"
-                    content.description = reaction.message.content[:2048-len(jump)] + jump
-                    content.timestamp = reaction.message.created_at
-                    content.set_footer(text=f"{reaction.count} ⭐ #{reaction.message.channel.name}")
-                    if len(reaction.message.attachments) > 0:
-                        content.set_image(url=reaction.message.attachments[0].url)
+            channel_id = starboard_settings[2]
+            channel = payload.member.guild.get_channel(channel_id)
+            if channel is None:
+                return
 
-                    msg = await channel.send(embed=content)
-                    db.execute("INSERT INTO starboard values(?, ?)", (reaction.message.id, msg.id))
+            board_msg_id = db.query(
+                "SELECT starboard_message_id FROM starboard WHERE message_id = ?",
+                (payload.message_id,)
+            )
+            if board_msg_id is None:
+                # message is not on board yet,
+                content = discord.Embed(color=discord.Color.gold())
+                content.set_author(
+                    name=f"{message.author}",
+                    icon_url=message.author.avatar_url
+                )
+                jump = f"\n\n[context]({message.jump_url})"
+                content.description = message.content[:2048-len(jump)] + jump
+                content.timestamp = message.created_at
+                content.set_footer(text=f"{reaction_count} ⭐ #{message.channel.name}")
+                if len(message.attachments) > 0:
+                    content.set_image(url=message.attachments[0].url)
 
-                else:
-                    board_msg = await channel.fetch_message(board_msg_id[0][0])
-                    content = board_msg.embeds[0]
-                    content.set_footer(text=f"{reaction.count} ⭐ #{reaction.message.channel.name}")
-                    await board_msg.edit(embed=content)
+                board_message = await channel.send(embed=content)
+                db.execute("INSERT INTO starboard VALUES(?, ?)", (payload.message_id, board_message.id))
+
+            else:
+                # message is on board, update star count
+                board_message = await channel.fetch_message(board_msg_id[0][0])
+                content = board_message.embeds[0]
+                content.set_footer(text=f"{reaction_count} ⭐ #{message.channel.name}")
+                await board_message.edit(embed=content)
 
 
 def setup(bot):
