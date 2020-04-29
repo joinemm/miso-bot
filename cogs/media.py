@@ -502,7 +502,7 @@ class Media(commands.Cog):
             "⬅": previous_result,
             "➡": next_result
         }
-        asyncio.ensure_future(await util.reaction_buttons(ctx, msg, functions, only_author=True))
+        asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions, only_author=True))
 
 
 def setup(bot):
