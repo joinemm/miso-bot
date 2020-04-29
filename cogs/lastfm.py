@@ -76,12 +76,12 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def profile(self, ctx):
-        """Lastfm profile."""
+        """Last.fm profile."""
         await ctx.send(embed=await get_userinfo_embed(ctx.username))
 
     @fm.command(aliases=['yt'])
     async def youtube(self, ctx):
-        """Search for currently playing song on youtube."""
+        """Search for your currently playing song on youtube."""
         data = await api_request({
             "user": ctx.username,
             "method": "user.getrecenttracks",
@@ -93,10 +93,14 @@ class LastFm(commands.Cog):
         if not tracks:
             return await ctx.send("You have not listened to anything yet!")
 
-        user_attr = data['recenttracks']['@attr']
-
+        username = data['recenttracks']['@attr']['user']
         artist = tracks[0]['artist']['#text']
         track = tracks[0]['name']
+
+        state = "Most recent track"
+        track_attr = tracks[0].get('@attr')
+        if track_attr is not None and 'nowplaying' in track_attr:
+            state = "Now Playing"
 
         url = 'https://www.googleapis.com/youtube/v3/search'
         params = {
@@ -106,34 +110,31 @@ class LastFm(commands.Cog):
             'q': f"{artist} {track}",
             'key': GOOGLE_API_KEY
         }
-        async with aiohttp.ClientSession() as session:
+
+        async with aiohttp.ClientSession(raise_for_status=True) as session:
             async with session.get(url, params=params) as response:
                 data = await response.json()
 
-        video_item = data.get('items')[0]
-        video_url = f"https://youtube.com/watch?v={video_item['id']['videoId']}"
+        video_id = data['items'][0]['id']['videoId']
+        video_url = f"https://youtube.com/watch?v={video_id}"
 
-        state = "Most recent track"
-        if '@attr' in tracks[0]:
-            if "nowplaying" in tracks[0]['@attr']:
-                state = "Now Playing"
-
-        await ctx.send(f'**{user_attr["user"]} — {state}** :cd:\n{video_url}')
+        await ctx.send(f'**{username} — {state}** :cd:\n{video_url}')
 
     @fm.command(aliases=['np'])
     async def nowplaying(self, ctx):
-        """Currently playing song or most recent song."""
+        """Show your currently playing song."""
         data = await api_request({
             "user": ctx.username,
             "method": "user.getrecenttracks",
             "limit": 1
         })
-        user_attr = data['recenttracks']['@attr']
+
         tracks = data['recenttracks']['track']
 
         if not tracks:
             return await ctx.send("You have not listened to anything yet!")
 
+        username = data['recenttracks']['@attr']['user']
         artist = tracks[0]['artist']['#text']
         album = tracks[0]['album']['#text']
         track = tracks[0]['name']
@@ -174,7 +175,7 @@ class LastFm(commands.Cog):
                 state = "— Now Playing"
 
         content.set_author(
-            name=f"{user_attr['user']} {state}",
+            name=f"{username} {state}",
             icon_url=ctx.usertarget.avatar_url
         )
 
@@ -473,7 +474,7 @@ class LastFm(commands.Cog):
         albums = []
         tracks = []
         metadata = [None, None, None]
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(raise_for_status=True) as session:
             url = f"https://last.fm/user/{ctx.username}/library/music/{artistname}?date_preset={period_http_format(period)}"
             data = await fetch(session, url, handling='text')
             soup = BeautifulSoup(data, 'html.parser')
@@ -610,7 +611,7 @@ class LastFm(commands.Cog):
             'imageFormat': 'jpeg',
             'quality': 70
         }
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(raise_for_status=True) as session:
             async with session.post('http://localhost:3000/html', data=payload) as response:
                 with open("downloads/fmchart.jpeg", "wb") as f:
                     while True:
@@ -741,7 +742,7 @@ async def get_playcount(artist, username, reference=None):
 async def get_similar_artists(artistname):
     similar = []
     url = f"https://last.fm/music/{artistname}"
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(raise_for_status=True) as session:
         data = await fetch(session, url, handling='text')
         soup = BeautifulSoup(data, 'html.parser')
         for artist in soup.findAll("h3", {"class": "artist-similar-artists-sidebar-item-name"}):
@@ -869,7 +870,7 @@ async def api_request(params):
     max_tries = 2
     trying = True
     while trying:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(raise_for_status=True) as session:
             async with session.get(url, params=params) as response:
                 try:
                     content = await response.json()
@@ -1015,7 +1016,7 @@ async def get_userinfo_embed(username):
 
 async def scrape_artist_image(artist):
     url = f"https://www.last.fm/music/{urllib.parse.quote_plus(artist)}/+images"
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(raise_for_status=True) as session:
         data = await fetch(session, url, handling='text')
 
     soup = BeautifulSoup(data, 'html.parser')
@@ -1055,7 +1056,7 @@ def period_http_format(period):
 async def scrape_artists_for_chart(username, period, amount):
     tasks = []
     url = f"https://www.last.fm/user/{username}/library/artists"
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(raise_for_status=True) as session:
         for i in range(1, math.ceil(amount/50)+1):
             params = {
                 'date_preset': period_http_format(period),
