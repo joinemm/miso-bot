@@ -19,7 +19,7 @@ else:
 logger.info(f"Developer mode is {'ON' if DEV else 'OFF'}")
 
 TOKEN = os.environ['MISO_BOT_TOKEN_BETA' if DEV else 'MISO_BOT_TOKEN']
-bot = commands.Bot(
+bot = commands.AutoShardedBot(
     command_prefix=util.determine_prefix,
     case_insensitive=True
 )
@@ -55,7 +55,10 @@ async def on_ready():
     # cache owner from appinfo
     bot.owner = (await bot.application_info()).owner
     bot.start_time = time()
-    logger.info("Loading complete")
+    latencies = bot.latencies
+    logger.info(f"Loading complete | running {len(latencies)} shards")
+    for shard_id, latency in latencies:
+        logger.info(f"< Shard [{shard_id}] - HEARTBEAT {latency}s >")
 
 
 @bot.before_invoke
