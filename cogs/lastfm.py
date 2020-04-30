@@ -111,7 +111,7 @@ class LastFm(commands.Cog):
             'key': GOOGLE_API_KEY
         }
 
-        async with aiohttp.ClientSession(raise_for_status=True) as session:
+        async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
                 data = await response.json()
 
@@ -474,7 +474,7 @@ class LastFm(commands.Cog):
         albums = []
         tracks = []
         metadata = [None, None, None]
-        async with aiohttp.ClientSession(raise_for_status=True) as session:
+        async with aiohttp.ClientSession() as session:
             url = f"https://last.fm/user/{ctx.username}/library/music/{artistname}?date_preset={period_http_format(period)}"
             data = await fetch(session, url, handling='text')
             soup = BeautifulSoup(data, 'html.parser')
@@ -611,7 +611,7 @@ class LastFm(commands.Cog):
             'imageFormat': 'jpeg',
             'quality': 70
         }
-        async with aiohttp.ClientSession(raise_for_status=True) as session:
+        async with aiohttp.ClientSession() as session:
             async with session.post('http://localhost:3000/html', data=payload) as response:
                 with open("downloads/fmchart.jpeg", "wb") as f:
                     while True:
@@ -742,7 +742,7 @@ async def get_playcount(artist, username, reference=None):
 async def get_similar_artists(artistname):
     similar = []
     url = f"https://last.fm/music/{artistname}"
-    async with aiohttp.ClientSession(raise_for_status=True) as session:
+    async with aiohttp.ClientSession() as session:
         data = await fetch(session, url, handling='text')
         soup = BeautifulSoup(data, 'html.parser')
         for artist in soup.findAll("h3", {"class": "artist-similar-artists-sidebar-item-name"}):
@@ -870,7 +870,7 @@ async def api_request(params):
     max_tries = 2
     trying = True
     while trying:
-        async with aiohttp.ClientSession(raise_for_status=True) as session:
+        async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
                 try:
                     content = await response.json()
@@ -1016,7 +1016,7 @@ async def get_userinfo_embed(username):
 
 async def scrape_artist_image(artist):
     url = f"https://www.last.fm/music/{urllib.parse.quote_plus(artist)}/+images"
-    async with aiohttp.ClientSession(raise_for_status=True) as session:
+    async with aiohttp.ClientSession() as session:
         data = await fetch(session, url, handling='text')
 
     soup = BeautifulSoup(data, 'html.parser')
@@ -1056,7 +1056,7 @@ def period_http_format(period):
 async def scrape_artists_for_chart(username, period, amount):
     tasks = []
     url = f"https://www.last.fm/user/{username}/library/artists"
-    async with aiohttp.ClientSession(raise_for_status=True) as session:
+    async with aiohttp.ClientSession() as session:
         for i in range(1, math.ceil(amount/50)+1):
             params = {
                 'date_preset': period_http_format(period),
