@@ -200,7 +200,7 @@ class Config(commands.Cog):
                     (ctx.guild.id, channel.id)) is None:
             return await ctx.send(f":warning: {channel.mention} is not a voting channel!")
 
-        db.execute("DELETE FROM votechannels where guild_id = ? and channel_id = ?", (ctx.guild.id, channel_id))
+        db.execute("DELETE FROM votechannels where guild_id = ? and channel_id = ?", (ctx.guild.id, channel.id))
         await ctx.send(f"{channel.mention} is no longer a voting channel.")
 
     @votechannel.command(name="list")
