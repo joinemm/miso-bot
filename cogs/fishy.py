@@ -89,12 +89,12 @@ class Fishy(commands.Cog):
                 "Not so fast! Please wait {time}"
             ]
             wait_time = f"**{util.stringfromtime(COOLDOWN - time_since_fishy, 2)}**"
-            return await ctx.send(random.choice(not_yet_quotes).format(time=wait_time))
+            await ctx.send(random.choice(not_yet_quotes).format(time=wait_time))
+        else:
+            catch = random.choices(list(self.FISHTYPES.keys()), self.WEIGHTS)[0]
+            amount = await self.FISHTYPES[catch](ctx, receiver, gift)
+            db.add_fishy(receiver.id, catch, amount, ctx.message.created_at.timestamp(), fisher_id=(ctx.author.id if gift else None))
 
-        catch = random.choices(list(self.FISHTYPES.keys()), self.WEIGHTS)[0]
-        amount = await self.FISHTYPES[catch](ctx, receiver, gift)
-        db.add_fishy(receiver.id, catch, amount, ctx.message.created_at.timestamp(),
-                     fisher_id=(ctx.author.id if gift else None))
         self.fish_lock.remove(ctx.author.id)
 
     @commands.command()
