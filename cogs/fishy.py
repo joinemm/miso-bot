@@ -50,7 +50,6 @@ class Fishy(commands.Cog):
             "legendary": fish_legendary
         }
         self.WEIGHTS = [9, 60, 20, 10, 1]
-        self.fish_lock = set()
 
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
     async def fishy(self, ctx, user=None):
@@ -60,10 +59,6 @@ class Fishy(commands.Cog):
             >fishy
             >fishy <user>
         """
-        if ctx.author.id in self.fish_lock:
-            return await ctx.send("Mister you are fishing way too fast.")
-
-        self.fish_lock.add(ctx.author.id)
         receiver = await util.get_member(ctx, user, fallback=ctx.author)
         if receiver is not None and receiver is not ctx.author:
             gift = True
@@ -94,8 +89,6 @@ class Fishy(commands.Cog):
             catch = random.choices(list(self.FISHTYPES.keys()), self.WEIGHTS)[0]
             amount = await self.FISHTYPES[catch](ctx, receiver, gift)
             db.add_fishy(receiver.id, catch, amount, ctx.message.created_at.timestamp(), fisher_id=(ctx.author.id if gift else None))
-
-        self.fish_lock.remove(ctx.author.id)
 
     @commands.command()
     async def fishystats(self, ctx, user=None):
