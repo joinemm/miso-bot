@@ -145,7 +145,7 @@ class LastFm(commands.Cog):
         content = discord.Embed()
         content.colour = int(image_colour, 16)
         content.description = f"**{util.escape_md(album)}**"
-        content.title = f"**{util.escape_md(artist)}** — ***{util.escape_md(track)} ***"
+        content.title = f"**{util.escape_md(artist)} — *{util.escape_md(track)}* **"
         content.set_thumbnail(url=image_url)
 
         # tags and playcount
