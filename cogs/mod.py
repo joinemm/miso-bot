@@ -85,7 +85,7 @@ class Mod(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(ban_members=True)
-    async def ban(self, ctx, user):
+    async def ban(self, ctx, user, delete_message_days: int=0):
         """Ban user."""
         u = await util.get_user(ctx, user)
         if u is None:
@@ -105,7 +105,7 @@ class Mod(commands.Cog):
             content.description = f"{u.mention}\n**{u.name}#{u.discriminator}**\n{u.id}"
         except AttributeError as e:
             # unknown user, most likely not in guild so just ban without confirmation
-            await ctx.guild.ban(u)
+            await ctx.guild.ban(u, delete_message_days=delete_message_days)
             return await ctx.send(f":hammer: Banned `{u}`")
 
         # send confirmation message
@@ -114,7 +114,7 @@ class Mod(commands.Cog):
         async def confirm_ban():
             content.title = ":white_check_mark: User banned"
             await msg.edit(embed=content)
-            await ctx.guild.ban(u)
+            await ctx.guild.ban(u, delete_message_days=delete_message_days)
 
         async def cancel_ban():
             content.title = ":x: Ban cancelled"

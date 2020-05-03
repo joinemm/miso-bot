@@ -253,11 +253,14 @@ class User(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def topservers(self, ctx):
+    async def topservers(self, ctx, user: discord.User=None):
         """See your top servers with miso bot."""
+        if user is None:
+            user = ctx.author
+
         data = db.query(
                 "SELECT guild_id, %s FROM activity WHERE user_id = ? GROUP BY guild_id ORDER BY %s DESC" % (ALLSUM, ALLSUM),
-                (ctx.author.id,)
+                (user.id,)
             )
         rows = []
         total_xp = 0
@@ -273,7 +276,7 @@ class User(commands.Cog):
             rows.append(f"`#{i}` **{guild}** — Level **{level}**")
         
         content = discord.Embed()
-        content.set_author(name=f"{ctx.author.name}'s top servers", icon_url=ctx.author.avatar_url)
+        content.set_author(name=f"{user.name}'s top servers", icon_url=ctx.author.avatar_url)
         content.set_footer(text=f"Global level {util.get_level(total_xp)}")
         content.colour = ctx.author.color
         await util.send_as_pages(ctx, content, rows)
