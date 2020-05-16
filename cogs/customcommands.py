@@ -42,6 +42,16 @@ class CustomCommands(commands.Cog):
                     command_list.add(alias)
         return command_list
 
+    async def everyone_or_manager(ctx):
+        setting = db.get_setting(ctx.guild.id, "custom_commands_everyone")
+        if setting != 0:
+            return True
+        else:
+            if ctx.author.guild_permissions.manage_guild:
+                return True
+            else:
+                raise commands.MissingPermissions(["manage_server"])
+
     @commands.group()
     @commands.guild_only()
     async def command(self, ctx):
@@ -49,6 +59,7 @@ class CustomCommands(commands.Cog):
         await util.command_group_help(ctx)
 
     @command.command()
+    @commands.check(everyone_or_manager)
     async def add(self, ctx, name, *, response):
         """Add a new command."""
         if name in self.bot_command_list():
@@ -75,7 +86,7 @@ class CustomCommands(commands.Cog):
             if not ctx.author.guild_permissions.manage_guild:
                 return await ctx.send(
                     ":warning: You can only remove commands you have added " \
-                    "unless you have the 'manage_guild' permission."
+                    "unless you have the `manage_server` permission."
                 )
 
         db.execute(
@@ -118,6 +129,15 @@ class CustomCommands(commands.Cog):
             await util.send_as_pages(ctx, content, rows, maxrows=25)
         else:
             await ctx.send("No custom commands added on this server yet")
+
+    @command.command(name="eligibility")
+    async def command_eligibility(self, ctx, value: bool):
+        """Change whether everyone can add commands, or only server managers"""
+        db.update_setting(ctx.guild.id, "custom_commands_everyone", util.bool_to_int(value))
+        if value:
+            await ctx.send("Everyone can now add custom commands!")
+        else:
+            await ctx.send("Adding commands now requires the `manage_server` permission!")
 
 
 def custom_command_list(guild_id, match=""):
