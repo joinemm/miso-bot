@@ -11,7 +11,7 @@ def get_logger(logger_name):
 
     # logger not created yet, assign options
     coloredlogs.install(
-        fmt="{asctime} | {levelname:7} | {name:25} > {message}",
+        fmt="{asctime} | {name:25} > {message}",
         style='{',
         level='DEBUG',
         logger=logger
@@ -27,7 +27,7 @@ def get_command_logger():
 
     # logger not created yet, assign options
     coloredlogs.install(
-        fmt="{asctime} | {levelname:7} | {message}",
+        fmt="{asctime} | {message}",
         style='{',
         level='DEBUG',
         logger=logger
@@ -41,10 +41,10 @@ def log_command(ctx):
     command = str(ctx.command)
     guild = ctx.guild.name if ctx.guild is not None else 'DM'
     user = str(ctx.author)
-    return f"{command:19} {took:.2f}s > {guild} ? {user} \"{ctx.message.content}\""
+    return f"{command:19} {took:.2f}s > {guild} : {user} \"{ctx.message.content}\""
 
 
 def custom_command_format(ctx, keyword):
     guild = ctx.guild.name if ctx.guild is not None else 'DM'
     user = str(ctx.author)
-    return f"{f'custom({keyword})':>24} > {guild} ? {user} \"{ctx.message.content}\""
+    return f"{f'{keyword} (custom)':25} > {guild} : {user} \"{ctx.message.content}\""

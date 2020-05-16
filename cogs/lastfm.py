@@ -13,15 +13,12 @@ from discord.ext import commands
 from concurrent.futures import ThreadPoolExecutor
 from helpers import utilityfunctions as util
 from data import database as db
+from helpers.exceptions import LastFMError
 
 
 LASTFM_APPID = os.environ.get('LASTFM_APIKEY')
 LASTFM_TOKEN = os.environ.get('LASTFM_SECRET')
 GOOGLE_API_KEY = os.environ.get('GOOGLE_KEY')
-
-
-class LastFMError(Exception):
-    pass
 
 
 class LastFm(commands.Cog):

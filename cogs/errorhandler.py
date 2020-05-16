@@ -1,8 +1,9 @@
 import traceback
 import discord
+import asyncio
 from discord.ext import commands
 from helpers import log, utilityfunctions as util
-from cogs.lastfm import LastFMError
+from helpers import exceptions
 
 logger = log.get_logger(__name__)
 command_logger = log.get_logger("commands")
@@ -21,7 +22,6 @@ class Events(commands.Cog):
         error : Exception
         """
 
-
         if hasattr(ctx.command, 'on_error'):
             return
 
@@ -33,7 +33,7 @@ class Events(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             return await util.send_command_help(ctx)
 
-        command_logger.error(f"{util.get_full_class_name(error):25} > {ctx.guild} ? {ctx.author} \"{ctx.message.content}\" > {str(error)}")
+        command_logger.error(f"{type(error).__name__:25} > {ctx.guild} ? {ctx.author} \"{ctx.message.content}\" > {error}")
         
         if isinstance(error, util.ErrorMessage):
             return await ctx.send(str(error))
@@ -53,7 +53,7 @@ class Events(commands.Cog):
             await ctx.send(f':warning: `{ctx.command}` has been disabled!')
 
         elif isinstance(error, commands.NoPrivateMessage):
-            await ctx.author.send(f':warning: `{ctx.command}` can not be used in DMs!')
+            await ctx.author.send(f':warning: You cannot use commands in private messages')
 
         elif isinstance(error, commands.NotOwner):
             await ctx.send(f":warning: Sorry, you are not authorized to use this command!")
@@ -61,6 +61,22 @@ class Events(commands.Cog):
         elif isinstance(error, commands.CheckFailure):
             logger.error(str(error))
             await ctx.send(f":warning: {error}")
+
+        elif isinstance(error, exceptions.BlacklistTrigger):
+            if error.blacklist_type == "command":
+                message = "This command has been blacklisted by the server moderators"
+            elif error.blacklist_type == "channel":
+                message = "Command usage on this channel has been blacklisted by the server moderators"
+            elif error.blacklist_type == "user":
+                message = "You have been blacklisted from using commands by the server moderators"
+            elif error.blacklist_type == "global":
+                message = "You have been blacklisted from using Miso Bot"
+
+            delete = error.do_delete
+            await ctx.send(f":no_entry_sign: `{message}`", delete_after=(5 if delete else None))
+            if delete:
+                await asyncio.sleep(5)
+                await ctx.message.delete()
 
         elif isinstance(error, commands.BadArgument):
             await ctx.send(f"```{str(error)}```")
@@ -74,7 +90,7 @@ class Events(commands.Cog):
                 except discord.errors.Forbidden:
                     logger.error(str(error))
 
-        elif isinstance(error, LastFMError):
+        elif isinstance(error, exceptions.LastFMError):
             await ctx.send(f"```{str(error)}```")
         
         else:

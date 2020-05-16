@@ -106,7 +106,7 @@ class Mod(commands.Cog):
         except AttributeError as e:
             # unknown user, most likely not in guild so just ban without confirmation
             await ctx.guild.ban(u, delete_message_days=delete_message_days)
-            return await ctx.send(f":hammer: Banned `{u}`")
+            return await ctx.send(f":hammer: Baned `{u}`")
 
         # send confirmation message
         msg = await ctx.send(embed=content)
@@ -126,6 +126,110 @@ class Mod(commands.Cog):
         }
 
         await util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+
+    @commands.group()
+    @commands.has_permissions(administrator=True)
+    async def blacklist(self, ctx):
+        """Restrict command usage."""
+        await util.command_group_help(ctx)
+
+    @blacklist.command(name="delete")
+    async def blacklist_delete(self, ctx, value: bool):
+        """Toggle whether delete unsuccessful tries of command use"""
+        db.update_setting(ctx.guild.id, "delete_blacklisted", util.bool_to_int(value))
+        await ctx.send(f":white_check_mark: Deletion of unsuccessful command usage is now **{'on' if value else 'off'}**")
+
+    @blacklist.command(name="show")
+    async def blacklist_show(self, ctx):
+        """Show current blacklists."""
+        content = discord.Embed(title=f"{ctx.guild.name} Blacklist status")
+
+        blacklisted_channels = db.get_blacklist(ctx.guild.id, "channel_id", "channels")
+        blacklisted_users = db.get_blacklist(ctx.guild.id, "user_id", "users")
+        blacklisted_commands = db.get_blacklist(ctx.guild.id, "command", "commands")
+
+        if blacklisted_channels:
+            content.add_field(
+                name="Channels",
+                value="\n".join(f"<#{channel_id}>" for channel_id in blacklisted_channels)
+            )
+        if blacklisted_users:
+            content.add_field(
+                name="Users",
+                value="\n".join(f"<@{user_id}>" for user_id in blacklisted_users)
+            )
+        if blacklisted_commands:
+            content.add_field(
+                name="Commands",
+                value="\n".join(f"`{command}`" for command in blacklisted_commands)
+            )
+
+        await ctx.send(embed=content)
+
+    @blacklist.command(name="channel")
+    async def blacklist_channel(self, ctx, textchannel: discord.TextChannel):
+        """Blacklist a channel."""
+        db.execute("INSERT OR IGNORE INTO blacklisted_channels VALUES(?, ?)", (ctx.guild.id, textchannel.id))
+        await ctx.send(f":white_check_mark: {textchannel.mention} has been blacklisted from command usage")
+
+    @blacklist.command(name="user")
+    async def blacklist_user(self, ctx, *, member: discord.Member):
+        """Blacklist member of this server."""
+        db.execute("INSERT OR IGNORE INTO blacklisted_users VALUES(?, ?)", (ctx.guild.id, member.id))
+        await ctx.send(f":white_check_mark: **{member}** has been blacklisted from using commands on this server")
+
+    @blacklist.command(name="command")
+    async def blacklist_command(self, ctx, *, command):
+        """Blacklist a command."""
+        cmd = self.bot.get_command(command)
+        if cmd is None:
+            return await ctx.send(f":warning: `{command}` is not a command!")
+
+        db.execute("INSERT OR IGNORE INTO blacklisted_commands VALUES(?, ?)", (ctx.guild.id, str(cmd)))
+        await ctx.send(f":white_check_mark: `{cmd}` has been blacklisted on this server")
+
+    @blacklist.command(name="global")
+    @commands.is_owner()
+    async def blacklist_global(self, ctx, *, user: discord.User):
+        """Blacklist someone from Miso Bot"""
+        db.execute("INSERT OR IGNORE INTO blacklist_global_users VALUES(?)", (user.id,))
+        await ctx.send(f":white_check_mark: **{user}** is now globally blacklisted from using Miso Bot")
+
+    @commands.group()
+    @commands.has_permissions(administrator=True)
+    async def whitelist(self, ctx):
+        """Reverse blacklist."""
+        await util.command_group_help(ctx)
+
+    @whitelist.command(name="channel")
+    async def whitelist_channel(self, ctx, textchannel: discord.TextChannel):
+        """Whitelist a channel."""
+        db.execute("DELETE FROM blacklisted_channels WHERE guild_id = ? AND channel_id = ?", (ctx.guild.id, textchannel.id))
+        await ctx.send(f":white_check_mark: {textchannel.mention} is no longer blacklisted")
+
+    @whitelist.command(name="user")
+    async def whitelist_user(self, ctx, *, member: discord.Member):
+        """Whitelist a member of this server."""
+        db.execute("DELETE FROM blacklisted_users WHERE guild_id = ? AND user_id = ?", (ctx.guild.id, member.id))
+        await ctx.send(f":white_check_mark: **{member}** is no longer blacklisted")
+
+    @whitelist.command(name="command")
+    async def whitelist_command(self, ctx, *, command):
+        """Whitelist a command."""
+        cmd = self.bot.get_command(command)
+        if cmd is None:
+            return await ctx.send(f":warning: `{command}` is not a command!")
+
+        db.execute("DELETE FROM blacklisted_commands WHERE guild_id = ? AND command = ?", (ctx.guild.id, str(cmd)))
+        await ctx.send(f":white_check_mark: `{cmd}` is no longer blacklisted")
+
+    @whitelist.command(name="global")
+    @commands.is_owner()
+    async def whitelist_global(self, ctx, *, user: discord.User):
+        """Whitelist user globally."""
+        db.execute("DELETE FROM blacklist_global_users WHERE user_id = ?", (user.id,))
+        await ctx.send(f":white_check_mark: **{user}** is no longer globally blacklisted from using Miso Bot")
+
 
 def setup(bot):
     bot.add_cog(Mod(bot))

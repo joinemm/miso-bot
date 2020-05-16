@@ -58,7 +58,7 @@ async def on_ready():
     latencies = bot.latencies
     logger.info(f"Loading complete | running {len(latencies)} shards")
     for shard_id, latency in latencies:
-        logger.info(f"< Shard [{shard_id}] - HEARTBEAT {latency}s >")
+        logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
 
 
 @bot.before_invoke
@@ -68,6 +68,14 @@ async def before_any_command(ctx):
         await ctx.trigger_typing()
     except discord.errors.Forbidden:
         pass
+
+
+@bot.check
+async def check_for_blacklist(ctx):
+    if ctx.guild is None:
+        raise commands.NoPrivateMessage
+    else:
+        return db.is_blacklisted(ctx)
 
 
 @bot.event
