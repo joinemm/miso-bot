@@ -68,7 +68,7 @@ class Config(commands.Cog):
 
     @logmessages_welcome.command(name='channel')
     async def welcome_channel(self, ctx, *, channel: ChannelSetting):
-        """"Set the welcome messages channel."""
+        """Set the welcome messages channel."""
         db.update_setting(ctx.guild.id, "welcome_channel", (None if channel is None else channel.id))
         if channel is None:
             await ctx.send("Welcome messages disabled.")
