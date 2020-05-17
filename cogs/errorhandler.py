@@ -50,13 +50,13 @@ class Events(commands.Cog):
             return await ctx.send(f":hourglass: This command is on a cooldown! (`{error.retry_after:.2f}s` remaining)")
         
         elif isinstance(error, commands.DisabledCommand):
-            await ctx.send(f':warning: `{ctx.command}` has been disabled!')
+            await ctx.send(f":warning: `{ctx.command}` has been disabled!")
 
         elif isinstance(error, commands.NoPrivateMessage):
-            await ctx.author.send(f':warning: You cannot use commands in private messages')
+            await ctx.author.send(":warning: You cannot use commands in private messages")
 
         elif isinstance(error, commands.NotOwner):
-            await ctx.send(f":warning: Sorry, you are not authorized to use this command!")
+            await ctx.send(":warning: Sorry, you are not authorized to use this command!")
 
         elif isinstance(error, commands.CheckFailure):
             logger.error(str(error))

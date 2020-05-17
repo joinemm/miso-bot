@@ -52,6 +52,7 @@ extensions = [
 
 @bot.event
 async def on_ready():
+    """Runs when the bot connects to the discord servers"""
     # cache owner from appinfo
     bot.owner = (await bot.application_info()).owner
     bot.start_time = time()
@@ -63,6 +64,7 @@ async def on_ready():
 
 @bot.before_invoke
 async def before_any_command(ctx):
+    """Runs before any command"""
     ctx.timer = time()
     try:
         await ctx.trigger_typing()
@@ -72,14 +74,15 @@ async def before_any_command(ctx):
 
 @bot.check
 async def check_for_blacklist(ctx):
+    """Check command invocation context for blacklist triggers"""
     if ctx.guild is None:
         raise commands.NoPrivateMessage
-    else:
-        return db.is_blacklisted(ctx)
+    return db.is_blacklisted(ctx)
 
 
 @bot.event
 async def on_command_completion(ctx):
+    """Runs when any command is completed succesfully"""
     # prevent double invocation for subcommands
     if ctx.invoked_subcommand is None:
         command_logger.info(log.log_command(ctx))

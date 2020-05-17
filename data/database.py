@@ -217,22 +217,31 @@ def get_blacklist(guild_id, column, table):
 
 
 def is_blacklisted(ctx):
-    bl_global = query("SELECT * FROM blacklist_global_users WHERE user_id = ?", (ctx.author.id,))
+    bl_global = query(
+        "SELECT * FROM blacklist_global_users WHERE user_id = ?",
+        (ctx.author.id,)
+    )
     if bl_global is not None:
         raise exceptions.BlacklistTrigger(ctx, "global")
 
-    bl_command = query("SELECT * FROM blacklisted_commands WHERE guild_id = ? AND command = ?",
-                      (ctx.guild.id, str(ctx.command)))
+    bl_command = query(
+        "SELECT * FROM blacklisted_commands WHERE guild_id = ? AND command = ?",
+        (ctx.guild.id, str(ctx.command))
+    )
     if bl_command is not None:
         raise exceptions.BlacklistTrigger(ctx, "command")
 
-    bl_channel = query("SELECT * FROM blacklisted_channels WHERE guild_id = ? AND channel_id = ?",
-                      (ctx.guild.id, ctx.channel.id))
+    bl_channel = query(
+        "SELECT * FROM blacklisted_channels WHERE guild_id = ? AND channel_id = ?",
+        (ctx.guild.id, ctx.channel.id)
+    )
     if bl_channel is not None:
         raise exceptions.BlacklistTrigger(ctx, "channel")
 
-    bl_user = query("SELECT * FROM blacklisted_users WHERE guild_id = ? AND user_id = ?",
-                      (ctx.guild.id, ctx.author.id))
+    bl_user = query(
+        "SELECT * FROM blacklisted_users WHERE guild_id = ? AND user_id = ?",
+        (ctx.guild.id, ctx.author.id)
+    )
     if bl_user is not None:
         raise exceptions.BlacklistTrigger(ctx, "user")
 
