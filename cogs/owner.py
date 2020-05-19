@@ -9,6 +9,7 @@ from helpers import log, utilityfunctions as util
 from data import database as db
 from contextlib import redirect_stdout
 
+
 logger = log.get_logger(__name__)
 
 
@@ -25,13 +26,8 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
     @commands.command(rest_is_raw=True)
     async def say(self, ctx, channel, *, message):
         """Make the bot say something in a given channel."""
-        if ':' in channel:
-            guild, channel = channel.split(':')
-            guild = await util.get_guild(ctx, guild)
-            channel = await util.get_textchannel(ctx, channel, guildfilter=guild)
-        else:
-            channel = await self.bot.get_channel(int(channel))
-            guild = channel.guild
+        channel = self.bot.get_channel(int(channel))
+        guild = channel.guild
         
         await ctx.send(f"Sending message to **{guild}** <#{channel.id}>\n> {message}")
         await channel.send(message)
@@ -51,47 +47,57 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
     @commands.command()
     async def logout(self, ctx):
         """Shut down the bot."""
-        print('logout')
-        await ctx.send("Shutting down... :wave:")
+        print('LOGGING OUT')
+        await ctx.send("Shutting down... :electric_plug:")
         await self.bot.logout()
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     async def patron(self, ctx):
         """Manage patronage."""
         await util.command_group_help(ctx)
 
     @patron.command(name='add')
-    async def patron_add(self, ctx, user, tier, patron_since=None):
+    async def patron_add(self, ctx, user: discord.User, tier: int):
         """Add a new patron."""
-        discord_user = await util.get_user(ctx, user)
-        if discord_user is None:
-            return await ctx.send(f"Cannot find user {user}")
-
-        since_ts = arrow.get(patron_since).timestamp
-
-        db.execute("INSERT INTO patrons VALUES(?, ?, ?, ?)", (discord_user.id, int(tier), since_ts, 1))
-        await ctx.send(f"**{discord_user}** is now a patreon!")
+        since_ts = arrow.utcnow().timestamp
+        db.execute(
+            "INSERT INTO patrons VALUES(?, ?, ?, ?)",
+            (user.id, tier, since_ts, 1)
+        )
+        await ctx.send(f"**{user}** is now a patron!")
 
     @patron.command(name='remove')
-    async def patron_remove(self, ctx, user):
+    async def patron_remove(self, ctx, user: discord.User):
         """Remove a patron."""
-        discord_user = await util.get_user(ctx, user)
-        db.execute("DELETE FROM patrons WHERE user_id = ?",
-                   (discord_user.id if discord_user is not None else int(user),))
-        await ctx.send(f"Removed **{discord_user if discord_user is not None else int(user)}** from patrons")
+        db.execute(
+            "DELETE FROM patrons WHERE user_id = ?",
+            (user.id,)
+        )
+        await ctx.send(f"Removed **{user}** from patrons")
 
     @patron.command(name='toggle')
-    async def patron_toggle(self, ctx, user):
+    async def patron_toggle(self, ctx, user: discord.User):
         """Toggle user's patron status."""
-        discord_user = await util.get_user(ctx, user)
-        if discord_user is None:
-            return await ctx.send(f"Cannot find user {user}")
+        current = util.int_to_bool(
+            db.query(
+                "SELECT currently_active FROM patrons WHERE user_id = ?",
+                (user.id,)
+            )[0][0]
+        )
+        db.execute(
+            "UPDATE patrons SET currently_active = ? WHERE user_id = ?",
+            (util.bool_to_int(not current), user.id)
+        )
+        await ctx.send(f"**{user}** patreon activity set to **{not current}**")
 
-        current = util.int_to_bool(db.query("SELECT currently_active FROM patrons WHERE user_id = ?",
-                                            (discord_user.id,))[0][0])
-        db.execute("UPDATE patrons SET currently_active = ? WHERE user_id = ?",
-                   (util.bool_to_int(not current), discord_user.id))
-        await ctx.send(f"**{discord_user}** patreon activity set to **{not current}**")
+    @patron.command(name="tier")
+    async def patron_tier(self, ctx, user: discord.User, new_tier: int):
+        """Change user's patreon tier."""
+        db.execute(
+            "UPDATE patrons SET tier = ? WHERE user_id = ?",
+            (new_tier, user.id)
+        )
+        await ctx.send(f"Patreon tier of **{user}** changed to **{new_tier}**")
 
     @commands.command(name='eval')
     async def evaluate(self, ctx, *, python_code):
@@ -128,11 +134,14 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
             )
         else:
             result = stdout.getvalue()
-            await ctx.send(f"```py\n{result}```")
+            if result:
+                await ctx.send(f"```py\n{result}```")
+            else:
+                await ctx.send("```OK```")
 
     @commands.command(name='reload')
-    async def reload_module(self, ctx, *, module):
-        """Reload a module."""
+    async def reload_cog(self, ctx, *, module):
+        """Reload a cog."""
         try:
             self.bot.reload_extension(module)
         except Exception as error:
@@ -147,24 +156,24 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
         await util.command_group_help(ctx)
 
     @sql.command(name='query')
-    async def sql_query(self, ctx,  *, statement):
+    async def sql_query(self, ctx, *, statement):
         """Query the database."""
-        connection = sqlite3.connect(db.SQLDATABASE)
-        cursor = connection.cursor()
-        cursor.execute(statement)
-        pretty_table = db.pp(cursor)
-        connection.close()
+        with sqlite3.connect(db.SQLDATABASE) as connection:
+            cursor = connection.cursor()
+            cursor.execute(statement)
+            pretty_table = db.pp(cursor)
+
         await ctx.send(f"```{pretty_table}```")
 
     @sql.command(name='execute')
     async def sql_execute(self, ctx, *, statement):
         """Execute something in the database."""
         start = time.time()
-        connection = sqlite3.connect(db.SQLDATABASE)
-        cursor = connection.cursor()
-        cursor.execute(statement)
-        connection.commit()
-        connection.close()
+        with sqlite3.connect(db.SQLDATABASE) as connection:
+            cursor = connection.cursor()
+            cursor.execute(statement)
+            connection.commit()
+
         await ctx.send(f"```OK. Took {time.time() - start}s```")
 
 
