@@ -232,8 +232,8 @@ class Events(commands.Cog):
             db.log_emoji_usage(message, custom_emojis, unicode_emojis)
 
         # level up message
-        announce = util.int_to_bool(db.get_setting(message.guild.id, "levelup_toggle"))
-        if announce:
+        announce = db.get_setting(message.guild.id, "levelup_toggle")
+        if announce != 0:
             activity_data = db.get_user_activity(message.guild.id, message.author.id)
             if activity_data is None:
                 return
