@@ -101,8 +101,11 @@ def add_fishy(user_id, fishtype, amount, timestamp, fisher_id=None):
                     "select id from fishysize order by size desc limit 15,1) as t)")
 
 
-def get_keywords(guild_id):
-    data = query("select keyword, user_id from notifications where guild_id = ?", (guild_id,))
+def get_keywords(message):
+    data = query(
+        "SELECT keyword, user_id FROM notifications WHERE (guild_id = ? OR guild_id = 0) AND user_id != ?",
+        (message.guild.id, message.author.id)
+    )
     return data
 
 
