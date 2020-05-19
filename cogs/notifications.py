@@ -144,7 +144,7 @@ async def send_notification(user, message, pattern=None):
         icon_url=message.author.avatar_url
     )
     highlighted_text = re.sub(pattern, lambda x: f'**{x.group(0)}**', message.content)
-    quoted_text = highlighted_text.replace('\n', '\n> ')
+    quoted_text = "> " + highlighted_text.replace('\n', '\n> ')
 
     content.description = f"{quoted_text}\n[Go to message]({message.jump_url})"
     content.set_footer(
