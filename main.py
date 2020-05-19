@@ -47,6 +47,7 @@ extensions = [
     'typings',
     'reminders',
     'bangs',
+    'opgg',
 ]
 
 
@@ -76,7 +77,8 @@ async def before_any_command(ctx):
 async def check_for_blacklist(ctx):
     """Check command invocation context for blacklist triggers"""
     if ctx.guild is None:
-        raise commands.NoPrivateMessage
+        #raise commands.NoPrivateMessage
+        return True
     return db.is_blacklisted(ctx)
 
 
