@@ -108,7 +108,7 @@ class Rolepicker(commands.Cog):
                     #case = db.get_setting(message.guild.id, "rolepicker_case")
                     role = message.guild.get_role(db.rolepicker_role(message.guild.id, rolename))
                     if role is None:
-                        await message.channel.send(":warning: Role `{rolename}` not found")
+                        await message.channel.send(f":warning: Role `{rolename}` not found")
                     else:
                         if command == "+":
                             await message.author.add_roles(role)
