@@ -131,17 +131,13 @@ def add_crown(artist, guild_id, user_id, playcount):
         return data[0][0]
 
 
-def rolepicker_role(guild_id, rolename, caps=False):
+def rolepicker_role(guild_id, rolename):
     data = query("SELECT role_id FROM roles WHERE rolename = ? AND guild_id = ?", (rolename, guild_id))
 
     if data is None:
         return None
-    else:
-        if caps:
-            if rolename != data[0][0]:
-                return None
 
-        return data[0][0]
+    return data[0][0]
 
 
 def random_kpop_idol(gender=None):
