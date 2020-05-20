@@ -1,5 +1,7 @@
 # Miso Bot
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/84479f7c0f4c44a6aa2ba435e0215436)](https://app.codacy.com/manual/joinemm/miso-bot?utm_source=github.com&utm_medium=referral&utm_content=joinemm/miso-bot&utm_campaign=Badge_Grade_Dashboard)
+
 ---
 
 A discord bot with almost 100 commands and features, including but not limited to:
