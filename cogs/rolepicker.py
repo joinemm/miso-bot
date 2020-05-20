@@ -69,7 +69,7 @@ class Rolepicker(commands.Cog):
             content.description = "No roles set on this server"
         await ctx.send(embed=content)
 
-    @rolepicker.command()
+    @rolepicker.command(enabled=False)
     async def case(self, ctx, boolean):
         """Toggle case sensitivity."""
         if boolean.lower() == 'true':
@@ -101,24 +101,23 @@ class Rolepicker(commands.Cog):
         if db.get_setting(message.guild.id, "rolepicker_enabled") == 0:
             return
         if message.channel.id == db.get_setting(message.guild.id, "rolepicker_channel"):
-            if not message.author == self.bot.user:
+            if not message.author.bot:
                 command = message.content[0]
                 rolename = message.content[1:].strip()
                 if command in ["+", "-"]:
-                    case = db.get_setting(message.guild.id, "rolepicker_case")
-                    role = message.guild.get_role(db.rolepicker_role(message.guild.id, rolename, caps=(case != 0)))
+                    #case = db.get_setting(message.guild.id, "rolepicker_case")
+                    role = message.guild.get_role(db.rolepicker_role(message.guild.id, rolename))
                     if role is None:
-                        await message.channel.send(":warning: Role not found")
+                        await message.channel.send(":warning: Role `{rolename}` not found")
                     else:
                         if command == "+":
                             await message.author.add_roles(role)
-                            await message.channel.send(f"Added you the role **{role.name}!**")
+                            await message.channel.send(embed=discord.Embed(description=f"Added {role.mention} to your roles"))
                         elif command == "-":
                             await message.author.remove_roles(role)
-                            await message.channel.send(f"Removed the role **{role.name}** from you")
+                            await message.channel.send(embed=discord.Embed(description=f"Removed {role.mention} from your roles"))
                 else:
-                    await message.channel.send(
-                        f":warning: Invalid role command `{command}`\nUse `+` to add a role and `-` to remove a role")
+                    await message.channel.send(f":warning: Unknown action `{command}`\nUse `+` to add roles or `-` to remove them.")
 
             await asyncio.sleep(5)
             try:
