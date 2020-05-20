@@ -47,7 +47,6 @@ extensions = [
     'typings',
     'reminders',
     'bangs',
-    'opgg',
 ]
 
 
