@@ -3,7 +3,7 @@ import arrow
 import random
 import re
 import aiohttp
-from lxml.html import clean
+import bleach
 from discord.ext import commands
 from operator import itemgetter
 from libraries import plotter
@@ -484,10 +484,9 @@ class User(commands.Cog):
 
         description = db.query("SELECT description FROM profiles WHERE user_id = ?", (user.id,))
         if description is None or description[0][0] is None:
-            description = "<p>use >editprofile to change your description</p>"
+            description = "use >editprofile to change your description"
         else:
-            cleaner = clean.Cleaner(safe_attrs_only=True)
-            description = cleaner.clean_html(description[0][0].replace('\n', '<br>'))
+            description = bleach.clean(description[0][0].replace('\n', '<br>'))
 
         background_url = db.query("SELECT background_url FROM profiles WHERE user_id = ?", (user.id,))
         if background_url is None:

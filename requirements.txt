@@ -3,6 +3,7 @@ arrow==0.15.5
 async-timeout==3.0.1
 attrs==19.3.0
 beautifulsoup4==4.9.0
+bleach==3.1.5
 cachetools==4.0.0
 certifi==2020.4.5.1
 chardet==3.0.4
@@ -20,7 +21,7 @@ google-auth==1.13.1
 google-auth-httplib2==0.0.3
 Google-Images-Search==1.0.1
 googleapis-common-protos==1.51.0
-httplib2==0.18.0
+httplib2==0.17.1
 humanfriendly==8.1
 idna==2.9
 kiwisolver==1.2.0
@@ -53,6 +54,7 @@ termcolor==1.1.0
 tweepy==3.8.0
 uritemplate==3.0.1
 urllib3==1.25.8
+webencodings==0.5.1
 websockets==8.1
 wikipedia==1.4.0
 wordcloud==1.6.0
