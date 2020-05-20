@@ -1,7 +1,6 @@
 import discord
 import os
 import asyncio
-import json
 import arrow
 import aiohttp
 import re
@@ -10,7 +9,6 @@ import urllib.parse
 from bs4 import BeautifulSoup
 from operator import itemgetter
 from discord.ext import commands
-from concurrent.futures import ThreadPoolExecutor
 from helpers import utilityfunctions as util
 from data import database as db
 from helpers.exceptions import LastFMError
@@ -30,7 +28,7 @@ class LastFm(commands.Cog):
 
     @commands.group(case_insensitive=True)
     async def fm(self, ctx):
-        """Last.fm commands"""
+        """Last.fm commands."""
         if ctx.message.mentions:
             ctx.foreign_target = True
             ctx.usertarget = ctx.message.mentions[0]
@@ -180,7 +178,8 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['ta'])
     async def topartists(self, ctx, *args):
-        """Most listened artists.
+        """
+        Most listened artists.
 
         Usage:
             >fm topartists [timeframe] [amount]
@@ -223,7 +222,8 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['talb'])
     async def topalbums(self, ctx, *args):
-        """Most listened albums.
+        """
+        Most listened albums.
 
         Usage:
             >fm topalbums [timeframe] [amount]
@@ -268,7 +268,8 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['tt'])
     async def toptracks(self, ctx, *args):
-        """Most listened tracks.
+        """
+        Most listened tracks.
 
         Usage:
             >fm toptracks [timeframe] [amount]
@@ -324,7 +325,8 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=['recents', 're'])
     async def recent(self, ctx, size="15"):
-        """Recently listened tracks.
+        """
+        Recently listened tracks.
 
         Usage:
             >fm recent [amount]
@@ -367,7 +369,8 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def artist(self, ctx, timeframe, datatype, *, artistname=""):
-        """Artist specific playcounts and info.
+        """
+        Artist specific playcounts and info.
 
         Usage:
             >fm artist [timeframe] toptracks <artist name>
@@ -379,7 +382,7 @@ class LastFm(commands.Cog):
             artistname = " ".join([datatype, artistname]).strip()
             datatype = timeframe
             period = 'overall'
-        
+
         artistname = remove_mentions(artistname)
         if artistname == "":
             return await ctx.send("Missing artist name!")
@@ -467,7 +470,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     async def artist_overview(self, ctx, period, artistname):
-        """Overall artist view"""
+        """Overall artist view."""
         albums = []
         tracks = []
         metadata = [None, None, None]
@@ -520,20 +523,20 @@ class LastFm(commands.Cog):
             crownstate = ":crown: "
 
         content.add_field(
-            name='Scrobbles | Albums | Tracks', 
-            value=f"{crownstate}**{metadata[0]}** | **{metadata[1]}** | **{metadata[2]}**", 
+            name='Scrobbles | Albums | Tracks',
+            value=f"{crownstate}**{metadata[0]}** | **{metadata[1]}** | **{metadata[2]}**",
             inline=False
         )
         
         content.add_field(
-            name="Top albums", 
-            value="\n".join(f"`#{i:2}` **{item}** ({playcount})" 
+            name="Top albums",
+            value="\n".join(f"`#{i:2}` **{item}** ({playcount})"
                             for i, (item, playcount) in enumerate(albums, start=1)),
             inline=True
         )
         content.add_field(
-            name="Top tracks", 
-            value="\n".join(f"`#{i:2}` **{item}** ({playcount})" 
+            name="Top tracks",
+            value="\n".join(f"`#{i:2}` **{item}** ({playcount})"
                             for i, (item, playcount) in enumerate(tracks, start=1)),
             inline=True
         )
@@ -542,7 +545,8 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def chart(self, ctx, *args):
-        """Visual chart of your top albums or artists.
+        """
+        Visual chart of your top albums or artists.
 
         Usage:
             >fm chart [album | artist] [timeframe] [width]x[height]
@@ -628,7 +632,8 @@ class LastFm(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(2, 10, type=commands.BucketType.user)
     async def whoknows(self, ctx, *, artistname):
-        """Check who has listened to a given artist the most.
+        """
+        Check who has listened to a given artist the most.
 
         Usage:
             >whoknows <artist name>
@@ -859,7 +864,7 @@ def parse_chart_arguments(args):
 
 
 async def api_request(params):
-    """Get json data from the lastfm api"""
+    """Get json data from the lastfm api."""
     url = "http://ws.audioscrobbler.com/2.0/"
     params['api_key'] = LASTFM_APPID
     params['format'] = 'json'
@@ -890,7 +895,7 @@ async def api_request(params):
 
 
 async def custom_period(user, group_by, shift_hours=24):
-    """parse recent tracks to get custom duration data (24 hour)"""
+    """Parse recent tracks to get custom duration data (24 hour)."""
     limit_timestamp = arrow.utcnow().shift(hours=-shift_hours)
     data = await api_request({
         "user": user,
@@ -1008,6 +1013,7 @@ async def get_userinfo_embed(username):
     )
     content.set_thumbnail(url=profile_pic_url)
     content.set_footer(text=f"Total plays: {playcount}")
+    content.colour = int(image_colour, 16)
     return content
 
 
