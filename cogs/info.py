@@ -1,5 +1,4 @@
 import discord
-import json
 import math
 import psutil
 import time
@@ -11,6 +10,7 @@ from discord.ext import commands
 from operator import itemgetter
 from helpers import utilityfunctions as util
 from data import database as db
+from libraries import unicode_codes
 
 
 class Info(commands.Cog):
@@ -20,7 +20,7 @@ class Info(commands.Cog):
     
     @commands.Cog.listener()
     async def on_ready(self):
-        self.bot.version = str(await get_version())
+        self.bot.version = f"{await get_version():.2f}"
 
     @commands.command()
     async def invite(self, ctx):
@@ -40,27 +40,35 @@ class Info(commands.Cog):
     @commands.command()
     async def patrons(self, ctx):
         """List the current patreons."""
-        patrons = db.query("select user_id, currently_active from patrons")
-        content = discord.Embed(title="Patreon supporters ❤", color=discord.Color.red())
-        content.description = "https://patreon.com/joinemm"
+        tier_badges = [':coffee:', ':beer:', ':moneybag:']
+        patrons = db.query("select tier, user_id, currently_active from patrons")
+        content = discord.Embed(
+            title="Patreon supporters ❤",
+            color=int('f96854', 16),
+            description = "https://patreon.com/joinemm"
+        )
         current = []
-        past = []
-        for user_id, state in patrons:
+        former = []
+        for tier, user_id, state in sorted(patrons, key=lambda x: x[0], reverse=True):
             user = self.bot.get_user(user_id)
+
             if util.int_to_bool(state):
-                current.append(user or user_id)
+                current.append(f"**{user or user_id}** {tier_badges[tier-1]}")
             else:
-                past.append(user or user_id)
+                former.append(f"{user or user_id}")
 
         if current:
             content.add_field(
+                inline=False,
                 name="Current patrons",
-                value="\n".join(f"**{x}**" for x in current)
+                value="\n".join(current)
             )
-        if past:
+
+        if former:
             content.add_field(
-                name="Inactive patrons",
-                value="\n".join(f"{x}" for x in past)
+                inline=False,
+                name="Former patrons",
+                value="\n".join(former)
             )
 
         await ctx.send(embed=content)
@@ -69,19 +77,22 @@ class Info(commands.Cog):
     async def info(self, ctx):
         """Get information about the bot."""
         membercount = len(set(self.bot.get_all_members()))
-        content = discord.Embed(title=f"Miso Bot | version {self.bot.version}", colour=discord.Colour.red())
+        content = discord.Embed(
+            title=f"Miso Bot | version {self.bot.version}",
+            colour=discord.Colour.blue()
+        )
         content.description = (
-            f"Created by **{self.bot.owner}** {self.bot.owner.mention} using discord.py and sqlite3\n\n"
-            f"Use `{ctx.prefix}help` to get the full list of commands, \n"
+            f"Created by **{self.bot.owner}** {self.bot.owner.mention} using discord.py\n\n"
+            f"Use `{ctx.prefix}help` to get help on any commands, \n"
             f"or visit the website for more detailed instructions.\n\n"
-            f"Currently active in **{len(self.bot.guilds)}** servers, "
+            f"Currently active in **{len(self.bot.guilds)}** servers,\n"
             f"totaling **{membercount}** unique users."
         )
         content.set_thumbnail(url=self.bot.user.avatar_url)
         content.add_field(name='Website', value="https://misobot.xyz", inline=False)
         content.add_field(name='Github', value='https://github.com/joinemm/miso-bot', inline=False)
         content.add_field(name='Patreon', value="https://www.patreon.com/joinemm", inline=False)
-        #content.add_field(name='Discord server', value='https://discord.gg/fdeCeNN', inline=False)
+        content.add_field(name='Discord', value='https://discord.gg/RzDW3Ne', inline=False)
 
         data = await get_commits("joinemm", "miso-bot")
         last_update = data[0]['commit']['author'].get('date')
@@ -92,34 +103,70 @@ class Info(commands.Cog):
     @commands.command()
     async def ping(self, ctx):
         """Get the bot's ping."""
-        pong_msg = await ctx.send(":ping_pong:")
-        sr_lat = (pong_msg.created_at - ctx.message.created_at).total_seconds() * 1000
-        await pong_msg.edit(content=f"Command latency = `{sr_lat}`ms\n"
-                                    f"Discord latency = `{self.bot.latency * 1000:.1f}`ms")
+        test_message = await ctx.send(":ping_pong:")
+        cmd_lat = (test_message.created_at - ctx.message.created_at).total_seconds() * 1000
+        discord_lat = self.bot.latency * 1000
+        content = discord.Embed(
+            colour=discord.Color.red(),
+            description=f"**Command response** `{cmd_lat}` ms\n**Discord API latency** `{discord_lat:.1f}` ms"
+        )
+        await test_message.edit(content="", embed=content)
 
-    @commands.command(aliases=['uptime'])
-    async def status(self, ctx):
-        """Get the bot's status."""
-        up_time = time.time() - self.bot.start_time
-        uptime_string = util.stringfromtime(up_time, 2)
-        stime = time.time() - psutil.boot_time()
-        system_uptime_string = util.stringfromtime(stime, 2)
-
+    @commands.command()
+    async def system(self, ctx):
+        """Get status of the server system."""
+        process_uptime = time.time() - self.bot.start_time
+        system_uptime = time.time() - psutil.boot_time()
         mem = psutil.virtual_memory()
         pid = os.getpid()
         memory_use = psutil.Process(pid).memory_info()[0]
 
-        content = discord.Embed(title=":robot: status")
-        
-        data = await get_commits("joinemm", "miso-bot")
-        last_update = arrow.get(data[0]['commit']['author'].get('date')).humanize()
+        data = [
+            ("Version", self.bot.version),
+            ("Process uptime", util.stringfromtime(process_uptime, 2)),
+            ("Process memory", f"{memory_use / math.pow(1024, 2):.2f}MB"),
+            ("System uptime", util.stringfromtime(system_uptime, 2)),
+            ("CPU Usage", f"{psutil.cpu_percent()}%"),
+            ("RAM Usage", f"{mem.percent}%"),
+        ]
 
-        content.description = (
-            f"> **__Bot__**\n**Version**: {self.bot.version}\n**Uptime**: {uptime_string}\n**Latest commit**: {last_update}\n**Memory used**: {memory_use / math.pow(1024, 2):.2f}MB\n"
-            f"> **__System__**\n**Uptime**: {system_uptime_string}\n**CPU Usage**: {psutil.cpu_percent()}%\n**RAM Usage**: {mem.percent}%\n"
-            f"> **__Discord__**\n**discord.py version**: {discord.__version__}\n**WebSocket latency**: {self.bot.latency * 1000:.1f}ms"
+        content = discord.Embed(
+            title=":computer: System status",
+            colour=int("5dadec", 16),
+            description = "\n".join(f"**{x[0]}** {x[1]}" for x in data)
         )
+        await ctx.send(embed=content)
 
+    @commands.command()
+    async def stats(self, ctx):
+        """Get various statistics."""
+        commit_data = await get_commits("joinemm", "miso-bot")
+        most_used_command = db.query("""
+            SELECT command, MAX(countsum) FROM(
+                SELECT command, SUM(count) as countsum FROM command_usage GROUP BY command
+            )""")[0]
+
+        most_command_uses_by = db.query("""
+            SELECT user_id, MAX(countsum) FROM(
+                SELECT user_id, SUM(count) as countsum FROM command_usage GROUP BY user_id
+            )""")[0]
+
+        most_used_emoji = db.query("""
+            SELECT emoji, MAX(countsum) FROM(
+                SELECT emoji, sum(count) as countsum FROM emoji_usage GROUP BY emoji
+            )""")[0]
+
+        data = [
+            ("Amount of commands", len(self.bot.commands)),
+            ("Most used command", f"`>{most_used_command[0]}` ({most_used_command[1]})"),
+            ("Most total command uses", f"{self.bot.get_user(most_command_uses_by[0])} ({most_command_uses_by[1]})"),
+            ("Most used emoji", f"{unicode_codes.EMOJI_ALIAS_UNICODE.get(most_used_emoji[0])} ({most_used_emoji[1]})"),
+        ]
+
+        content = discord.Embed(
+            title=":bar_chart: Bot stats",
+            description = "\n".join(f"**{x[0]}** {x[1]}" for x in data)
+        )
         await ctx.send(embed=content)
 
     @commands.command()
@@ -154,6 +201,7 @@ class Info(commands.Cog):
                 value=f"**{author}** committed {arrow_date.humanize()} | [link]({url})",
                 inline=False
             )
+
         pages.append(content)
         await util.page_switcher(ctx, pages)
 
@@ -277,9 +325,7 @@ class Info(commands.Cog):
                 (user.id,)
             )
         else:
-            data = db.query(
-                "SELECT command, SUM(count) FROM command_usage GROUP BY command"
-            )
+            data = db.query("SELECT command, SUM(count) FROM command_usage GROUP BY command")
 
         rows = []
         total = 0
@@ -287,11 +333,10 @@ class Info(commands.Cog):
             total += count
             biggest_user = None
             if user is None:
-                userdata = db.query(
-                    """SELECT user_id, MAX(countsum) FROM (
+                userdata = db.query("""
+                    SELECT user_id, MAX(countsum) FROM (
                         SELECT user_id, SUM(count) as countsum FROM command_usage WHERE command = ? GROUP BY user_id
-                    )""",
-                    (command,)
+                    )""", (command,)
                 )
                 biggest_user = (
                     self.bot.get_user(userdata[0][0]),
@@ -375,6 +420,7 @@ class Info(commands.Cog):
                 name="Total subcommand uses",
                 value=subcommand_usage
             )
+
         await ctx.send(embed=content)
 
 
