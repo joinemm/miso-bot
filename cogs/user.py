@@ -458,7 +458,6 @@ class User(commands.Cog):
             user = ctx.author
 
         badges = []
-
         badge_classes = {
             "dev": "fab fa-dev",
             "patreon": "fab fa-patreon",
@@ -467,6 +466,17 @@ class User(commands.Cog):
             "location": "fas fa-compass",
             "bot": "fas fa-robot"
         }
+
+        def get_font_size(username):
+            length = len(username)
+            if length < 15:
+                return "24px"
+            elif length < 20:
+                return "18px"
+            elif length < 25:
+                return "15px"
+            else:
+                return "11px"
 
         def make_badge(classname):
             return f'<li class="badge-container"><i class="corner-logo {classname}"></i></li>'
@@ -531,7 +541,8 @@ class User(commands.Cog):
             'ACTIVITY_DATA': str(activity),
             'CHART_MAX': max(activity),
             'COMMANDS_USED': command_count,
-            'BADGES': '\n'.join(badges)
+            'BADGES': '\n'.join(badges),
+            'USERNAME_SIZE': get_font_size(user.name)
         }
 
         def dictsub(m):
