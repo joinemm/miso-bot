@@ -18,7 +18,7 @@ class User(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        with open("html/profile.html", "r", encoding="utf-8") as file:
+        with open("html/new_profile.html", "r", encoding="utf-8") as file:
             self.profile_html = file.read()
 
     async def get_rank(self, ctx, user, table, _global=False):
@@ -457,58 +457,81 @@ class User(commands.Cog):
         if user is None:
             user = ctx.author
 
-        activity = str(db.get_user_activity(ctx.guild.id, user.id))
+        badges = []
+
+        badge_classes = {
+            "dev": "fab fa-dev",
+            "patreon": "fab fa-patreon",
+            "lastfm": "fab fa-lastfm",
+            "sunsign": "fas fa-sun",
+            "location": "fas fa-compass",
+            "bot": "fas fa-robot"
+        }
+
+        def make_badge(classname):
+            return f'<li class="badge-container"><i class="corner-logo {classname}"></i></li>'
+
+        #activity = db.get_user_activity(ctx.guild.id, user.id)
+        activity = db.global_activitydata(user.id)
         fishydata = db.fishdata(user.id)
 
         local_xp_rows = db.query("SELECT * FROM activity WHERE user_id = ? AND guild_id = ?", (user.id, ctx.guild.id))
         local_xp = 0
         if local_xp_rows is not None:
             local_xp = sum(list(local_xp_rows[0][3:]))
-            local_rank = await self.get_rank(ctx, user, 'activity')
 
         global_xp_rows = db.query("SELECT * FROM activity WHERE user_id = ?", (user.id,))
         global_xp = 0
         if global_xp_rows is not None:
             global_xp = sum(sum(row[3:]) for row in global_xp_rows)
-            global_rank = await self.get_rank(ctx, user, 'activity', _global=True)
          
-        patrons = db.query("select user_id from patrons where currently_active = 1")
         if user.id == self.bot.owner.id:
-            corner_icon = 'fa-dev'
-        elif patrons is not None and user.id in [x[0] for x in patrons]:
-            corner_icon = 'fa-patreon'
-        else:
-            corner_icon = ''
-            
-        activity_formatted = util.activityhandler(user.activities)
+            badges.append(make_badge(badge_classes['dev']))
 
+        if user.bot:
+            badges.append(make_badge(badge_classes['bot']))
+
+        patrons = db.query("select user_id from patrons where currently_active = 1")
+        if patrons is not None and user.id in [x[0] for x in patrons]:
+            badges.append(make_badge(badge_classes['patreon']))
+            
         description = db.query("SELECT description FROM profiles WHERE user_id = ?", (user.id,))
         if description is None or description[0][0] is None:
-            description = "use >editprofile to change your description"
+            description = f"You should change this by using<br><code>>editprofile description</code>"
         else:
-            description = bleach.clean(description[0][0].replace('\n', '<br>'))
+            description = bleach.clean(
+                description[0][0].replace('\n', '<br>'),
+                tags=bleach.sanitizer.ALLOWED_TAGS + ['br']
+            )
 
         background_url = db.query("SELECT background_url FROM profiles WHERE user_id = ?", (user.id,))
-        if background_url is None:
-            background_url = ''
-        else:
-            background_url = background_url[0][0]
+        custom_bg = background_url is not None
+
+        command_count = 0
+        command_uses = db.query("""
+            SELECT SUM(count) FROM command_usage WHERE user_id = ? GROUP BY user_id
+            """, (user.id,)
+        )
+        if command_uses is not None:
+            command_count = command_uses[0][0]
 
         replacements = {
-            'BACKGROUND_IMAGE': background_url,
-            'ACCENT_COLOR': user.color,
+            'BACKGROUND_IMAGE': background_url[0][0] if custom_bg else '',
+            'WRAPPER_CLASS': 'custom-bg' if custom_bg else '',
+            'SIDEBAR_CLASS': 'blur' if custom_bg else '',
+            'OVERLAY_CLASS': 'overlay' if custom_bg else '',
+            'USER_COLOR': user.color,
             'AVATAR_URL': user.avatar_url_as(size=128, format='png'),
-            'USERNAME': f"{user.name} #{user.discriminator}",
+            'USERNAME': user.name,
+            'DISCRIMINATOR': f"#{user.discriminator}",
             'DESCRIPTION': description,
-            'FISHY': fishydata.fishy if fishydata is not None else 0,
-            'LVL_LOCAL': util.get_level(local_xp),
-            'RANK_LOCAL': local_rank,
-            'LVL_GLOBAL': util.get_level(global_xp),
-            'RANK_GLOBAL': global_rank,
-            'ACTIVITY_ICON': activity_formatted.get('icon'),
-            'ACTIVITY_TEXT': activity_formatted.get('text'),
-            'ACTIVITY_DATA': activity,
-            'PATREON': corner_icon
+            'FISHY_AMOUNT': fishydata.fishy if fishydata is not None else 0,
+            'SERVER_LEVEL': util.get_level(local_xp),
+            'GLOBAL_LEVEL': util.get_level(global_xp),
+            'ACTIVITY_DATA': str(activity),
+            'CHART_MAX': max(activity),
+            'COMMANDS_USED': command_count,
+            'BADGES': '\n'.join(badges)
         }
 
         def dictsub(m):
@@ -519,8 +542,8 @@ class User(commands.Cog):
         async with aiohttp.ClientSession() as session:
             data = {
                 'html': formatted_html,
-                'width': 512, 
-                'height': 512,
+                'width': 600,
+                'height': 400,
                 'imageFormat': 'png'
             }
             async with session.post('http://localhost:3000/html', data=data) as response: 
@@ -533,7 +556,7 @@ class User(commands.Cog):
 
         with open("downloads/profile.png", "rb") as f:
             await ctx.send(file=discord.File(f))
-        
+
     @commands.group()
     async def editprofile(self, ctx):
         await util.command_group_help(ctx)

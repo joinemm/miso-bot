@@ -55,6 +55,21 @@ def activitydata(guild_id, user_id, tablename='activity'):
     return data
 
 
+def global_activitydata(user_id, tablename='activity'):
+    data = query("""
+        SELECT SUM(h0), SUM(h1), SUM(h2), SUM(h3), SUM(h4), SUM(h5),
+               SUM(h6), SUM(h7), SUM(h8), SUM(h9), SUM(h10), SUM(h11),
+               SUM(h12), SUM(h13), SUM(h14), SUM(h15), SUM(h16), SUM(h17),
+               SUM(h18), SUM(h19), SUM(h20), SUM(h21), SUM(h22), SUM(h23)
+        FROM %s WHERE user_id = ?
+        """ % tablename, (user_id,)
+    )
+    if data is None:
+        return []
+
+    return list(data[0])
+
+
 def get_user_activity(guild_id, user_id, tablename='activity'):
     data = query("select * from %s where guild_id = ? and user_id = ?" % tablename, (guild_id, user_id))
     if data is None:
