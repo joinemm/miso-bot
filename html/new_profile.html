@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-new_
 <head>
   <meta charset="UTF-8">
   <title>Miso Bot Profile</title>
@@ -18,7 +17,6 @@ new_
       margin: 0;
       padding: 0;
       font-family: 'Catamaran';
-      background-color: #36393f;
     }
 
     .wrapper {
@@ -47,6 +45,7 @@ new_
     }
 
     .blur {
+      overflow: hidden;
       backdrop-filter: blur(3px);
     }
 
@@ -244,9 +243,7 @@ new_
           pointRadius: 0,
           fill: false,
           borderWidth: 4,
-          data: [
-            %% ACTIVITY_DATA %%
-          ]
+          data: %%ACTIVITY_DATA%%
         }
       ]
     },
@@ -270,7 +267,7 @@ new_
               display: false,
               beginAtZero: true,
               maxTicksLimit: 4,
-              max: %% CHART_MAX %%
+              max: %%CHART_MAX%%
           },
             gridLines: {
               display: false
