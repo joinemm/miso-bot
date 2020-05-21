@@ -161,26 +161,29 @@ class Miscellaneous(commands.Cog):
             if len(nameslist) < 1:
                 return await ctx.send("Please give two names separated with `and`")
 
-        url = "https://www.calculator.net/love-calculator.html"
+        url = "https://www.lovecalculator.com/love.php"
         params = {
-            'cnameone': nameslist[0],
-            'cnametwo': nameslist[1],
-            'x': 0,
-            'y': 0
+            'name1': nameslist[0],
+            'name2': nameslist[1],
         }
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                soup = BeautifulSoup(await response.text(), 'html.parser')
+            headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0"
+            }
+            async with session.get(url, params=params, headers=headers) as response:
+                data = await response.text()
+                soup = BeautifulSoup(data, 'html.parser')
 
-        percentage = int(soup.find("font", {'color': 'green'}).find('b').text.strip('%'))
-        text = soup.find("div", {'id': 'content'}).find_all('p')[2].text
+        percentage = int(soup.find("div", {"class": "result__score"}).text.strip(' %\n'))
+        text = soup.find("div", {'class': 'result-text'}).text
 
         if percentage < 26:
             emoji = ":broken_heart:"
         elif percentage > 74:
             emoji = ":sparkling_heart:"
         else:
-            emoji = ":hearts:"
+            emoji = ":heart:"
 
         content = discord.Embed(
             title=f"{nameslist[0]} {emoji} {nameslist[1]} - {percentage}%",
