@@ -9,38 +9,41 @@
 
 A discord bot with almost 100 commands and features, including but not limited to:
 
-- LastFM Integration
-- Melon charts
-- Youtube search
-- Twitter image extractor
-- Instagram image extractor
-- Moderation (ban, kick, mute, etc)
-- Levels and XP leaderboards
-- Server activity graph
-- Minecraft server status
-- Meme creation by inserting text
-- Starboard
-- Voting channels
-- Fishing
-- Google search
-- Colors and color palettes
-- Create Gfycats and Streamables 
-- Gfycat search
-- xkcd
-- Horoscope
-- Weather
-- Keyword notifications
-- Rolepicker
-- Typing tests and Typeracer
-- Papago Naver translator
-- Google Translate
-- Wolfram alpha
-- Wordcloud
-- Wikipedia
+-   LastFM Integration
+-   Melon charts
+-   Youtube search
+-   Twitter image extractor
+-   Instagram image extractor
+-   Moderation (ban, kick, mute, etc)
+-   Log bans, leaves, joins, messages
+-   Server and user information
+-   Levels and XP leaderboards
+-   Customizable profiles
+-   Server activity graph
+-   Minecraft server status
+-   Meme creation by inserting text
+-   Starboard
+-   Voting channels
+-   Fishing
+-   DuckDuckGo bangs
+-   Colors and color palettes
+-   Create Gfycats and Streamables 
+-   Gfycat search
+-   xkcd
+-   Horoscope
+-   Weather
+-   Keyword notifications
+-   Rolepicker
+-   Typing tests and Typeracer
+-   Papago Naver translator
+-   Google Translate
+-   Wolfram alpha
+-   Wikipedia
+-   Reminders
+-   Custom commands
+-   Changeable prefix
 
-...and many more that I won't bother listing here.
-
-Visit <https://misobot.xyz> for more detailed overview of the features.
+...and much more. Visit <https://misobot.xyz> for more detailed overview of the features.
 
 ---
 
