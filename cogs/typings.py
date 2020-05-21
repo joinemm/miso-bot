@@ -214,7 +214,7 @@ class Typings(commands.Cog):
                     new_wins = 1
                 else:
                     new_wins = wins[0][0] + 1
-                db.execute("REPLACE INTO typeracer VALUES(?, ?, ?)", (member.id, ctx.guild.id, new_wins))
+                db.execute("REPLACE INTO typeracer VALUES(?, ?, ?)", (ctx.guild.id, member.id, new_wins))
 
             rows.append(f"{f'`{i}.`' if i > 1 else ':crown:'} **{int(player[1])} WPM ** — {member.name}")
 
@@ -248,8 +248,7 @@ class Typings(commands.Cog):
             return await ctx.send(("You haven't" if user is ctx.author else f"**{user.name}** hasn't")
                                   + " taken any typing tests yet!")
 
-        racedata = db.query("SELECT wins FROM typeracer WHERE user_id = ?", (user.id,))
-        print(racedata, user.id)
+        racedata = db.query("SELECT SUM(wins) FROM typeracer WHERE user_id = ?", (user.id,))
         wpm_list = [x[2] for x in data]
         wpm_avg = sum(wpm_list) / len(wpm_list)
         acc_list = [x[3] for x in data]
@@ -258,7 +257,7 @@ class Typings(commands.Cog):
         wpm_avg_re = sum(wpm_list_re) / len(wpm_list_re)
         acc_list_re = [x[3] for x in data[:10]]
         acc_avg_re = sum(acc_list_re) / len(acc_list_re)
-        wins = sum(guildwins[0] for guildwins in racedata) if racedata is not None else 'N/A'
+        wins = racedata[0][0] if racedata is not None else 'N/A'
         content = discord.Embed(title=f":keyboard: {user.name} typing stats", color=discord.Color.gold())
         content.description = f"Tests taken: **{len(data)}**\n" \
                               f"Races won: **{wins}**\n" \
