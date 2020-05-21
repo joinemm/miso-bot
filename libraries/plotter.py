@@ -4,7 +4,7 @@ from scipy.interpolate import make_interp_spline
 import matplotlib.ticker as plticker
 
 
-def create_graph(data, usercolor, title=None, dimensions=(6, 3), draw=False):
+def create_graph(data, usercolor, title=None, dimensions=(6, 3), draw=False, background_color="#2f3136"):
     plt.rcParams['figure.figsize'] = [dimensions[0], dimensions[1]]
     T = np.array(list(range(0, len(data))))
     xnew = np.linspace(T.min(), T.max(), 240)
@@ -21,7 +21,7 @@ def create_graph(data, usercolor, title=None, dimensions=(6, 3), draw=False):
     power_smooth = np.array(power)
 
     fig = plt.figure()
-    fig.patch.set_facecolor('#1D1E22')
+    fig.patch.set_facecolor(background_color)
     if title is not None:
         fig.suptitle(title, color='white')
     plt.autoscale(tight=True)
@@ -29,7 +29,7 @@ def create_graph(data, usercolor, title=None, dimensions=(6, 3), draw=False):
     ax = plt.gca()
     loc = plticker.MultipleLocator(base=1.0)
     ax.xaxis.set_major_locator(loc)
-    ax.set_facecolor('#1D1E22')
+    ax.set_facecolor(background_color)
     ax.set_xlabel('Hour')
     # ax.set_ylabel('XP gain')
 
@@ -44,5 +44,5 @@ def create_graph(data, usercolor, title=None, dimensions=(6, 3), draw=False):
     plt.fill_between(xnew, power_smooth, color=usercolor, alpha=0.2)
     if draw:
         plt.show()
-    plt.savefig('downloads/graph.png', facecolor='#1D1E22', bbox_inches='tight')
+    plt.savefig('downloads/graph.png', facecolor=background_color, bbox_inches='tight')
     plt.close()

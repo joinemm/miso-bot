@@ -4,6 +4,7 @@ import random
 import re
 import aiohttp
 import bleach
+import typing
 from discord.ext import commands
 from operator import itemgetter
 from libraries import plotter
@@ -206,16 +207,22 @@ class User(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command(aliases=["level"])
-    async def activity(self, ctx, user: discord.Member=None):
-        """See your hourly server activity chart (GMT)"""
+    async def activity(self, ctx, user: typing.Optional[discord.Member] = None, scope=""):
+        """See your hourly activity chart (GMT)"""
         if user is None:
             user = ctx.author
 
-        activitydata = db.activitydata(ctx.guild.id, user.id)
-        if activitydata is None:
-            return await ctx.send(f"No activity for `{user}` found on this server")
+        is_global = scope.lower() == "global"
 
-        activities = list(activitydata[3:])
+        if is_global:
+            activitydata = db.global_activitydata(user.id)
+        else:
+            activitydata = db.get_user_activity(ctx.guild.id, user.id)
+
+        if activitydata is None:
+            return await ctx.send(f"No activity found!")
+
+        activities = list(activitydata)
         xp = sum(activities)
         level = util.get_level(xp)
 
@@ -227,7 +234,10 @@ class User(commands.Cog):
         )
 
         with open("downloads/graph.png", "rb") as img:
-            await ctx.send(f"`Hourly cumulative server activity for {user}`", file=discord.File(img))
+            await ctx.send(
+                f"`Hourly cumulative {'global' if is_global else 'server'} activity for {user}`",
+                file=discord.File(img)
+            )
 
     @commands.command()
     async def rank(self, ctx, user: discord.Member=None):
@@ -516,6 +526,7 @@ class User(commands.Cog):
 
         background_url = db.query("SELECT background_url FROM profiles WHERE user_id = ?", (user.id,))
         custom_bg = background_url is not None
+        print(custom_bg, background_url)
 
         command_count = 0
         command_uses = db.query("""
