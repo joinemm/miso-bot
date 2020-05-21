@@ -83,7 +83,8 @@ class Utility(commands.Cog):
 
     @commands.command()
     async def weather(self, ctx, *address):
-        """Get weather of given location.
+        """
+        Get weather of given location.
 
         Usage:
             >weather
@@ -102,7 +103,7 @@ class Utility(commands.Cog):
 
         else:
             location = " ".join(address)
-            
+
         url = "https://maps.googleapis.com/maps/api/geocode/json"
         params = {'address': location, 'key': GOOGLE_API_KEY}
         async with aiohttp.ClientSession() as session:
@@ -129,7 +130,6 @@ class Utility(commands.Cog):
 
         current = json_data['currently']
         hourly = json_data['hourly']
-        daily = json_data['daily']
         localtime = await get_timezone({'lat': lat, 'lon': lon})
 
         content = discord.Embed(color=await util.get_color(ctx, '#e1e8ed'))
@@ -177,7 +177,7 @@ class Utility(commands.Cog):
                 params={
                     'strictMatch': "false"
                 }
-                async with session.get(url, headers=headers) as response:
+                async with session.get(url, headers=headers, params=params) as response:
                     data = await response.json()
 
             for entry in data['results'][0]['lexicalEntries']:
@@ -262,7 +262,8 @@ class Utility(commands.Cog):
 
     @commands.command(aliases=['tr', 'trans'], rest_is_raw=True)
     async def translate(self, ctx, *, text):
-        """Naver/Google translator.
+        """
+        Naver/Google translator.
 
         You can specify language pairs or let them be automatically detected.
         Default target language is english.
@@ -318,10 +319,10 @@ class Utility(commands.Cog):
             # use google
             url = "https://translation.googleapis.com/language/translate/v2"
             params = {
-                'key': GOOGLE_API_KEY, 
-                'model': 'nmt', 
-                'target': target, 
-                'source': source, 
+                'key': GOOGLE_API_KEY,
+                'model': 'nmt',
+                'target': target,
+                'source': source,
                 'q': text
             }
 
@@ -341,9 +342,9 @@ class Utility(commands.Cog):
         """Ask something from wolfram alpha."""
         url = "http://api.wolframalpha.com/v1/result"
         params = {
-            'appid': WOLFRAM_APPID, 
-            'i': query, 
-            'output': 'json', 
+            'appid': WOLFRAM_APPID,
+            'i': query,
+            'output': 'json',
             'units': 'metric'
         }
 
@@ -371,7 +372,6 @@ class Utility(commands.Cog):
         try:
             gfyname = data['gfyname']
         except KeyError:
-            logger.error(data)
             return await ctx.send(":warning: Unable to create gif from this link!")
 
         message = await ctx.send("Encoding <a:loading:643419324941336587>")
@@ -459,7 +459,7 @@ class Utility(commands.Cog):
                         break
 
                     await asyncio.sleep(i)
-                    i += 1  
+                    i += 1
 
 
 def setup(client):
@@ -469,10 +469,10 @@ def setup(client):
 async def get_timezone(coord, clocktype='12hour'):
     url = "http://api.timezonedb.com/v2.1/get-time-zone"
     params = {
-        'key': TIMEZONE_API_KEY, 
-        'format': 'json', 
-        'by': 'position', 
-        'lat': str(coord['lat']), 
+        'key': TIMEZONE_API_KEY,
+        'format': 'json',
+        'by': 'position',
+        'lat': str(coord['lat']),
         'lng': str(coord['lon'])
     }
 
@@ -502,12 +502,12 @@ async def get_timezone(coord, clocktype='12hour'):
                 return f"HTTP ERROR {response.status}"
 
 async def detect_language(string):
-    url = "https://translation.googleapis.com/language/translate/v2/detect" 
+    url = "https://translation.googleapis.com/language/translate/v2/detect"
     params = {
-        'key': GOOGLE_API_KEY, 
-        'q': string[:1000]    
+        'key': GOOGLE_API_KEY,
+        'q': string[:1000]
     }
-    
+
     async with aiohttp.ClientSession() as session:
         async with session.get(url, params=params) as response:
             data = await response.json()
