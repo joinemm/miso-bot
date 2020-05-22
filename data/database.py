@@ -263,22 +263,23 @@ def is_blacklisted(ctx):
 
 
 def pp(cursor, data=None, rowlens=0):
-    d = cursor.description
-    if not d:
+    description = cursor.description
+    if not description:
         return "### NO RESULTS ###"
+
     names = []
     lengths = []
     rules = []
     if not data:
-        data = cursor.fetchall(  )
-    for dd in d:    # iterate over description
-        ll = dd[1]
-        if not ll:
-            ll = 12             # or default arg ...
-        ll = max(ll, len(dd[0])) # Handle long names
-        names.append(dd[0])
-        lengths.append(ll)
-    for col in range(len(lengths)):
+        data = cursor.fetchall()
+
+    for i, col_name in enumerate(description):    # iterate over description
+        name_length = len(col_name[0])
+        data_length = max([len(str(datarow[i])) for datarow in data])
+        names.append(col_name[0])
+        lengths.append(max(name_length, data_length))
+
+    for col, _ in enumerate(lengths):
         if rowlens:
             rls = [len(row[col]) for row in data if row[col]]
             lengths[col] = max([lengths[col]]+rls)
@@ -287,4 +288,5 @@ def pp(cursor, data=None, rowlens=0):
     result = [print_format % tuple(names), print_format % tuple(rules)]
     for row in data:
         result.append(print_format % row)
-    return "\n".join(result)
+
+    return result
