@@ -525,8 +525,7 @@ class User(commands.Cog):
             )
 
         background_url = db.query("SELECT background_url FROM profiles WHERE user_id = ?", (user.id,))
-        custom_bg = background_url is not None
-        print(custom_bg, background_url)
+        custom_bg = background_url is not None and str(background_url[0][0]).lower() != "none"
 
         command_count = 0
         command_uses = db.query("""
