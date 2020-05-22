@@ -517,7 +517,10 @@ class User(commands.Cog):
             
         description = db.query("SELECT description FROM profiles WHERE user_id = ?", (user.id,))
         if description is None or description[0][0] is None:
-            description = f"You should change this by using<br><code>>editprofile description</code>"
+            if user.bot:
+                description = f"I am a bot<br>BEEP BOOP"
+            else:
+                description = f"You should change this by using<br>>editprofile description"
         else:
             description = bleach.clean(
                 description[0][0].replace('\n', '<br>'),
@@ -586,19 +589,21 @@ class User(commands.Cog):
     async def editprofile_description(self, ctx, *, text):
         if text.strip() == '':
             return await util.send_command_help(ctx)
+
         db.execute("INSERT OR IGNORE INTO profiles VALUES (?, ?, ?, ?)", (ctx.author.id, None, None, None))
         db.execute("UPDATE profiles SET description = ? WHERE user_id = ?", (text[1:], ctx.author.id))
-        await ctx.send("Description updated!")
+        await ctx.send(":white_check_mark: Profile description updated!")
 
     @editprofile.command(name='background')
     async def editprofile_background(self, ctx, url):
         patrons = db.query("select user_id from patrons where currently_active = 1")
         if ctx.author != self.bot.owner:
             if ctx.author.id not in [x[0] for x in patrons]:
-                return await ctx.send("Sorry, only patreon supporters can use this feature!")
+                return await ctx.send("Become a patreon supporter to use this feature! <https://patreon.com/joinemm>")
+
         db.execute("INSERT OR IGNORE INTO profiles VALUES (?, ?, ?, ?)", (ctx.author.id, None, None, None))
         db.execute("UPDATE profiles SET background_url = ? WHERE user_id = ?", (url, ctx.author.id))
-        await ctx.send("Background image updated!")
+        await ctx.send(":white_check_mark: Background image updated!")
 
 def setup(bot):
     bot.add_cog(User(bot))
