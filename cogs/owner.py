@@ -163,7 +163,12 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
             cursor.execute(statement)
             pretty_table = db.pp(cursor)
 
-        await ctx.send(f"```{pretty_table}```")
+        title = '\n'.join(pretty_table[:2])
+        paginator = commands.Paginator(prefix=f"{title}", suffix="")
+        for row in pretty_table[2:]:
+            paginator.add_line(row)
+
+        await util.text_based_page_switcher(ctx, paginator.pages)
 
     @sql.command(name='execute')
     async def sql_execute(self, ctx, *, statement):
