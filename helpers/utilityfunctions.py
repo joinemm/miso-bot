@@ -45,6 +45,49 @@ async def send_as_pages(ctx, content, rows, maxrows=15, maxpages=10):
         await ctx.send(embed=pages[0])
 
 
+async def text_based_page_switcher(ctx, pages, prefix="```", suffix="```", numbers=True):
+    """
+    :param ctx    : Context
+    :param pages  : List of strings
+    :param prefix : String to prefix every page with
+    :param suffix : String to suffix every page with
+    :param numbers: Add page numbers to suffix
+    """
+    total_rows = len("\n".join(pages).split('\n'))
+
+    # add all page numbers
+    if numbers:
+        seen_rows = 0
+        for i, page in enumerate(pages, start=1):
+            seen_rows += len(page.split('\n'))
+            page += f"\n{i}/{len(pages)} | {seen_rows}/{total_rows}{suffix}"
+            page = prefix + "\n" + page
+            pages[i-1] = page
+
+    pages = TwoWayIterator(pages)
+
+    msg = await ctx.send(pages.current())
+
+    async def switch_page(new_page):
+        await msg.edit(content=new_page)
+
+    async def previous_page():
+        content = pages.previous()
+        if content is not None:
+            await switch_page(content)
+
+    async def next_page():
+        content = pages.next()
+        if content is not None:
+            await switch_page(content)
+
+    functions = {
+        "⬅": previous_page,
+        "➡": next_page
+    }
+    asyncio.ensure_future(reaction_buttons(ctx, msg, functions))
+
+
 async def page_switcher(ctx, pages):
     """
     :param ctx   : Context
@@ -132,21 +175,22 @@ async def reaction_buttons(ctx, message, functions, timeout=300.0, only_author=F
     except discord.errors.Forbidden:
         return
 
-    def check(_reaction, _user):
-        return _reaction.message.id == message.id \
-               and _reaction.emoji in functions \
-               and not _user == ctx.bot.user \
-               and (_user == ctx.author or not only_author)
+    def check(payload):
+        return payload.message_id == message.id \
+               and str(payload.emoji) in functions \
+               and not payload.member == ctx.bot.user \
+               and (payload.member == ctx.author or not only_author)
 
     while True:
         try:
-            reaction, user = await ctx.bot.wait_for('reaction_add', timeout=timeout, check=check)
+            payload = await ctx.bot.wait_for('raw_reaction_add', timeout=timeout, check=check)
+
         except asyncio.TimeoutError:
             break
         else:
-            exits = await functions[str(reaction.emoji)]()
+            exits = await functions[str(payload.emoji)]()
             try:
-                await message.remove_reaction(reaction.emoji, user)
+                await message.remove_reaction(payload.emoji, payload.member)
             except discord.errors.NotFound:
                 pass
             except discord.errors.Forbidden:
@@ -154,13 +198,11 @@ async def reaction_buttons(ctx, message, functions, timeout=300.0, only_author=F
             if single_use or exits is True:
                 break
 
-    try:
-        tasks = []
-        for emojiname in functions:
-            tasks.append(message.remove_reaction(emojiname, ctx.bot.user))
-        await asyncio.gather(*tasks)
-    except discord.errors.NotFound:
-        pass
+    for emojiname in functions:
+        try:
+            await message.clear_reaction(emojiname)
+        except discord.errors.NotFound:
+            pass
 
 
 def message_embed(message):
