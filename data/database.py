@@ -230,6 +230,18 @@ def get_blacklist(guild_id, column, table):
     return blacklist
 
 
+def is_patron(user_id, tier=(1, 2, 3)):
+    data = query("""
+        SELECT * FROM patrons
+        WHERE user_id = ? AND currently_active = 1 AND tier in %s
+        """ % str(tier), (user_id,)
+    )
+    if data is None:
+        return False
+    else:
+        return True
+
+
 def is_blacklisted(ctx):
     bl_global = query(
         "SELECT * FROM blacklist_global_users WHERE user_id = ?",
