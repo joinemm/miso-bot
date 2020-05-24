@@ -384,90 +384,71 @@ class LastFm(commands.Cog):
             period = 'overall'
 
         artistname = remove_mentions(artistname)
+
         if artistname == "":
             return await ctx.send("Missing artist name!")
 
         if datatype in ["toptracks", "tt", "tracks", "track"]:
-            method = "user.gettoptracks"
-            path = ["toptracks", "track"]
+            datatype = 'tracks'
+
         elif datatype in ["topalbums", "talb", "albums", "album"]:
-            method = "user.gettopalbums"
-            path = ["topalbums", "album"]
+            datatype = 'albums'
+
         elif datatype in ['overview', 'stats', 'ov']:
             return await self.artist_overview(ctx, period, artistname)
+
         else:
             return await util.send_command_help(ctx)
 
-        async def extract_songs(items):
-            songs = []
-            for item in items:
-                item_artist = item['artist']['name']
-                if item_artist.casefold() == artistname.casefold():
-                    songs.append((item['name'], int(item['playcount'])))
-            return songs
-
-        data = await api_request({
-            "method": method,
-            "user": ctx.username,
-            "limit": 200,
-            "period": period
-        })
-        total_pages = int(data[path[0]]['@attr']['totalPages'])
-        artist_data = await extract_songs(data[path[0]][path[1]])
-        username = data[path[0]]["@attr"]['user']
-
-        if total_pages > 1:
-            tasks = []
-            for i in range(2, total_pages+1):
-                params = {
-                    "method": method,
-                    "user": ctx.username,
-                    "limit": 200,
-                    "period": period,
-                    "page": i
-                }
-                tasks.append(api_request(params))
-
-            data = await asyncio.gather(*tasks)
-            extraction_tasks = []
-            for datapage in data:
-                extraction_tasks.append(extract_songs(datapage[path[0]][path[1]]))
-
-            artist_data += sum(await asyncio.gather(*extraction_tasks), [])
-
-        if not artist_data:
+        artist, data = await self.artist_top(ctx, period, artistname, datatype)
+        if artist is None or not data:
             if period == 'overall':
                 return await ctx.send(f"You have never listened to **{artistname}**!")
             else:
                 return await ctx.send(f"You have not listened to **{artistname}** in the past {period}s!")
 
-        artist_info = await api_request({
-            "method": "artist.getinfo",
-            "artist": artistname
-        })
-        artist_info = artist_info.get('artist')
-        image_url = await scrape_artist_image(artistname)
-        formatted_name = artist_info['name']
-
-        image_colour = await util.color_from_image_url(image_url)
-
-        content = discord.Embed()
-        content.set_thumbnail(url=image_url)
-        content.colour = int(image_colour, 16)
+        image_colour = await util.color_from_image_url(artist['image_url'])
 
         rows = []
-        total_plays = 0
-        for i, (name, playcount) in enumerate(artist_data, start=1):
-            line = f"`#{i:2}` **{playcount}** {format_plays(total_plays)} — **{name}**"
-            total_plays += playcount
-            rows.append(line)
+        for i, (name, playcount) in enumerate(data, start=1):
+            rows.append(f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{name}**")
 
-        content.set_footer(text=f"Total {total_plays} {format_plays(total_plays)}")
-        content.set_author(name=f"{username} — " + (f"{humanized_period(period)} " if period != 'overall' else '') + \
-                                f"top {'tracks' if method == 'user.gettoptracks' else 'albums'}" \
-                                f" for {formatted_name}", icon_url=ctx.usertarget.avatar_url)
+        content = discord.Embed()
+        content.set_thumbnail(url=artist['image_url'])
+        content.colour = int(image_colour, 16)
+        content.set_author(
+            name=f"{ctx.usertarget.name} — " + (f"{humanized_period(period)} " if period != 'overall' else '') + \
+                 f"Top 50 {datatype} for {artist['formatted_name']}",
+            icon_url=ctx.usertarget.avatar_url,
+            url=f"https://last.fm/user/{ctx.username}/library/music/{artistname}/+{datatype}?date_preset={period_http_format(period)}"
+        )
 
         await util.send_as_pages(ctx, content, rows)
+
+    async def artist_top(self, ctx, period, artistname, datatype):
+        """Scrape either top tracks or top albums from lastfm library page."""
+        async with aiohttp.ClientSession() as session:
+            url = f"https://last.fm/user/{ctx.username}/library/music/{artistname}/+{datatype}?date_preset={period_http_format(period)}"
+            data = await fetch(session, url, handling='text')
+            soup = BeautifulSoup(data, 'html.parser')
+            data = []
+            try:
+                chartlist = soup.find("tbody", {"data-playlisting-add-entries": ""})
+            except ValueError:
+                return None, []
+
+            artist = {
+                'image_url': soup.find("span", {"class": "library-header-image"}).find('img').get('src').replace("avatar70s", "avatar300s"),
+                'formatted_name': soup.find("a", {"class": "library-header-crumb"}).text.strip()
+            }
+
+            items = chartlist.findAll("tr", {"class": "chartlist-row"})
+            for item in items:
+                name = item.find("td", {"class": "chartlist-name"}).find("a").get('title')
+                playcount = item.find("span", {"class": "chartlist-count-bar-value"}).text.replace('scrobbles', '').replace("scrobble", "").strip()
+                data.append((name, int(playcount)))
+
+            return artist, data
 
     async def artist_overview(self, ctx, period, artistname):
         """Overall artist view."""
@@ -496,27 +477,31 @@ class LastFm(commands.Cog):
             metadata_list = soup.find("ul", {"class": "metadata-list"})
             for i, metadata_item in enumerate(metadata_list.findAll("p", {"class": "metadata-display"})):
                 metadata[i] = int(metadata_item.text.replace(",", ""))
-        
-        artist_info = await api_request({
-            "method": "artist.getinfo",
-            "artist": artistname
-        })
-        artist_info = artist_info.get('artist')
-        formatted_name = artist_info['name']
-        image_url = soup.find("span", {"class": "library-header-image"}).find('img').get('src').replace("avatar70s", "avatar300s")
-        image_colour = await util.color_from_image_url(image_url)
+
+        artist = {
+            'image_url': soup.find("span", {"class": "library-header-image"}).find('img').get('src').replace("avatar70s", "avatar300s"),
+            'formatted_name': soup.find("h2", {"class": "library-header-title"}).text.strip()
+        }
+
+        image_colour = await util.color_from_image_url(artist['image_url'])
+        similar, listeners = await get_similar_artists(artist['formatted_name'])
 
         content = discord.Embed()
-        content.set_thumbnail(url=image_url)
+        content.set_thumbnail(url=artist['image_url'])
         content.colour = int(image_colour, 16)
         content.set_author(
-            name=f"{ctx.usertarget.name} — {formatted_name} " + (f"{humanized_period(period)} " if period != 'overall' else '') + "Overview",
-            icon_url=ctx.usertarget.avatar_url
+            name=f"{ctx.usertarget.name} — {artist['formatted_name']} " + (f"{humanized_period(period)} " if period != 'overall' else '') + "Overview",
+            icon_url=ctx.usertarget.avatar_url,
+            url=f"https://last.fm/user/{ctx.username}/library/music/{artistname}?date_preset={period_http_format(period)}"
         )
-        similar, listeners = await get_similar_artists(formatted_name)
+
         content.set_footer(text=f"{listeners} Listeners | Similar to: {', '.join(similar)}")
 
-        crown_holder = db.query("SELECT user_id FROM crowns WHERE guild_id = ? AND artist = ?", (ctx.guild.id, formatted_name))
+        crown_holder = db.query("""
+            SELECT user_id FROM crowns WHERE guild_id = ? AND artist = ?
+            """, (ctx.guild.id, artist['formatted_name'])
+        )
+
         if crown_holder is None or crown_holder[0][0] != ctx.usertarget.id:
             crownstate = ""
         else:
