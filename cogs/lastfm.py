@@ -630,7 +630,7 @@ class LastFm(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    @commands.cooldown(2, 10, type=commands.BucketType.user)
+    @commands.cooldown(2, 15, type=commands.BucketType.user)
     async def whoknows(self, ctx, *, artistname):
         """
         Check who has listened to a given artist the most.

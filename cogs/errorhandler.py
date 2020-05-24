@@ -2,8 +2,8 @@ import traceback
 import discord
 import asyncio
 from discord.ext import commands
-from helpers import log, utilityfunctions as util
-from helpers import exceptions
+from helpers import exceptions, log, utilityfunctions as util
+from data import database as db
 
 logger = log.get_logger(__name__)
 command_logger = log.get_logger("commands")
@@ -47,7 +47,10 @@ class Events(commands.Cog):
             return await ctx.send(f":warning: Cannot execute command! Bot is missing permission {perms}")
 
         elif isinstance(error, commands.CommandOnCooldown):
-            return await ctx.send(f":hourglass: This command is on a cooldown! (`{error.retry_after:.2f}s` remaining)")
+            if db.is_patron(ctx.author.id, (2, 3)):
+                return await ctx.reinvoke()
+            else:
+                return await ctx.send(f":hourglass: This command is on a cooldown! (`{error.retry_after:.2f}s` remaining)")
         
         elif isinstance(error, commands.DisabledCommand):
             await ctx.send(f":warning: `{ctx.command}` has been disabled!")
