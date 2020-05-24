@@ -22,7 +22,7 @@ class User(commands.Cog):
         with open("html/new_profile.html", "r", encoding="utf-8") as file:
             self.profile_html = file.read()
 
-    async def get_rank(self, ctx, user, table, _global=False):
+    async def get_rank(self, ctx, user, table='activity', _global=False):
         """Get user's xp ranking from given table."""
         if user.bot:
             return 'BOT'
@@ -52,7 +52,7 @@ class User(commands.Cog):
             if user_id == user.id:
                 ranking = i
 
-        return f"#{ranking}/{total}"
+        return f"#{ranking} / {total}"
         
     @commands.command(aliases=['dp'])
     async def avatar(self, ctx, *, user: discord.User=None):
@@ -96,13 +96,9 @@ class User(commands.Cog):
         except AttributeError:
             status = "Unavailable"
 
-        try:
-            activity = str(user.activities[0]) if user.activities else "None"
-        except AttributeError:
-            activity = "Unknown"
+        activity = util.activities_string(user.activities)
 
         content = discord.Embed()
-
         content.title = f"{user.name}#{user.discriminator} | #{user.id}"
         content.set_thumbnail(url=user.avatar_url)
         content.add_field(name="Status", value=status)
@@ -128,11 +124,17 @@ class User(commands.Cog):
                 value=f"#{member_number} / {len(ctx.guild.members)}"
             )
 
-            roles_names = []
-            for role in user.roles:
-                roles_names.append(role.mention)
+            content.add_field(
+                name="Rank",
+                value=await self.get_rank(ctx, user)
+            )
 
-            role_string = " ".join(role.mention for role in user.roles)
+            content.add_field(
+                name="Global Rank",
+                value=await self.get_rank(ctx, user, _global=True)
+            )
+
+            role_string = " ".join(role.mention for role in reversed(user.roles[1:])) if len(user.roles) > 1 else "None"
             content.add_field(
                 name="Roles",
                 value=role_string,

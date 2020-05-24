@@ -585,33 +585,54 @@ def get_full_class_name(obj, limit=2):
     return '.'.join(name.split('.')[-limit:])
 
 
-def activityhandler(activity_tuple):
-    """
-    :param activity_tuple : Discord activity tuple (None, Spotify, Streaming, Playing)
-    :return               : Activity dictionary
-    """
-    if not activity_tuple:
-        return {'text': '', 'icon': ''}
+def activities_string(activities, markdown=True, show_emoji=True):
+    """Print user activity as it shows up on the sidebar."""
+    if not activities:
+        return None
 
-    activity = activity_tuple[0]
-    
-    activity_dict = {}
-    if isinstance(activity, discord.Spotify):
-        activity_dict['text'] = f"Listening to <strong>{activity.title}</strong><br>by <strong>{activity.artist}</strong>"
-        activity_dict['icon'] = 'fab fa-spotify'
-    elif isinstance(activity, discord.Game):
-        activity_dict['text'] = f"Playing {activity.name}<br>for {stringfromtime((datetime.datetime.utcnow() - activity.start).total_seconds(), accuracy=1)}"
-        activity_dict['icon'] = 'fas fa-gamepad'
-    elif isinstance(activity, discord.Streaming):
-        activity_dict['text'] = f"Streaming {activity.details} as {activity.twitch_name}<br>{activity.name}"
-        activity_dict['icon'] = 'fab fa-twitch'
-    else:
-        try:
-            activity_dict['text'] = f"{activity.type.name} {activity.name}"
-        except AttributeError:
-            activity_dict['text'] = str(activity)
-        activity_dict['icon'] = 'fab fa-discord'
-    return activity_dict
+    custom_activity = None
+    base_activity = None
+    spotify_activity = None
+    for act in activities:
+        if isinstance(act, discord.CustomActivity):
+            custom_activity = act
+        elif isinstance(act, discord.BaseActivity):
+            base_activity = act
+        elif isinstance(act, discord.Spotify):
+            spotify_activity = act
+        else:
+            print(act)
+            return "Unknown activity"
+
+    emoji = None
+    message = None
+    if custom_activity:
+        emoji = custom_activity.emoji
+        message = custom_activity.name
+
+    if message is None and spotify_activity is not None:
+        message = "Listening to " + ("**Spotify**" if markdown else "Spotify")
+
+    if message is None and base_activity is not None:
+        if base_activity.type == discord.ActivityType.playing:
+            prefix = "Playing"
+        elif base_activity.type == discord.ActivityType.streaming:
+            prefix = "Streaming"
+        elif base_activity.type == discord.ActivityType.listening:
+            prefix = "Listening"
+        elif base_activity.type == discord.ActivityType.watching:
+            prefix = "Watching"
+
+        message = prefix + " " + (f"**{base_activity.name}**" if markdown else base_activity.name)
+
+    text = ""
+    if emoji is not None and show_emoji:
+        text += f"{emoji} "
+
+    if message is not None:
+        text += message
+
+    return text if text != "" else None
 
 
 class TwoWayIterator:
