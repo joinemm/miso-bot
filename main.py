@@ -21,7 +21,8 @@ logger.info(f"Developer mode is {'ON' if DEV else 'OFF'}")
 TOKEN = os.environ['MISO_BOT_TOKEN_BETA' if DEV else 'MISO_BOT_TOKEN']
 bot = commands.AutoShardedBot(
     command_prefix=util.determine_prefix,
-    case_insensitive=True
+    case_insensitive=True,
+    allowed_mentions=discord.AllowedMentions(everyone=False)
 )
 
 bot.default_prefix = '<' if DEV else '>'
