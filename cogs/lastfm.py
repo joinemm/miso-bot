@@ -420,7 +420,7 @@ class LastFm(commands.Cog):
             name=f"{ctx.usertarget.name} — " + (f"{humanized_period(period)} " if period != 'overall' else '') + \
                  f"Top 50 {datatype} for {artist['formatted_name']}",
             icon_url=ctx.usertarget.avatar_url,
-            url=f"https://last.fm/user/{ctx.username}/library/music/{artistname}/+{datatype}?date_preset={period_http_format(period)}"
+            url=f"https://last.fm/user/{ctx.username}/library/music/{urllib.parse.quote_plus(artistname)}/+{datatype}?date_preset={period_http_format(period)}"
         )
 
         await util.send_as_pages(ctx, content, rows)
@@ -492,7 +492,7 @@ class LastFm(commands.Cog):
         content.set_author(
             name=f"{ctx.usertarget.name} — {artist['formatted_name']} " + (f"{humanized_period(period)} " if period != 'overall' else '') + "Overview",
             icon_url=ctx.usertarget.avatar_url,
-            url=f"https://last.fm/user/{ctx.username}/library/music/{artistname}?date_preset={period_http_format(period)}"
+            url=f"https://last.fm/user/{ctx.username}/library/music/{urllib.parse.quote_plus(artistname)}?date_preset={period_http_format(period)}"
         )
 
         content.set_footer(text=f"{listeners} Listeners | Similar to: {', '.join(similar)}")
