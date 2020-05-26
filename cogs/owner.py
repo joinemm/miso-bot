@@ -168,7 +168,10 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
         for row in pretty_table[2:]:
             paginator.add_line(row)
 
-        await util.text_based_page_switcher(ctx, paginator.pages)
+        if len(paginator.pages) > 1:
+            await util.text_based_page_switcher(ctx, paginator.pages)
+        else:
+            await ctx.send(f"```{paginator.pages[0]}```")
 
     @sql.command(name='execute')
     async def sql_execute(self, ctx, *, statement):
