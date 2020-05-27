@@ -7,7 +7,6 @@ from wordcloud import WordCloud, STOPWORDS
 
 
 class Wordcloud(commands.Cog):
-
     def __init__(self, bot):
         self.bot = bot
         self.mask = np.array(Image.open("html/cloud.png"))
@@ -16,8 +15,10 @@ class Wordcloud(commands.Cog):
     async def wordcloud(self, ctx, user, messages=1000):
         """Create a word cloud of messages in the channel used in."""
         if int(messages) > 10000:
-            return await ctx.send("For performance reasons the amount of messages is limited to 10000 for now!")
-        if user in ['all', 'channel']:
+            return await ctx.send(
+                "For performance reasons the amount of messages is limited to 10000 for now!"
+            )
+        if user in ["all", "channel"]:
             user_limiter = None
         else:
             member = await util.get_member(ctx, user)
@@ -31,13 +32,13 @@ class Wordcloud(commands.Cog):
                 all_words += message.content.split(" ")
 
         stopwords = set(STOPWORDS)
-        
+
         wc = WordCloud(
-                background_color="#36393F",
-                max_words=500,
-                mask=self.mask,
-                stopwords=stopwords
-            )
+            background_color="#36393F",
+            max_words=500,
+            mask=self.mask,
+            stopwords=stopwords,
+        )
 
         await self.bot.loop.run_in_executor(
             None, lambda: wc.generate(" ".join(all_words))

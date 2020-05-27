@@ -26,7 +26,7 @@ async def determine_prefix(bot, message):
         data = db.query("SELECT prefix FROM prefixes WHERE guild_id = ?", (guild.id,))
         if data is not None:
             prefix = data[0][0]
-    
+
     return prefix
 
 
@@ -45,7 +45,9 @@ async def send_as_pages(ctx, content, rows, maxrows=15, maxpages=10):
         await ctx.send(embed=pages[0])
 
 
-async def text_based_page_switcher(ctx, pages, prefix="```", suffix="```", numbers=True):
+async def text_based_page_switcher(
+    ctx, pages, prefix="```", suffix="```", numbers=True
+):
     """
     :param ctx    : Context
     :param pages  : List of strings
@@ -53,16 +55,16 @@ async def text_based_page_switcher(ctx, pages, prefix="```", suffix="```", numbe
     :param suffix : String to suffix every page with
     :param numbers: Add page numbers to suffix
     """
-    total_rows = len("\n".join(pages).split('\n'))
+    total_rows = len("\n".join(pages).split("\n"))
 
     # add all page numbers
     if numbers:
         seen_rows = 0
         for i, page in enumerate(pages, start=1):
-            seen_rows += len(page.split('\n'))
+            seen_rows += len(page.split("\n"))
             page += f"\n{i}/{len(pages)} | {seen_rows}/{total_rows}{suffix}"
             page = prefix + "\n" + page
-            pages[i-1] = page
+            pages[i - 1] = page
 
     pages = TwoWayIterator(pages)
 
@@ -81,10 +83,7 @@ async def text_based_page_switcher(ctx, pages, prefix="```", suffix="```", numbe
         if content is not None:
             await switch_page(content)
 
-    functions = {
-        "⬅": previous_page,
-        "➡": next_page
-    }
+    functions = {"⬅": previous_page, "➡": next_page}
     asyncio.ensure_future(reaction_buttons(ctx, msg, functions))
 
 
@@ -100,7 +99,10 @@ async def page_switcher(ctx, pages):
         old_footer = page.footer.text
         if old_footer == discord.Embed.Empty:
             old_footer = None
-        page.set_footer(text=f"{i}/{len(pages.items)}" + (f' | {old_footer}' if old_footer is not None else ''))
+        page.set_footer(
+            text=f"{i}/{len(pages.items)}"
+            + (f" | {old_footer}" if old_footer is not None else "")
+        )
 
     msg = await ctx.send(embed=pages.current())
 
@@ -117,10 +119,7 @@ async def page_switcher(ctx, pages):
         if content is not None:
             await switch_page(content)
 
-    functions = {
-        "⬅": previous_page,
-        "➡": next_page
-    }
+    functions = {"⬅": previous_page, "➡": next_page}
     asyncio.ensure_future(reaction_buttons(ctx, msg, functions))
 
 
@@ -138,12 +137,12 @@ def create_pages(content, rows, maxrows=15, maxpages=10):
     rowcount = len(rows)
     for row in rows:
         thisrow += 1
-        if len(content.description) + len(row) < 2000 and thisrow < maxrows+1:
+        if len(content.description) + len(row) < 2000 and thisrow < maxrows + 1:
             content.description += f"\n{row}"
             rowcount -= 1
         else:
             thisrow = 1
-            if len(pages) == maxpages-1:
+            if len(pages) == maxpages - 1:
                 content.description += f"\n*+ {rowcount} more entries...*"
                 pages.append(content)
                 content = None
@@ -156,19 +155,22 @@ def create_pages(content, rows, maxrows=15, maxpages=10):
 
     if content is not None and not content.description == "":
         pages.append(content)
-    
+
     return pages
 
 
-async def reaction_buttons(ctx, message, functions, timeout=300.0, only_author=False, single_use=False):
+async def reaction_buttons(
+    ctx, message, functions, timeout=300.0, only_author=False, single_use=False
+):
     """Handler for reaction buttons
     :param message     : message to add reactions to
-    :param functions   : dictionary of {emoji : function} pairs. functions must be async. return True to exit
-    :param timeout     : time in seconds for how long the buttons work for. default 10 minutes (600.0)
+    :param functions   : dictionary of {emoji : function} pairs. functions must be async.
+                         return True to exit
+    :param timeout     : time in seconds for how long the buttons work for.
     :param only_author : only allow the user who used the command use the buttons
     :param single_use  : delete buttons after one is used
     """
-    
+
     try:
         for emojiname in functions:
             await message.add_reaction(emojiname)
@@ -176,14 +178,18 @@ async def reaction_buttons(ctx, message, functions, timeout=300.0, only_author=F
         return
 
     def check(payload):
-        return payload.message_id == message.id \
-               and str(payload.emoji) in functions \
-               and not payload.member == ctx.bot.user \
-               and (payload.member == ctx.author or not only_author)
+        return (
+            payload.message_id == message.id
+            and str(payload.emoji) in functions
+            and not payload.member == ctx.bot.user
+            and (payload.member == ctx.author or not only_author)
+        )
 
     while True:
         try:
-            payload = await ctx.bot.wait_for('raw_reaction_add', timeout=timeout, check=check)
+            payload = await ctx.bot.wait_for(
+                "raw_reaction_add", timeout=timeout, check=check
+            )
 
         except asyncio.TimeoutError:
             break
@@ -194,7 +200,9 @@ async def reaction_buttons(ctx, message, functions, timeout=300.0, only_author=F
             except discord.errors.NotFound:
                 pass
             except discord.errors.Forbidden:
-                await ctx.send("`error: I'm missing required discord permission [ manage messages ]`")
+                await ctx.send(
+                    "`error: I'm missing required discord permission [ manage messages ]`"
+                )
             if single_use or exits is True:
                 break
 
@@ -211,10 +219,7 @@ def message_embed(message):
     :returns        : discord.Embed
     """
     content = discord.Embed()
-    content.set_author(
-        name=f"{message.author}",
-        icon_url=message.author.avatar_url
-    )
+    content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
     content.description = message.content
     content.set_footer(text=f"{message.guild.name} | #{message.channel.name}")
     content.timestamp = message.created_at
@@ -235,11 +240,11 @@ def timefromstring(s):
     prev = words[0]
     for word in words[1:]:
         try:
-            if word in ['hours', 'hour']:
+            if word in ["hours", "hour"]:
                 t += int(prev) * 3600
-            elif word in ['minutes', 'minute', 'min']:
+            elif word in ["minutes", "minute", "min"]:
                 t += int(prev) * 60
-            elif word in ['seconds', 'second', 'sec']:
+            elif word in ["seconds", "second", "sec"]:
                 t += int(prev)
         except ValueError:
             pass
@@ -276,7 +281,7 @@ def get_xp(level):
     :return      : Amount of xp needed to reach the level
     """
 
-    return math.ceil(math.pow((level-1)/(0.05*(1 + math.sqrt(5))), 2))
+    return math.ceil(math.pow((level - 1) / (0.05 * (1 + math.sqrt(5))), 2))
 
 
 def get_level(xp):
@@ -285,7 +290,7 @@ def get_level(xp):
     :returns  : Current level based on the amount of xp
     """
 
-    return math.floor(0.05*(1 + math.sqrt(5))*math.sqrt(xp)) + 1
+    return math.floor(0.05 * (1 + math.sqrt(5)) * math.sqrt(xp)) + 1
 
 
 def xp_to_next_level(level):
@@ -355,7 +360,9 @@ async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
         except commands.errors.BadArgument:
             return fallback
     else:
-        result = discord.utils.find(lambda m: argument in (m.name, m.id), guildfilter.text_channels)
+        result = discord.utils.find(
+            lambda m: argument in (m.name, m.id), guildfilter.text_channels
+        )
         return result or fallback
 
 
@@ -431,14 +438,13 @@ def escape_md(s):
     :return  : The escaped string
     """
     transformations = {
-        regex.escape(c): '\\' + c
-        for c in ('*', '`', '_', '~', '\\', '||')
+        regex.escape(c): "\\" + c for c in ("*", "`", "_", "~", "\\", "||")
     }
 
     def replace(obj):
-        return transformations.get(regex.escape(obj.group(0)), '')
+        return transformations.get(regex.escape(obj.group(0)), "")
 
-    pattern = regex.compile('|'.join(transformations.keys()))
+    pattern = regex.compile("|".join(transformations.keys()))
     return pattern.sub(replace, s)
 
 
@@ -455,7 +461,7 @@ def rgb_to_hex(rgb):
     return "{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
 
 
-async def color_from_image_url(url, fallback='E74C3C'):
+async def color_from_image_url(url, fallback="E74C3C"):
     """
     :param url      : image url
     :param fallback : the color to return in case the operation fails
@@ -478,7 +484,7 @@ async def color_from_image_url(url, fallback='E74C3C'):
 
 def useragent():
     """Returns random user agent to use in web scraping."""
-    agents = db.get_from_data_json(['useragents'])
+    agents = db.get_from_data_json(["useragents"])
     return random.choice(agents)
 
 
@@ -501,16 +507,16 @@ def int_to_bool(value):
 def find_unicode_emojis(text):
     """Finds and returns all unicode emojis from a string"""
     emoji_list = []
-    data = regex.findall(r'\X', text)
-    flags = regex.findall(u'[\U0001F1E6-\U0001F1FF]', text)
+    data = regex.findall(r"\X", text)
+    flags = regex.findall("[\U0001F1E6-\U0001F1FF]", text)
     for word in data:
         if any(char in emoji.UNICODE_EMOJI for char in word):
             if word in flags:
                 continue
             emoji_list.append(emoji.demojize(word))
-    
-    for i in range(math.floor(len(flags)/2)):
-        emoji_list.append(''.join(emoji.demojize(x) for x in flags[i:i+2]))
+
+    for i in range(math.floor(len(flags) / 2)):
+        emoji_list.append("".join(emoji.demojize(x) for x in flags[i : i + 2]))
 
     return emoji_list
 
@@ -518,7 +524,7 @@ def find_unicode_emojis(text):
 def find_custom_emojis(text):
     """Finds and returns all custom discord emojis from a string"""
     emoji_list = []
-    data = regex.findall(r'<(a?):([a-zA-Z0-9\_]+):([0-9]+)>', text)
+    data = regex.findall(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>", text)
     for a, emoji_name, emoji_id in data:
         emoji_list.append(f"<{a}:{emoji_name}:{emoji_id}>")
 
@@ -529,8 +535,8 @@ async def image_info_from_url(url):
     """Return dictionary containing filesize, filetype and dimensions of an image."""
     async with aiohttp.ClientSession() as session:
         async with session.get(str(url)) as response:
-            filesize = int(response.headers.get('Content-Length'))/1024
-            filetype = response.headers.get('Content-Type')
+            filesize = int(response.headers.get("Content-Length")) / 1024
+            filetype = response.headers.get("Content-Type")
             image = Image.open(io.BytesIO(await response.read()))
             dimensions = image.size
             if filesize > 1024:
@@ -539,27 +545,24 @@ async def image_info_from_url(url):
                 filesize = f"{filesize:.2f}KB"
 
             return {
-                'filesize': filesize,
-                'filetype': filetype,
-                'dimensions': f"{dimensions[0]}x{dimensions[1]}"
+                "filesize": filesize,
+                "filetype": filetype,
+                "dimensions": f"{dimensions[0]}x{dimensions[1]}",
             }
 
 
 def create_welcome_embed(user, guild, messageformat):
     """Creates and returns embed for welcome message."""
-    content = discord.Embed(
-        title="New member! :wave:",
-        color=discord.Color.green()
-    )
+    content = discord.Embed(title="New member! :wave:", color=discord.Color.green())
     content.set_thumbnail(url=user.avatar_url)
     content.timestamp = datetime.datetime.utcnow()
     content.set_footer(text=f"👤#{len(guild.members)}")
     content.description = messageformat.format(
         mention=user.mention,
-        user=user, 
+        user=user,
         id=user.id,
         server=guild.name,
-        username=user.name
+        username=user.name,
     )
     return content
 
@@ -571,7 +574,7 @@ def create_goodbye_message(user, guild, messageformat):
         user=user,
         id=user.id,
         server=guild.name,
-        username=user.name
+        username=user.name,
     )
 
 
@@ -581,8 +584,8 @@ def get_full_class_name(obj, limit=2):
     if module is None or module == str.__class__.__module__:
         name = obj.__class__.__name__
     else:
-        name = module + '.' + obj.__class__.__name__
-    return '.'.join(name.split('.')[-limit:])
+        name = module + "." + obj.__class__.__name__
+    return ".".join(name.split(".")[-limit:])
 
 
 def activities_string(activities, markdown=True, show_emoji=True):
@@ -623,7 +626,11 @@ def activities_string(activities, markdown=True, show_emoji=True):
         elif base_activity.type == discord.ActivityType.watching:
             prefix = "Watching"
 
-        message = prefix + " " + (f"**{base_activity.name}**" if markdown else base_activity.name)
+        message = (
+            prefix
+            + " "
+            + (f"**{base_activity.name}**" if markdown else base_activity.name)
+        )
 
     text = ""
     if emoji is not None and show_emoji:

@@ -5,12 +5,11 @@ from helpers import utilityfunctions as util
 
 
 class ImageObject:
-
     def __init__(self, filename):
         self.filename = filename
         self.image = Image.open(self.filename)
         self.draw = ImageDraw.Draw(self.image)
-        self.font = 'NanumGothic.ttf'
+        self.font = "NanumGothic.ttf"
 
     def get_text_size(self, font_size, text):
         font = ImageFont.truetype(self.font, font_size)
@@ -31,11 +30,11 @@ class ImageObject:
             lines = []
             line = []
             line_height = 0
-            words = text.split(' ')
+            words = text.split(" ")
             for w, word in enumerate(words):
-                if '\n' in word:
-                    newline_words = word.split('\n')
-                    new_line = ' '.join(line + [newline_words[0]])
+                if "\n" in word:
+                    newline_words = word.split("\n")
+                    new_line = " ".join(line + [newline_words[0]])
                     size = self.get_text_size(font_size, new_line)
                     line_height = size[1]
                     if size[0] <= width:
@@ -44,12 +43,12 @@ class ImageObject:
                         lines.append(line)
                         line = [newline_words[0]]
                     lines.append(line)
-                    if len(word.split('\n')) > 2:
-                        for i in range(1, len(word.split('\n')) - 1):
+                    if len(word.split("\n")) > 2:
+                        for i in range(1, len(word.split("\n")) - 1):
                             lines.append([newline_words[i]])
                     line = [newline_words[-1]]
                 else:
-                    new_line = ' '.join(line + [word])
+                    new_line = " ".join(line + [word])
                     size = self.get_text_size(font_size, new_line)
                     line_height = size[1]
                     if size[0] <= width:
@@ -59,7 +58,7 @@ class ImageObject:
                         line = [word]
 
                 # check after every word to exit prematurely
-                size = self.get_text_size(font_size, ' '.join(line))
+                size = self.get_text_size(font_size, " ".join(line))
                 text_height = len(lines) * line_height
                 if text_height > height or size[0] > width:
                     # print(f"Font_size {font_size} too big at {w+1}/{len(words)} words")
@@ -77,7 +76,7 @@ class ImageObject:
                 # print(f"Font_size {font_size} too big")
                 font_size -= 1
 
-        lines = [' '.join(line) for line in lines]
+        lines = [" ".join(line) for line in lines]
         font = ImageFont.truetype(self.font, font_size)
 
         height = y
@@ -90,7 +89,6 @@ class ImageObject:
 
 
 class Images(commands.Cog):
-
     def __init__(self, bot):
         self.bot = bot
 
@@ -115,16 +113,33 @@ class Images(commands.Cog):
     async def haseul(self, ctx, *, text):
         """Haseul has something to say."""
         filename = "images/haseul.jpg"
-        await image_sender(ctx, filename, (228, 400, 266, 258), text, wm_size=20, wm_color=(50, 50 ,50 ,100))
+        await image_sender(
+            ctx,
+            filename,
+            (228, 400, 266, 258),
+            text,
+            wm_size=20,
+            wm_color=(50, 50, 50, 100),
+        )
 
     @meme.command()
     async def trump(self, ctx, *, text):
         """Donald Trump has signed a new order."""
         filename = "images/trump.jpg"
-        await image_sender(ctx, filename, (761, 579, 406, 600), text, wm_color=(255, 255 ,255 ,255))
+        await image_sender(
+            ctx, filename, (761, 579, 406, 600), text, wm_color=(255, 255, 255, 255)
+        )
 
 
-async def image_sender(ctx, filename, boxdimensions, text, color=(40, 40, 40), wm_size=30, wm_color=(150, 150, 150, 100)):
+async def image_sender(
+    ctx,
+    filename,
+    boxdimensions,
+    text,
+    color=(40, 40, 40),
+    wm_size=30,
+    wm_color=(150, 150, 150, 100),
+):
     image = ImageObject(filename)
     await image.write_box(*boxdimensions, color, text)
     image.write_watermark(wm_size, wm_color)
