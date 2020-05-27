@@ -12,42 +12,43 @@ logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
 
 if len(sys.argv) > 1:
-    DEV = sys.argv[1] == 'dev'
+    DEV = sys.argv[1] == "dev"
 else:
     DEV = False
 
 logger.info(f"Developer mode is {'ON' if DEV else 'OFF'}")
 
-TOKEN = os.environ['MISO_BOT_TOKEN_BETA' if DEV else 'MISO_BOT_TOKEN']
+TOKEN = os.environ["MISO_BOT_TOKEN_BETA" if DEV else "MISO_BOT_TOKEN"]
 bot = commands.AutoShardedBot(
     command_prefix=util.determine_prefix,
     case_insensitive=True,
-    allowed_mentions=discord.AllowedMentions(everyone=False)
+    allowed_mentions=discord.AllowedMentions(everyone=False),
 )
 
-bot.default_prefix = '<' if DEV else '>'
+bot.default_prefix = "<" if DEV else ">"
 
 extensions = [
-    'events',
-    'config',
-    'errorhandler',
-    'customcommands',
-    'fishy',
-    'info',
-    'rolepicker',
-    'mod',
-    'owner',
-    'notifications',
-    'miscellaneous',
-    'media',
-    'lastfm',
-    'user',
-    'images',
-    'utility',
-    'wordcloud',
-    'typings',
-    'reminders',
-    'bangs',
+    "events",
+    "config",
+    "errorhandler",
+    "customcommands",
+    "fishy",
+    "info",
+    "rolepicker",
+    "mod",
+    "owner",
+    "notifications",
+    "miscellaneous",
+    "media",
+    "lastfm",
+    "user",
+    "images",
+    "utility",
+    "wordcloud",
+    "typings",
+    "reminders",
+    "bangs",
+    "opgg",
 ]
 
 
@@ -77,7 +78,7 @@ async def before_any_command(ctx):
 async def check_for_blacklist(ctx):
     """Check command invocation context for blacklist triggers"""
     if ctx.guild is None:
-        #raise commands.NoPrivateMessage
+        # raise commands.NoPrivateMessage
         return True
     return db.is_blacklisted(ctx)
 
@@ -99,5 +100,5 @@ if __name__ == "__main__":
         except Exception as error:
             logger.error(f"Error loading [ {extension} ]")
             traceback.print_exception(type(error), error, error.__traceback__)
-            
+
     bot.run(TOKEN)

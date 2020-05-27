@@ -10,39 +10,35 @@ logger = log.get_logger(__name__)
 
 
 class Events(commands.Cog):
-
     def __init__(self, bot):
         self.bot = bot
-        self.stfu_regex = re.compile(r'(?:^|\W){0}(?:$|\W)'.format('stfu'), flags=re.IGNORECASE)
+        self.stfu_regex = re.compile(
+            r"(?:^|\W){0}(?:$|\W)".format("stfu"), flags=re.IGNORECASE
+        )
         self.statuses = [
             ("watching", lambda: f"{len(self.bot.guilds)} servers"),
             ("listening", lambda: f"to {len(set(self.bot.get_all_members()))} users"),
-            ("playing", lambda: "misobot.xyz")
+            ("playing", lambda: "misobot.xyz"),
         ]
-        self.activities = {
-            'playing': 0,
-            'streaming': 1,
-            'listening': 2,
-            'watching': 3
-        }
+        self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
         self.current_status = None
         self.status_loop.start()
-    
+
     def cog_unload(self):
         self.status_loop.cancel()
 
     @commands.Cog.listener()
     async def on_ready(self):
-        settings = db.get_from_data_json(['bot_settings'])
-        self.logchannel = self.bot.get_channel(settings['log_channel'])
-    
+        settings = db.get_from_data_json(["bot_settings"])
+        self.logchannel = self.bot.get_channel(settings["log_channel"])
+
     @tasks.loop(minutes=3.0)
     async def status_loop(self):
         try:
             await self.next_status()
         except Exception as e:
             logger.error(e)
-    
+
     @status_loop.before_loop
     async def before_status_loop(self):
         await self.bot.wait_until_ready()
@@ -53,14 +49,13 @@ class Events(commands.Cog):
         new_status_id = self.current_status
         while new_status_id == self.current_status:
             new_status_id = random.randrange(0, len(self.statuses))
-        
+
         status = self.statuses[new_status_id]
         self.current_status = new_status_id
-        
+
         await self.bot.change_presence(
             activity=discord.Activity(
-                type=discord.ActivityType(self.activities[status[0]]),
-                name=status[1]()
+                type=discord.ActivityType(self.activities[status[0]]), name=status[1]()
             )
         )
 
@@ -70,7 +65,9 @@ class Events(commands.Cog):
         logger.info(f"New guild : {guild}")
         content = discord.Embed(color=discord.Color.green())
         content.title = "New guild!"
-        content.description = f"Miso just joined **{guild}**\nWith **{guild.member_count-1}** members"
+        content.description = (
+            f"Miso just joined **{guild}**\nWith **{guild.member_count-1}** members"
+        )
         content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")
         await self.logchannel.send(embed=content)
@@ -81,7 +78,9 @@ class Events(commands.Cog):
         logger.info(f"Left guild : {guild}")
         content = discord.Embed(color=discord.Color.red())
         content.title = "Left guild!"
-        content.description = f"Miso just left **{guild}**\nWith **{guild.member_count-1}** members :("
+        content.description = (
+            f"Miso just left **{guild}**\nWith **{guild.member_count-1}** members :("
+        )
         content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")
         await self.logchannel.send(embed=content)
@@ -95,13 +94,17 @@ class Events(commands.Cog):
 
         channel = member.guild.get_channel(channel_id)
         if channel is None:
-            return logger.warning(f"Cannot welcome {member} to {member.guild.name} (invalid channel)")
+            return logger.warning(
+                f"Cannot welcome {member} to {member.guild.name} (invalid channel)"
+            )
 
         message_format = db.get_setting(member.guild.id, "welcome_message")
         if message_format is None:
             message_format = "Welcome **{username}** {mention} to **{server}**"
-        
-        await channel.send(embed=util.create_welcome_embed(member, member.guild, message_format))
+
+        await channel.send(
+            embed=util.create_welcome_embed(member, member.guild, message_format)
+        )
         logger.info(f"Welcomed {member.name} to {member.guild.name}")
 
         # add autorole
@@ -110,7 +113,9 @@ class Events(commands.Cog):
             try:
                 await member.add_roles(role)
             except discord.errors.Forbidden:
-                logger.error(f"Trying to add autorole failed in {member.guild.name} (no permissions)")
+                logger.error(
+                    f"Trying to add autorole failed in {member.guild.name} (no permissions)"
+                )
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
@@ -121,7 +126,9 @@ class Events(commands.Cog):
 
         channel = guild.get_channel(channel_id)
         if channel is None:
-            return logger.warning(f"Cannot announce ban of {user} from {guild.name} (invalid channel)")
+            return logger.warning(
+                f"Cannot announce ban of {user} from {guild.name} (invalid channel)"
+            )
 
         await channel.send(f"**{user.name}** (`{user.id}`) has been permanently banned")
         logger.info(f"{user} was just banned from {guild.name}")
@@ -135,30 +142,34 @@ class Events(commands.Cog):
 
         channel = member.guild.get_channel(channel_id)
         if channel is None:
-            return logger.warning(f"Cannot say goodbye to {member} from {member.guild.name} (invalid channel)")
-        
+            return logger.warning(
+                f"Cannot say goodbye to {member} from {member.guild.name} (invalid channel)"
+            )
+
         message_format = db.get_setting(member.guild.id, "goodbye_message")
         if message_format is None:
             message_format = "Goodbye {mention} ( **{user}** )"
 
-        await channel.send(util.create_goodbye_message(member, member.guild, message_format))
+        await channel.send(
+            util.create_goodbye_message(member, member.guild, message_format)
+        )
         logger.info(f"Said goodbye to {member.name} from {member.guild.name}")
-    
+
     @commands.Cog.listener()
     async def on_message_delete(self, message):
         """Listener that gets called when any message is deleted."""
         # ignore DMs
         if message.guild is None:
             return
-        
+
         channel_id = db.get_setting(message.guild.id, "deleted_messages_channel")
         if channel_id is None:
             return
-        
+
         channel = message.guild.get_channel(channel_id)
         if channel is None or message.channel == channel:
             return
-        
+
         try:
             await channel.send(embed=util.message_embed(message))
         except discord.errors.Forbidden:
@@ -172,56 +183,82 @@ class Events(commands.Cog):
             return
 
         # votechannels
-        if db.query("select * from votechannels where guild_id = ? and channel_id = ?",
-                    (message.guild.id, message.channel.id)) is not None:
-            await message.add_reaction(self.bot.get_emoji(
-                db.query("select id from emojis where name = 'upvote'")[0][0]))
-            await message.add_reaction(self.bot.get_emoji(
-                db.query("select id from emojis where name = 'downvote'")[0][0]))
+        if (
+            db.query(
+                "select * from votechannels where guild_id = ? and channel_id = ?",
+                (message.guild.id, message.channel.id),
+            )
+            is not None
+        ):
+            await message.add_reaction(
+                self.bot.get_emoji(
+                    db.query("select id from emojis where name = 'upvote'")[0][0]
+                )
+            )
+            await message.add_reaction(
+                self.bot.get_emoji(
+                    db.query("select id from emojis where name = 'downvote'")[0][0]
+                )
+            )
 
         # xp gain
         message_xp = util.xp_from_message(message)
         currenthour = message.created_at.hour
         db.add_activity(message.guild.id, message.author.id, message_xp, currenthour)
-        
+
         # if bot account, ignore everything after this
         if message.author.bot:
             return
-        
+
         # stfu
         if self.stfu_regex.findall(message.content) and random.randint(0, 1) == 0:
             try:
                 await message.channel.send("no u")
             except discord.errors.Forbidden:
                 pass
-        
+
         # hi
-        if message.content.lower().strip("!.?~ ") == "hi" and random.randint(0, 19) == 0:
+        if (
+            message.content.lower().strip("!.?~ ") == "hi"
+            and random.randint(0, 19) == 0
+        ):
             try:
-                await message.channel.send('hi')
+                await message.channel.send("hi")
             except discord.errors.Forbidden:
                 pass
 
         # git gud
         if message.content.lower().startswith("git "):
-            gitcommand = re.search(r'git (\S+)', message.content)
+            gitcommand = re.search(r"git (\S+)", message.content)
             if gitcommand is not None:
                 try:
                     gitcommand = gitcommand.group(1)
                     if gitcommand == "--help":
-                        msg = "```\n" \
-                              "usage: git [--version] [--help] [-C <path>] [-c <name>=<value>]\n" \
-                              "           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n" \
-                              "           [-p | --paginate | --no-pager] [--no-replace-objects] [--bare]\n" \
-                              "           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]\n" \
-                              "           <command> [<args>]```"
+                        msg = (
+                            "```\n"
+                            "usage: git [--version] [--help] [-C <path>] [-c <name>=<value>]\n"
+                            "           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n"
+                            "           [-p | --paginate | --no-pager] [--no-replace-objects] [--bare]\n"
+                            "           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]\n"
+                            "           <command> [<args>]```"
+                        )
                         await message.channel.send(msg)
                     elif gitcommand == "--version":
                         await message.channel.send("`git version 2.17.1`")
-                    elif gitcommand in ["commit", "push", "pull", "checkout", "status", "init", "add"]:
+                    elif gitcommand in [
+                        "commit",
+                        "push",
+                        "pull",
+                        "checkout",
+                        "status",
+                        "init",
+                        "add",
+                    ]:
                         pass
                     else:
-                        await message.channel.send(f"`git: '{gitcommand}' is not a git command. See 'git --help'.`")
+                        await message.channel.send(
+                            f"`git: '{gitcommand}' is not a git command. See 'git --help'.`"
+                        )
                 except discord.errors.Forbidden:
                     pass
 
@@ -239,12 +276,14 @@ class Events(commands.Cog):
                 return
 
             xp = sum(activity_data)
-            level_before = util.get_level(xp-message_xp)
+            level_before = util.get_level(xp - message_xp)
             level_now = util.get_level(xp)
 
             if level_now > level_before:
                 try:
-                    await message.channel.send(f"{message.author.mention} just leveled up! (level **{level_now}**)")
+                    await message.channel.send(
+                        f"{message.author.mention} just leveled up! (level **{level_now}**)"
+                    )
                 except discord.errors.Forbidden:
                     pass
 
@@ -253,8 +292,9 @@ class Events(commands.Cog):
         """Starboard"""
         if payload.emoji.name == "⭐":
             starboard_settings = db.query(
-                "SELECT starboard_toggle, starboard_amount, starboard_channel FROM guilds WHERE guild_id = ?",
-                (payload.guild_id,)
+                """SELECT starboard_toggle, starboard_amount, starboard_channel
+                FROM guilds WHERE guild_id = ?""",
+                (payload.guild_id,),
             )
             if starboard_settings is None:
                 # starboard not configured on this server
@@ -265,7 +305,9 @@ class Events(commands.Cog):
             if not util.int_to_bool(starboard_settings[0]):
                 return
 
-            message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+            message = await self.bot.get_channel(payload.channel_id).fetch_message(
+                payload.message_id
+            )
             for react in message.reactions:
                 if react.emoji == payload.emoji.name:
                     if react.count < starboard_settings[1]:
@@ -281,24 +323,26 @@ class Events(commands.Cog):
 
             board_msg_id = db.query(
                 "SELECT starboard_message_id FROM starboard WHERE message_id = ?",
-                (payload.message_id,)
+                (payload.message_id,),
             )
             if board_msg_id is None:
                 # message is not on board yet,
                 content = discord.Embed(color=discord.Color.gold())
                 content.set_author(
-                    name=f"{message.author}",
-                    icon_url=message.author.avatar_url
+                    name=f"{message.author}", icon_url=message.author.avatar_url
                 )
                 jump = f"\n\n[context]({message.jump_url})"
-                content.description = message.content[:2048-len(jump)] + jump
+                content.description = message.content[: 2048 - len(jump)] + jump
                 content.timestamp = message.created_at
                 content.set_footer(text=f"{reaction_count} ⭐ #{message.channel.name}")
                 if len(message.attachments) > 0:
                     content.set_image(url=message.attachments[0].url)
 
                 board_message = await channel.send(embed=content)
-                db.execute("INSERT INTO starboard VALUES(?, ?)", (payload.message_id, board_message.id))
+                db.execute(
+                    "INSERT INTO starboard VALUES(?, ?)",
+                    (payload.message_id, board_message.id),
+                )
 
             else:
                 # message is on board, update star count

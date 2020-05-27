@@ -6,15 +6,15 @@ import helpers.utilityfunctions as util
 
 class ChannelSetting(commands.TextChannelConverter):
     """This enables removing a channel from the database in the same command that adds it."""
+
     async def convert(self, ctx, argument):
-        if argument.lower() in ['disable', 'none', 'delete', 'remove']:
+        if argument.lower() in ["disable", "none", "delete", "remove"]:
             return None
         else:
             return await super().convert(ctx, argument)
 
 
 class Config(commands.Cog):
-
     def __init__(self, bot):
         self.bot = bot
 
@@ -28,10 +28,16 @@ class Config(commands.Cog):
             if this_cog_commands:
                 this_page = discord.Embed(title=f"{cog}")
                 for command in this_cog_commands:
-                    this_page.add_field(name=command.name +
-                                        (f' [{" | ".join(command.aliases)}]' if command.aliases else ""),
-                                        inline=False,
-                                        value=command.short_doc or "-no help yet-")
+                    this_page.add_field(
+                        name=command.name
+                        + (
+                            f' [{" | ".join(command.aliases)}]'
+                            if command.aliases
+                            else ""
+                        ),
+                        inline=False,
+                        value=command.short_doc or "-no help yet-",
+                    )
                 pages.append(this_page)
         await util.page_switcher(ctx, pages)
 
@@ -39,7 +45,7 @@ class Config(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def prefix(self, ctx, prefix):
         """Set a custom command prefix for this server.
-        
+
         Usage:
             >prefix <text>
             >prefix \"<text with spaces>\"
@@ -50,26 +56,31 @@ class Config(commands.Cog):
             return await ctx.send(":warning: Prefix cannot start with a space.")
         elif len(prefix) > 32:
             return await ctx.send(":warning: Prefix cannot be over 32 characters.")
-        
+
         prefix = prefix.lstrip()
         db.execute("REPLACE INTO prefixes VALUES (?, ?)", (ctx.guild.id, prefix))
-        await ctx.send(f"Command prefix for this server set to `{prefix}`\nExample command usage: {prefix}help")
+        await ctx.send(
+            f"Command prefix for this server set to `{prefix}`\n"
+            f"Example command usage: {prefix}help"
+        )
 
-    @commands.group(name='logger')
+    @commands.group(name="logger")
     @commands.has_permissions(manage_channels=True)
     async def logmessages(self, ctx):
         """Configure the various event messages sent."""
         await util.command_group_help(ctx)
-    
-    @logmessages.group(name='welcome')
+
+    @logmessages.group(name="welcome")
     async def logmessages_welcome(self, ctx):
         """Configure the welcome message."""
         await util.command_group_help(ctx)
 
-    @logmessages_welcome.command(name='channel')
+    @logmessages_welcome.command(name="channel")
     async def welcome_channel(self, ctx, *, channel: ChannelSetting):
         """Set the welcome messages channel."""
-        db.update_setting(ctx.guild.id, "welcome_channel", (None if channel is None else channel.id))
+        db.update_setting(
+            ctx.guild.id, "welcome_channel", (None if channel is None else channel.id)
+        )
         if channel is None:
             await ctx.send("Welcome messages disabled.")
         else:
@@ -83,26 +94,27 @@ class Config(commands.Cog):
             >logger welcome message <message...>
             >logger welcome message default
         """
-        if message.lower() == 'default':
+        if message.lower() == "default":
             db.update_setting(ctx.guild.id, "welcome_message", None)
             return await ctx.send("Welcome message has been reset to default.")
 
         welcomepreview = util.create_welcome_embed(ctx.author, ctx.guild, message)
         db.update_setting(ctx.guild.id, "welcome_message", message)
         await ctx.send(
-            f"New welcome message set:\n```{message}```Preview:",
-            embed=welcomepreview
+            f"New welcome message set:\n```{message}```Preview:", embed=welcomepreview
         )
 
-    @logmessages.group(name='goodbye')
+    @logmessages.group(name="goodbye")
     async def logmessages_goodbye(self, ctx):
         """Configure the goodbye message."""
         await util.command_group_help(ctx)
 
-    @logmessages_goodbye.command(name='channel')
+    @logmessages_goodbye.command(name="channel")
     async def goodbye_channel(self, ctx, *, channel: ChannelSetting):
         """Set the goodbye messages channel."""
-        db.update_setting(ctx.guild.id, "goodbye_channel", (None if channel is None else channel.id))
+        db.update_setting(
+            ctx.guild.id, "goodbye_channel", (None if channel is None else channel.id)
+        )
         if channel is None:
             await ctx.send("Goodbye messages disabled.")
         else:
@@ -116,33 +128,39 @@ class Config(commands.Cog):
             >logger goodbye message <message...>
             >logger goodbye message default
         """
-        if message.lower() == 'default':
+        if message.lower() == "default":
             db.update_setting(ctx.guild.id, "goodbye_message", None)
             return await ctx.send("Goodbye message has been reset to default.")
-        
+
         db.update_setting(ctx.guild.id, "goodbye_message", message)
         await ctx.send(f"New Goodbye message set.\n```{message}```Preview:")
         await ctx.send(util.create_goodbye_message(ctx.author, ctx.guild, message))
-    
-    @logmessages.command(name='bans')
+
+    @logmessages.command(name="bans")
     async def logmessages_bans(self, ctx, *, channel: ChannelSetting):
         """Set channel where bans are announced."""
-        db.update_setting(ctx.guild.id, 'bans_channel', (None if channel is None else channel.id))
+        db.update_setting(
+            ctx.guild.id, "bans_channel", (None if channel is None else channel.id)
+        )
         if channel is None:
             await ctx.send("Ban messages disabled.")
         else:
             await ctx.send(f"Bans will now be logged in {channel.mention}")
 
-    @logmessages.command(name='deletedmessages')
+    @logmessages.command(name="deletedmessages")
     async def logmessages_messages(self, ctx, *, channel: ChannelSetting):
         """Set channel where deleted messages are logged."""
-        db.update_setting(ctx.guild.id, 'deleted_messages_channel', (None if channel is None else channel.id))
+        db.update_setting(
+            ctx.guild.id,
+            "deleted_messages_channel",
+            (None if channel is None else channel.id),
+        )
         if channel is None:
             await ctx.send("Deleted messages logs disabled.")
         else:
             await ctx.send(f"Deleted messages will now be logged in {channel.mention}")
 
-    @logmessages.command(name='levelups')
+    @logmessages.command(name="levelups")
     async def logmessages_levelups(self, ctx, state: bool):
         """Enable or disable levelup messages."""
         db.update_setting(ctx.guild.id, "levelup_toggle", (1 if state else 0))
@@ -189,24 +207,36 @@ class Config(commands.Cog):
         """Set a channel to be a voting channel."""
         db.execute(
             "INSERT OR IGNORE INTO votechannels values(?, ?)",
-            (ctx.guild.id, channel.id)
+            (ctx.guild.id, channel.id),
         )
         await ctx.send(f"{channel.mention} is now a voting channel.")
 
     @votechannel.command(name="remove")
     async def votechannel_remove(self, ctx, *, channel: discord.TextChannel):
         """Remove voting channel."""
-        if db.query("SELECT * FROM votechannels WHERE guild_id = ? and channel_id = ?",
-                    (ctx.guild.id, channel.id)) is None:
-            return await ctx.send(f":warning: {channel.mention} is not a voting channel!")
+        if (
+            db.query(
+                "SELECT * FROM votechannels WHERE guild_id = ? and channel_id = ?",
+                (ctx.guild.id, channel.id),
+            )
+            is None
+        ):
+            return await ctx.send(
+                f":warning: {channel.mention} is not a voting channel!"
+            )
 
-        db.execute("DELETE FROM votechannels where guild_id = ? and channel_id = ?", (ctx.guild.id, channel.id))
+        db.execute(
+            "DELETE FROM votechannels where guild_id = ? and channel_id = ?",
+            (ctx.guild.id, channel.id),
+        )
         await ctx.send(f"{channel.mention} is no longer a voting channel.")
 
     @votechannel.command(name="list")
     async def votechannel_list(self, ctx):
         """List all current voting channels."""
-        channels = db.query("select channel_id from votechannels where guild_id = ?", (ctx.guild.id,))
+        channels = db.query(
+            "select channel_id from votechannels where guild_id = ?", (ctx.guild.id,)
+        )
         if channels is None:
             return await ctx.send("There are no voting channels on this server yet!")
 
@@ -231,7 +261,7 @@ class Config(commands.Cog):
             >muterole <role>
             >muterole remove
         """
-        if role.lower() in ['none', 'remove', 'delete']:
+        if role.lower() in ["none", "remove", "delete"]:
             db.update_setting(ctx.guild.id, "muterole", None)
             return await ctx.send("Muterole removed!")
 
@@ -240,9 +270,11 @@ class Config(commands.Cog):
             return await ctx.send(":warning: Unknown role")
 
         db.update_setting(ctx.guild.id, "muterole", thisrole.id)
-        await ctx.send(embed=discord.Embed(
-            description=f"Muting someone now gives them {thisrole.mention}"
-        ))
+        await ctx.send(
+            embed=discord.Embed(
+                description=f"Muting someone now gives them {thisrole.mention}"
+            )
+        )
 
     @commands.command()
     @commands.has_permissions(manage_roles=True)
@@ -253,7 +285,7 @@ class Config(commands.Cog):
             >autorole <role>
             >autorole remove
         """
-        if role.lower() in ['none', 'remove', 'delete', 'disable']:
+        if role.lower() in ["none", "remove", "delete", "disable"]:
             db.update_setting(ctx.guild.id, "autorole", None)
             return await ctx.send("Autorole removed!")
 
@@ -262,9 +294,11 @@ class Config(commands.Cog):
             return await ctx.send(":warning: Unknown role")
 
         db.update_setting(ctx.guild.id, "autorole", thisrole.id)
-        await ctx.send(embed=discord.Embed(
-            description=f"New members will now automatically get {thisrole.mention}"
-        ))
+        await ctx.send(
+            embed=discord.Embed(
+                description=f"New members will now automatically get {thisrole.mention}"
+            )
+        )
 
 
 def setup(bot):
