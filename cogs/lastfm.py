@@ -458,8 +458,10 @@ class LastFm(commands.Cog):
     async def artist_top(self, ctx, period, artistname, datatype):
         """Scrape either top tracks or top albums from lastfm library page."""
         async with aiohttp.ClientSession() as session:
-            url = f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
-            f"+{datatype}?date_preset={period_http_format(period)}"
+            url = (
+                f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
+                f"+{datatype}?date_preset={period_http_format(period)}"
+            )
             data = await fetch(session, url, handling="text")
             soup = BeautifulSoup(data, "html.parser")
             data = []
@@ -499,8 +501,10 @@ class LastFm(commands.Cog):
         tracks = []
         metadata = [None, None, None]
         async with aiohttp.ClientSession() as session:
-            url = f"https://last.fm/user/{ctx.username}/library/music/{artistname}"
-            f"?date_preset={period_http_format(period)}"
+            url = (
+                f"https://last.fm/user/{ctx.username}/library/music/{artistname}"
+                f"?date_preset={period_http_format(period)}"
+            )
             data = await fetch(session, url, handling="text")
             soup = BeautifulSoup(data, "html.parser")
             try:
