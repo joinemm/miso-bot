@@ -15,9 +15,17 @@ class Events(commands.Cog):
         self.stfu_regex = re.compile(
             r"(?:^|\W){0}(?:$|\W)".format("stfu"), flags=re.IGNORECASE
         )
+        self.emojis = {
+            "upvote": self.bot.get_emoji(
+                db.query("select id from emojis where name = 'upvote'")[0][0]
+            ),
+            "downvote": self.bot.get_emoji(
+                db.query("select id from emojis where name = 'downvote'")[0][0]
+            ),
+        }
         self.statuses = [
             ("watching", lambda: f"{len(self.bot.guilds)} servers"),
-            ("listening", lambda: f"to {len(set(self.bot.get_all_members()))} users"),
+            ("listening", lambda: f"{len(set(self.bot.get_all_members()))} users"),
             ("playing", lambda: "misobot.xyz"),
         ]
         self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
@@ -162,6 +170,10 @@ class Events(commands.Cog):
         if message.guild is None:
             return
 
+        # ignore empty messages
+        if len(message.content) == 0 and len(message.attachments) == 0:
+            return
+
         channel_id = db.get_setting(message.guild.id, "deleted_messages_channel")
         if channel_id is None:
             return
@@ -185,21 +197,14 @@ class Events(commands.Cog):
         # votechannels
         if (
             db.query(
-                "select * from votechannels where guild_id = ? and channel_id = ?",
+                """SELECT * FROM votechannels
+                WHERE guild_id = ? and channel_id = ?""",
                 (message.guild.id, message.channel.id),
             )
             is not None
         ):
-            await message.add_reaction(
-                self.bot.get_emoji(
-                    db.query("select id from emojis where name = 'upvote'")[0][0]
-                )
-            )
-            await message.add_reaction(
-                self.bot.get_emoji(
-                    db.query("select id from emojis where name = 'downvote'")[0][0]
-                )
-            )
+            await message.add_reaction(self.emojis.get("upvote"))
+            await message.add_reaction(self.emojis.get("downvote"))
 
         # xp gain
         message_xp = util.xp_from_message(message)
@@ -210,57 +215,8 @@ class Events(commands.Cog):
         if message.author.bot:
             return
 
-        # stfu
-        if self.stfu_regex.findall(message.content) and random.randint(0, 1) == 0:
-            try:
-                await message.channel.send("no u")
-            except discord.errors.Forbidden:
-                pass
-
-        # hi
-        if (
-            message.content.lower().strip("!.?~ ") == "hi"
-            and random.randint(0, 19) == 0
-        ):
-            try:
-                await message.channel.send("hi")
-            except discord.errors.Forbidden:
-                pass
-
-        # git gud
-        if message.content.lower().startswith("git "):
-            gitcommand = re.search(r"git (\S+)", message.content)
-            if gitcommand is not None:
-                try:
-                    gitcommand = gitcommand.group(1)
-                    if gitcommand == "--help":
-                        msg = (
-                            "```\n"
-                            "usage: git [--version] [--help] [-C <path>] [-c <name>=<value>]\n"
-                            "           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n"
-                            "           [-p | --paginate | --no-pager] [--no-replace-objects] [--bare]\n"
-                            "           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]\n"
-                            "           <command> [<args>]```"
-                        )
-                        await message.channel.send(msg)
-                    elif gitcommand == "--version":
-                        await message.channel.send("`git version 2.17.1`")
-                    elif gitcommand in [
-                        "commit",
-                        "push",
-                        "pull",
-                        "checkout",
-                        "status",
-                        "init",
-                        "add",
-                    ]:
-                        pass
-                    else:
-                        await message.channel.send(
-                            f"`git: '{gitcommand}' is not a git command. See 'git --help'.`"
-                        )
-                except discord.errors.Forbidden:
-                    pass
+        if db.get_setting(message.guild.id, "autoresponses") == 1:
+            await self.easter_eggs(message)
 
         # log emojis
         unicode_emojis = util.find_unicode_emojis(message.content)
@@ -282,14 +238,69 @@ class Events(commands.Cog):
             if level_now > level_before:
                 try:
                     await message.channel.send(
-                        f"{message.author.mention} just leveled up! (level **{level_now}**)"
+                        f"{message.author.mention} just leveled up! (level **{level_now}**)",
+                        delete_after=5,
                     )
                 except discord.errors.Forbidden:
                     pass
 
+    async def easter_eggs(self, message):
+        """Easter eggs handler."""
+        # stfu
+        if self.stfu_regex.findall(message.content) and random.randint(0, 1) == 0:
+            try:
+                await message.channel.send("no u")
+            except discord.errors.Forbidden:
+                pass
+
+        # hi
+        if (
+            message.content.lower().strip("!.?~ ") == "hi"
+            and random.randint(0, 19) == 0
+        ):
+            try:
+                await message.channel.send("hi")
+            except discord.errors.Forbidden:
+                pass
+
+        # git gud
+        if message.content.lower().startswith("git "):
+            gitcommand = re.search(r"git (\S+)", message.content)
+            if gitcommand is None:
+                return
+            gitcommand = gitcommand.group(1)
+            if gitcommand == "--help":
+                msg = (
+                    "```\n"
+                    "usage: git [--version] [--help] [-C <path>] [-c <name>=<value>]\n"
+                    "           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n"
+                    "           [-p | --paginate | --no-pager] [--no-replace-objects] [--bare]\n"
+                    "           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]\n"
+                    "           <command> [<args>]```"
+                )
+            elif gitcommand == "--version":
+                msg = "`git version 2.17.1`"
+            elif gitcommand in [
+                "commit",
+                "push",
+                "pull",
+                "checkout",
+                "status",
+                "init",
+                "add",
+            ]:
+                return
+            else:
+                msg = f"`git: '{gitcommand}' is not a git command. See 'git --help'.`"
+
+            try:
+                await message.channel.send(msg)
+            except discord.errors.Forbidden:
+                pass
+
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        """Starboard"""
+        """Starboard event handler."""
         if payload.emoji.name == "⭐":
             starboard_settings = db.query(
                 """SELECT starboard_toggle, starboard_amount, starboard_channel
@@ -322,11 +333,13 @@ class Events(commands.Cog):
                 return
 
             board_msg_id = db.query(
-                "SELECT starboard_message_id FROM starboard WHERE message_id = ?",
+                """SELECT starboard_message_id FROM starboard WHERE message_id = ?""",
                 (payload.message_id,),
             )
-            if board_msg_id is None:
-                # message is not on board yet,
+            try:
+                board_message = await channel.fetch_message(board_msg_id[0][0])
+            except discord.errors.NotFound:
+                # message is not on board yet, or it was deleted
                 content = discord.Embed(color=discord.Color.gold())
                 content.set_author(
                     name=f"{message.author}", icon_url=message.author.avatar_url
@@ -340,13 +353,11 @@ class Events(commands.Cog):
 
                 board_message = await channel.send(embed=content)
                 db.execute(
-                    "INSERT INTO starboard VALUES(?, ?)",
+                    "REPLACE INTO starboard VALUES(?, ?)",
                     (payload.message_id, board_message.id),
                 )
-
             else:
                 # message is on board, update star count
-                board_message = await channel.fetch_message(board_msg_id[0][0])
                 content = board_message.embeds[0]
                 content.set_footer(text=f"{reaction_count} ⭐ #{message.channel.name}")
                 await board_message.edit(embed=content)
