@@ -35,7 +35,7 @@ class Notifications(commands.Cog):
         if message.guild is None:
             return
 
-        if message.author.id == self.bot.user.id:
+        if message.author.bot:
             return
 
         keywords = db.get_keywords(message)
