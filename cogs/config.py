@@ -300,6 +300,13 @@ class Config(commands.Cog):
             )
         )
 
+    @commands.command()
+    @commands.has_permissions(manage_channels=True)
+    async def autoresponses(self, ctx, value: bool):
+        """Disable/enable automatic responses to certain messages and easter eggs."""
+        db.update_setting(ctx.guild.id, "autoresponses", util.bool_to_int(value))
+        await ctx.send(f"Automatic message responses **{'enabled' if value else 'disabled'}**")
+
 
 def setup(bot):
     bot.add_cog(Config(bot))
