@@ -156,7 +156,8 @@ class LastFm(commands.Cog):
                 "method": "track.getInfo",
                 "artist": artist,
                 "track": track,
-            }
+            },
+            ignore_errors=True,
         )
         if trackdata is not None:
             tags = []
@@ -322,7 +323,8 @@ class LastFm(commands.Cog):
                 "method": "track.getInfo",
                 "artist": tracks[0]["artist"]["name"],
                 "track": tracks[0]["name"],
-            }
+            },
+            ignore_errors=True,
         )
         content = discord.Embed()
         try:
@@ -974,7 +976,7 @@ def parse_chart_arguments(args):
     return parsed
 
 
-async def api_request(params):
+async def api_request(params, ignore_errors=False):
     """Get json data from the lastfm api."""
     url = "http://ws.audioscrobbler.com/2.0/"
     params["api_key"] = LASTFM_APPID
@@ -994,9 +996,12 @@ async def api_request(params):
                             if tries < max_tries:
                                 continue
 
-                        raise LastFMError(
-                            f"Error {content.get('error')} : {content.get('message')}"
-                        )
+                        if ignore_errors:
+                            return None
+                        else:
+                            raise LastFMError(
+                                f"Error {content.get('error')} : {content.get('message')}"
+                            )
 
                 except aiohttp.client_exceptions.ContentTypeError:
                     return None
@@ -1109,7 +1114,9 @@ async def custom_period(user, group_by, shift_hours=24):
 
 
 async def get_userinfo_embed(username):
-    data = await api_request({"user": username, "method": "user.getinfo"})
+    data = await api_request(
+        {"user": username, "method": "user.getinfo"}, ignore_errors=True
+    )
     if data is None:
         return None
 
