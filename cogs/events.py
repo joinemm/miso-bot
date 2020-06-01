@@ -15,14 +15,6 @@ class Events(commands.Cog):
         self.stfu_regex = re.compile(
             r"(?:^|\W){0}(?:$|\W)".format("stfu"), flags=re.IGNORECASE
         )
-        self.emojis = {
-            "upvote": self.bot.get_emoji(
-                db.query("select id from emojis where name = 'upvote'")[0][0]
-            ),
-            "downvote": self.bot.get_emoji(
-                db.query("select id from emojis where name = 'downvote'")[0][0]
-            ),
-        }
         self.statuses = [
             ("watching", lambda: f"{len(self.bot.guilds)} servers"),
             ("listening", lambda: f"{len(set(self.bot.get_all_members()))} users"),
@@ -39,6 +31,14 @@ class Events(commands.Cog):
     async def on_ready(self):
         settings = db.get_from_data_json(["bot_settings"])
         self.logchannel = self.bot.get_channel(settings["log_channel"])
+        self.emojis = {
+            "upvote": self.bot.get_emoji(
+                db.query("select id from emojis where name = 'upvote'")[0][0]
+            ),
+            "downvote": self.bot.get_emoji(
+                db.query("select id from emojis where name = 'downvote'")[0][0]
+            ),
+        }
 
     @tasks.loop(minutes=3.0)
     async def status_loop(self):
@@ -338,7 +338,7 @@ class Events(commands.Cog):
             )
             try:
                 board_message = await channel.fetch_message(board_msg_id[0][0])
-            except discord.errors.NotFound:
+            except (discord.errors.NotFound, TypeError):
                 # message is not on board yet, or it was deleted
                 content = discord.Embed(color=discord.Color.gold())
                 content.set_author(
