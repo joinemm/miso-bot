@@ -195,19 +195,11 @@ class Media(commands.Cog):
         """Get all the images from an instagram post."""
         result = regex.findall("/p/(.*?)(/|\\Z)", url)
         if result:
-            url = f"https://www.instagram.com/p/{result[0][0]}"
+            url = f"https://www.instagram.com/tv/{result[0][0]}"
         else:
-            url = f"https://www.instagram.com/p/{url}"
+            url = f"https://www.instagram.com/tv/{url}"
 
         headers = {
-            "Accept": "*/*",
-            "Host": "www.instagram.com",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en,en-US;q=0.5",
-            "Connection": "keep-alive",
-            "DNT": "1",
-            "Upgrade-Insecure-Requests": "1",
-            "Cookie": IG_COOKIE or "",
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
         }
 
