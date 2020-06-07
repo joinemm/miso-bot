@@ -360,6 +360,10 @@ def calculate_entry(message, words_message, wordlist):
     for user_word, correct_word in itertools.zip_longest(user_words, wordlist):
         if correct_word is None:
             continue
+        if correct_word == "I":
+            correct_word = correct_word.lower()
+            user_word = user_word.lower()
+
         total_keys += len(correct_word) + 1
         if user_word == correct_word:
             corrent_keys += len(correct_word) + 1
