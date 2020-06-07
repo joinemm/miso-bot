@@ -308,15 +308,22 @@ class Info(commands.Cog):
         rows = []
         for i, (emoji, count, emojitype) in enumerate(data, start=1):
             if emojitype == "unicode":
-                emoji = unicode_codes.EMOJI_ALIAS_UNICODE.get(emoji)
+                emoji_repr = unicode_codes.EMOJI_ALIAS_UNICODE.get(emoji)
+            else:
+                emoji_obj = self.bot.get_emoji(int(emoji.split(":")[-1].strip('>')))
+                if emoji_obj is not None and emoji_obj.is_usable():
+                    emoji_repr = str(emoji_obj)
+                else:
+                    emoji_repr = f"`{emoji}`"
+
             rows.append(
-                f"`#{i:2}` {emoji} — **{count}** Use" + ("s" if count > 1 else "")
+                f"`#{i:2}` {emoji_repr} — **{count}** Use" + ("s" if count > 1 else "")
             )
 
         content = discord.Embed(
             title="Most used emojis"
             + (f" by {usertarget.name}" if usertarget is not None else "")
-            + (f", globally" if g else " on this server"),
+            + (", globally" if g else " on this server"),
             color=int("ffcc4d", 16),
         )
         await util.send_as_pages(ctx, content, rows, maxrows=10)
