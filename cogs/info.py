@@ -274,6 +274,53 @@ class Info(commands.Cog):
         content.description = f"```yaml\n{result_formatted}\n```"
         await ctx.send(embed=content)
 
+    @commands.command()
+    async def emojistats(self, ctx, scope="server"):
+        """
+        See most used emojis on server, globally, and optionally filtered by user.
+
+        Usage:
+            >emojistats
+            >emojistats [mention]
+            >emojistats global
+            >emojistats global [mention]
+        """
+        g = scope == "global"
+        usertarget = ctx.message.mentions[0] if ctx.message.mentions else None
+        query = "SELECT emoji, sum(count), emojitype FROM emoji_usage"
+        params = []
+        if not g:
+            query += " WHERE guild_id = ?"
+            params.append(ctx.guild.id)
+
+        if usertarget is not None:
+            if not g:
+                query += " AND user_id = ?"
+            else:
+                query += " WHERE user_id = ?"
+            params.append(usertarget.id)
+
+        query += " GROUP BY emoji ORDER BY sum(count) DESC"
+        data = db.query(query, tuple(params))
+        if data is None:
+            return await ctx.send("No emojis found!")
+
+        rows = []
+        for i, (emoji, count, emojitype) in enumerate(data, start=1):
+            if emojitype == "unicode":
+                emoji = unicode_codes.EMOJI_ALIAS_UNICODE.get(emoji)
+            rows.append(
+                f"`#{i:2}` {emoji} — **{count}** Use" + ("s" if count > 1 else "")
+            )
+
+        content = discord.Embed(
+            title="Most used emojis"
+            + (f" by {usertarget.name}" if usertarget is not None else "")
+            + (f", globally" if g else " on this server"),
+            color=int("ffcc4d", 16),
+        )
+        await util.send_as_pages(ctx, content, rows, maxrows=10)
+
     @commands.group()
     async def commandstats(self, ctx):
         """See the most used commands.
@@ -390,7 +437,8 @@ class Info(commands.Cog):
 
         # get data from database
         usage_data = db.query(
-            """SELECT SUM(count) FROM command_usage WHERE command = ?""", (command_name,)
+            """SELECT SUM(count) FROM command_usage WHERE command = ?""",
+            (command_name,),
         )[0][0]
 
         usage_data_server = db.query(
