@@ -1,8 +1,10 @@
 import discord
+import kdtree
 import os
 import asyncio
 import arrow
 import aiohttp
+import typing
 import re
 import math
 import urllib.parse
@@ -12,6 +14,9 @@ from discord.ext import commands
 from helpers import utilityfunctions as util
 from data import database as db
 from helpers.exceptions import LastFMError
+from PIL import Image
+import io
+import colorgram
 
 
 LASTFM_APPID = os.environ.get("LASTFM_APIKEY")
@@ -19,9 +24,33 @@ LASTFM_TOKEN = os.environ.get("LASTFM_SECRET")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
 
 
+class AlbumColorNode(object):
+    def __init__(self, rgb, image_url):
+        self.rgb = rgb
+        self.data = image_url
+
+    def __len__(self):
+        return len(self.rgb)
+
+    def __getitem__(self, i):
+        return self.rgb[i]
+
+    def __str__(self):
+        return f"rgb{self.rgb}"
+
+    def __repr__(self):
+        return f"AlbumColorNode({self.rgb}, {self.image_url})"
+
+
 class LastFm(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.cover_base_urls = [
+            "https://lastfm.freetls.fastly.net/i/u/34s/{0}.png",
+            "https://lastfm.freetls.fastly.net/i/u/64s/{0}.png",
+            "https://lastfm.freetls.fastly.net/i/u/174s/{0}.png",
+            "https://lastfm.freetls.fastly.net/i/u/300x300/{0}.png",
+        ]
         with open("html/fm_chart_flex.html", "r", encoding="utf-8") as file:
             self.chart_html_flex = file.read().replace("\n", "")
 
@@ -459,6 +488,7 @@ class LastFm(commands.Cog):
 
     async def artist_top(self, ctx, period, artistname, datatype):
         """Scrape either top tracks or top albums from lastfm library page."""
+        artistname = urllib.parse.quote_plus(artistname)
         async with aiohttp.ClientSession() as session:
             url = (
                 f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
@@ -504,7 +534,8 @@ class LastFm(commands.Cog):
         metadata = [None, None, None]
         async with aiohttp.ClientSession() as session:
             url = (
-                f"https://last.fm/user/{ctx.username}/library/music/{artistname}"
+                f"https://last.fm/user/{ctx.username}/library/music/"
+                f"{urllib.parse.quote_plus(artistname)}"
                 f"?date_preset={period_http_format(period)}"
             )
             data = await fetch(session, url, handling="text")
@@ -611,6 +642,139 @@ class LastFm(commands.Cog):
         )
         await ctx.send(embed=content)
 
+    async def fetch_color(self, session, album_art_id):
+        async def get_image(url):
+            async with session.get(url) as response:
+                try:
+                    return Image.open(io.BytesIO(await response.read()))
+                except Exception:
+                    return None
+
+        image = None
+        imagesize = 0
+        while image is None or imagesize >= 3:
+            image = await get_image(
+                self.cover_base_urls[imagesize].format(album_art_id)
+            )
+            imagesize += 1
+
+        if image is None:
+            return None
+
+        colors = colorgram.extract(image, 1)
+        dominant_color = colors[0]
+
+        colorspace = dominant_color.rgb
+        return (colorspace.r, colorspace.g, colorspace.b)
+
+    async def get_all_albums(self, username):
+        params = {
+            "user": username,
+            "method": "user.gettopalbums",
+            "period": "overall",
+            "limit": 500,
+        }
+        data = await api_request(dict(params, **{"page": 1}))
+        topalbums = data["topalbums"]["album"]
+        total_pages = int(data["topalbums"]["@attr"]["totalPages"])
+        if total_pages > 1:
+            tasks = []
+            for i in range(2, total_pages + 1):
+                tasks.append(api_request(dict(params, **{"page": i})))
+
+            data = await asyncio.gather(*tasks)
+            for page in data:
+                topalbums += page["topalbums"]["album"]
+
+        return topalbums
+
+    @fm.command()
+    async def colorchart(self, ctx, *, colour: discord.Colour):
+        """
+        Color based album chart.
+
+        Usage:
+            >fm colorchart <color name>
+            >fm colorchart #<hex>
+        """
+        # dim = size.split("x")
+        # width = int(dim[0])
+        # if len(dim) > 1:
+        #    height = int(dim[1])
+        # else:
+        #    height = int(dim[0])
+        width, height = (3, 3)
+        query_color = colour.to_rgb()
+
+        topalbums = await self.get_all_albums(ctx.username)
+
+        def string_to_rgb(rgbstring):
+            values = [int(x) for x in rgbstring.strip("()").split(", ")]
+            return tuple(values)
+
+        albums = set()
+        album_color_nodes = []
+        for album in topalbums:
+            album_art_id = album["image"][0]["#text"].split("/")[-1].split(".")[0]
+            if album_art_id.strip() == "":
+                continue
+
+            albums.add(album_art_id)
+
+        to_fetch = []
+        albumcolors = db.album_colors_from_cache(list(albums))
+
+        async with aiohttp.ClientSession() as session:
+            for image_id, color in albumcolors:
+                if color is None:
+                    to_fetch.append(image_id)
+                else:
+                    color = string_to_rgb(color)
+                    album_color_nodes.append(AlbumColorNode(color, image_id))
+
+            if to_fetch:
+                to_cache = []
+                tasks = []
+                for image_id in to_fetch:
+                    tasks.append(self.fetch_color(session, image_id))
+
+                if len(tasks) > 500:
+                    await ctx.send(
+                        ":exclamation:Your library includes over 500 uncached album colors, "
+                        "this might take a while <a:loading:643419324941336587>"
+                    )
+
+                colordata = await asyncio.gather(*tasks)
+                for i, color in enumerate(colordata):
+                    if color is not None:
+                        to_cache.append((to_fetch[i], str(color)))
+                        album_color_nodes.append(AlbumColorNode(color, to_fetch[i]))
+
+                db.executemany("INSERT INTO album_color_cache VALUES(?, ?)", to_cache)
+
+            tree = kdtree.create(album_color_nodes)
+            nearest = tree.search_knn(query_color, width * height)
+            final_albums = [
+                (
+                    self.cover_base_urls[3].format(alb[0].data.data),
+                    f"rgb{alb[0].data.rgb}, dist {alb[1]:.2f}",
+                )
+                for alb in nearest
+            ]
+
+        await self.chart_factory(final_albums, width, height, show_labels=False)
+
+        with open("downloads/fmchart.jpeg", "rb") as img:
+            await ctx.send(
+                f"`{ctx.username} album color chart for {color}`"
+                + (
+                    f"\n`{len(to_fetch)} fetched, {len(albumcolors)-len(to_fetch)} from cache`"
+                    if to_fetch
+                    else ""
+                ),
+                file=discord.File(img),
+            )
+
     @fm.command()
     async def chart(self, ctx, *args):
         """
@@ -644,8 +808,8 @@ class LastFm(commands.Cog):
                 plays = album["playcount"]
                 chart.append(
                     (
-                        f"{plays} {format_plays(plays)}<br>" f"{name} - {artist}",
                         album["image"][3]["#text"],
+                        f"{plays} {format_plays(plays)}<br>" f"{name} - {artist}",
                     )
                 )
 
@@ -659,7 +823,7 @@ class LastFm(commands.Cog):
                 name = artist["name"]
                 plays = artist["playcount"]
                 chart.append(
-                    (f"{plays} {format_plays(plays)}<br>{name}", scraped_images[i])
+                    (scraped_images[i], f"{plays} {format_plays(plays)}<br>{name}")
                 )
 
         elif arguments["method"] == "user.getrecenttracks":
@@ -668,18 +832,30 @@ class LastFm(commands.Cog):
             for track in tracks:
                 name = track["name"]
                 artist = track["artist"]["#text"]
-                chart.append((f"{name} - {artist}", track["image"][3]["#text"]))
+                chart.append((track["image"][3]["#text"], f"{name} - {artist}"))
 
-        img_divs = "".join(
-            '<div class="art"><img src="{'
-            + str(i)
-            + '[1]}"><p class="label">{'
-            + str(i)
-            + "[0]}</p></div>"
-            for i in range(len(chart))
-        ).format(*chart)
+        await self.chart_factory(chart, arguments["width"], arguments["height"])
 
-        dimensions = (300 * arguments["width"], 300 * arguments["height"])
+        with open("downloads/fmchart.jpeg", "rb") as img:
+            await ctx.send(
+                f"`{ctx.username} {humanized_period(arguments['period'])} "
+                f"{arguments['width']}x{arguments['height']} {chart_type} chart`",
+                file=discord.File(img),
+            )
+
+    async def chart_factory(self, chart_items, width, height, show_labels=True):
+        if show_labels:
+            img_div_template = (
+                '<div class="art"><img src="{0}"><p class="label">{1}</p></div>'
+            )
+        else:
+            img_div_template = '<div class="art"><img src="{0}"></div>'
+
+        img_divs = "\n".join(
+            img_div_template.format(*chart_item) for chart_item in chart_items
+        )
+
+        dimensions = (300 * width, 300 * height)
         replacements = {
             "WIDTH": dimensions[0],
             "HEIGHT": dimensions[1],
@@ -708,13 +884,6 @@ class LastFm(commands.Cog):
                         if not block:
                             break
                         f.write(block)
-
-        with open("downloads/fmchart.jpeg", "rb") as img:
-            await ctx.send(
-                f"`{ctx.username} {humanized_period(arguments['period'])} "
-                f"{dimensions[0]//300}x{dimensions[1]//300} {chart_type} chart`",
-                file=discord.File(img),
-            )
 
     @commands.command()
     @commands.guild_only()
@@ -1124,7 +1293,6 @@ async def get_userinfo_embed(username):
     playcount = data["user"]["playcount"]
     profile_url = data["user"]["url"]
     profile_pic_url = data["user"]["image"][3]["#text"]
-    timestamp = arrow.get(int(data["user"]["registered"]["unixtime"]))
     image_colour = await util.color_from_image_url(profile_pic_url)
 
     content = discord.Embed(title=f":cd: {username}")
