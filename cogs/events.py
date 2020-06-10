@@ -166,6 +166,10 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_message_delete(self, message):
         """Listener that gets called when any message is deleted."""
+        # ignore bots
+        if message.author.bot:
+            return
+
         # ignore DMs
         if message.guild is None:
             return
