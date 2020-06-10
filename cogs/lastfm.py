@@ -766,7 +766,7 @@ class LastFm(commands.Cog):
 
         with open("downloads/fmchart.jpeg", "rb") as img:
             await ctx.send(
-                f"`{ctx.username} album color chart for {color}`"
+                f"`{ctx.username} album color chart for {colour}`"
                 + (
                     f"\n`{len(to_fetch)} fetched, {len(albumcolors)-len(to_fetch)} from cache`"
                     if to_fetch
@@ -1293,6 +1293,7 @@ async def get_userinfo_embed(username):
     playcount = data["user"]["playcount"]
     profile_url = data["user"]["url"]
     profile_pic_url = data["user"]["image"][3]["#text"]
+    timestamp = arrow.get(int(data["user"]["registered"]["unixtime"]))
     image_colour = await util.color_from_image_url(profile_pic_url)
 
     content = discord.Embed(title=f":cd: {username}")
