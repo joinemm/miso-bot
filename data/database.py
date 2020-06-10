@@ -43,6 +43,30 @@ def execute(command, parameters=(), database=SQLDATABASE):
     connection.close()
 
 
+def executemany(command, parameters: list, database=SQLDATABASE):
+    """execute many. parameters is list of tuples."""
+    connection = sqlite3.connect(database)
+    cursor = connection.cursor()
+    cursor.executemany(command, parameters)
+    connection.commit()
+    connection.close()
+
+
+def album_colors_from_cache(image_ids):
+    connection = sqlite3.connect(SQLDATABASE)
+    cursor = connection.cursor()
+    cursor.execute("CREATE TEMPORARY TABLE temp_images (image_id TEXT)")
+    cursor.executemany("INSERT INTO temp_images VALUES(?)", [(img,) for img in image_ids])
+    cursor.execute(
+        """SELECT temp_images.image_id, rgb
+        FROM temp_images LEFT OUTER JOIN album_color_cache
+        ON temp_images.image_id = album_color_cache.image_id"""
+    )
+    data = cursor.fetchall()
+    connection.close()
+    return data
+
+
 def userdata(userid):
     data = query("select * from users where user_id = ?", (userid,), maketuple=True)
     return data
