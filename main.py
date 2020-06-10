@@ -1,5 +1,6 @@
 import os
 import sys
+import uvloop
 import discord
 import traceback
 from discord.ext import commands
@@ -7,6 +8,8 @@ from time import time
 from helpers import log
 from helpers import utilityfunctions as util
 from data import database as db
+
+uvloop.install()
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
