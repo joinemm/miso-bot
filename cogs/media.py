@@ -84,7 +84,7 @@ class Media(commands.Cog):
                 continue
 
             if source.startswith("http") or source.startswith("https"):
-                url_color = util.color_from_image_url(source)
+                url_color = await util.color_from_image_url(source)
                 if url_color is not None:
                     colors.append(url_color)
                     continue
