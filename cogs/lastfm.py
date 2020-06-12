@@ -357,6 +357,8 @@ class LastFm(commands.Cog):
         )
         content = discord.Embed()
         try:
+            if trackdata is None:
+                raise KeyError
             image_url = trackdata["track"]["album"]["image"][-1]["#text"]
             image_url_small = trackdata["track"]["album"]["image"][1]["#text"]
             image_colour = await util.color_from_image_url(image_url_small)
@@ -688,22 +690,26 @@ class LastFm(commands.Cog):
 
         return topalbums
 
-    @fm.command()
-    async def colorchart(self, ctx, *, colour: discord.Colour):
+    @fm.command(aliases=["colourchart"])
+    async def colorchart(self, ctx, colour: discord.Colour, size="3x3"):
         """
         Color based album chart.
 
         Usage:
-            >fm colorchart <color name>
-            >fm colorchart #<hex>
+            >fm colorchart #<hex color>
         """
-        # dim = size.split("x")
-        # width = int(dim[0])
-        # if len(dim) > 1:
-        #    height = int(dim[1])
-        # else:
-        #    height = int(dim[0])
-        width, height = (3, 3)
+        dim = size.split("x")
+        width = int(dim[0])
+        if len(dim) > 1:
+           height = int(dim[1])
+        else:
+           height = int(dim[0])
+
+        if width + height > 30:
+            return await ctx.send(
+                "Size is too big! Chart `width` + `height` total must not exceed `30`"
+            )
+
         query_color = colour.to_rgb()
 
         topalbums = await self.get_all_albums(ctx.username)
@@ -723,6 +729,7 @@ class LastFm(commands.Cog):
 
         to_fetch = []
         albumcolors = db.album_colors_from_cache(list(albums))
+        warn = None
 
         async with aiohttp.ClientSession() as session:
             for image_id, color in albumcolors:
@@ -739,8 +746,8 @@ class LastFm(commands.Cog):
                     tasks.append(self.fetch_color(session, image_id))
 
                 if len(tasks) > 500:
-                    await ctx.send(
-                        ":exclamation:Your library includes over 500 uncached album colors, "
+                    warn = await ctx.send(
+                        ":exclamation:Your library includes over 500 uncached album colours, "
                         "this might take a while <a:loading:643419324941336587>"
                     )
 
@@ -774,6 +781,8 @@ class LastFm(commands.Cog):
                 ),
                 file=discord.File(img),
             )
+        if warn is not None:
+            await warn.delete()
 
     @fm.command()
     async def chart(self, ctx, *args):
@@ -784,9 +793,9 @@ class LastFm(commands.Cog):
             >fm chart [album | artist] [timeframe] [width]x[height]
         """
         arguments = parse_chart_arguments(args)
-        if arguments["width"] + arguments["height"] > 31:
+        if arguments["width"] + arguments["height"] > 30:
             return await ctx.send(
-                "Size is too big! Chart `width` + `height` total must not exceed `31`"
+                "Size is too big! Chart `width` + `height` total must not exceed `30`"
             )
 
         data = await api_request(
