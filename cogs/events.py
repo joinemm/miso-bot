@@ -314,12 +314,15 @@ class Events(commands.Cog):
             else:
                 starboard_settings = starboard_settings[0]
 
+            channel = self.bot.get_channel(payload.channel_id)
+            if channel.id == starboard_settings[2]:
+                # trying to star a starboard message
+                return
+
             if not util.int_to_bool(starboard_settings[0]):
                 return
 
-            message = await self.bot.get_channel(payload.channel_id).fetch_message(
-                payload.message_id
-            )
+            message = await channel.fetch_message(payload.message_id)
             for react in message.reactions:
                 if react.emoji == payload.emoji.name:
                     if react.count < starboard_settings[1]:
