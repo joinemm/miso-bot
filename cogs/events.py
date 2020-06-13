@@ -23,12 +23,6 @@ class Events(commands.Cog):
         self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
         self.current_status = None
         self.status_loop.start()
-
-    def cog_unload(self):
-        self.status_loop.cancel()
-
-    @commands.Cog.listener()
-    async def on_ready(self):
         settings = db.get_from_data_json(["bot_settings"])
         self.logchannel = self.bot.get_channel(settings["log_channel"])
         self.emojis = {
@@ -39,6 +33,9 @@ class Events(commands.Cog):
                 db.query("select id from emojis where name = 'downvote'")[0][0]
             ),
         }
+
+    def cog_unload(self):
+        self.status_loop.cancel()
 
     @tasks.loop(minutes=3.0)
     async def status_loop(self):

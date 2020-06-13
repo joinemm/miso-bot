@@ -209,7 +209,7 @@ async def reaction_buttons(
     for emojiname in functions:
         try:
             await message.clear_reaction(emojiname)
-        except discord.errors.NotFound:
+        except (discord.errors.NotFound, discord.errors.Forbidden):
             pass
 
 
