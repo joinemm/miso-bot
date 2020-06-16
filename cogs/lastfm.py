@@ -1,4 +1,5 @@
 import discord
+import json
 import kdtree
 import os
 import asyncio
@@ -701,9 +702,9 @@ class LastFm(commands.Cog):
         dim = size.split("x")
         width = int(dim[0])
         if len(dim) > 1:
-           height = int(dim[1])
+            height = int(dim[1])
         else:
-           height = int(dim[0])
+            height = int(dim[0])
 
         if width + height > 30:
             return await ctx.send(
@@ -894,7 +895,7 @@ class LastFm(commands.Cog):
                             break
                         f.write(block)
 
-    @commands.command()
+    @commands.command(aliases=["wk"])
     @commands.guild_only()
     @commands.cooldown(2, 15, type=commands.BucketType.user)
     async def whoknows(self, ctx, *, artistname):
@@ -920,8 +921,8 @@ class LastFm(commands.Cog):
         if tasks:
             data = await asyncio.gather(*tasks)
             for playcount, user, name in data:
+                artistname = name
                 if playcount > 0:
-                    artistname = name
                     listeners.append((playcount, user))
         else:
             return await ctx.send(
@@ -956,8 +957,7 @@ class LastFm(commands.Cog):
         content = discord.Embed(title=f"Who knows **{artistname}**?")
         image_url = await scrape_artist_image(artistname)
         content.set_thumbnail(url=image_url)
-        if len(listeners) > 1:
-            content.set_footer(text=f"Collective plays: {total}")
+        content.set_footer(text=f"Collective plays: {total}")
 
         image_colour = await util.color_from_image_url(image_url)
         content.colour = int(image_colour, 16)
@@ -970,14 +970,157 @@ class LastFm(commands.Cog):
             f"> **{new_king.name}** just stole the **{artistname}** crown from **{old_king.name}**"
         )
 
+    @commands.command(aliases=["wkt", "whoknowst"])
+    @commands.guild_only()
+    @commands.cooldown(2, 15, type=commands.BucketType.user)
+    async def whoknowstrack(self, ctx, *, track):
+        """
+        Check who has listened to a given song the most.
+
+        Usage:
+            >whoknowstrack <track name> | <artist name>
+        """
+        try:
+            trackname, artistname = [x.strip() for x in track.split("|")]
+            if trackname == "" or artistname == "":
+                raise ValueError
+        except ValueError:
+            return await ctx.send(":warning: Incorrect format! use `track | artist`")
+
+        listeners = []
+        tasks = []
+        userslist = db.query(
+            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
+        )
+        for user in userslist if userslist is not None else []:
+            lastfm_username = user[1]
+            member = ctx.guild.get_member(user[0])
+            if member is None:
+                continue
+
+            tasks.append(
+                get_playcount_track(artistname, trackname, lastfm_username, member)
+            )
+
+        if tasks:
+            data = await asyncio.gather(*tasks)
+            for playcount, user, metadata in data:
+                artistname, trackname, image_url = metadata
+                if playcount > 0:
+                    listeners.append((playcount, user))
+        else:
+            return await ctx.send(
+                "Nobody on this server has connected their last.fm account yet!"
+            )
+
+        rows = []
+        total = 0
+        for i, (playcount, user) in enumerate(
+            sorted(listeners, key=lambda p: p[0], reverse=True), start=1
+        ):
+            rows.append(
+                f"`#{i:2}` **{user.name}** — **{playcount}** {format_plays(playcount)}"
+            )
+            total += playcount
+
+        if not rows:
+            return await ctx.send(
+                f"Nobody on this server has listened to **{trackname}** by **{artistname}**"
+            )
+
+        if image_url is None:
+            image_url = await scrape_artist_image(artistname)
+
+        content = discord.Embed(title=f"Who knows **{trackname}**\n— by {artistname}")
+        content.set_thumbnail(url=image_url)
+        content.set_footer(text=f"Collective plays: {total}")
+
+        image_colour = await util.color_from_image_url(image_url)
+        content.colour = int(image_colour, 16)
+
+        await util.send_as_pages(ctx, content, rows)
+
+    @commands.command(aliases=["wka", "whoknowsa"])
+    @commands.guild_only()
+    @commands.cooldown(2, 15, type=commands.BucketType.user)
+    async def whoknowsalbum(self, ctx, *, album):
+        """
+        Check who has listened to a given album the most.
+
+        Usage:
+            >whoknowsalbum <album name> | <artist name>
+        """
+        try:
+            albumname, artistname = [x.strip() for x in album.split("|")]
+            if albumname == "" or artistname == "":
+                raise ValueError
+        except ValueError:
+            return await ctx.send(":warning: Incorrect format! use `album | artist`")
+
+        listeners = []
+        tasks = []
+        userslist = db.query(
+            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
+        )
+        for user in userslist if userslist is not None else []:
+            lastfm_username = user[1]
+            member = ctx.guild.get_member(user[0])
+            if member is None:
+                continue
+
+            tasks.append(
+                get_playcount_album(artistname, albumname, lastfm_username, member)
+            )
+
+        if tasks:
+            data = await asyncio.gather(*tasks)
+            for playcount, user, metadata in data:
+                artistname, albumname, image_url = metadata
+                if playcount > 0:
+                    listeners.append((playcount, user))
+        else:
+            return await ctx.send(
+                "Nobody on this server has connected their last.fm account yet!"
+            )
+
+        rows = []
+        total = 0
+        for i, (playcount, user) in enumerate(
+            sorted(listeners, key=lambda p: p[0], reverse=True), start=1
+        ):
+            rows.append(
+                f"`#{i:2}` **{user.name}** — **{playcount}** {format_plays(playcount)}"
+            )
+            total += playcount
+
+        if not rows:
+            return await ctx.send(
+                f"Nobody on this server has listened to **{albumname}** by **{artistname}**"
+            )
+
+        if image_url is None:
+            image_url = await scrape_artist_image(artistname)
+
+        content = discord.Embed(title=f"Who knows **{albumname}**\n— by {artistname}")
+        content.set_thumbnail(url=image_url)
+        content.set_footer(text=f"Collective plays: {total}")
+
+        image_colour = await util.color_from_image_url(image_url)
+        content.colour = int(image_colour, 16)
+
+        await util.send_as_pages(ctx, content, rows)
+
     @commands.command()
     @commands.guild_only()
-    async def crowns(self, ctx):
+    async def crowns(self, ctx, *, user: discord.Member = None):
         """Check your artist crowns."""
+        if user is None:
+            user = ctx.author
+
         crownartists = db.query(
             """SELECT artist, playcount FROM crowns
             WHERE guild_id = ? AND user_id = ?""",
-            (ctx.guild.id, ctx.author.id),
+            (ctx.guild.id, user.id),
         )
         if crownartists is None:
             return await ctx.send(
@@ -990,7 +1133,7 @@ class LastFm(commands.Cog):
             rows.append(f"**{artist}** with **{playcount}** {format_plays(playcount)}")
 
         content = discord.Embed(
-            title=f"Artist crowns for {ctx.author.name} — Total {len(crownartists)} crowns",
+            title=f"Artist crowns for {user.name} — Total {len(crownartists)} crowns",
             color=discord.Color.gold(),
         )
         await util.send_as_pages(ctx, content, rows)
@@ -1005,6 +1148,64 @@ def format_plays(amount):
         return "play"
     else:
         return "plays"
+
+
+async def get_playcount_track(artist, track, username, reference=None):
+    data = await api_request(
+        {
+            "method": "track.getinfo",
+            "user": username,
+            "track": track,
+            "artist": artist,
+            "autocorrect": 1,
+        }
+    )
+    try:
+        count = int(data["track"]["userplaycount"])
+    except KeyError:
+        count = 0
+
+    artistname = data["track"]["artist"]["name"]
+    trackname = data["track"]["name"]
+
+    try:
+        image_url = data["track"]["album"]["image"][-1]["#text"]
+    except KeyError:
+        image_url = None
+
+    if reference is None:
+        return count
+    else:
+        return count, reference, (artistname, trackname, image_url)
+
+
+async def get_playcount_album(artist, album, username, reference=None):
+    data = await api_request(
+        {
+            "method": "album.getinfo",
+            "user": username,
+            "album": album,
+            "artist": artist,
+            "autocorrect": 1,
+        }
+    )
+    try:
+        count = int(data["album"]["userplaycount"])
+    except KeyError:
+        count = 0
+
+    artistname = data["album"]["artist"]
+    albumname = data["album"]["name"]
+
+    try:
+        image_url = data["album"]["image"][-1]["#text"]
+    except KeyError:
+        image_url = None
+
+    if reference is None:
+        return count
+    else:
+        return count, reference, (artistname, albumname, image_url)
 
 
 async def get_playcount(artist, username, reference=None):
