@@ -23,16 +23,20 @@ class Events(commands.Cog):
         self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
         self.current_status = None
         self.status_loop.start()
-        settings = db.get_from_data_json(["bot_settings"])
-        self.logchannel = self.bot.get_channel(settings["log_channel"])
-        self.emojis = {
-            "upvote": self.bot.get_emoji(
-                db.query("select id from emojis where name = 'upvote'")[0][0]
-            ),
-            "downvote": self.bot.get_emoji(
-                db.query("select id from emojis where name = 'downvote'")[0][0]
-            ),
-        }
+        self.settings = db.get_from_data_json(["bot_settings"])
+        self.emojis = None
+
+    @commands.Listener()
+    async def on_ready(self):
+        if self.emojis is None:
+            self.emojis = {
+                "upvote": self.bot.get_emoji(
+                    db.query("select id from emojis where name = 'upvote'")[0][0]
+                ),
+                "downvote": self.bot.get_emoji(
+                    db.query("select id from emojis where name = 'downvote'")[0][0]
+                ),
+            }
 
     def cog_unload(self):
         self.status_loop.cancel()
@@ -75,7 +79,8 @@ class Events(commands.Cog):
         )
         content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")
-        await self.logchannel.send(embed=content)
+        logchannel = self.bot.get_channel(self.settings["log_channel"])
+        await logchannel.send(embed=content)
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
