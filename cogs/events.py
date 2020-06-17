@@ -26,7 +26,7 @@ class Events(commands.Cog):
         self.settings = db.get_from_data_json(["bot_settings"])
         self.emojis = None
 
-    @commands.Listener()
+    @commands.Cog.listener()
     async def on_ready(self):
         if self.emojis is None:
             self.emojis = {
