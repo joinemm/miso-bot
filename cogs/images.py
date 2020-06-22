@@ -1,4 +1,6 @@
 import discord
+import concurrent.futures
+import os
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 from helpers import utilityfunctions as util
@@ -22,8 +24,7 @@ class ImageObject:
         font = ImageFont.truetype(self.font, size)
         self.draw.text((5, 5), "Created with Miso Bot", font=font, fill=color)
 
-    async def write_box(self, x, y, width, height, color, text):
-
+    def write_box(self, x, y, width, height, color, text, angle=0):
         font_size = 300
 
         while True:
@@ -61,7 +62,6 @@ class ImageObject:
                 size = self.get_text_size(font_size, " ".join(line))
                 text_height = len(lines) * line_height
                 if text_height > height or size[0] > width:
-                    # print(f"Font_size {font_size} too big at {w+1}/{len(words)} words")
                     break
 
             # add leftover line to total
@@ -70,22 +70,28 @@ class ImageObject:
 
             text_height = len(lines) * line_height
             if text_height <= height and size[0] <= width:
-                # print(f"Selected font_size {font_size}")
                 break
             else:
-                # print(f"Font_size {font_size} too big")
                 font_size -= 1
 
         lines = [" ".join(line) for line in lines]
         font = ImageFont.truetype(self.font, font_size)
 
+        if angle != 0:
+            txt = Image.new("RGBA", (self.image.size))
+            txtd = ImageDraw.Draw(txt)
+        else:
+            txtd = self.draw
         height = y
         for i, line in enumerate(lines):
             total_size = self.get_text_size(font_size, line)
             x_left = int(x + ((width - total_size[0]) / 2))
-            self.draw.text((x_left, height), line, font=font, fill=color)
-            # print(f"Drawing line {i} : {line}")
+            txtd.text((x_left, height), line, font=font, fill=color)
             height += line_height
+
+        if angle != 0:
+            txt = txt.rotate(angle, resample=Image.BILINEAR)
+            self.image.paste(txt, mask=txt)
 
 
 class Images(commands.Cog):
@@ -101,52 +107,115 @@ class Images(commands.Cog):
     async def olivia(self, ctx, *, text):
         """Olivia hye has something to say."""
         filename = "images/hye.jpg"
-        await image_sender(ctx, filename, (206, 480, 530, 400), text)
+        await self.image_sender(ctx, filename, (206, 480, 530, 400), text, angle=2)
 
     @meme.command()
     async def yyxy(self, ctx, *, text):
         """YYXY has something to say."""
         filename = "images/yyxy.png"
-        await image_sender(ctx, filename, (498, 92, 309, 467), text)
+        await self.image_sender(ctx, filename, (500, 92, 315, 467), text, angle=1)
 
     @meme.command()
     async def haseul(self, ctx, *, text):
         """Haseul has something to say."""
         filename = "images/haseul.jpg"
-        await image_sender(
+        await self.image_sender(
             ctx,
             filename,
-            (228, 400, 266, 258),
+            (212, 395, 275, 279),
             text,
             wm_size=20,
             wm_color=(50, 50, 50, 100),
+            angle=4,
         )
 
     @meme.command()
     async def trump(self, ctx, *, text):
         """Donald Trump has signed a new order."""
         filename = "images/trump.jpg"
-        await image_sender(
+        await self.image_sender(
             ctx, filename, (761, 579, 406, 600), text, wm_color=(255, 255, 255, 255)
         )
 
+    @meme.command()
+    async def jihyo(self, ctx, *, text):
+        """Jihyo has something to say."""
+        filename = "images/jihyo.jpg"
+        await self.image_sender(
+            ctx,
+            filename,
+            (272, 441, 518, 353),
+            text,
+            wm_color=(255, 255, 255, 255),
+            angle=-7,
+        )
 
-async def image_sender(
-    ctx,
-    filename,
-    boxdimensions,
-    text,
-    color=(40, 40, 40),
-    wm_size=30,
-    wm_color=(150, 150, 150, 100),
-):
-    image = ImageObject(filename)
-    await image.write_box(*boxdimensions, color, text)
-    image.write_watermark(wm_size, wm_color)
-    save_location = f"downloads/output_{filename.split('/')[-1]}"
-    image.save(save_location)
-    with open(save_location, "rb") as img:
-        await ctx.send(file=discord.File(img))
+    @meme.command()
+    async def dubu(self, ctx, *, text):
+        """Dahyun has something to say."""
+        filename = "images/dubu.jpg"
+        await self.image_sender(
+            ctx,
+            filename,
+            (287, 454, 512, 347),
+            text,
+            wm_color=(255, 255, 255, 255),
+            angle=-3,
+        )
+
+    @meme.command(aliases=["chae"])
+    async def chaeyoung(self, ctx, *, text):
+        """Chae has something to say."""
+        filename = "images/chae.jpg"
+        await self.image_sender(
+            ctx,
+            filename,
+            (109, 466, 467, 320),
+            text,
+            wm_color=(255, 255, 255, 255),
+            angle=3,
+        )
+
+    @meme.command()
+    async def nayeon(self, ctx, *, text):
+        """Nayeon has something to say."""
+        filename = "images/nayeon.jpg"
+        await self.image_sender(
+            ctx,
+            filename,
+            (247, 457, 531, 353),
+            text,
+            wm_color=(255, 255, 255, 255),
+            angle=5,
+        )
+
+    async def image_sender(
+        self,
+        ctx,
+        filename,
+        boxdimensions,
+        text,
+        color=(40, 40, 40),
+        wm_size=30,
+        wm_color=(150, 150, 150, 100),
+        angle=0,
+    ):
+        image = ImageObject(filename)
+
+        with concurrent.futures.ProcessPoolExecutor() as pool:
+            await self.bot.loop.run_in_executor(
+                pool, lambda: image.write_box(*boxdimensions, color, text, angle=angle)
+            )
+            await self.bot.loop.run_in_executor(
+                pool, lambda: image.write_watermark(wm_size, wm_color)
+            )
+
+        save_location = f"downloads/{ctx.message.id}_output_{filename.split('/')[-1]}"
+        image.save(save_location)
+        with open(save_location, "rb") as img:
+            await ctx.send(file=discord.File(img))
+
+        os.remove(save_location)
 
 
 def setup(bot):
