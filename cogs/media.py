@@ -275,11 +275,12 @@ class Media(commands.Cog):
             hashtags.append(f"#{hashtag['text']}")
 
         for i in range(len(media)):
+            print(json.dumps(media[i], indent=4))
             media_url = media[i]["media_url"]
             video_url = None
             if not media[i]["type"] == "photo":
                 video_urls = media[i]["video_info"]["variants"]
-                largest_rate = 0
+                largest_rate = -1
                 for x in range(len(video_urls)):
                     if video_urls[x]["content_type"] == "video/mp4":
                         if video_urls[x]["bitrate"] > largest_rate:
