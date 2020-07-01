@@ -275,7 +275,6 @@ class Media(commands.Cog):
             hashtags.append(f"#{hashtag['text']}")
 
         for i in range(len(media)):
-            print(json.dumps(media[i], indent=4))
             media_url = media[i]["media_url"]
             video_url = None
             if not media[i]["type"] == "photo":
