@@ -63,14 +63,10 @@ class Events(commands.Cog):
                 ":warning: You cannot use commands in private messages"
             )
 
-        elif isinstance(error, commands.NotOwner):
+        elif isinstance(error, (commands.NotOwner, commands.CheckFailure)):
             await ctx.send(
                 ":warning: Sorry, you are not authorized to use this command!"
             )
-
-        elif isinstance(error, commands.CheckFailure):
-            logger.error(str(error))
-            await ctx.send(f":warning: {error}")
 
         elif isinstance(error, exceptions.BlacklistTrigger):
             if error.blacklist_type == "command":
