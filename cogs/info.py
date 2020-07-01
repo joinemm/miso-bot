@@ -310,7 +310,7 @@ class Info(commands.Cog):
             if emojitype == "unicode":
                 emoji_repr = unicode_codes.EMOJI_ALIAS_UNICODE.get(emoji)
             else:
-                emoji_obj = self.bot.get_emoji(int(emoji.split(":")[-1].strip('>')))
+                emoji_obj = self.bot.get_emoji(int(emoji.split(":")[-1].strip(">")))
                 if emoji_obj is not None and emoji_obj.is_usable():
                     emoji_repr = str(emoji_obj)
                 else:
@@ -495,6 +495,28 @@ class Info(commands.Cog):
             content.add_field(
                 inline=False, name="Total subcommand uses", value=subcommand_usage
             )
+
+        await ctx.send(embed=content)
+
+    @commands.command(aliases=["serverdp", "sdp"])
+    async def servericon(self, ctx, guild: int = None):
+        """Get discord guild icon."""
+        if guild is not None:
+            guild = self.bot.get_guild(guild)
+        if guild is None:
+            guild = ctx.guild
+
+        content = discord.Embed()
+        content.set_author(name=str(guild), url=guild.icon_url)
+        content.set_image(url=guild.icon_url_as(static_format="png"))
+        stats = await util.image_info_from_url(guild.icon_url)
+        color = await util.color_from_image_url(
+            str(guild.icon_url_as(size=128, format="png"))
+        )
+        content.colour = await util.get_color(ctx, color)
+        content.set_footer(
+            text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
+        )
 
         await ctx.send(embed=content)
 
