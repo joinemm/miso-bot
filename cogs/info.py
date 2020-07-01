@@ -314,7 +314,11 @@ class Info(commands.Cog):
                 if emoji_obj is not None and emoji_obj.is_usable():
                     emoji_repr = str(emoji_obj)
                 else:
-                    emoji_repr = f"`{emoji}`"
+                    emojiname = emoji.split(":")[0].strip("<")
+                    if len(emojiname) < 2:
+                        emojiname = emoji.split(":")[1]
+
+                    emoji_repr = "`" + emojiname + "`"
 
             rows.append(
                 f"`#{i:2}` {emoji_repr} — **{count}** Use" + ("s" if count > 1 else "")
