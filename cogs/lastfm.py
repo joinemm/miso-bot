@@ -941,7 +941,7 @@ class LastFm(commands.Cog):
         if artistname is not None:
             artistname = remove_mentions(artistname)
             if artistname.lower() == "np":
-                artistname = (await getnowplaying(ctx))['artist']
+                artistname = (await getnowplaying(ctx))["artist"]
         if artistname is None:
             return await util.send_command_help(ctx)
 
@@ -1025,15 +1025,17 @@ class LastFm(commands.Cog):
             track = remove_mentions(track)
             if track.lower() == "np":
                 npd = await getnowplaying(ctx)
-                trackname = npd['track']
-                artistname = npd['artist']
+                trackname = npd["track"]
+                artistname = npd["artist"]
             else:
                 try:
                     trackname, artistname = [x.strip() for x in track.split("|")]
                     if trackname == "" or artistname == "":
                         raise ValueError
                 except ValueError:
-                    return await ctx.send(":warning: Incorrect format! use `track | artist`")
+                    return await ctx.send(
+                        ":warning: Incorrect format! use `track | artist`"
+                    )
 
         if track is None:
             return await util.send_command_help(ctx)
@@ -1107,15 +1109,17 @@ class LastFm(commands.Cog):
             album = remove_mentions(album)
             if album.lower() == "np":
                 npd = await getnowplaying(ctx)
-                albumname = npd['album']
-                artistname = npd['artist']
+                albumname = npd["album"]
+                artistname = npd["artist"]
             else:
                 try:
                     albumname, artistname = [x.strip() for x in album.split("|")]
                     if albumname == "" or artistname == "":
                         raise ValueError
                 except ValueError:
-                    return await ctx.send(":warning: Incorrect format! use `album | artist`")
+                    return await ctx.send(
+                        ":warning: Incorrect format! use `album | artist`"
+                    )
 
         if album is None:
             return await util.send_command_help(ctx)
@@ -1215,11 +1219,7 @@ def format_plays(amount):
 
 async def getnowplaying(ctx):
     await username_to_ctx(ctx)
-    playing = {
-        'artist': None,
-        'album': None,
-        'track': None
-    }
+    playing = {"artist": None, "album": None, "track": None}
 
     data = await api_request(
         {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
@@ -1227,9 +1227,9 @@ async def getnowplaying(ctx):
 
     tracks = data["recenttracks"]["track"]
     if tracks:
-        playing['artist'] = tracks[0]["artist"]["#text"]
-        playing['album'] = tracks[0]["album"]["#text"]
-        playing['track'] = tracks[0]["name"]
+        playing["artist"] = tracks[0]["artist"]["#text"]
+        playing["album"] = tracks[0]["album"]["#text"]
+        playing["track"] = tracks[0]["name"]
 
     return playing
 
