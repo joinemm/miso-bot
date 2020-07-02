@@ -272,8 +272,20 @@ class Miscellaneous(commands.Cog):
     @commands.group(aliases=["hs"])
     async def horoscope(self, ctx):
         """Get your daily horoscope."""
-        if ctx.invoked_subcommand is not None:
-            return
+        if ctx.invoked_subcommand is None:
+            await self.send_hs(ctx, "today")
+
+    @horoscope.command(name="tomorrow")
+    async def horoscope_tomorrow(self, ctx):
+        """Get tomorrow's horoscope."""
+        await self.send_hs(ctx, "tomorrow")
+
+    @horoscope.command(name="yesterday")
+    async def horoscope_yesterday(self, ctx):
+        """Get yesterday's horoscope."""
+        await self.send_hs(ctx, "yesterday")
+
+    async def send_hs(self, ctx, day):
         userdata = db.userdata(ctx.author.id)
         if userdata is None or userdata.sunsign is None:
             return await ctx.send(
@@ -281,8 +293,7 @@ class Miscellaneous(commands.Cog):
                 "use `>horoscope list` if you don't know which one you are."
             )
         sign = userdata.sunsign
-
-        params = {"sign": sign, "day": "today"}
+        params = {"sign": sign, "day": day}
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 "https://aztro.sameerkumar.website/", params=params
