@@ -202,12 +202,16 @@ class Media(commands.Cog):
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
         }
+        # url.strip("/") + "/?__a=1", headers=headers
+        post_id = url.split("/")[-1]
+        newurl = f"https://www.instagram.com/graphql/query/?query_hash=505f2f2dfcfce5b99cb7ac4155cbf299&variables=%7B%22shortcode%22%3A%22{post_id}%22%2C%22child_comment_count%22%3A3%2C%22fetch_comment_count%22%3A40%2C%22parent_comment_count%22%3A24%2C%22has_threaded_comments%22%3Atrue%7D"
 
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                url.strip("/") + "/?__a=1", headers=headers
+                    newurl, headers=headers
             ) as response:
-                data = (await response.json())["graphql"]["shortcode_media"]
+                data = await response.json()
+                data = data["data"]["shortcode_media"]
 
         medias = []
         try:
