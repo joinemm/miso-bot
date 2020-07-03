@@ -11,7 +11,7 @@ import copy
 import aiohttp
 import regex
 import arrow
-from discord.ext import commands
+from discord.ext import commands, flags
 from tweepy import OAuthHandler
 from bs4 import BeautifulSoup
 from helpers import utilityfunctions as util
@@ -29,10 +29,15 @@ class Media(commands.Cog):
         self.bot = bot
         self.twitter_api = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
         self.ig_colors = [
-            discord.Color.from_rgb(253, 213, 118),
-            discord.Color.from_rgb(88, 85, 203),
-            discord.Color.from_rgb(217, 47, 127),
-            discord.Color.from_rgb(247, 113, 46),
+            int("405de6", 16),
+            int("5851db", 16),
+            int("833ab4", 16),
+            int("c13584", 16),
+            int("e1306c", 16),
+            int("fd1d1d", 16),
+            int("f56040", 16),
+            int("f77737", 16),
+            int("fcaf45", 16),
         ]
 
     @commands.command(aliases=["colour"])
@@ -48,7 +53,6 @@ class Media(commands.Cog):
             >color <@role>
             >color random [amount]
             >color <image url>
-            >color <discord default color name>
         """
         if not sources:
             return await util.send_command_help(ctx)
@@ -58,14 +62,6 @@ class Media(commands.Cog):
         while i < len(sources):
             source = sources[i]
             i += 1
-            try:
-                result = getattr(discord.Color, source)
-                hexcolor = str(result())
-                colors.append(hexcolor)
-                continue
-            except AttributeError:
-                pass
-
             if source.lower() == "random":
                 try:
                     amount = int(sources[i])
@@ -190,26 +186,34 @@ class Media(commands.Cog):
             util.reaction_buttons(ctx, msg, functions, only_author=True)
         )
 
-    @commands.command(aliases=["ig"])
-    async def instagram(self, ctx, url):
+    @flags.add_flag("-d", "--download", action="store_true")
+    @flags.command(aliases=["ig", "insta"])
+    async def instagram(self, ctx, url, **flags):
         """Get all the images from an instagram post."""
+        try:
+            # delete discord automatic embed
+            await ctx.message.edit(suppress=True)
+        except discord.Forbidden:
+            pass
+
         result = regex.findall("/p/(.*?)(/|\\Z)", url)
         if result:
-            url = f"https://www.instagram.com/tv/{result[0][0]}"
+            url = f"https://www.instagram.com/p/{result[0][0]}"
         else:
-            url = f"https://www.instagram.com/tv/{url}"
+            url = f"https://www.instagram.com/p/{url.strip('/').split('/')[0]}"
 
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
         }
-        # url.strip("/") + "/?__a=1", headers=headers
         post_id = url.split("/")[-1]
-        newurl = f"https://www.instagram.com/graphql/query/?query_hash=505f2f2dfcfce5b99cb7ac4155cbf299&variables=%7B%22shortcode%22%3A%22{post_id}%22%2C%22child_comment_count%22%3A3%2C%22fetch_comment_count%22%3A40%2C%22parent_comment_count%22%3A24%2C%22has_threaded_comments%22%3Atrue%7D"
+        newurl = "https://www.instagram.com/graphql/query/"
+        params = {
+            "query_hash": "505f2f2dfcfce5b99cb7ac4155cbf299",
+            "variables": '{"shortcode":"' + post_id + '"}',
+        }
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(
-                    newurl, headers=headers
-            ) as response:
+            async with session.get(newurl, params=params, headers=headers) as response:
                 data = await response.json()
                 data = data["data"]["shortcode_media"]
 
@@ -225,8 +229,37 @@ class Media(commands.Cog):
         content = discord.Embed(color=random.choice(self.ig_colors))
         content.set_author(name=f"@{username}", icon_url=avatar_url, url=url)
 
-        if medias:
-            # there are images
+        if not medias:
+            return await ctx.send(":warning: Could not find any media from this post")
+
+        if flags["download"]:
+            # send as files
+            async with aiohttp.ClientSession() as session:
+                await ctx.send(f"<{url}>")
+                timestamp = arrow.get(data["taken_at_timestamp"]).format("YYMMDD")
+                for n, file in enumerate(medias, start=1):
+                    if file.get("is_video"):
+                        media_url = file.get("video_url")
+                        extension = "mp4"
+                    else:
+                        media_url = file.get("display_url")
+                        extension = "jpg"
+
+                    filename = f"{timestamp}-@{username}-{post_id}-{n}.{extension}"
+                    async with session.get(media_url) as response:
+                        with open(filename, "wb") as f:
+                            while True:
+                                block = await response.content.read(1024)
+                                if not block:
+                                    break
+                                f.write(block)
+
+                    with open(filename, "rb") as f:
+                        await ctx.send(file=discord.File(f))
+
+                    os.remove(filename)
+        else:
+            # send as embeds
             for medianode in medias:
                 if medianode.get("is_video"):
                     await ctx.send(embed=content)
@@ -237,24 +270,15 @@ class Media(commands.Cog):
                 content.description = None
                 content._author = None
 
-        else:
-            await ctx.send(":warning: Could not find any images")
-
-    @commands.command(aliases=["twt"])
-    async def twitter(self, ctx, *tweet_url):
+    @flags.add_flag("-d", "--download", action="store_true")
+    @flags.command(aliases=["twt"])
+    async def twitter(self, ctx, tweet_url, **flags):
         """Get all the images from a tweet."""
-        flags = []
-        for param in tweet_url:
-            if param.startswith("-"):
-                # short flags
-                flags += param.strip("-").split()
-            elif param.startswith("--"):
-                # long flag
-                flags.append(param.strip("--"))
-            else:
-                tweet_url = param
-
-        upload = any(x in ["U", "u", "upload"] for x in flags)
+        try:
+            # delete discord automatic embed
+            await ctx.message.edit(suppress=True)
+        except discord.Forbidden:
+            pass
 
         if "status" in tweet_url:
             tweet_id = re.search(r"status/(\d+)", tweet_url).group(1)
@@ -299,13 +323,13 @@ class Media(commands.Cog):
             url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}",
         )
 
-        if upload:
+        if flags["download"]:
             # download file and rename, upload to discord
             async with aiohttp.ClientSession() as session:
                 await ctx.send(f"<{tweet.full_text.split(' ')[-1]}>")
+                timestamp = arrow.get(tweet.created_at).format("YYMMDD")
                 for n, file in enumerate(media_files, start=1):
                     # is image not video
-                    timestamp = arrow.get(tweet.created_at).format("YYMMDD")
                     if file[2] is None:
                         extension = "jpeg"
                     else:
@@ -328,7 +352,6 @@ class Media(commands.Cog):
 
         else:
             # just send link in embed
-
             for file in media_files:
                 url = file[1].replace(".jpg", "?format=jpg&name=orig")
                 content.set_image(url=url)
@@ -343,7 +366,6 @@ class Media(commands.Cog):
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx, *, query):
         """Search for a random gif"""
-
         async def extract_scripts(session, url):
             async with session.get(url) as response:
                 data = await response.text()
