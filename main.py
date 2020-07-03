@@ -12,7 +12,6 @@ from data import database as db
 uvloop.install()
 
 logger = log.get_logger(__name__)
-command_logger = log.get_command_logger()
 
 if len(sys.argv) > 1:
     DEV = sys.argv[1] == "dev"
@@ -55,18 +54,6 @@ extensions = [
 ]
 
 
-@bot.event
-async def on_ready():
-    """Runs when the bot connects to the discord servers"""
-    # cache owner from appinfo
-    bot.owner = (await bot.application_info()).owner
-    bot.start_time = time()
-    latencies = bot.latencies
-    logger.info(f"Loading complete | running {len(latencies)} shards")
-    for shard_id, latency in latencies:
-        logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
-
-
 @bot.before_invoke
 async def before_any_command(ctx):
     """Runs before any command"""
@@ -84,15 +71,6 @@ async def check_for_blacklist(ctx):
         # raise commands.NoPrivateMessage
         return True
     return db.is_blacklisted(ctx)
-
-
-@bot.event
-async def on_command_completion(ctx):
-    """Runs when any command is completed succesfully"""
-    # prevent double invocation for subcommands
-    if ctx.invoked_subcommand is None:
-        command_logger.info(log.log_command(ctx))
-        db.log_command_usage(ctx)
 
 
 if __name__ == "__main__":
