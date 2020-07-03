@@ -10,6 +10,7 @@ from discord.ext import commands
 from google_images_search import GoogleImagesSearch
 from data import database as db
 from helpers import utilityfunctions as util
+from libraries import unicode_codes
 
 
 GCS_DEVELOPER_KEY = os.environ.get("GOOGLE_KEY")
@@ -418,21 +419,34 @@ class Miscellaneous(commands.Cog):
         Usage:
             >emoji :emoji:
         """
-        emoji = await util.get_emoji(ctx, emoji)
-        if emoji is None:
-            return await ctx.send(":warning: I don't know this emoji!")
+        if emoji[0] == "<":
+            emoji = await util.get_emoji(ctx, emoji)
+            if emoji is None:
+                return await ctx.send(":warning: I don't know this emoji!")
 
-        color_hex = await util.color_from_image_url(str(emoji.url) + "?size=32")
+            emoji_url = emoji.url
+            emoji_name = emoji.name
+        else:
+            # unicode emoji
+            emoji_name = unicode_codes.UNICODE_EMOJI.get(emoji)
+            if emoji_name is None:
+                return await ctx.send(":warning: I don't know this emoji!")
+
+            emoji_name = emoji_name.strip(":")
+            emoji_url = f"https://twemoji.maxcdn.com/v/13.0.0/72x72/{ord(emoji):x}.png"
+
+        print(emoji_url)
+        color_hex = await util.color_from_image_url(str(emoji_url))
         content = discord.Embed(
-            title=f"`:{emoji.name}:`", color=await util.get_color(ctx, color_hex)
+            title=f"`:{emoji_name}:`", color=await util.get_color(ctx, color_hex)
         )
-        content.set_image(url=emoji.url)
-        stats = await util.image_info_from_url(emoji.url)
+        content.set_image(url=emoji_url)
+        stats = await util.image_info_from_url(emoji_url)
         content.set_footer(text=f"Type: {stats['filetype']}")
 
-        content.description = ""
         if isinstance(emoji, discord.Emoji):
             # is full emoji
+            content.description = ""
             fuller_emoji = await emoji.guild.fetch_emoji(emoji.id)
             if fuller_emoji is not None and fuller_emoji.user is not None:
                 content.description += f"Added by {fuller_emoji.user.mention}"
@@ -443,10 +457,6 @@ class Miscellaneous(commands.Cog):
                 f" on {arrow.get(emoji.created_at).format('D/M/YYYY')}\n"
                 f"Located in **{emoji.guild}**"
             )
-
-        else:
-            # is partial emoji
-            pass
 
         content.set_footer(
             text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
