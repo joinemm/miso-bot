@@ -1,4 +1,5 @@
 import discord
+from time import time
 from discord.ext import commands, tasks
 import helpers.log as log
 import helpers.utilityfunctions as util
@@ -7,6 +8,7 @@ import re
 import random
 
 logger = log.get_logger(__name__)
+command_logger = log.get_command_logger()
 
 
 class Events(commands.Cog):
@@ -26,8 +28,28 @@ class Events(commands.Cog):
         self.settings = db.get_from_data_json(["bot_settings"])
         self.emojis = None
 
+    def cog_unload(self):
+        self.status_loop.cancel()
+
+    @commands.Cog.listener()
+    async def on_command_completion(self, ctx):
+        """Runs when any command is completed succesfully"""
+        # prevent double invocation for subcommands
+        if ctx.invoked_subcommand is None:
+            command_logger.info(log.log_command(ctx))
+            db.log_command_usage(ctx)
+
     @commands.Cog.listener()
     async def on_ready(self):
+        """Runs when the bot connects to the discord servers"""
+        # cache owner from appinfo
+        self.bot.owner = (await self.bot.application_info()).owner
+        self.bot.start_time = time()
+        latencies = self.bot.latencies
+        logger.info(f"Loading complete | running {len(latencies)} shards")
+        for shard_id, latency in latencies:
+            logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
+
         if self.emojis is None:
             self.emojis = {
                 "upvote": self.bot.get_emoji(
@@ -37,9 +59,6 @@ class Events(commands.Cog):
                     db.query("select id from emojis where name = 'downvote'")[0][0]
                 ),
             }
-
-    def cog_unload(self):
-        self.status_loop.cancel()
 
     @tasks.loop(minutes=3.0)
     async def status_loop(self):
@@ -346,8 +365,9 @@ class Events(commands.Cog):
                 (payload.message_id,),
             )
             try:
+                assert board_msg_id is not None
                 board_message = await channel.fetch_message(board_msg_id[0][0])
-            except (discord.errors.NotFound, TypeError):
+            except (discord.errors.NotFound, AssertionError):
                 # message is not on board yet, or it was deleted
                 content = discord.Embed(color=discord.Color.gold())
                 content.set_author(
