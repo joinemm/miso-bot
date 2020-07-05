@@ -362,18 +362,14 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @fm.command(aliases=["recents", "re"])
-    async def recent(self, ctx, size="15"):
+    async def recent(self, ctx, size: int = 15):
         """
         Recently listened tracks.
 
         Usage:
             >fm recent [amount]
         """
-        try:
-            size = int(size)
-        except ValueError:
-            size = 15
-
+        size = abs(size)
         data = await api_request(
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": size}
         )
@@ -684,9 +680,9 @@ class LastFm(commands.Cog):
         dim = size.split("x")
         width = int(dim[0])
         if len(dim) > 1:
-            height = int(dim[1])
+            height = abs(int(dim[1]))
         else:
-            height = int(dim[0])
+            height = abs(int(dim[0]))
 
         if width + height > 30:
             return await ctx.send(
@@ -1424,11 +1420,11 @@ def parse_chart_arguments(args):
         if parsed["amount"] is None:
             try:
                 size = a.split("x")
-                parsed["width"] = int(size[0])
+                parsed["width"] = abs(int(size[0]))
                 if len(size) > 1:
-                    parsed["height"] = int(size[1])
+                    parsed["height"] = abs(int(size[1]))
                 else:
-                    parsed["height"] = int(size[0])
+                    parsed["height"] = abs(int(size[0]))
                 continue
             except ValueError:
                 pass
