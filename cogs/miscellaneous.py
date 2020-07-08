@@ -170,7 +170,7 @@ class Miscellaneous(commands.Cog):
         nameslist = names.split(" and ")
         if not len(nameslist) == 2:
             nameslist = names.split(" ", 1)
-            if len(nameslist) < 1:
+            if len(nameslist) < 2:
                 return await ctx.send("Please give two names separated with `and`")
 
         url = "https://www.lovecalculator.com/love.php"
