@@ -1137,8 +1137,7 @@ class LastFm(commands.Cog):
     @commands.command()
     async def report(self, ctx, lastfm_username, *, reason):
         """Report someone who is botting plays."""
-        # reports_channel = self.bot.get_channel(729736304677486723)
-        reports_channel = self.bot.get_channel(648153195356356619)
+        reports_channel = self.bot.get_channel(729736304677486723)
         if reports_channel is None:
             return await ctx.send(":warning: Something went wrong.")
 
@@ -1172,6 +1171,7 @@ class LastFm(commands.Cog):
 
                 content.add_field(name="Connected by", value=", ".join(connected_accounts))
             content.set_footer(text=f">fmban {lastfm_username}")
+            content.description = ""
 
             await reports_channel.send(embed=content)
             await msg.edit(content="📨 Report sent!", embed=None)
