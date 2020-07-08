@@ -186,6 +186,12 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
 
         await ctx.send(f"```OK. Took {time.time() - start}s```")
 
+    @commands.command()
+    async def fmban(self, ctx, lastfm_username):
+        """Ban someone from the leaderboards."""
+        db.execute("INSERT INTO lastfm_blacklist VALUES(?)", (lastfm_username.lower(),))
+        await ctx.send(":ok_hand: Flagged last.fm profile `{lastfm_username}` as fraudelent.")
+
 
 def clean_codeblock(text):
     """Remove codeblocks and empty lines, return lines."""
