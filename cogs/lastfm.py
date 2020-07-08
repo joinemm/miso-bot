@@ -1,11 +1,9 @@
 import discord
-import json
 import kdtree
 import os
 import asyncio
 import arrow
 import aiohttp
-import typing
 import re
 import math
 import urllib.parse
@@ -67,26 +65,20 @@ class LastFm(commands.Cog):
     async def set(self, ctx, username):
         """Save your last.fm username."""
         if ctx.foreign_target:
-            return await ctx.send(
-                ":warning: You cannot set lastfm username for someone else!"
-            )
+            return await ctx.send(":warning: You cannot set lastfm username for someone else!")
 
         content = await get_userinfo_embed(username)
         if content is None:
             return await ctx.send(f":warning: Invalid Last.fm username `{username}`")
 
         db.update_user(ctx.author.id, "lastfm_username", username)
-        await ctx.send(
-            f"{ctx.author.mention} Username saved as `{username}`", embed=content
-        )
+        await ctx.send(f"{ctx.author.mention} Username saved as `{username}`", embed=content)
 
     @fm.command()
     async def unset(self, ctx):
         """Unlink your last.fm."""
         if ctx.foreign_target:
-            return await ctx.send(
-                ":warning: You cannot unset someone else's lastfm username!"
-            )
+            return await ctx.send(":warning: You cannot unset someone else's lastfm username!")
 
         db.update_user(ctx.author.id, "lastfm_username", None)
         await ctx.send(":broken_heart: Removed your last.fm username from the database")
@@ -163,12 +155,7 @@ class LastFm(commands.Cog):
 
         # tags and playcount
         trackdata = await api_request(
-            {
-                "user": ctx.username,
-                "method": "track.getInfo",
-                "artist": artist,
-                "track": track,
-            },
+            {"user": ctx.username, "method": "track.getInfo", "artist": artist, "track": track},
             ignore_errors=True,
         )
         if trackdata is not None:
@@ -190,9 +177,7 @@ class LastFm(commands.Cog):
             if "nowplaying" in tracks[0]["@attr"]:
                 state = "— Now Playing"
 
-        content.set_author(
-            name=f"{username} {state}", icon_url=ctx.usertarget.avatar_url
-        )
+        content.set_author(name=f"{username} {state}", icon_url=ctx.usertarget.avatar_url)
 
         await ctx.send(embed=content)
 
@@ -396,8 +381,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total scrobbles: {user_attr['total']}")
         content.set_author(
-            name=f"{user_attr['user']} — Recent tracks",
-            icon_url=ctx.usertarget.avatar_url,
+            name=f"{user_attr['user']} — Recent tracks", icon_url=ctx.usertarget.avatar_url,
         )
 
         await util.send_as_pages(ctx, content, rows, 15)
@@ -448,9 +432,7 @@ class LastFm(commands.Cog):
 
         rows = []
         for i, (name, playcount) in enumerate(data, start=1):
-            rows.append(
-                f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{name}**"
-            )
+            rows.append(f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{name}**")
 
         artistname = urllib.parse.quote_plus(artistname)
         content = discord.Embed()
@@ -488,16 +470,12 @@ class LastFm(commands.Cog):
                 .find("img")
                 .get("src")
                 .replace("avatar70s", "avatar300s"),
-                "formatted_name": soup.find(
-                    "a", {"class": "library-header-crumb"}
-                ).text.strip(),
+                "formatted_name": soup.find("a", {"class": "library-header-crumb"}).text.strip(),
             }
 
             items = chartlist.findAll("tr", {"class": "chartlist-row"})
             for item in items:
-                name = (
-                    item.find("td", {"class": "chartlist-name"}).find("a").get("title")
-                )
+                name = item.find("td", {"class": "chartlist-name"}).find("a").get("title")
                 playcount = (
                     item.find("span", {"class": "chartlist-count-bar-value"})
                     .text.replace("scrobbles", "")
@@ -527,9 +505,7 @@ class LastFm(commands.Cog):
                 )
             except ValueError:
                 if period == "overall":
-                    return await ctx.send(
-                        f"You have never listened to **{artistname}**!"
-                    )
+                    return await ctx.send(f"You have never listened to **{artistname}**!")
                 else:
                     return await ctx.send(
                         f"You have not listened to **{artistname}** in the past {period}s!"
@@ -538,11 +514,7 @@ class LastFm(commands.Cog):
             for container, destination in zip([albumsdiv, tracksdiv], [albums, tracks]):
                 items = container.findAll("tr", {"class": "chartlist-row"})
                 for item in items:
-                    name = (
-                        item.find("td", {"class": "chartlist-name"})
-                        .find("a")
-                        .get("title")
-                    )
+                    name = item.find("td", {"class": "chartlist-name"}).find("a").get("title")
                     playcount = (
                         item.find("span", {"class": "chartlist-count-bar-value"})
                         .text.replace("scrobbles", "")
@@ -562,9 +534,7 @@ class LastFm(commands.Cog):
             .find("img")
             .get("src")
             .replace("avatar70s", "avatar300s"),
-            "formatted_name": soup.find(
-                "h2", {"class": "library-header-title"}
-            ).text.strip(),
+            "formatted_name": soup.find("h2", {"class": "library-header-title"}).text.strip(),
         }
 
         image_colour = await util.color_from_image_url(artist["image_url"])
@@ -583,9 +553,7 @@ class LastFm(commands.Cog):
             f"?date_preset={period_http_format(period)}",
         )
 
-        content.set_footer(
-            text=f"{listeners} Listeners | Similar to: {', '.join(similar)}"
-        )
+        content.set_footer(text=f"{listeners} Listeners | Similar to: {', '.join(similar)}")
 
         crown_holder = db.query(
             """
@@ -634,9 +602,7 @@ class LastFm(commands.Cog):
         image = None
         imagesize = 0
         while image is None or imagesize >= 3:
-            image = await get_image(
-                self.cover_base_urls[imagesize].format(album_art_id)
-            )
+            image = await get_image(self.cover_base_urls[imagesize].format(album_art_id))
             imagesize += 1
 
         if image is None:
@@ -810,9 +776,7 @@ class LastFm(commands.Cog):
             for i, artist in enumerate(artists):
                 name = artist["name"]
                 plays = artist["playcount"]
-                chart.append(
-                    (scraped_images[i], f"{plays} {format_plays(plays)}<br>{name}")
-                )
+                chart.append((scraped_images[i], f"{plays} {format_plays(plays)}<br>{name}"))
 
         elif arguments["method"] == "user.getrecenttracks":
             chart_type = "recent tracks"
@@ -833,15 +797,11 @@ class LastFm(commands.Cog):
 
     async def chart_factory(self, chart_items, width, height, show_labels=True):
         if show_labels:
-            img_div_template = (
-                '<div class="art"><img src="{0}"><p class="label">{1}</p></div>'
-            )
+            img_div_template = '<div class="art"><img src="{0}"><p class="label">{1}</p></div>'
         else:
             img_div_template = '<div class="art"><img src="{0}"></div>'
 
-        img_divs = "\n".join(
-            img_div_template.format(*chart_item) for chart_item in chart_items
-        )
+        img_divs = "\n".join(img_div_template.format(*chart_item) for chart_item in chart_items)
 
         dimensions = (300 * width, 300 * height)
         replacements = {
@@ -863,9 +823,7 @@ class LastFm(commands.Cog):
             "quality": 70,
         }
         async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "http://localhost:3000/html", data=payload
-            ) as response:
+            async with session.post("http://localhost:3000/html", data=payload) as response:
                 with open("downloads/fmchart.jpeg", "wb") as f:
                     while True:
                         block = await response.content.read(1024)
@@ -896,21 +854,15 @@ class LastFm(commands.Cog):
                 if song is not None:
                     listeners.append((song, member_ref))
         else:
-            return await ctx.send(
-                "Nobody on this server has connected their last.fm account yet!"
-            )
+            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
         if not listeners:
-            return await ctx.send(
-                "Nobody on this server is listening to anything at the moment!"
-            )
+            return await ctx.send("Nobody on this server is listening to anything at the moment!")
 
         total_listening = len(listeners)
         rows = []
         for song, member in listeners:
-            rows.append(
-                f"{member.mention} **{song.get('artist')}** — ***{song.get('name')}***"
-            )
+            rows.append(f"{member.mention} **{song.get('artist')}** — ***{song.get('name')}***")
 
         content = discord.Embed()
         content.set_author(
@@ -945,6 +897,7 @@ class LastFm(commands.Cog):
         tasks = []
         userslist = db.query(
             "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
+            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
         )
         for user in userslist if userslist is not None else []:
             lastfm_username = user[1]
@@ -961,9 +914,7 @@ class LastFm(commands.Cog):
                 if playcount > 0:
                     listeners.append((playcount, user))
         else:
-            return await ctx.send(
-                "Nobody on this server has connected their last.fm account yet!"
-            )
+            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
         rows = []
         old_king = None
@@ -980,15 +931,11 @@ class LastFm(commands.Cog):
                 new_king = user
             else:
                 rank = f"`#{i:2}`"
-            rows.append(
-                f"{rank} **{user.name}** — **{playcount}** {format_plays(playcount)}"
-            )
+            rows.append(f"{rank} **{user.name}** — **{playcount}** {format_plays(playcount)}")
             total += playcount
 
         if not rows:
-            return await ctx.send(
-                f"Nobody on this server has listened to **{artistname}**"
-            )
+            return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
 
         content = discord.Embed(title=f"Who knows **{artistname}**?")
         image_url = await scrape_artist_image(artistname)
@@ -1029,9 +976,7 @@ class LastFm(commands.Cog):
                     if trackname == "" or artistname == "":
                         raise ValueError
                 except ValueError:
-                    return await ctx.send(
-                        ":warning: Incorrect format! use `track | artist`"
-                    )
+                    return await ctx.send(":warning: Incorrect format! use `track | artist`")
 
         if track is None:
             return await util.send_command_help(ctx)
@@ -1041,6 +986,7 @@ class LastFm(commands.Cog):
         tasks = []
         userslist = db.query(
             "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
+            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
         )
         for user in userslist if userslist is not None else []:
             lastfm_username = user[1]
@@ -1048,9 +994,7 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(
-                get_playcount_track(artistname, trackname, lastfm_username, member)
-            )
+            tasks.append(get_playcount_track(artistname, trackname, lastfm_username, member))
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1059,18 +1003,14 @@ class LastFm(commands.Cog):
                 if playcount > 0:
                     listeners.append((playcount, user))
         else:
-            return await ctx.send(
-                "Nobody on this server has connected their last.fm account yet!"
-            )
+            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
         rows = []
         total = 0
         for i, (playcount, user) in enumerate(
             sorted(listeners, key=lambda p: p[0], reverse=True), start=1
         ):
-            rows.append(
-                f"`#{i:2}` **{user.name}** — **{playcount}** {format_plays(playcount)}"
-            )
+            rows.append(f"`#{i:2}` **{user.name}** — **{playcount}** {format_plays(playcount)}")
             total += playcount
 
         if not rows:
@@ -1113,9 +1053,7 @@ class LastFm(commands.Cog):
                     if albumname == "" or artistname == "":
                         raise ValueError
                 except ValueError:
-                    return await ctx.send(
-                        ":warning: Incorrect format! use `album | artist`"
-                    )
+                    return await ctx.send(":warning: Incorrect format! use `album | artist`")
 
         if album is None:
             return await util.send_command_help(ctx)
@@ -1124,6 +1062,7 @@ class LastFm(commands.Cog):
         tasks = []
         userslist = db.query(
             "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
+            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
         )
         for user in userslist if userslist is not None else []:
             lastfm_username = user[1]
@@ -1131,9 +1070,7 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(
-                get_playcount_album(artistname, albumname, lastfm_username, member)
-            )
+            tasks.append(get_playcount_album(artistname, albumname, lastfm_username, member))
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1142,18 +1079,14 @@ class LastFm(commands.Cog):
                 if playcount > 0:
                     listeners.append((playcount, user))
         else:
-            return await ctx.send(
-                "Nobody on this server has connected their last.fm account yet!"
-            )
+            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
         rows = []
         total = 0
         for i, (playcount, user) in enumerate(
             sorted(listeners, key=lambda p: p[0], reverse=True), start=1
         ):
-            rows.append(
-                f"`#{i:2}` **{user.name}** — **{playcount}** {format_plays(playcount)}"
-            )
+            rows.append(f"`#{i:2}` **{user.name}** — **{playcount}** {format_plays(playcount)}")
             total += playcount
 
         if not rows:
@@ -1201,6 +1134,57 @@ class LastFm(commands.Cog):
         )
         await util.send_as_pages(ctx, content, rows)
 
+    @commands.command()
+    async def report(self, ctx, lastfm_username, *, reason):
+        """Report someone who is botting plays."""
+        # reports_channel = self.bot.get_channel(729736304677486723)
+        reports_channel = self.bot.get_channel(648153195356356619)
+        if reports_channel is None:
+            return await ctx.send(":warning: Something went wrong.")
+
+        url = f"https://www.last.fm/user/{lastfm_username}"
+
+        content = discord.Embed(title="New Last.fm user report")
+        content.add_field(name="Profile", value=url)
+        content.add_field(name="Reason", value=reason)
+
+        content.description = (
+            "Are you sure you want to report this lastfm account?"
+            " Please note sending false reports **will get you blacklisted**."
+        )
+
+        # send confirmation message
+        msg = await ctx.send(embed=content)
+
+        async def confirm_ban():
+            content.add_field(
+                name="Reported by",
+                value=f"**{ctx.author}** {ctx.author.mention} `{ctx.author.id}`",
+            )
+            data = db.query(
+                "select user_id from users where lastfm_username = ?", (lastfm_username,)
+            )
+            if data is not None:
+                connected_accounts = []
+                for x in data:
+                    user = self.bot.get_user(x[0])
+                    connected_accounts.append(f"{user}(`{user.id}`)")
+
+                content.add_field(name="Connected by", value=", ".join(connected_accounts))
+            content.set_footer(text=f">fmban {lastfm_username}")
+
+            await reports_channel.send(embed=content)
+            await msg.edit(content="📨 Report sent!", embed=None)
+
+        async def cancel_ban():
+            await msg.edit(content="❌ Report cancelled.", embed=None)
+
+        functions = {"✅": confirm_ban, "❌": cancel_ban}
+
+        asyncio.ensure_future(
+            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+        )
+
 
 def setup(bot):
     bot.add_cog(LastFm(bot))
@@ -1217,9 +1201,7 @@ async def getnowplaying(ctx):
     await username_to_ctx(ctx)
     playing = {"artist": None, "album": None, "track": None}
 
-    data = await api_request(
-        {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
-    )
+    data = await api_request({"user": ctx.username, "method": "user.getrecenttracks", "limit": 1})
 
     tracks = data["recenttracks"]["track"]
     if tracks:
@@ -1290,12 +1272,7 @@ async def get_playcount_album(artist, album, username, reference=None):
 
 async def get_playcount(artist, username, reference=None):
     data = await api_request(
-        {
-            "method": "artist.getinfo",
-            "user": username,
-            "artist": artist,
-            "autocorrect": 1,
-        }
+        {"method": "artist.getinfo", "user": username, "artist": artist, "autocorrect": 1}
     )
     try:
         count = int(data["artist"]["stats"]["userplaycount"])
@@ -1312,8 +1289,7 @@ async def get_playcount(artist, username, reference=None):
 
 async def get_np(username, ref):
     data = await api_request(
-        {"method": "user.getrecenttracks", "user": username, "limit": 1},
-        ignore_errors=True,
+        {"method": "user.getrecenttracks", "user": username, "limit": 1}, ignore_errors=True,
     )
     song = None
     if data is not None:
@@ -1335,14 +1311,10 @@ async def get_similar_artists(artistname):
     async with aiohttp.ClientSession() as session:
         data = await fetch(session, url, handling="text")
         soup = BeautifulSoup(data, "html.parser")
-        for artist in soup.findAll(
-            "h3", {"class": "artist-similar-artists-sidebar-item-name"}
-        ):
+        for artist in soup.findAll("h3", {"class": "artist-similar-artists-sidebar-item-name"}):
             similar.append(artist.find("a").text)
         listeners = (
-            soup.find("li", {"class": "header-metadata-tnew-item--listeners"})
-            .find("abbr")
-            .text
+            soup.find("li", {"class": "header-metadata-tnew-item--listeners"}).find("abbr").text
         )
     return similar, listeners
 
@@ -1525,9 +1497,7 @@ async def custom_period(user, group_by, shift_hours=24):
                     "image": track["image"],
                 }
 
-        albumsdata = sorted(
-            formatted_data.values(), key=lambda x: x["playcount"], reverse=True
-        )
+        albumsdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
         return {
             "topalbums": {
                 "album": albumsdata,
@@ -1552,9 +1522,7 @@ async def custom_period(user, group_by, shift_hours=24):
                     "image": track["image"],
                 }
 
-        tracksdata = sorted(
-            formatted_data.values(), key=lambda x: x["playcount"], reverse=True
-        )
+        tracksdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
         return {
             "toptracks": {
                 "track": tracksdata,
@@ -1577,9 +1545,7 @@ async def custom_period(user, group_by, shift_hours=24):
                     "image": track["image"],
                 }
 
-        artistdata = sorted(
-            formatted_data.values(), key=lambda x: x["playcount"], reverse=True
-        )
+        artistdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
         return {
             "topartists": {
                 "artist": artistdata,
@@ -1592,13 +1558,12 @@ async def custom_period(user, group_by, shift_hours=24):
 
 
 async def get_userinfo_embed(username):
-    data = await api_request(
-        {"user": username, "method": "user.getinfo"}, ignore_errors=True
-    )
+    data = await api_request({"user": username, "method": "user.getinfo"}, ignore_errors=True)
     if data is None:
         return None
 
     username = data["user"]["name"]
+    blacklisted = db.query("select * from lastfm_blacklist where username = ?", (username.lower(),))
     playcount = data["user"]["playcount"]
     profile_url = data["user"]["url"]
     profile_pic_url = data["user"]["image"][3]["#text"]
@@ -1606,9 +1571,7 @@ async def get_userinfo_embed(username):
     image_colour = await util.color_from_image_url(profile_pic_url)
 
     content = discord.Embed(title=f":cd: {username}")
-    content.add_field(
-        name="Last.fm profile", value=f"[Link]({profile_url})", inline=True
-    )
+    content.add_field(name="Last.fm profile", value=f"[Link]({profile_url})", inline=True)
     content.add_field(
         name="Registered",
         value=f"{timestamp.humanize()}\n{timestamp.format('DD/MM/YYYY')}",
@@ -1617,6 +1580,9 @@ async def get_userinfo_embed(username):
     content.set_thumbnail(url=profile_pic_url)
     content.set_footer(text=f"Total plays: {playcount}")
     content.colour = int(image_colour, 16)
+    if blacklisted is not None:
+        content.description = ":warning: `This account is flagged as a cheater`"
+
     return content
 
 
@@ -1632,11 +1598,7 @@ async def scrape_artist_image(artist):
     image = soup.find("img", {"class": "image-list-image"})
     if image is None:
         try:
-            image = (
-                soup.find("li", {"class": "image-list-item-wrapper"})
-                .find("a")
-                .find("img")
-            )
+            image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
         except AttributeError:
             return ""
 
@@ -1684,8 +1646,7 @@ async def scrape_artists_for_chart(username, period, amount):
             soup = BeautifulSoup(data, "html.parser")
             imagedivs = soup.findAll("td", {"class": "chartlist-image"})
             images += [
-                div.find("img")["src"].replace("/avatar70s/", "/300x300/")
-                for div in imagedivs
+                div.find("img")["src"].replace("/avatar70s/", "/300x300/") for div in imagedivs
             ]
 
     return images
