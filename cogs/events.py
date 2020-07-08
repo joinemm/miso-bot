@@ -14,9 +14,7 @@ command_logger = log.get_command_logger()
 class Events(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.stfu_regex = re.compile(
-            r"(?:^|\W){0}(?:$|\W)".format("stfu"), flags=re.IGNORECASE
-        )
+        self.stfu_regex = re.compile(r"(?:^|\W){0}(?:$|\W)".format("stfu"), flags=re.IGNORECASE)
         self.statuses = [
             ("watching", lambda: f"{len(self.bot.guilds)} servers"),
             ("listening", lambda: f"{len(set(self.bot.get_all_members()))} users"),
@@ -131,9 +129,7 @@ class Events(commands.Cog):
         if message_format is None:
             message_format = "Welcome **{username}** {mention} to **{server}**"
 
-        await channel.send(
-            embed=util.create_welcome_embed(member, member.guild, message_format)
-        )
+        await channel.send(embed=util.create_welcome_embed(member, member.guild, message_format))
         logger.info(f"Welcomed {member.name} to {member.guild.name}")
 
         # add autorole
@@ -179,9 +175,7 @@ class Events(commands.Cog):
         if message_format is None:
             message_format = "Goodbye {mention} ( **{user}** )"
 
-        await channel.send(
-            util.create_goodbye_message(member, member.guild, message_format)
-        )
+        await channel.send(util.create_goodbye_message(member, member.guild, message_format))
         logger.info(f"Said goodbye to {member.name} from {member.guild.name}")
 
     @commands.Cog.listener()
@@ -279,10 +273,7 @@ class Events(commands.Cog):
                 pass
 
         # hi
-        if (
-            message.content.lower().strip("!.?~ ") == "hi"
-            and random.randint(0, 19) == 0
-        ):
+        if message.content.lower().strip("!.?~ ") == "hi" and random.randint(0, 19) == 0:
             try:
                 await message.channel.send("hi")
             except discord.errors.Forbidden:
@@ -370,9 +361,7 @@ class Events(commands.Cog):
             except (discord.errors.NotFound, AssertionError):
                 # message is not on board yet, or it was deleted
                 content = discord.Embed(color=discord.Color.gold())
-                content.set_author(
-                    name=f"{message.author}", icon_url=message.author.avatar_url
-                )
+                content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
                 jump = f"\n\n[context]({message.jump_url})"
                 content.description = message.content[: 2048 - len(jump)] + jump
                 content.timestamp = message.created_at
@@ -380,11 +369,17 @@ class Events(commands.Cog):
                 if len(message.attachments) > 0:
                     content.set_image(url=message.attachments[0].url)
 
-                board_message = await channel.send(embed=content)
-                db.execute(
-                    "REPLACE INTO starboard VALUES(?, ?)",
-                    (payload.message_id, board_message.id),
-                )
+                try:
+                    board_message = await channel.send(embed=content)
+                    db.execute(
+                        "REPLACE INTO starboard VALUES(?, ?)",
+                        (payload.message_id, board_message.id),
+                    )
+                except discord.errors.Forbidden:
+                    logger.warning(
+                        "Unable to send message to starboard in {channel.guild} due to missing permissions!"
+                    )
+
             else:
                 # message is on board, update star count
                 content = board_message.embeds[0]

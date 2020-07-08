@@ -6,7 +6,6 @@ from helpers import utilityfunctions as util
 
 
 class Rolepicker(commands.Cog):
-
     def __init__(self, bot):
         self.bot = bot
 
@@ -24,14 +23,18 @@ class Rolepicker(commands.Cog):
             return await ctx.send(":warning: Could not get this role")
 
         db.execute("REPLACE INTO roles VALUES(?, ?, ?)", (ctx.guild.id, name, role_to_add.id))
-        await ctx.send(embed=discord.Embed(description=f"{role_to_add.mention} added to picker as `{name}`"))
+        await ctx.send(
+            embed=discord.Embed(description=f"{role_to_add.mention} added to picker as `{name}`")
+        )
 
     @rolepicker.command()
     async def remove(self, ctx, name):
         """Remove a role from the picker."""
         roles = db.query("select rolename from roles where guild_id = ?", (ctx.guild.id,))
         if name in [x[0] for x in roles]:
-            db.execute("DELETE FROM roles WHERE guild_id = ? and rolename = ?", (ctx.guild.id, name))
+            db.execute(
+                "DELETE FROM roles WHERE guild_id = ? and rolename = ?", (ctx.guild.id, name)
+            )
             await ctx.send(f"Removed `{name}` from the role picker.")
         else:
             return await ctx.send(":warning: Could not find this role from the picker")
@@ -46,8 +49,10 @@ class Rolepicker(commands.Cog):
         db.update_setting(ctx.guild.id, "rolepicker_channel", this_channel.id)
         db.update_setting(ctx.guild.id, "rolepicker_enabled", 0)
 
-        await ctx.send(f"Rolepicker channel set to {this_channel.mention}\n"
-                       f"Now enable the rolepicker once you want messages in the channel to be deleted.")
+        await ctx.send(
+            f"Rolepicker channel set to {this_channel.mention}\n"
+            f"Now enable the rolepicker once you want messages in the channel to be deleted."
+        )
 
     @rolepicker.command()
     async def list(self, ctx):
@@ -60,10 +65,12 @@ class Rolepicker(commands.Cog):
             for name, role_id in data:
                 role = ctx.guild.get_role(role_id)
                 if role is not None:
-                   roleslist.append((name, role))
+                    roleslist.append((name, role))
 
             for name, role in sorted(roleslist, key=lambda x: x[1].position, reverse=True):
-                content.description += f"\n`{name}` : {role.mention if role is not None else 'None'}"
+                content.description += (
+                    f"\n`{name}` : {role.mention if role is not None else 'None'}"
+                )
 
         else:
             content.description = "No roles set on this server"
@@ -72,9 +79,9 @@ class Rolepicker(commands.Cog):
     @rolepicker.command(enabled=False)
     async def case(self, ctx, boolean):
         """Toggle case sensitivity."""
-        if boolean.lower() == 'true':
+        if boolean.lower() == "true":
             newvalue = 1
-        elif boolean.lower() == 'false':
+        elif boolean.lower() == "false":
             newvalue = 0
         else:
             return await ctx.send("Invalid value, use `true` or `false`")
@@ -105,19 +112,31 @@ class Rolepicker(commands.Cog):
                 command = message.content[0]
                 rolename = message.content[1:].strip()
                 if command in ["+", "-"]:
-                    #case = db.get_setting(message.guild.id, "rolepicker_case")
                     role = message.guild.get_role(db.rolepicker_role(message.guild.id, rolename))
-                    if role is None:
-                        await message.channel.send(f":warning: Role `{rolename}` not found")
-                    else:
-                        if command == "+":
-                            await message.author.add_roles(role)
-                            await message.channel.send(embed=discord.Embed(description=f"Added {role.mention} to your roles"))
-                        elif command == "-":
-                            await message.author.remove_roles(role)
-                            await message.channel.send(embed=discord.Embed(description=f"Removed {role.mention} from your roles"))
+                    try:
+                        if role is None:
+                            await message.channel.send(f":warning: Role `{rolename}` not found")
+                        else:
+                            if command == "+":
+                                await message.author.add_roles(role)
+                                await message.channel.send(
+                                    embed=discord.Embed(
+                                        description=f"Added {role.mention} to your roles"
+                                    )
+                                )
+                            elif command == "-":
+                                await message.author.remove_roles(role)
+                                await message.channel.send(
+                                    embed=discord.Embed(
+                                        description=f"Removed {role.mention} from your roles"
+                                    )
+                                )
+                    except discord.errors.Forbidden:
+                        pass
                 else:
-                    await message.channel.send(f":warning: Unknown action `{command}`\nUse `+` to add roles or `-` to remove them.")
+                    await message.channel.send(
+                        f":warning: Unknown action `{command}`\nUse `+` to add roles or `-` to remove them."
+                    )
 
             await asyncio.sleep(5)
             try:
