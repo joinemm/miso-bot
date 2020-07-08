@@ -424,7 +424,7 @@ async def get_guild(ctx, argument, fallback=None):
 async def command_group_help(ctx):
     """Sends default command help if group command is invoked on it's own"""
     if ctx.invoked_subcommand is None:
-        await send_command_help(ctx)
+        await ctx.bot.help_command.group_help_brief(ctx, ctx.command)
 
 
 async def send_command_help(ctx):
