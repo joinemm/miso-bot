@@ -1,3 +1,16 @@
+# Syntax
+
+This page will list most of the commands this bot has to offer.   
+Argument syntax is as follows:   
+
+`<required>`    
+`[optional]`
+
+Do not include the brackes in the command.   
+
+Aguments are split on whitespace, unless surrounded by quotes `"like this"`.    
+Arguments affixed with `...` on this page do not need quotes but are instead parsed till the end of line.
+
 # Info
 
 Get basic information about the bot.
@@ -13,9 +26,10 @@ Get the bot's ping.
 
 > \>ping
 
-See statistics of the bot like uptime and memory usage.
+See statistics of the bot.
 
-> \>status
+> \>system
+> \>stats
 
 Github commit history.
 
@@ -26,6 +40,11 @@ Statistics about command usage.
 > \>commandstats server [user]    
 > \>commandstats global [user]    
 > \>commandstats <command\>
+
+Statistics about emoji usage.
+
+> \>emojistats [user]    
+> \>emojistats global [user]
 
 Get Miso invite link.
 
@@ -63,12 +82,11 @@ Go fishing and receive random fish.
 
 You can also gift fishy to other members:
 
-> \>fishy <member\>
+> \>fishy [member]
 
 See statistics about your or other user's fishing.
 
-> \>fishystats    
-> \>fishystats <member\>  
+> \>fishystats [member]    
 > \>fishystats global
 
 ---
@@ -103,9 +121,27 @@ Permanently ban a user. Doesn't have to be a member of the server.
 
 > \>ban <user\>
 
-Bulk delete messages. Mention users at the end to only delete messages by them.
+Bulk delete messages. Mention users at the end to only delete messages by them. Amount determines how many messages up to scan.
 
 > \>purge <amount\> [mentions...]
+
+Blacklist users, commands and channels.
+
+> \>blacklist user <member...\>    
+> \>blacklist channel <textchannel...\>    
+> \>blacklist command <command...\>    
+> \>blacklist show    
+
+Toggle whether command usage that triggers a blacklist will be automatically deleted.
+
+> \>blacklist delete <boolean\>    
+
+Reverse any blacklisting you might have done
+
+> \>whitelist user <member...\>    
+> \>whitelist channel <textchannel...\>    
+> \>whitelist command <command...\>    
+
 ---
 
 # Notifications
@@ -118,7 +154,7 @@ All information will be delivered to you in private messages so others wont know
 
 Lists all your notification keywords.
 
-> \>noification list
+> \>notification list
 
 ---
 
@@ -149,16 +185,15 @@ You can chain any of these sources together to form a palette.
 Embeds the given post in discord so you can easily save all the images in high resolution, or just show them.    
 You can use full url, or just the post id. (eg. `1156225603470688261` for twitter or `B0u02QonS3z` for instagram)
 
-> \>ig <url\>  
-> \>ig <id\>
+> \>instagram <url | id\>  
 
-> \>twitter <url\>  
-> \>twitter <id\>
+> \>twitter <url | id\>  
 
-You can use `-U` flag with twitter to download and reupload the images instead of posting the urls in embeds.
+You can use `-d` or `--download` flag with twitter and instagram to download and reupload the images.    
 These images are named for easy downloading and will not stop working in case the original tweet is deleted.
 
-> \>twitter -U <id\>
+> \>instagram <url | id\> --download    
+> \>twitter <url | id\> --download
 
 #### Web search
 
@@ -176,7 +211,7 @@ Search various places on the web like gfycat and youtube.
 
 Use any DuckDuckGo [bangs](https://duckduckgo.com/bang) to quickly search the internet!
 
-\>!<bang\> <search...\>
+> \>!<bang\> <search...\>
 
 ---
 
@@ -185,8 +220,8 @@ Use any DuckDuckGo [bangs](https://duckduckgo.com/bang) to quickly search the in
 Integration with the music tracking service, last.fm.    
 For anything requiring artist name, the name must be formatted **exactly** as is shows up in the lastfm website.
 
-You can mention anyone in a command and you will see the mentioned user's stats instead, 
-as long as they have connected their last.fm username of course.
+You can mention anyone at the end of an command, making sure it doesn't conflict with other arguments, and you will see the mentioned user's stats instead, 
+as long as they have connected their last.fm username.
 
 First connect your lastfm account by using
 
@@ -198,11 +233,11 @@ Check your profile with
 
 Then you can check various top lists.
 
-> \>fm toptracks <timeframe\>    
-> \>fm topartists <timeframe\>    
-> \>fm topalbums <timeframe\>    
+> \>fm toptracks [timeframe]    
+> \>fm topartists [timeframe]    
+> \>fm topalbums [timeframe]    
 
-Valid timeframes are `[day | week | month | 3month | 6month | year | alltime]`
+Valid timeframes are `[day | week | month | 3month | 6month | year | alltime]` (defaults to alltime)
 
 Show your most recently listened to tracks, or the one currently playing in embed or youtube link form.
 
@@ -220,20 +255,37 @@ Show overview of your top tracks and albums for artist.
 > \>fm artist [timeframe] overview <artist\>
 
 Generate a visual chart of your data.    
-You can optionally specify datatype `( artist | album | recent )`, timeframe or size of the chart in any order.    
+You can optionally specify datatype `[ artist | album | recent ]`, timeframe or size of the chart.    
 Defaults to albums week 3x3.
 
-> \>fm chart    
-> \>fm chart <datatype\> <timeframe\> <NxN\>   
+> \>fm chart [datatype] [timeframe] [size]
+
+Chart that is based on a hex color instead of amount of plays
+
+> \>fm colorchart <color\> [size]
 
 Check who has listened to given artist most on this server.    
 Top listener gains a crown.
+You can also give `np` as the sole argument to any of the commands and it will use your currenctly playing song.
 
 > \>whoknows <artist\>
+
+You can also check individual songs or albums, but those will not award any crowns.
+
+> \>whoknowstrack <track\> | <artist\>
+> \>whoknowsalbum <album\> | <artist\>
+
+See what people are listening to on the server.
+
+> \>fm servernp
 
 See your artist crowns on this server.
 
 > \>crowns
+
+Report someone who is botting plays for crowns.
+
+> \>report <lastfm_username\> <reason... \>
 
 Unlink you last.fm account.
 
@@ -256,7 +308,7 @@ Shows your server activity graph per hour, along with your xp and level informat
 
 Shows your top servers with miso bot.
 
-> \>topservers
+> \>topservers [user]
 
 Show your daily/weekly/monthly/overall xp ranking
 
@@ -301,6 +353,10 @@ Get information about the server.
 Get list of all roles on the server, and information about them.
 
 > \>roleslist
+
+Server icon
+
+> \>servericon
 
 ---
 
@@ -432,10 +488,16 @@ Get big image and info about some emoji.
 Get your daily horoscope. Save your sunsign by using `set`.  
 List all sunsigns and their ranges by using `list`.
 
-> \>horoscope  
-> \>horoscope tomorrow  
+> \>horoscope [tomorrow | yesterday]
 > \>horoscope set  
 > \>horoscope list
+
+#### OPGG
+
+League of Legends summoner profile.
+
+> \>opgg profile <region\> <summoner name...\>    
+> \>opgg nowplaying <region\> <summoner name...\>    
 
 ---
 
@@ -477,7 +539,11 @@ Send message when user gets banned.
 
 Enable or disable levelup messages.
 
-> \>logger levelups <state\>
+> \>logger levelups <boolean\>
+
+Enable or disable automatic responses to certain messages.
+
+> \>autoresponses <boolean\>
 
 #### Starboard
 

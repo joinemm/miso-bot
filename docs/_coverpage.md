@@ -1,6 +1,6 @@
 ![logo](assets/icon.png)
 
-# Miso bot <small>3.8</small>
+# Miso bot <small>4.8</small>
 
 - 100+ commands
 - Twitter, Instagram, Last.fm, Gfycat, Melon
