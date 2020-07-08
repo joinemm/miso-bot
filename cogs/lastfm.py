@@ -1293,14 +1293,17 @@ async def get_np(username, ref):
     )
     song = None
     if data is not None:
-        tracks = data["recenttracks"]["track"]
-        if tracks:
-            if "@attr" in tracks[0]:
-                if "nowplaying" in tracks[0]["@attr"]:
-                    song = {
-                        "artist": tracks[0]["artist"]["#text"],
-                        "name": tracks[0]["name"],
-                    }
+        try:
+            tracks = data["recenttracks"]["track"]
+            if tracks:
+                if "@attr" in tracks[0]:
+                    if "nowplaying" in tracks[0]["@attr"]:
+                        song = {
+                            "artist": tracks[0]["artist"]["#text"],
+                            "name": tracks[0]["name"],
+                        }
+        except KeyError:
+            pass
 
     return song, ref
 

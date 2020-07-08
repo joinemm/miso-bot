@@ -1,7 +1,7 @@
 import traceback
 import discord
 import asyncio
-from discord.ext import commands
+from discord.ext import commands, flags
 from helpers import exceptions, log, utilityfunctions as util
 from data import database as db
 
@@ -86,7 +86,7 @@ class Events(commands.Cog):
                 await asyncio.sleep(5)
                 await ctx.message.delete()
 
-        elif isinstance(error, commands.BadArgument):
+        elif isinstance(error, (commands.BadArgument, flags._parser.ArgumentParsingError)):
             await ctx.send(f"```{str(error)}```")
 
         elif isinstance(error, discord.errors.Forbidden):

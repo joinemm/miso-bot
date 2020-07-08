@@ -110,7 +110,8 @@ class Events(commands.Cog):
         )
         content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")
-        await self.logchannel.send(embed=content)
+        logchannel = self.bot.get_channel(self.settings["log_channel"])
+        await logchannel.send(embed=content)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
