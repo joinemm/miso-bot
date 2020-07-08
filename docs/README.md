@@ -28,7 +28,7 @@ Get the bot's ping.
 
 See statistics of the bot.
 
-> \>system
+> \>system    
 > \>stats
 
 Github commit history.

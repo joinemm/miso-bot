@@ -1,12 +1,11 @@
 :root {
 
   --main-background: #ffffff;
-  --accent-color: #0074D9;
+  --accent-color: #ee84ca;
   --accent-color-2: #f63d7e;
   --text: #838d8a;
   --sidebar-text: #ff00aa;
   --button-hover: #dd00aa;
-
 
   --theme-color: #1FC5BF;
   --theme-color-light: #5D001E;
@@ -23,7 +22,7 @@
 body {
   font-size: 100%;
   line-height: 1.5;
-  font-family: 'Fira Code','Open Sans','Helvetica Neue',Arial,sans-serif;
+  font-family: 'Source Sans Pro','Open Sans','Helvetica Neue',Arial,sans-serif;
   background-color: var(--main-background)
 }
 
@@ -70,7 +69,7 @@ aside.sidebar {
 
 .sidebar ul li a:hover {
   text-decoration: none;
-  color: var(--button-hover);
+  color: #fff;
 }
 
 .sidebar .sidebar-nav ul li.active>a {
@@ -138,12 +137,13 @@ th {
 
 .markdown-section blockquote {
   margin: 1em 0;
+  font-family: monospace;
 }
 
 .markdown-section em,
 .markdown-section blockquote {
   color: var(--accent-color-2);
-  font-size: 1em;
+  font-size: 1.3em;
   line-height: 1.5;
 }
 
@@ -235,9 +235,10 @@ section.cover .cover-main {
 
 .markdown-section code {
   color: inherit;
-  border-radius: 0;
+  border-radius: 3px;
   font-size: 0.9em;
-  padding: 6px 10px;
+  padding: 0px 10px 3px;
+  background-color: #dfdfdf;
 }
 
 .markdown-section table {

@@ -14,5 +14,5 @@
 - [**Typing tests**](/#typing-tests)
 - [**Miscellaneous commands**](/#miscellaneous-commands)
 - [**Configuration**](/#configuration)
-  - [Member messages](/#member-join-and-leave-messages)
+  - [Member messages](/#member-messages)
   - [Starboard](/#starboard)
