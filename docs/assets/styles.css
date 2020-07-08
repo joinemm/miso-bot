@@ -1,7 +1,7 @@
 :root {
 
-  --main-background: #ddf7ff;
-  --accent-color: #ffffff;
+  --main-background: #ffffff;
+  --accent-color: #0074D9;
   --accent-color-2: #f63d7e;
   --text: #838d8a;
   --sidebar-text: #ff00aa;
@@ -23,7 +23,7 @@
 body {
   font-size: 100%;
   line-height: 1.5;
-  font-family: 'Source Sans Pro','Open Sans','Helvetica Neue',Arial,sans-serif;
+  font-family: 'Fira Code','Open Sans','Helvetica Neue',Arial,sans-serif;
   background-color: var(--main-background)
 }
 
@@ -62,7 +62,7 @@ aside.sidebar {
 }
 
 .sidebar li.active {
-  background-color: #fff;
+  background-color: var(--accent-color);
   border-radius: 10px;
   outline:none;
   text-decoration:none;
@@ -84,7 +84,6 @@ aside.sidebar {
 .sidebar-logo {
   display: block;
   width: 4rem;
-  vertical-align: bottom;
   line-height: 1.6;
   height: 4rem;
   margin: 0 auto;
@@ -137,7 +136,7 @@ th {
   text-align: left;
 }
 
-.markdown-section blockqu/?id=configurationote {
+.markdown-section blockquote {
   margin: 1em 0;
 }
 
