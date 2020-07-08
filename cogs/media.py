@@ -217,6 +217,9 @@ class Media(commands.Cog):
                 data = await response.json()
                 data = data["data"]["shortcode_media"]
 
+        if data is None:
+            return await ctx.send(":warning: Invalid instagram URI")
+
         medias = []
         try:
             for x in data["edge_sidecar_to_children"]["edges"]:
