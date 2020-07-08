@@ -411,7 +411,6 @@ class Utility(commands.Cog):
                     break
 
                 else:
-                    logger.error(response)
                     await message.edit(
                         content=":warning: There was an error while creating your gif :("
                     )

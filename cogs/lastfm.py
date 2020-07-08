@@ -981,7 +981,6 @@ class LastFm(commands.Cog):
         if track is None:
             return await util.send_command_help(ctx)
 
-        print(trackname, artistname)
         listeners = []
         tasks = []
         userslist = db.query(
@@ -1590,7 +1589,7 @@ async def get_userinfo_embed(username):
 
 
 async def scrape_artist_image(artist):
-    url = f"https://www.last.fm/music/{urllib.parse.quote_plus(artist)}/+images"
+    url = f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
     async with aiohttp.ClientSession() as session:
         data = await fetch(session, url, handling="text")
 
