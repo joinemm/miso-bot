@@ -53,6 +53,7 @@ extensions = [
     "reminders",
     "bangs",
     "opgg",
+    "webserver",
 ]
 
 
