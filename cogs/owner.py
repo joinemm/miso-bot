@@ -189,8 +189,13 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
     @commands.command()
     async def fmban(self, ctx, lastfm_username):
         """Ban someone from the leaderboards."""
-        db.execute("INSERT INTO lastfm_blacklist VALUES(?)", (lastfm_username.lower(),))
-        await ctx.send(":ok_hand: Flagged last.fm profile `{lastfm_username}` as fraudelent.")
+        data = db.query("select * from lastfm_blacklist where username = ?", (lastfm_username.lower(),))
+        if data is None:
+            db.execute("INSERT INTO lastfm_blacklist VALUES(?)", (lastfm_username.lower(),))
+            await ctx.send(f":ok_hand: Flagged lastfm profile `{lastfm_username}` as a cheater.")
+        else:
+            db.execute("DELETE FROM lastfm_blacklist WHERE username = ?", (lastfm_username.lower(),))
+            await ctx.send(f":ok_hand: Removed cheater flag from `{lastfm_username}`")
 
 
 def clean_codeblock(text):

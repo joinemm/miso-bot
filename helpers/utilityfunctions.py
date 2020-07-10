@@ -45,9 +45,7 @@ async def send_as_pages(ctx, content, rows, maxrows=15, maxpages=10):
         await ctx.send(embed=pages[0])
 
 
-async def text_based_page_switcher(
-    ctx, pages, prefix="```", suffix="```", numbers=True
-):
+async def text_based_page_switcher(ctx, pages, prefix="```", suffix="```", numbers=True):
     """
     :param ctx    : Context
     :param pages  : List of strings
@@ -92,6 +90,10 @@ async def page_switcher(ctx, pages):
     :param ctx   : Context
     :param pages : List of embeds to use as pages
     """
+
+    if len(pages) == 1:
+        return await ctx.send(embed=pages[0])
+
     pages = TwoWayIterator(pages)
 
     # add all page numbers
@@ -100,8 +102,7 @@ async def page_switcher(ctx, pages):
         if old_footer == discord.Embed.Empty:
             old_footer = None
         page.set_footer(
-            text=f"{i}/{len(pages.items)}"
-            + (f" | {old_footer}" if old_footer is not None else "")
+            text=f"{i}/{len(pages.items)}" + (f" | {old_footer}" if old_footer is not None else "")
         )
 
     msg = await ctx.send(embed=pages.current())
@@ -160,7 +161,7 @@ def create_pages(content, rows, maxrows=15, maxpages=10):
 
 
 async def reaction_buttons(
-    ctx, message, functions, timeout=300.0, only_author=False, single_use=False
+    ctx, message, functions, timeout=300.0, only_author=False, single_use=False, only_owner=False
 ):
     """Handler for reaction buttons
     :param message     : message to add reactions to
@@ -182,14 +183,16 @@ async def reaction_buttons(
             payload.message_id == message.id
             and str(payload.emoji) in functions
             and not payload.member == ctx.bot.user
-            and (payload.member == ctx.author or not only_author)
+            and (
+                (payload.member == ctx.bot.owner)
+                if only_owner
+                else (payload.member == ctx.author or not only_author)
+            )
         )
 
     while True:
         try:
-            payload = await ctx.bot.wait_for(
-                "raw_reaction_add", timeout=timeout, check=check
-            )
+            payload = await ctx.bot.wait_for("raw_reaction_add", timeout=timeout, check=check)
 
         except asyncio.TimeoutError:
             break
@@ -437,9 +440,7 @@ def escape_md(s):
     :param s : String to espace markdown from
     :return  : The escaped string
     """
-    transformations = {
-        regex.escape(c): "\\" + c for c in ("*", "`", "_", "~", "\\", "||")
-    }
+    transformations = {regex.escape(c): "\\" + c for c in ("*", "`", "_", "~", "\\", "||")}
 
     def replace(obj):
         return transformations.get(regex.escape(obj.group(0)), "")
@@ -558,11 +559,7 @@ def create_welcome_embed(user, guild, messageformat):
     content.timestamp = datetime.datetime.utcnow()
     content.set_footer(text=f"👤#{len(guild.members)}")
     content.description = messageformat.format(
-        mention=user.mention,
-        user=user,
-        id=user.id,
-        server=guild.name,
-        username=user.name,
+        mention=user.mention, user=user, id=user.id, server=guild.name, username=user.name,
     )
     return content
 
@@ -570,11 +567,7 @@ def create_welcome_embed(user, guild, messageformat):
 def create_goodbye_message(user, guild, messageformat):
     """Formats a goodbye message."""
     return messageformat.format(
-        mention=user.mention,
-        user=user,
-        id=user.id,
-        server=guild.name,
-        username=user.name,
+        mention=user.mention, user=user, id=user.id, server=guild.name, username=user.name,
     )
 
 
@@ -626,11 +619,7 @@ def activities_string(activities, markdown=True, show_emoji=True):
         elif base_activity.type == discord.ActivityType.watching:
             prefix = "Watching"
 
-        message = (
-            prefix
-            + " "
-            + (f"**{base_activity.name}**" if markdown else base_activity.name)
-        )
+        message = prefix + " " + (f"**{base_activity.name}**" if markdown else base_activity.name)
 
     text = ""
     if emoji is not None and show_emoji:
