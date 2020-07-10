@@ -1136,11 +1136,11 @@ class LastFm(commands.Cog):
     @commands.command()
     async def report(self, ctx, lastfm_username, *, reason):
         """Report someone who is botting plays."""
-        reports_channel = self.bot.get_channel(729736304677486723)
-        if reports_channel is None:
-            return await ctx.send(":warning: Something went wrong.")
-
+        lastfm_username = lastfm_username.strip('/').split('/')[-1]
         url = f"https://www.last.fm/user/{lastfm_username}"
+        data = await api_request({"user": lastfm_username, "method": "user.getinfo"}, ignore_errors=True)
+        if data is None:
+            return await ctx.send(f":warning: `{url}` is not a valid last.fm profile.")
 
         content = discord.Embed(title="New Last.fm user report")
         content.add_field(name="Profile", value=url)
@@ -1157,22 +1157,23 @@ class LastFm(commands.Cog):
         async def confirm_ban():
             content.add_field(
                 name="Reported by",
-                value=f"**{ctx.author}** {ctx.author.mention} `{ctx.author.id}`",
+                value=f"{ctx.author} (`{ctx.author.id}`)",
+                inline=False
             )
             data = db.query(
-                "select user_id from users where lastfm_username = ?", (lastfm_username,)
+                "select user_id from users where LOWER(lastfm_username) = ?", (lastfm_username.lower(),)
             )
             if data is not None:
                 connected_accounts = []
                 for x in data:
                     user = self.bot.get_user(x[0])
-                    connected_accounts.append(f"{user}(`{user.id}`)")
+                    connected_accounts.append(f"{user} (`{user.id}`)")
 
-                content.add_field(name="Connected by", value=", ".join(connected_accounts))
+                content.add_field(name="Connected by", value=", ".join(connected_accounts), inline=False)
             content.set_footer(text=f">fmban {lastfm_username}")
             content.description = ""
 
-            await reports_channel.send(embed=content)
+            await self.send_report(ctx, content, lastfm_username)
             await msg.edit(content="📨 Report sent!", embed=None)
 
         async def cancel_ban():
@@ -1182,6 +1183,30 @@ class LastFm(commands.Cog):
 
         asyncio.ensure_future(
             util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+        )
+
+    async def send_report(self, ctx, content, lastfm_username):
+        reports_channel = self.bot.get_channel(648153195356356619)#729736304677486723)
+        if reports_channel is None:
+            return await ctx.send(":warning: Something went wrong.")
+
+        msg = await reports_channel.send(embed=content)
+
+        async def confirm_ban():
+            db.execute("INSERT INTO lastfm_blacklist VALUES(?)", (lastfm_username.lower(),))
+            content.description = "Account flagged"
+            content.color = discord.Color.green()
+            await msg.edit(embed=content)
+
+        async def cancel_ban():
+            content.description = "Report ignored"
+            content.color = discord.Color.red()
+            await msg.edit(embed=content)
+
+        functions = {"✅": confirm_ban, "❌": cancel_ban}
+
+        asyncio.ensure_future(
+            util.reaction_buttons(ctx, msg, functions, single_use=True, only_owner=True)
         )
 
 
