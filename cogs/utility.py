@@ -23,6 +23,7 @@ GFYCAT_CLIENT_ID = os.environ.get("GFYCAT_CLIENT_ID")
 GFYCAT_SECRET = os.environ.get("GFYCAT_SECRET")
 STREAMABLE_USER = os.environ.get("STREAMABLE_USER")
 STREAMABLE_PASSWORD = os.environ.get("STREAMABLE_PASSWORD")
+THESAURUS_KEY = os.environ.get("THESAURUS_KEY")
 
 
 papago_pairs = [
@@ -148,6 +149,42 @@ class Utility(commands.Cog):
         content.set_footer(text=f"🕐 Local time {localtime}")
         await ctx.send(embed=content)
 
+    @commands.command(aliases=["synonyms", "synonym"])
+    async def thesaurus(self, ctx, *, word):
+        """Get synonyms for a word."""
+        url = f"https://www.dictionaryapi.com/api/v3/references/thesaurus/json/{word}"
+        params = {"key": THESAURUS_KEY}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url=url, params=params) as response:
+                data = await response.json()
+
+        if isinstance(data[0], dict):
+            api_icon = "https://dictionaryapi.com/images/MWLogo_120x120_2x.png"
+            pages = []
+            for definition in data:
+                base_word = definition["hwi"]["hw"]
+                fl = definition["fl"]
+                offensive = definition["meta"]["offensive"]
+                syns = definition["meta"]["syns"][0]
+                content = discord.Embed(color=int("d71921", 16))
+                content.set_author(
+                    name=f"{base_word.capitalize()}, {fl}" + (" (offensive)" if offensive else ""),
+                    icon_url=api_icon,
+                )
+                content.description = ",\n".join(x.capitalize() for x in definition["shortdef"])
+                content.add_field(name="Synonyms", value=", ".join(syns))
+                pages.append(content)
+
+            await util.page_switcher(ctx, pages)
+
+        else:
+            if len(data) > 5:
+                data = data[:5]
+
+            suggestions = ", ".join(f"`{x}`" for x in data)
+
+            await ctx.send(f"Did you mean: {suggestions}?")
+
     @commands.command()
     async def define(self, ctx, *, word):
         """Search for a definition from oxford dictionary."""
@@ -160,18 +197,14 @@ class Utility(commands.Cog):
         }
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"{api_url}lemmas/en/{word}", headers=headers
-            ) as response:
+            async with session.get(f"{api_url}lemmas/en/{word}", headers=headers) as response:
                 data = await response.json()
 
         # searched for word id, now use the word id to get definition
         all_entries = []
 
         if data.get("results"):
-            definitions_embed = discord.Embed(
-                colour=discord.Colour.from_rgb(0, 189, 242)
-            )
+            definitions_embed = discord.Embed(colour=discord.Colour.from_rgb(0, 189, 242))
             definitions_embed.description = ""
 
             found_word = data["results"][0]["id"]
@@ -186,23 +219,17 @@ class Utility(commands.Cog):
                 name = data["results"][0]["word"]
 
                 for i in range(len(entry["entries"][0]["senses"])):
-                    for definition in entry["entries"][0]["senses"][i].get(
-                        "definitions", []
-                    ):
+                    for definition in entry["entries"][0]["senses"][i].get("definitions", []):
                         this_top_level_definition = f"\n**{i + 1}.** {definition}"
                         if len(definitions_value + this_top_level_definition) > 1024:
                             break
                         definitions_value += this_top_level_definition
                         try:
-                            for y in range(
-                                len(entry["entries"][0]["senses"][i]["subsenses"])
-                            ):
-                                for subdef in entry["entries"][0]["senses"][i][
-                                    "subsenses"
-                                ][y]["definitions"]:
-                                    this_definition = (
-                                        f"\n**└ {i + 1}.{y + 1}.** {subdef}"
-                                    )
+                            for y in range(len(entry["entries"][0]["senses"][i]["subsenses"])):
+                                for subdef in entry["entries"][0]["senses"][i]["subsenses"][y][
+                                    "definitions"
+                                ]:
+                                    this_definition = f"\n**└ {i + 1}.{y + 1}.** {subdef}"
                                     if len(definitions_value + this_definition) > 1024:
                                         break
                                     definitions_value += this_definition
@@ -326,9 +353,7 @@ class Utility(commands.Cog):
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, headers=headers, data=params) as response:
-                    translation = (await response.json())["message"]["result"][
-                        "translatedText"
-                    ]
+                    translation = (await response.json())["message"]["result"]["translatedText"]
 
         else:
             # use google
@@ -346,9 +371,7 @@ class Utility(commands.Cog):
                     data = await response.json()
 
             try:
-                translation = html.unescape(
-                    data["data"]["translations"][0]["translatedText"]
-                )
+                translation = html.unescape(data["data"]["translations"][0]["translatedText"])
             except KeyError:
                 return await ctx.send("Sorry, I could not translate this :(")
 
@@ -430,9 +453,7 @@ class Utility(commands.Cog):
         headers = {"User-Agent": util.useragent()}
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(
-                url, params=params, auth=auth, headers=headers
-            ) as response:
+            async with session.get(url, params=params, auth=auth, headers=headers) as response:
                 if response.status != 200:
                     try:
                         data = await response.json()
@@ -450,9 +471,7 @@ class Utility(commands.Cog):
 
                 data = await response.json()
                 link = "https://streamable.com/" + data.get("shortcode")
-                message = await ctx.send(
-                    "Processing Video <a:loading:643419324941336587>"
-                )
+                message = await ctx.send("Processing Video <a:loading:643419324941336587>")
 
         i = 1
         await asyncio.sleep(5)
