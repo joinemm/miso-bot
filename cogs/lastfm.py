@@ -347,14 +347,18 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @fm.command(aliases=["recents", "re"])
-    async def recent(self, ctx, size: int = 15):
+    async def recent(self, ctx, size="15"):
         """
         Recently listened tracks.
 
         Usage:
             >fm recent [amount]
         """
-        size = abs(size)
+        try:
+            size = abs(int(size))
+        except ValueError:
+            size = 15
+
         data = await api_request(
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": size}
         )
@@ -403,6 +407,10 @@ class LastFm(commands.Cog):
             period = "overall"
 
         artistname = remove_mentions(artistname)
+        if artistname.lower() == "np":
+            artistname = (await getnowplaying(ctx))["artist"]
+            if artistname is None:
+                return await ctx.send(":warning: Could not get currently playing artist!")
 
         if artistname == "":
             return await ctx.send("Missing artist name!")
@@ -886,12 +894,14 @@ class LastFm(commands.Cog):
             >whoknows <artist name>
             >whoknows np
         """
-        if artistname is not None:
-            artistname = remove_mentions(artistname)
-            if artistname.lower() == "np":
-                artistname = (await getnowplaying(ctx))["artist"]
         if artistname is None:
             return await util.send_command_help(ctx)
+
+        artistname = remove_mentions(artistname)
+        if artistname.lower() == "np":
+            artistname = (await getnowplaying(ctx))["artist"]
+            if artistname is None:
+                return await ctx.send(":warning: Could not get currently playing artist!")
 
         listeners = []
         tasks = []
@@ -964,22 +974,24 @@ class LastFm(commands.Cog):
             >whoknowstrack <track name> | <artist name>
             >whoknowstrack np
         """
-        if track is not None:
-            track = remove_mentions(track)
-            if track.lower() == "np":
-                npd = await getnowplaying(ctx)
-                trackname = npd["track"]
-                artistname = npd["artist"]
-            else:
-                try:
-                    trackname, artistname = [x.strip() for x in track.split("|")]
-                    if trackname == "" or artistname == "":
-                        raise ValueError
-                except ValueError:
-                    return await ctx.send(":warning: Incorrect format! use `track | artist`")
-
         if track is None:
             return await util.send_command_help(ctx)
+
+        track = remove_mentions(track)
+        if track.lower() == "np":
+            npd = await getnowplaying(ctx)
+            trackname = npd["track"]
+            artistname = npd["artist"]
+            if None in [trackname, artistname]:
+                return await ctx.send(":warning: Could not get currently playing track!")
+        else:
+            try:
+                trackname, artistname = [x.strip() for x in track.split("|")]
+                if trackname == "" or artistname == "":
+                    raise ValueError
+            except ValueError:
+                return await ctx.send(":warning: Incorrect format! use `track | artist`")
+
 
         listeners = []
         tasks = []
@@ -1040,22 +1052,23 @@ class LastFm(commands.Cog):
             >whoknowsalbum <album name> | <artist name>
             >whoknowsalbum np
         """
-        if album is not None:
-            album = remove_mentions(album)
-            if album.lower() == "np":
-                npd = await getnowplaying(ctx)
-                albumname = npd["album"]
-                artistname = npd["artist"]
-            else:
-                try:
-                    albumname, artistname = [x.strip() for x in album.split("|")]
-                    if albumname == "" or artistname == "":
-                        raise ValueError
-                except ValueError:
-                    return await ctx.send(":warning: Incorrect format! use `album | artist`")
-
         if album is None:
             return await util.send_command_help(ctx)
+
+        album = remove_mentions(album)
+        if album.lower() == "np":
+            npd = await getnowplaying(ctx)
+            albumname = npd["album"]
+            artistname = npd["artist"]
+            if None in [albumname, artistname]:
+                return await ctx.send(":warning: Could not get currently playing album!")
+        else:
+            try:
+                albumname, artistname = [x.strip() for x in album.split("|")]
+                if albumname == "" or artistname == "":
+                    raise ValueError
+            except ValueError:
+                return await ctx.send(":warning: Incorrect format! use `album | artist`")
 
         listeners = []
         tasks = []
