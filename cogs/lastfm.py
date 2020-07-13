@@ -391,6 +391,22 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @fm.command()
+    async def last(self, ctx, timeframe):
+        """
+        Your week/month/year listening overview.
+
+        Usage:
+            >fm last week
+            >fm last month
+            >fm last year
+        """
+        timeframe = timeframe.lower()
+        if timeframe not in ["week", "month", "year"]:
+            return await ctx.send(f":warning: Invalid timeframe `{timeframe}`")
+
+        await listening_overview(ctx, timeframe)
+
+    @fm.command()
     async def artist(self, ctx, timeframe, datatype, *, artistname=""):
         """
         Artist specific playcounts and info.
@@ -992,7 +1008,6 @@ class LastFm(commands.Cog):
             except ValueError:
                 return await ctx.send(":warning: Incorrect format! use `track | artist`")
 
-
         listeners = []
         tasks = []
         userslist = db.query(
@@ -1149,9 +1164,11 @@ class LastFm(commands.Cog):
     @commands.command()
     async def report(self, ctx, lastfm_username, *, reason):
         """Report someone who is botting plays."""
-        lastfm_username = lastfm_username.strip('/').split('/')[-1]
+        lastfm_username = lastfm_username.strip("/").split("/")[-1]
         url = f"https://www.last.fm/user/{lastfm_username}"
-        data = await api_request({"user": lastfm_username, "method": "user.getinfo"}, ignore_errors=True)
+        data = await api_request(
+            {"user": lastfm_username, "method": "user.getinfo"}, ignore_errors=True
+        )
         if data is None:
             return await ctx.send(f":warning: `{url}` is not a valid last.fm profile.")
 
@@ -1169,12 +1186,11 @@ class LastFm(commands.Cog):
 
         async def confirm_ban():
             content.add_field(
-                name="Reported by",
-                value=f"{ctx.author} (`{ctx.author.id}`)",
-                inline=False
+                name="Reported by", value=f"{ctx.author} (`{ctx.author.id}`)", inline=False
             )
             data = db.query(
-                "select user_id from users where LOWER(lastfm_username) = ?", (lastfm_username.lower(),)
+                "select user_id from users where LOWER(lastfm_username) = ?",
+                (lastfm_username.lower(),),
             )
             if data is not None:
                 connected_accounts = []
@@ -1182,7 +1198,9 @@ class LastFm(commands.Cog):
                     user = self.bot.get_user(x[0])
                     connected_accounts.append(f"{user} (`{user.id}`)")
 
-                content.add_field(name="Connected by", value=", ".join(connected_accounts), inline=False)
+                content.add_field(
+                    name="Connected by", value=", ".join(connected_accounts), inline=False
+                )
             content.set_footer(text=f">fmban {lastfm_username}")
             content.description = ""
 
@@ -1199,7 +1217,7 @@ class LastFm(commands.Cog):
         )
 
     async def send_report(self, ctx, content, lastfm_username):
-        reports_channel = self.bot.get_channel(648153195356356619)#729736304677486723)
+        reports_channel = self.bot.get_channel(648153195356356619)  # 729736304677486723)
         if reports_channel is None:
             return await ctx.send(":warning: Something went wrong.")
 
@@ -1313,10 +1331,10 @@ async def get_playcount(artist, username, reference=None):
     )
     try:
         count = int(data["artist"]["stats"]["userplaycount"])
-        name = data["artist"]["name"]
     except KeyError:
         count = 0
-        name = None
+
+    name = data["artist"]["name"]
 
     if reference is None:
         return count
@@ -1603,7 +1621,9 @@ async def get_userinfo_embed(username):
         return None
 
     username = data["user"]["name"]
-    blacklisted = db.query("select * from lastfm_blacklist where username = ?", (username.lower(),))
+    blacklisted = db.query(
+        "select * from lastfm_blacklist where username = ?", (username.lower(),)
+    )
     playcount = data["user"]["playcount"]
     profile_url = data["user"]["url"]
     profile_pic_url = data["user"]["image"][3]["#text"]
@@ -1712,6 +1732,72 @@ async def username_to_ctx(ctx):
             raise util.ErrorMessage(
                 f":warning: **{ctx.usertarget.name}** has not saved their lastfm username."
             )
+
+
+async def listening_overview(ctx, timeframe):
+    rows = []
+    async with aiohttp.ClientSession() as session:
+        url = f"https://last.fm/user/{ctx.username}/listening-report/{timeframe}"
+        data = await fetch(session, url, handling="text")
+        soup = BeautifulSoup(data, "html.parser")
+
+        # profile quick numbers
+        scrobbles = (
+            soup.find("div", {"class": "user-dashboard-data-point-scrobbles"})
+            .find("a")
+            .find("span", {"class": "js-ticker"})
+            .get("data-value")
+        )
+        per_day = (
+            soup.find("div", {"class": "user-dashboard-data-point-scrobbles-per-day"})
+            .find("span", {"class": "js-ticker"})
+            .get("data-value")
+        )
+        timetotal = (
+            soup.find("div", {"class": "user-dashboard-data-point-total-listening"})
+            .find("span", {"class": "duration-data"})
+            .text.strip().split()
+        )
+        timetotal = " ".join([timetotal[0], timetotal[2], timetotal[3], timetotal[5]])
+
+        # day/month chart
+        barchart_tbody = soup.find("table", {"class": "js-scrobble-stats-history-data"}).find(
+            "tbody"
+        )
+        if timeframe == "week":
+            datefmt = "MMM Do"
+        elif timeframe == "month":
+            datefmt = "Do"
+        elif timeframe == "year":
+            datefmt = "MMMM"
+
+        for tr in barchart_tbody.findAll("tr"):
+            scrobble_td = tr.find("td", {"data-scrobble-count-tooltip": True})
+            timestamp = int(
+                scrobble_td.get("data-library-url").split("?from=")[1].split("&")[0]
+            )
+            date = arrow.get(timestamp).format(fmt=datefmt)
+            scrobble_count = scrobble_td.text.strip()
+            rows.append(
+                f"`{date}`: **{scrobble_count}** Scrobbles, **TBD** Hours, **TBD** Minutes"
+            )
+
+        # top tags for the week
+        top_tags = []
+        tag_tbody = soup.find("table", {"class": "js-tube-tags-table"}).find("tbody")
+        for tr in tag_tbody.findAll("tr"):
+            td = tr.findAll("td")[-1]
+            tag = td.find("a").text.strip()
+            top_tags.append(tag)
+
+    content = discord.Embed(color=discord.Color.red())
+    content.set_author(name=f"{ctx.username} | LAST.{timeframe.upper()}", icon_url=ctx.usertarget.avatar_url)
+    content.description = "\n".join(rows)
+    content.add_field(name="Top tags", value=", ".join(top_tags), inline=False)
+    content.add_field(name="Scrobbles", value=scrobbles)
+    content.add_field(name="Per day", value=per_day)
+    content.add_field(name="Listening time", value=timetotal)
+    await ctx.send(embed=content)
 
 
 def remove_mentions(text):
