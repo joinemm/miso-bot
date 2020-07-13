@@ -9,22 +9,27 @@ class WebServer(commands.Cog):
         self.bot = bot
         self.running = False
         self.app = web.Application()
-        self.app.router.add_get("/ping", self.ping_handler)
         self.app.router.add_get("/", self.index)
+        self.app.router.add_get("/guilds", self.guild_count)
+        self.app.router.add_get("/ping", self.ping_handler)
 
     @commands.Cog.listener()
     async def on_ready(self):
-        with open("polls.yaml") as f:
-            config = yaml.safe_load(f)
+        if not self.running:
+            with open("polls.yaml") as f:
+                config = yaml.safe_load(f)
 
-        asyncio.ensure_future(web._run_app(self.app, host=config["host"], port=config["port"]))
-        self.running = True
+            asyncio.ensure_future(web._run_app(self.app, host=config["host"], port=config["port"]))
+            self.running = True
 
     async def index(self, request):
         return web.Response(text="Hi I'm Miso Bot!")
 
     async def ping_handler(self, request):
-        return web.Response(text="pong")
+        return web.Response(text=f"{self.bot.latency*1000}")
+
+    async def guild_count(self, request):
+        return web.Response(text=f"{len(self.bot.guilds)}")
 
 
 def setup(bot):
