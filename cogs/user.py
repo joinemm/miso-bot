@@ -103,7 +103,7 @@ class User(commands.Cog):
         activity = util.activities_string(user.activities)
 
         content = discord.Embed()
-        content.title = f"{user.name}#{user.discriminator} | #{user.id}"
+        content.title = f"{escape_formatting_chars(user.name)}#{user.discriminator} | #{user.id}"
         content.set_thumbnail(url=user.avatar_url)
         content.add_field(name="Status", value=status)
         content.add_field(name="Activity", value=activity)
@@ -169,12 +169,12 @@ class User(commands.Cog):
             ctx.guild.members, key=lambda x: x.joined_at, reverse=True
         )
 
-        content = discord.Embed(title=f"{ctx.guild.name} members")
+        content = discord.Embed(title=f"{escape_formatting_chars(ctx.guild.name)} members")
         rows = []
         for i, member in enumerate(sorted_members):
             jointime = member.joined_at.strftime("%y%m%d %H:%M")
             rows.append(
-                f"[`{jointime}`] **#{len(sorted_members)-i}** : **{member.name}**"
+                f"[`{jointime}`] **#{len(sorted_members)-i}** : **{escape_formatting_chars(member.name)}**"
             )
 
         await util.send_as_pages(ctx, content, rows)
@@ -186,10 +186,10 @@ class User(commands.Cog):
         content = discord.Embed(
             color=int(await util.color_from_image_url(image_small), 16)
         )
-        content.title = f"**{ctx.guild.name}** | #{ctx.guild.id}"
+        content.title = f"**{escape_formatting_chars(ctx.guild.name)}** | #{ctx.guild.id}"
         content.add_field(
             name="Owner",
-            value=f"{ctx.guild.owner.name}#{ctx.guild.owner.discriminator}",
+            value=f"{escape_formatting_chars(ctx.guild.owner.name)}#{ctx.guild.owner.discriminator}",
         )
         content.add_field(name="Region", value=str(ctx.guild.region))
         content.add_field(
@@ -210,7 +210,7 @@ class User(commands.Cog):
     @commands.command()
     async def roleslist(self, ctx):
         """List the roles of this server."""
-        content = discord.Embed(title=f"Roles in {ctx.message.guild.name}")
+        content = discord.Embed(title=f"Roles in {escape_formatting_chars(ctx.message.guild.name)}")
         rows = []
         for role in reversed(ctx.message.guild.roles):
             rows.append(
@@ -265,7 +265,7 @@ class User(commands.Cog):
 
         content = discord.Embed(color=user.color)
         content.set_author(
-            name=f"XP Rankings for {user.name}", icon_url=user.avatar_url
+            name=f"XP Rankings for {escape_formatting_chars(user.name)}", icon_url=user.avatar_url
         )
 
         for globalrank in [False, True]:
@@ -302,7 +302,7 @@ class User(commands.Cog):
             if guild is None:
                 guild = guild_id
             else:
-                guild = guild.name
+                guild = escape_formatting_chars(guild.name)
 
             level = util.get_level(xp)
             total_xp += xp
@@ -310,7 +310,7 @@ class User(commands.Cog):
 
         content = discord.Embed()
         content.set_author(
-            name=f"{user.name}'s top servers", icon_url=ctx.author.avatar_url
+            name=f"{escape_formatting_chars(user.name)}'s top servers", icon_url=ctx.author.avatar_url
         )
         content.set_footer(text=f"Global level {util.get_level(total_xp)}")
         content.colour = ctx.author.color
@@ -344,14 +344,14 @@ class User(commands.Cog):
             else:
                 ranking = f"`{rank}.`"
 
-            rows.append(f"{ranking} {user.name} - **{fishy}** fishy")
+            rows.append(f"{ranking} {escape_formatting_chars(user.name)} - **{fishy}** fishy")
             rank += 1
 
         if not rows:
             return await ctx.send("Nobody has been fishing yet on this server!")
 
         content = discord.Embed(
-            title=f"{'global' if _global_ else ctx.guild.name} fishy leaderboard",
+            title=f"{'global' if _global_ else escape_formatting_chars(ctx.guild.name)} fishy leaderboard",
             color=discord.Color.blue(),
         )
         await util.send_as_pages(ctx, content, rows)
@@ -377,8 +377,8 @@ class User(commands.Cog):
                 rank = f"`{i}.`"
 
             rows.append(
-                f"{rank} **{row[4]} Kg** caught by **{fisher}**"
-                + (f" for **{receiver}**" if receiver is not None else "")
+                f"{rank} **{row[4]} Kg** caught by **{escape_formatting_chars(fisher)}**"
+                + (f" for **{escape_formatting_chars(receiver)}**" if receiver is not None else "")
             )
 
         await util.send_as_pages(ctx, content, rows)
@@ -428,11 +428,11 @@ class User(commands.Cog):
             rows.append(
                 f"`#{i:2}` "
                 + (f"LVL **{util.get_level(xp)}** - " if time is None else "")
-                + f"**{user.name}** `[{xp} XP | {messages} messages]`"
+                + f"**{escape_formatting_chars(user.name)}** `[{xp} XP | {messages} messages]`"
             )
 
         content = discord.Embed(color=discord.Color.teal())
-        content.title = f"{'Global' if _global_ else guild.name} levels leaderboard"
+        content.title = f"{'Global' if _global_ else escape_formatting_chars(guild.name)} levels leaderboard"
         if time is not None:
             content.title += f" - {time}"
         await util.send_as_pages(ctx, content, rows)
@@ -476,7 +476,7 @@ class User(commands.Cog):
             else:
                 ranking = f"`{i}.`"
             rows.append(
-                f"{ranking} **{int(wpm)}** WPM — **{user.name}** ( {arrow.get(timestamp).humanize()} )"
+                f"{ranking} **{int(wpm)}** WPM — **{escape_formatting_chars(user.name)}** ( {arrow.get(timestamp).humanize()} )"
             )
         content = discord.Embed(
             title=":keyboard: WPM Leaderboard", color=discord.Color.orange()
@@ -503,11 +503,11 @@ class User(commands.Cog):
 
             rows.append(
                 (f"`{rank}:`" if rank > 1 else ":crown:")
-                + f" **{count}** crowns - **{user.name}**"
+                + f" **{count}** crowns - **{escape_formatting_chars(user.name)}**"
             )
             rank += 1
         content = discord.Embed(color=discord.Color.gold())
-        content.title = f"{ctx.guild.name} artist crowns leaderboard"
+        content.title = f"{escape_formatting_chars(ctx.guild.name)} artist crowns leaderboard"
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
