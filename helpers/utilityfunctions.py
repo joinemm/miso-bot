@@ -654,3 +654,9 @@ class TwoWayIterator:
 
     def current(self):
         return self.items[self.index]
+
+# people with `, *, etc, in their usernames break a ton of formatting
+def sanitize_formatting_chars(s):
+    for c in ["*", "_", "`", "~", ">"]: # frankly im not sure if > has any effect in embeds but i'll leave it here
+        s = s.replace(c, "\\" + c)
+    return s
