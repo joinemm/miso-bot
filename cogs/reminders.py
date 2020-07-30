@@ -20,7 +20,10 @@ class Reminders(commands.Cog):
 
     @tasks.loop(seconds=1.0)
     async def reminder_loop(self):
-        await self.check_reminders()
+        try:
+            await self.check_reminders()
+        except Exception as e:
+            logger.error(f"reminder loop error: {e}")
 
     @reminder_loop.before_loop
     async def before_reminder_loop(self):
@@ -50,15 +53,21 @@ class Reminders(commands.Cog):
                 if guild is None:
                     guild = "Deleted guild"
                 date = arrow.get(created_on)
-                try:
-                    await user.send(
-                        f":alarm_clock: The reminder you set {date.humanize()} "
-                        f"`[ {date.format('DD/MM/YYYY HH:mm:ss')} ]` "
-                        f"in **{guild}** has expired!\n> {thing}\nContext: {message_link}"
+                if now - reminder[3] > 86400:
+                    logger.info(
+                        f"deleting reminder set for {date.format('DD/MM/YYYY HH:mm:ss')} for being 24 hours late"
                     )
-                    logger.info(f'reminded {user} to "{thing}"')
-                except discord.errors.Forbidden:
-                    logger.warning(f"Unable to remind {user}, missing permissions")
+                else:
+
+                    try:
+                        await user.send(
+                            f":alarm_clock: The reminder you set {date.humanize()} "
+                            f"`[ {date.format('DD/MM/YYYY HH:mm:ss')} ]` "
+                            f"in **{guild}** has expired!\n> {thing}\nContext: {message_link}"
+                        )
+                        logger.info(f'reminded {user} to "{thing}"')
+                    except discord.errors.Forbidden:
+                        logger.warning(f"Unable to remind {user}, missing permissions")
             else:
                 logger.info(f"deleted expired reminder by unknown user {user_id}")
 
@@ -96,9 +105,7 @@ class Reminders(commands.Cog):
             date = now.shift(seconds=+seconds)
 
         else:
-            return await ctx.send(
-                f"Invalid prefix `{pre}`\nUse `on` for date and `in` for time"
-            )
+            return await ctx.send(f"Invalid prefix `{pre}`\nUse `on` for date and `in` for time")
 
         db.execute(
             "INSERT INTO reminders VALUES(?, ?, ?, ?, ?, ?)",
