@@ -1,4 +1,5 @@
 import discord
+import json
 import aiohttp
 import os
 import html
@@ -9,7 +10,6 @@ from bs4 import BeautifulSoup
 from discord.ext import commands
 from data import database as db
 from helpers import log, utilityfunctions as util
-
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
 DARKSKY_API_KEY = os.environ.get("DARK_SKY_KEY")
@@ -24,6 +24,7 @@ GFYCAT_SECRET = os.environ.get("GFYCAT_SECRET")
 STREAMABLE_USER = os.environ.get("STREAMABLE_USER")
 STREAMABLE_PASSWORD = os.environ.get("STREAMABLE_PASSWORD")
 THESAURUS_KEY = os.environ.get("THESAURUS_KEY")
+FINNHUB_TOKEN = os.environ.get("FINNHUB_TOKEN")
 
 
 papago_pairs = [
@@ -496,9 +497,97 @@ class Utility(commands.Cog):
                     await asyncio.sleep(i)
                     i += 1
 
+    @commands.command()
+    async def stock(self, ctx, *, symbol):
+        """
+        Get price data for the US stock market.
+
+        Usage:
+            >stock $<symbol>
+            >stock <company>
+
+        Example:
+            >stock $TSLA
+            >stock Tesla
+        """
+        async with aiohttp.ClientSession() as session:
+            if not symbol.startswith("$"):
+                # make search
+                url = "http://d.yimg.com/autoc.finance.yahoo.com/autoc"
+                yahoo_param = {
+                    "query": symbol,
+                    "region": 1,
+                    "lang": "en",
+                    "callback": "YAHOO.Finance.SymbolSuggest.ssCallback",
+                }
+
+                async with session.get(url, params=yahoo_param) as response:
+                    search_data = await response.text()
+                    search_data = search_data.replace(yahoo_param["callback"], "")
+                    search_data = json.loads(search_data.strip("();"))
+
+                companies = search_data["ResultSet"]["Result"]
+                if not companies:
+                    return await ctx.send("Found nothing!")
+                result = companies[0]
+
+                symbol = result["symbol"]
+
+            params = {"symbol": symbol.strip("$"), "token": FINNHUB_TOKEN}
+
+            url = "https://finnhub.io/api/v1/quote"
+            async with session.get(url, params=params) as response:
+                quote_data = await response.json()
+
+            error = quote_data.get("error")
+            if error is not None:
+                return await ctx.send(error)
+
+            url = "https://finnhub.io/api/v1/stock/profile2"
+            params['symbol'] = profile_ticker(params['symbol'])
+            async with session.get(url, params=params) as response:
+                company_profile = await response.json()
+
+        change = float(quote_data["c"]) - float(quote_data["pc"])
+        gains = change > 0
+        if gains:
+            tri = "<:green_triangle_up:733281394364514407>"
+        else:
+            tri = "<:red_triangle_down:733281284012638260>"
+
+        def getcur(s):
+            return f"${quote_data[s]}"
+
+        if company_profile.get('name') is not None:
+            content = discord.Embed(title=f"${company_profile['ticker']} | {company_profile['name']}")
+            content.set_thumbnail(url=company_profile.get("logo"))
+            content.set_footer(text=company_profile["exchange"])
+        else:
+            content = discord.Embed(title=f"${symbol}")
+
+        content.add_field(name="Change", value=f"{'+$' if gains else '-$'}{abs(change):.2f}{tri}")
+        content.add_field(name="Open", value=getcur("o"))
+        content.add_field(name="Previous close", value=getcur("pc"))
+
+        content.add_field(name="Current price", value=getcur("c"))
+        content.add_field(name="High", value=getcur("h"))
+        content.add_field(name="Low", value=getcur("l"))
+
+        content.colour = discord.Color.green() if gains else discord.Color.red()
+        content.timestamp = arrow.get(quote_data["t"]).datetime
+
+        await ctx.send(embed=content)
+
 
 def setup(client):
     client.add_cog(Utility(client))
+
+
+def profile_ticker(ticker):
+    subs = {
+        "GOOG": "GOOGL"
+    }
+    return subs.get(ticker) or ticker
 
 
 async def get_timezone(coord, clocktype="12hour"):
