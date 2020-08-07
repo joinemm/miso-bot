@@ -397,7 +397,7 @@ class LastFm(commands.Cog):
 
         Usage:
             >fm last week
-            >fm last month
+            >fm last month (requires lastfm pro)
             >fm last year
         """
         timeframe = timeframe.lower()
@@ -445,6 +445,7 @@ class LastFm(commands.Cog):
 
         artist, data = await self.artist_top(ctx, period, artistname, datatype)
         if artist is None or not data:
+            artistname = util.escape_md(artistname)
             if period == "overall":
                 return await ctx.send(f"You have never listened to **{artistname}**!")
             else:
@@ -527,7 +528,9 @@ class LastFm(commands.Cog):
                 albumsdiv, tracksdiv, _ = soup.findAll(
                     "tbody", {"data-playlisting-add-entries": ""}
                 )
+
             except ValueError:
+                artistname = util.escape_md(artistname)
                 if period == "overall":
                     return await ctx.send(f"You have never listened to **{artistname}**!")
                 else:
@@ -738,18 +741,20 @@ class LastFm(commands.Cog):
                 for alb in nearest
             ]
 
-        await self.chart_factory(final_albums, width, height, show_labels=False)
+        buffer = await self.chart_factory(final_albums, width, height, show_labels=False)
 
-        with open("downloads/fmchart.jpeg", "rb") as img:
-            await ctx.send(
-                f"`{ctx.username} album color chart for {colour}`"
-                + (
-                    f"\n`{len(to_fetch)} fetched, {len(albumcolors)-len(to_fetch)} from cache`"
-                    if to_fetch
-                    else ""
-                ),
-                file=discord.File(img),
-            )
+        await ctx.send(
+            f"`{ctx.username} album color chart for {colour}`"
+            + (
+                f"\n`{len(to_fetch)} fetched, {len(albumcolors)-len(to_fetch)} from cache`"
+                if to_fetch
+                else ""
+            ),
+            file=discord.File(
+                fp=buffer, filename=f"fmcolorchart_{ctx.username}_{str(colour).strip('#')}.jpeg"
+            ),
+        )
+
         if warn is not None:
             await warn.delete()
 
@@ -810,14 +815,15 @@ class LastFm(commands.Cog):
                 artist = track["artist"]["#text"]
                 chart.append((track["image"][3]["#text"], f"{name} - {artist}"))
 
-        await self.chart_factory(chart, arguments["width"], arguments["height"])
+        buffer = await self.chart_factory(chart, arguments["width"], arguments["height"])
 
-        with open("downloads/fmchart.jpeg", "rb") as img:
-            await ctx.send(
-                f"`{ctx.username} {humanized_period(arguments['period'])} "
-                f"{arguments['width']}x{arguments['height']} {chart_type} chart`",
-                file=discord.File(img),
-            )
+        await ctx.send(
+            f"`{ctx.username} {humanized_period(arguments['period'])} "
+            f"{arguments['width']}x{arguments['height']} {chart_type} chart`",
+            file=discord.File(
+                fp=buffer, filename=f"fmchart_{ctx.username}_{arguments['period']}.jpeg"
+            ),
+        )
 
     async def chart_factory(self, chart_items, width, height, show_labels=True):
         if show_labels:
@@ -846,14 +852,12 @@ class LastFm(commands.Cog):
             "imageFormat": "jpeg",
             "quality": 70,
         }
+
         async with aiohttp.ClientSession() as session:
             async with session.post("http://localhost:3000/html", data=payload) as response:
-                with open("downloads/fmchart.jpeg", "wb") as f:
-                    while True:
-                        block = await response.content.read(1024)
-                        if not block:
-                            break
-                        f.write(block)
+                buffer = io.BytesIO(await response.read())
+
+        return buffer
 
     @fm.command(aliases=["snp"])
     async def servernp(self, ctx):
@@ -886,7 +890,7 @@ class LastFm(commands.Cog):
         total_listening = len(listeners)
         rows = []
         for song, member in listeners:
-            rows.append(f"{member.mention} **{song.get('artist')}** — ***{song.get('name')}***")
+            rows.append(f"{member.mention} **{util.escape_md(song.get('artist'))}** — ***{util.escape_md(song.get('name'))}***")
 
         content = discord.Embed()
         content.set_author(
@@ -941,6 +945,8 @@ class LastFm(commands.Cog):
                     listeners.append((playcount, user))
         else:
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+
+        artistname = util.escape_md(artistname)
 
         rows = []
         old_king = None
@@ -1031,6 +1037,9 @@ class LastFm(commands.Cog):
         else:
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
+        artistname = util.escape_md(artistname)
+        trackname = util.escape_md(trackname)
+
         rows = []
         total = 0
         for i, (playcount, user) in enumerate(
@@ -1108,6 +1117,9 @@ class LastFm(commands.Cog):
         else:
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
+        artistname = util.escape_md(artistname)
+        albumname = util.escape_md(albumname)
+
         rows = []
         total = 0
         for i, (playcount, user) in enumerate(
@@ -1153,7 +1165,7 @@ class LastFm(commands.Cog):
 
         rows = []
         for artist, playcount in sorted(crownartists, key=itemgetter(1), reverse=True):
-            rows.append(f"**{artist}** with **{playcount}** {format_plays(playcount)}")
+            rows.append(f"**{util.escape_md(artist)}** with **{playcount}** {format_plays(playcount)}")
 
         content = discord.Embed(
             title=f"Artist crowns for {user.name} — Total {len(crownartists)} crowns",
@@ -1377,8 +1389,8 @@ async def get_similar_artists(artistname):
     return similar, listeners
 
 
-def get_period(timeframe):
-    if timeframe in ["day", "today", "1day", "24h"]:
+def get_period(timeframe, allow_custom=True):
+    if timeframe in ["day", "today", "1day", "24h"] and allow_custom:
         period = "today"
     elif timeframe in ["7day", "7days", "weekly", "week", "1week"]:
         period = "7day"
@@ -1471,7 +1483,7 @@ def parse_chart_arguments(args):
                 continue
 
         if parsed["period"] is None:
-            parsed["period"] = get_period(a)
+            parsed["period"] = get_period(a, allow_custom=False)
 
     if parsed["period"] is None:
         parsed["period"] = "7day"
@@ -1741,6 +1753,16 @@ async def listening_overview(ctx, timeframe):
         data = await fetch(session, url, handling="text")
         soup = BeautifulSoup(data, "html.parser")
 
+        if soup.find("a", {"class": "btn-subscribe"}) is not None:
+            return await ctx.send(
+                f":warning: Sorry, you can‘t see this because `{ctx.username}` doesn't have Last.fm Pro!"
+            )
+
+        if soup.find("section", {"class": "user-dashboard-nodata"}) is not None:
+            return await ctx.send(
+                f"`{ctx.username}` didn't listen to any music :("
+            )
+
         # profile quick numbers
         scrobbles = (
             soup.find("div", {"class": "user-dashboard-data-point-scrobbles"})
@@ -1756,47 +1778,63 @@ async def listening_overview(ctx, timeframe):
         timetotal = (
             soup.find("div", {"class": "user-dashboard-data-point-total-listening"})
             .find("span", {"class": "duration-data"})
-            .text.strip().split()
+            .text.strip()
+            .split()
         )
-        timetotal = " ".join([timetotal[0], timetotal[2], timetotal[3], timetotal[5]])
+        if len(timetotal) > 3:
+            timetotal = " ".join([timetotal[0], timetotal[2], timetotal[3], timetotal[5]])
+        else:
+            timetotal = " ".join([timetotal[0], timetotal[2]])
 
         # day/month chart
         barchart_tbody = soup.find("table", {"class": "js-scrobble-stats-history-data"}).find(
             "tbody"
         )
         if timeframe == "week":
-            datefmt = "MMM Do"
+            datefmt = "ddd, MMM Do"
         elif timeframe == "month":
-            datefmt = "Do"
+            datefmt = "ddd, MMM Do"
         elif timeframe == "year":
-            datefmt = "MMMM"
+            datefmt = "MMM"
 
         for tr in barchart_tbody.findAll("tr"):
             scrobble_td = tr.find("td", {"data-scrobble-count-tooltip": True})
-            timestamp = int(
-                scrobble_td.get("data-library-url").split("?from=")[1].split("&")[0]
-            )
+            timestamp = int(scrobble_td.get("data-library-url").split("?from=")[1].split("&")[0])
             date = arrow.get(timestamp).format(fmt=datefmt)
             scrobble_count = scrobble_td.text.strip()
             rows.append(
-                f"`{date}`: **{scrobble_count}** Scrobbles, **TBD** Hours, **TBD** Minutes"
+                f"`{date}`: **{scrobble_count}** Scrobbles"
             )
 
         # top tags for the week
         top_tags = []
-        tag_tbody = soup.find("table", {"class": "js-tube-tags-table"}).find("tbody")
-        for tr in tag_tbody.findAll("tr"):
-            td = tr.findAll("td")[-1]
+        piechart = False
+        tags = soup.find("table", {"class": "js-tube-tags-table"})
+        if tags is None:
+            tags = soup.find("table", {"class": "js-top-tags-table"})
+            piechart = True
+
+        for tr in tags.find("tbody").findAll("tr"):
+            td = tr.find("td", {"data-value": False}) if piechart else tr.findAll("td")[-1]
             tag = td.find("a").text.strip()
             top_tags.append(tag)
 
     content = discord.Embed(color=discord.Color.red())
-    content.set_author(name=f"{ctx.username} | LAST.{timeframe.upper()}", icon_url=ctx.usertarget.avatar_url)
+    content.set_author(
+        name=f"{ctx.username} | LAST.{timeframe.upper()}", icon_url=ctx.usertarget.avatar_url, url=url
+    )
     content.description = "\n".join(rows)
     content.add_field(name="Top tags", value=", ".join(top_tags), inline=False)
     content.add_field(name="Scrobbles", value=scrobbles)
     content.add_field(name="Per day", value=per_day)
     content.add_field(name="Listening time", value=timetotal)
+    if timeframe == "year":
+        streak = (
+            soup.find("section", {"class": "user-dashboard-longest-streak"})
+            .find("span", {"class": "js-ticker"})
+            .get("data-value")
+        )
+        content.add_field(name="Longest streak", value=f"{streak} days")
     await ctx.send(embed=content)
 
 
