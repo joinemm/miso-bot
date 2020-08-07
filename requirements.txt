@@ -12,7 +12,7 @@ colorama==0.4.3
 coloredlogs==14.0
 colorgram.py==1.2.0
 cycler==0.10.0
-discord.py==1.4.0a2338+g1ee1b7f
+discord.py==1.4.0
 emoji==0.5.4
 google==2.0.3
 google-api-core==1.16.0
