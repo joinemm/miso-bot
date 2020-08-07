@@ -6,6 +6,7 @@ import helpers.utilityfunctions as util
 import data.database as db
 import re
 import random
+import asyncio
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
@@ -19,6 +20,7 @@ class Events(commands.Cog):
             ("watching", lambda: f"{len(self.bot.guilds)} servers"),
             ("listening", lambda: f"{len(set(self.bot.get_all_members()))} users"),
             ("playing", lambda: "misobot.xyz"),
+            ("playing", lambda: "cutt.ly/misob"),
         ]
         self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
         self.current_status = None
@@ -68,6 +70,7 @@ class Events(commands.Cog):
     @status_loop.before_loop
     async def before_status_loop(self):
         await self.bot.wait_until_ready()
+        await asyncio.sleep(30)  # avoid rate limit from discord in case of rapid reconnect
         logger.info("Starting status loop")
 
     async def next_status(self):
