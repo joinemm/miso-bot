@@ -1793,14 +1793,14 @@ async def listening_overview(ctx, timeframe):
         if timeframe == "week":
             datefmt = "ddd, MMM Do"
         elif timeframe == "month":
-            datefmt = "ddd, MMM Do"
+            datefmt = "MMM Do"
         elif timeframe == "year":
-            datefmt = "MMM"
+            datefmt = "MMM YYYY"
 
         for tr in barchart_tbody.findAll("tr"):
             scrobble_td = tr.find("td", {"data-scrobble-count-tooltip": True})
             timestamp = int(scrobble_td.get("data-library-url").split("?from=")[1].split("&")[0])
-            date = arrow.get(timestamp).format(fmt=datefmt)
+            date = arrow.get(timestamp).shift(hours=12).format(fmt=datefmt)
             scrobble_count = scrobble_td.text.strip()
             rows.append(
                 f"`{date}`: **{scrobble_count}** Scrobbles"
