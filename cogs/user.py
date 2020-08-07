@@ -344,7 +344,7 @@ class User(commands.Cog):
             else:
                 ranking = f"`{rank}.`"
 
-            rows.append(f"{ranking} {user.name} - **{fishy}** fishy")
+            rows.append(f"{ranking} {util.escape_md(user.name)} - **{fishy}** fishy")
             rank += 1
 
         if not rows:
@@ -428,7 +428,7 @@ class User(commands.Cog):
             rows.append(
                 f"`#{i:2}` "
                 + (f"LVL **{util.get_level(xp)}** - " if time is None else "")
-                + f"**{user.name}** `[{xp} XP | {messages} messages]`"
+                + f"**{util.escape_md(user.name)}** `[{xp} XP | {messages} messages]`"
             )
 
         content = discord.Embed(color=discord.Color.teal())
@@ -476,7 +476,7 @@ class User(commands.Cog):
             else:
                 ranking = f"`{i}.`"
             rows.append(
-                f"{ranking} **{int(wpm)}** WPM — **{user.name}** ( {arrow.get(timestamp).humanize()} )"
+                f"{ranking} **{int(wpm)}** WPM — **{util.escape_md(user.name)}** ( {arrow.get(timestamp).humanize()} )"
             )
         content = discord.Embed(
             title=":keyboard: WPM Leaderboard", color=discord.Color.orange()
@@ -503,7 +503,7 @@ class User(commands.Cog):
 
             rows.append(
                 (f"`{rank}:`" if rank > 1 else ":crown:")
-                + f" **{count}** crowns - **{user.name}**"
+                + f" **{count}** crowns - **{util.escape_md(user.name)}**"
             )
             rank += 1
         content = discord.Embed(color=discord.Color.gold())
