@@ -474,6 +474,106 @@ class LastFm(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
+    @fm.command(name="album")
+    async def album(self, ctx, *, album):
+        """Get your top tracks from a given album."""
+        period = "overall"
+        if album is None:
+            return await util.send_command_help(ctx)
+
+        album = remove_mentions(album)
+        if album.lower() == "np":
+            npd = await getnowplaying(ctx)
+            albumname = npd["album"]
+            artistname = npd["artist"]
+            if None in [albumname, artistname]:
+                return await ctx.send(":warning: Could not get currently playing album!")
+        else:
+            try:
+                albumname, artistname = [x.strip() for x in album.split("|")]
+                if albumname == "" or artistname == "":
+                    raise ValueError
+            except ValueError:
+                return await ctx.send(":warning: Incorrect format! use `album | artist`")
+
+        album, data = await self.album_top_tracks(ctx, period, artistname, albumname)
+        if album is None or not data:
+            if period == "overall":
+                return await ctx.send(f"You have never listened to **{albumname}** by **{artistname}**!")
+            else:
+                return await ctx.send(
+                    f"You have not listened to **{albumname}** by **{artistname}** in the past {period}s!"
+                )
+
+        artistname = album['artist']
+        albumname = album['formatted_name']
+        image_colour = await util.color_from_image_url(album["image_url"])
+
+        total_plays = 0
+        rows = []
+        for i, (name, playcount) in enumerate(data, start=1):
+            total_plays += playcount
+            rows.append(f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{name}**")
+
+        titlestring = f"top tracks from {albumname}\n— by {artistname}"
+        artistname = urllib.parse.quote_plus(artistname)
+        albumname = urllib.parse.quote_plus(albumname)
+        content = discord.Embed()
+        content.set_thumbnail(url=album["image_url"])
+        content.set_footer(text=f"Total album plays: {total_plays}")
+        content.colour = int(image_colour, 16)
+        content.set_author(
+            name=f"{ctx.usertarget.name}'s "
+            + (f"{humanized_period(period)} " if period != "overall" else "")
+            + titlestring,
+            icon_url=ctx.usertarget.avatar_url,
+            url=f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
+            f"{albumname}?date_preset={period_http_format(period)}",
+        )
+
+        await util.send_as_pages(ctx, content, rows)
+
+    async def album_top_tracks(self, ctx, period, artistname, albumname):
+        """Scrape either top tracks or top albums from lastfm library page."""
+        artistname = urllib.parse.quote_plus(artistname)
+        albumname = urllib.parse.quote_plus(albumname)
+        async with aiohttp.ClientSession() as session:
+            url = (
+                f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
+                f"{albumname}?date_preset={period_http_format(period)}"
+            )
+            data = await fetch(session, url, handling="text")
+            soup = BeautifulSoup(data, "html.parser")
+            data = []
+            try:
+                chartlist = soup.find("tbody", {"data-playlisting-add-entries": ""})
+            except ValueError:
+                return None, []
+
+            album = {
+                "image_url": soup.find("header", {"class": "library-header"})
+                .find("img")
+                .get("src")
+                .replace("64s", "300s"),
+                "formatted_name": soup.find("h2", {"class": "library-header-title"}).text.strip(),
+                "artist": soup.find("header", {"class": "library-header"})
+                .find("a", {"class": "text-colour-link"})
+                .text.strip(),
+            }
+
+            items = chartlist.findAll("tr", {"class": "chartlist-row"})
+            for item in items:
+                name = item.find("td", {"class": "chartlist-name"}).find("a").get("title")
+                playcount = (
+                    item.find("span", {"class": "chartlist-count-bar-value"})
+                    .text.replace("scrobbles", "")
+                    .replace("scrobble", "")
+                    .strip()
+                )
+                data.append((name, int(playcount.replace(",", ""))))
+
+            return album, data
+
     async def artist_top(self, ctx, period, artistname, datatype):
         """Scrape either top tracks or top albums from lastfm library page."""
         artistname = urllib.parse.quote_plus(artistname)
@@ -890,7 +990,9 @@ class LastFm(commands.Cog):
         total_listening = len(listeners)
         rows = []
         for song, member in listeners:
-            rows.append(f"{member.mention} **{util.escape_md(song.get('artist'))}** — ***{util.escape_md(song.get('name'))}***")
+            rows.append(
+                f"{member.mention} **{util.escape_md(song.get('artist'))}** — ***{util.escape_md(song.get('name'))}***"
+            )
 
         content = discord.Embed()
         content.set_author(
@@ -1165,7 +1267,9 @@ class LastFm(commands.Cog):
 
         rows = []
         for artist, playcount in sorted(crownartists, key=itemgetter(1), reverse=True):
-            rows.append(f"**{util.escape_md(artist)}** with **{playcount}** {format_plays(playcount)}")
+            rows.append(
+                f"**{util.escape_md(artist)}** with **{playcount}** {format_plays(playcount)}"
+            )
 
         content = discord.Embed(
             title=f"Artist crowns for {user.name} — Total {len(crownartists)} crowns",
@@ -1759,9 +1863,7 @@ async def listening_overview(ctx, timeframe):
             )
 
         if soup.find("section", {"class": "user-dashboard-nodata"}) is not None:
-            return await ctx.send(
-                f"`{ctx.username}` didn't listen to any music :("
-            )
+            return await ctx.send(f"`{ctx.username}` didn't listen to any music :(")
 
         # profile quick numbers
         scrobbles = (
@@ -1802,9 +1904,7 @@ async def listening_overview(ctx, timeframe):
             timestamp = int(scrobble_td.get("data-library-url").split("?from=")[1].split("&")[0])
             date = arrow.get(timestamp).shift(hours=12).format(fmt=datefmt)
             scrobble_count = scrobble_td.text.strip()
-            rows.append(
-                f"`{date}`: **{scrobble_count}** Scrobbles"
-            )
+            rows.append(f"`{date}`: **{scrobble_count}** Scrobbles")
 
         # top tags for the week
         top_tags = []
@@ -1821,7 +1921,9 @@ async def listening_overview(ctx, timeframe):
 
     content = discord.Embed(color=discord.Color.red())
     content.set_author(
-        name=f"{ctx.username} | LAST.{timeframe.upper()}", icon_url=ctx.usertarget.avatar_url, url=url
+        name=f"{ctx.username} | LAST.{timeframe.upper()}",
+        icon_url=ctx.usertarget.avatar_url,
+        url=url,
     )
     content.description = "\n".join(rows)
     content.add_field(name="Top tags", value=", ".join(top_tags), inline=False)
