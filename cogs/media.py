@@ -186,185 +186,199 @@ class Media(commands.Cog):
             util.reaction_buttons(ctx, msg, functions, only_author=True)
         )
 
+    @flags.add_flag("urls", nargs="+")
     @flags.add_flag("-d", "--download", action="store_true")
     @flags.command(aliases=["ig", "insta"])
-    async def instagram(self, ctx, url, **flags):
-        """Get all the images from an instagram post."""
+    async def instagram(self, ctx, **flags):
+        """Get all the images from one or more instagram posts."""
         try:
             # delete discord automatic embed
             await ctx.message.edit(suppress=True)
         except discord.Forbidden:
             pass
 
-        result = regex.findall("/p/(.*?)(/|\\Z)", url)
-        if result:
-            url = f"https://www.instagram.com/p/{result[0][0]}"
-        else:
-            url = f"https://www.instagram.com/p/{url.strip('/').split('/')[0]}"
+        for url in flags['urls']:
 
-        headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
-        }
-        post_id = url.split("/")[-1]
-        newurl = "https://www.instagram.com/graphql/query/"
-        params = {
-            "query_hash": "505f2f2dfcfce5b99cb7ac4155cbf299",
-            "variables": '{"shortcode":"' + post_id + '"}',
-        }
+            result = regex.findall("/p/(.*?)(/|\\Z)", url)
+            if result:
+                url = f"https://www.instagram.com/p/{result[0][0]}"
+            else:
+                url = f"https://www.instagram.com/p/{url.strip('/').split('/')[0]}"
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(newurl, params=params, headers=headers) as response:
-                data = await response.json()
-                data = data["data"]["shortcode_media"]
+            headers = {
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
+            }
+            post_id = url.split("/")[-1]
+            newurl = "https://www.instagram.com/graphql/query/"
+            params = {
+                "query_hash": "505f2f2dfcfce5b99cb7ac4155cbf299",
+                "variables": '{"shortcode":"' + post_id + '"}',
+            }
 
-        if data is None:
-            return await ctx.send(":warning: Invalid instagram URI")
-
-        medias = []
-        try:
-            for x in data["edge_sidecar_to_children"]["edges"]:
-                medias.append(x["node"])
-        except KeyError:
-            medias.append(data)
-
-        avatar_url = data["owner"]["profile_pic_url"]
-        username = data["owner"]["username"]
-        content = discord.Embed(color=random.choice(self.ig_colors))
-        content.set_author(name=f"@{username}", icon_url=avatar_url, url=url)
-
-        if not medias:
-            return await ctx.send(":warning: Could not find any media from this post")
-
-        if flags["download"]:
-            # send as files
             async with aiohttp.ClientSession() as session:
-                await ctx.send(f"<{url}>")
-                timestamp = arrow.get(data["taken_at_timestamp"]).format("YYMMDD")
-                for n, file in enumerate(medias, start=1):
-                    if file.get("is_video"):
-                        media_url = file.get("video_url")
-                        extension = "mp4"
+                async with session.get(newurl, params=params, headers=headers) as response:
+                    data = await response.json()
+                    data = data["data"]["shortcode_media"]
+
+            if data is None:
+                await ctx.send(f":warning: Invalid instagram URL `{url}`")
+                continue
+
+            medias = []
+            try:
+                for x in data["edge_sidecar_to_children"]["edges"]:
+                    medias.append(x["node"])
+            except KeyError:
+                medias.append(data)
+
+            avatar_url = data["owner"]["profile_pic_url"]
+            username = data["owner"]["username"]
+            content = discord.Embed(color=random.choice(self.ig_colors))
+            content.set_author(name=f"@{username}", icon_url=avatar_url, url=url)
+
+            if not medias:
+                await ctx.send(f":warning: Could not find any media from `{url}`")
+                continue
+
+            if flags["download"]:
+                # send as files
+                async with aiohttp.ClientSession() as session:
+                    await ctx.send(f"<{url}>")
+                    timestamp = arrow.get(data["taken_at_timestamp"]).format("YYMMDD")
+                    for n, file in enumerate(medias, start=1):
+                        if file.get("is_video"):
+                            media_url = file.get("video_url")
+                            extension = "mp4"
+                        else:
+                            media_url = file.get("display_url")
+                            extension = "jpg"
+
+                        filename = f"{timestamp}-@{username}-{post_id}-{n}.{extension}"
+                        async with session.get(media_url) as response:
+                            with open(filename, "wb") as f:
+                                while True:
+                                    block = await response.content.read(1024)
+                                    if not block:
+                                        break
+                                    f.write(block)
+
+                        with open(filename, "rb") as f:
+                            await ctx.send(file=discord.File(f))
+
+                        os.remove(filename)
+            else:
+                # send as embeds
+                for medianode in medias:
+                    if medianode.get("is_video"):
+                        await ctx.send(embed=content)
+                        await ctx.send(medianode.get("video_url"))
                     else:
-                        media_url = file.get("display_url")
-                        extension = "jpg"
+                        content.set_image(url=medianode.get("display_url"))
+                        await ctx.send(embed=content)
+                    content.description = None
+                    content._author = None
 
-                    filename = f"{timestamp}-@{username}-{post_id}-{n}.{extension}"
-                    async with session.get(media_url) as response:
-                        with open(filename, "wb") as f:
-                            while True:
-                                block = await response.content.read(1024)
-                                if not block:
-                                    break
-                                f.write(block)
-
-                    with open(filename, "rb") as f:
-                        await ctx.send(file=discord.File(f))
-
-                    os.remove(filename)
-        else:
-            # send as embeds
-            for medianode in medias:
-                if medianode.get("is_video"):
-                    await ctx.send(embed=content)
-                    await ctx.send(medianode.get("video_url"))
-                else:
-                    content.set_image(url=medianode.get("display_url"))
-                    await ctx.send(embed=content)
-                content.description = None
-                content._author = None
-
+    @flags.add_flag("urls", nargs="+")
     @flags.add_flag("-d", "--download", action="store_true")
     @flags.command(aliases=["twt"])
-    async def twitter(self, ctx, tweet_url, **flags):
-        """Get all the images from a tweet."""
+    async def twitter(self, ctx, **flags):
+        """Get all the images from one or more tweets."""
         try:
             # delete discord automatic embed
             await ctx.message.edit(suppress=True)
         except discord.Forbidden:
             pass
 
-        if "status" in tweet_url:
-            tweet_id = re.search(r"status/(\d+)", tweet_url).group(1)
-        else:
-            tweet_id = tweet_url
+        for tweet_url in flags['urls']:
 
-        tweet = await ctx.bot.loop.run_in_executor(
-            None, lambda: self.twitter_api.get_status(tweet_id, tweet_mode="extended")
-        )
+            if "status" in tweet_url:
+                tweet_id = re.search(r"status/(\d+)", tweet_url).group(1)
+            else:
+                tweet_id = tweet_url
 
-        media_files = []
-        try:
-            media = tweet.extended_entities.get("media", [])
-        except AttributeError:
-            media = []
+            try:
+                tweet = await ctx.bot.loop.run_in_executor(
+                    None, lambda: self.twitter_api.get_status(tweet_id, tweet_mode="extended")
+                )
 
-        if not media:
-            return await ctx.send(":warning: Could not find any images")
+            except Exception:
+                await ctx.send(f":warning: Could not get tweet `{tweet_url}`")
+                continue
 
-        hashtags = []
-        for hashtag in tweet.entities.get("hashtags", []):
-            hashtags.append(f"#{hashtag['text']}")
+            media_files = []
+            try:
+                media = tweet.extended_entities.get("media", [])
+            except AttributeError:
+                media = []
 
-        for i in range(len(media)):
-            media_url = media[i]["media_url"]
-            video_url = None
-            if not media[i]["type"] == "photo":
-                video_urls = media[i]["video_info"]["variants"]
-                largest_rate = -1
-                for x in range(len(video_urls)):
-                    if video_urls[x]["content_type"] == "video/mp4":
-                        if video_urls[x]["bitrate"] > largest_rate:
-                            largest_rate = video_urls[x]["bitrate"]
-                            video_url = video_urls[x]["url"]
-                            media_url = video_urls[x]["url"]
-            media_files.append((" ".join(hashtags), media_url, video_url))
+            if not media:
+                await ctx.send(f":warning: Could not find any images from tweet id `{tweet_id}`")
+                continue
 
-        content = discord.Embed(colour=int(tweet.user.profile_link_color, 16))
-        content.set_author(
-            icon_url=tweet.user.profile_image_url,
-            name=f"@{tweet.user.screen_name}\n{media_files[0][0]}",
-            url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}",
-        )
+            hashtags = []
+            for hashtag in tweet.entities.get("hashtags", []):
+                hashtags.append(f"#{hashtag['text']}")
 
-        if flags["download"]:
-            # download file and rename, upload to discord
-            async with aiohttp.ClientSession() as session:
-                await ctx.send(f"<{tweet.full_text.split(' ')[-1]}>")
-                timestamp = arrow.get(tweet.created_at).format("YYMMDD")
-                for n, file in enumerate(media_files, start=1):
-                    # is image not video
-                    if file[2] is None:
-                        extension = "jpeg"
-                    else:
-                        extension = "mp4"
+            for i in range(len(media)):
+                media_url = media[i]["media_url"]
+                video_url = None
+                if not media[i]["type"] == "photo":
+                    video_urls = media[i]["video_info"]["variants"]
+                    largest_rate = -1
+                    for x in range(len(video_urls)):
+                        if video_urls[x]["content_type"] == "video/mp4":
+                            if video_urls[x]["bitrate"] > largest_rate:
+                                largest_rate = video_urls[x]["bitrate"]
+                                video_url = video_urls[x]["url"]
+                                media_url = video_urls[x]["url"]
+                media_files.append((" ".join(hashtags), media_url, video_url))
 
-                    filename = f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
+            content = discord.Embed(colour=int(tweet.user.profile_link_color, 16))
+            content.set_author(
+                icon_url=tweet.user.profile_image_url,
+                name=f"@{tweet.user.screen_name}\n{media_files[0][0]}",
+                url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}",
+            )
+
+            if flags["download"]:
+                # download file and rename, upload to discord
+                async with aiohttp.ClientSession() as session:
+                    await ctx.send(f"<{tweet.full_text.split(' ')[-1]}>")
+                    timestamp = arrow.get(tweet.created_at).format("YYMMDD")
+                    for n, file in enumerate(media_files, start=1):
+                        # is image not video
+                        if file[2] is None:
+                            extension = "jpeg"
+                        else:
+                            extension = "mp4"
+
+                        filename = f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
+                        url = file[1].replace(".jpg", "?format=jpg&name=orig")
+                        async with session.get(url) as response:
+                            with open(filename, "wb") as f:
+                                while True:
+                                    block = await response.content.read(1024)
+                                    if not block:
+                                        break
+                                    f.write(block)
+
+                        with open(filename, "rb") as f:
+                            await ctx.send(file=discord.File(f))
+
+                        os.remove(filename)
+
+            else:
+                # just send link in embed
+                for file in media_files:
                     url = file[1].replace(".jpg", "?format=jpg&name=orig")
-                    async with session.get(url) as response:
-                        with open(filename, "wb") as f:
-                            while True:
-                                block = await response.content.read(1024)
-                                if not block:
-                                    break
-                                f.write(block)
+                    content.set_image(url=url)
+                    await ctx.send(embed=content)
 
-                    with open(filename, "rb") as f:
-                        await ctx.send(file=discord.File(f))
+                    if file[2] is not None:
+                        # contains a video/gif, send it separately
+                        await ctx.send(file[2])
 
-                    os.remove(filename)
-
-        else:
-            # just send link in embed
-            for file in media_files:
-                url = file[1].replace(".jpg", "?format=jpg&name=orig")
-                content.set_image(url=url)
-                await ctx.send(embed=content)
-
-                if file[2] is not None:
-                    # contains a video/gif, send it separately
-                    await ctx.send(file[2])
-
-                content._author = None
+                    content._author = None
 
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx, *, query):
