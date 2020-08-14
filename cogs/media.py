@@ -1,9 +1,7 @@
 import discord
 import asyncio
-import html
 import googlesearch
 import json
-import asyncio
 import random
 import re
 import wikipedia
@@ -17,7 +15,6 @@ from discord.ext import commands, flags
 from tweepy import OAuthHandler
 from bs4 import BeautifulSoup
 from helpers import utilityfunctions as util
-from data import database as db
 
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")
@@ -25,7 +22,6 @@ IG_COOKIE = os.environ.get("IG_COOKIE")
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
-AUDDIO_TOKEN = os.environ.get("AUDDIO_TOKEN")
 
 
 class Media(commands.Cog):
@@ -545,69 +541,6 @@ class Media(commands.Cog):
 
         functions = {"⬅": previous_result, "➡": next_result}
         asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions, only_author=True))
-
-    @commands.command()
-    async def lyrics(self, ctx, *, query):
-        """Search for song lyrics."""
-
-        # patrons = db.query("select user_id from patrons where currently_active = 1")
-        # if ctx.author != self.bot.owner:
-        #     if ctx.author.id not in [x[0] for x in patrons]:
-        #         return await ctx.send(
-        #             ":no_entry: Due to not being a free service, this command \
-        #             is restricted to patrons only for now, sorry! <https://patreon.com/joinemm>"
-        #         )
-
-        url = "https://api.audd.io/findLyrics/"
-        request_data = {
-            "api_token": AUDDIO_TOKEN,
-            "q": query,
-        }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url=url, data=request_data) as response:
-                data = await response.json()
-
-        if data["status"] != "success":
-            return await ctx.send(f":warning: Something went wrong! `status: {data['status']}`")
-
-        results = data["result"]
-        if not results:
-            return await ctx.send("Found nothing!")
-
-        if len(results) > 1:
-            picker_content = discord.Embed(title="Type number to choose result")
-            found_titles = []
-            for i, result in enumerate(results, start=1):
-                found_titles.append(f"`{i}.` {result['full_title']}")
-
-            picker_content.description = "\n".join(found_titles)
-            bot_msg = await ctx.send(embed=picker_content)
-
-            def check(message):
-                if message.author == ctx.author and message.channel == ctx.channel:
-                    try:
-                        num = int(message.content)
-                    except ValueError:
-                        return False
-                    else:
-                        return num <= len(results) and num > 0
-                else:
-                    return False
-
-            try:
-                msg = await self.bot.wait_for("message", check=check, timeout=60)
-            except asyncio.TimeoutError:
-                return await ctx.send("number selection timed out")
-            else:
-                result = results[int(msg.content) - 1]
-                await bot_msg.delete()
-
-        else:
-            result = results[0]
-
-        rows = html.unescape(result["lyrics"]).split("\n")
-        content = discord.Embed(title=result["full_title"])
-        await util.send_as_pages(ctx, content, rows, maxrows=20)
 
 
 def setup(bot):
