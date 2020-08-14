@@ -1,4 +1,6 @@
 import discord
+import asyncio
+import html
 import googlesearch
 import json
 import asyncio
@@ -15,6 +17,7 @@ from discord.ext import commands, flags
 from tweepy import OAuthHandler
 from bs4 import BeautifulSoup
 from helpers import utilityfunctions as util
+from data import database as db
 
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")
@@ -22,6 +25,7 @@ IG_COOKIE = os.environ.get("IG_COOKIE")
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
+AUDDIO_TOKEN = os.environ.get("AUDDIO_TOKEN")
 
 
 class Media(commands.Cog):
@@ -72,9 +76,7 @@ class Media(commands.Cog):
                     colors.append("{:06x}".format(random.randint(0, 0xFFFFFF)))
                 continue
 
-            role_or_user = await util.get_member(ctx, source) or await util.get_role(
-                ctx, source
-            )
+            role_or_user = await util.get_member(ctx, source) or await util.get_role(ctx, source)
             if role_or_user is not None:
                 colors.append(str(role_or_user.color).strip("#"))
                 continue
@@ -182,9 +184,7 @@ class Media(commands.Cog):
 
         functions = {"⬅": prev_link, "➡": next_link, "✅": done}
 
-        asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, functions, only_author=True)
-        )
+        asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions, only_author=True))
 
     @flags.add_flag("urls", nargs="+")
     @flags.add_flag("-d", "--download", action="store_true")
@@ -197,7 +197,7 @@ class Media(commands.Cog):
         except discord.Forbidden:
             pass
 
-        for url in flags['urls']:
+        for url in flags["urls"]:
 
             result = regex.findall("/p/(.*?)(/|\\Z)", url)
             if result:
@@ -289,7 +289,7 @@ class Media(commands.Cog):
         except discord.Forbidden:
             pass
 
-        for tweet_url in flags['urls']:
+        for tweet_url in flags["urls"]:
 
             if "status" in tweet_url:
                 tweet_id = re.search(r"status/(\d+)", tweet_url).group(1)
@@ -352,7 +352,9 @@ class Media(commands.Cog):
                         else:
                             extension = "mp4"
 
-                        filename = f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
+                        filename = (
+                            f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
+                        )
                         url = file[1].replace(".jpg", "?format=jpg&name=orig")
                         async with session.get(url) as response:
                             with open(filename, "wb") as f:
@@ -383,6 +385,7 @@ class Media(commands.Cog):
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx, *, query):
         """Search for a random gif"""
+
         async def extract_scripts(session, url):
             async with session.get(url) as response:
                 data = await response.text()
@@ -393,13 +396,9 @@ class Media(commands.Cog):
         async with aiohttp.ClientSession() as session:
             tasks = []
             if len(query.split(" ")) == 1:
-                tasks.append(
-                    extract_scripts(session, f"https://gfycat.com/gifs/tag/{query}")
-                )
+                tasks.append(extract_scripts(session, f"https://gfycat.com/gifs/tag/{query}"))
 
-            tasks.append(
-                extract_scripts(session, f"https://gfycat.com/gifs/search/{query}")
-            )
+            tasks.append(extract_scripts(session, f"https://gfycat.com/gifs/search/{query}"))
             scripts = sum(await asyncio.gather(*tasks), [])
 
         urls = []
@@ -421,9 +420,7 @@ class Media(commands.Cog):
             await msg.edit(content=f"**{query}** {random.choice(urls)}")
 
         buttons = {"❌": msg.delete, "🔁": randomize}
-        asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, buttons, only_author=True)
-        )
+        asyncio.ensure_future(util.reaction_buttons(ctx, msg, buttons, only_author=True))
 
     @commands.command()
     async def melon(self, ctx, timeframe=None):
@@ -462,9 +459,7 @@ class Media(commands.Cog):
             util.escape_md(x.find("a").text)
             for x in soup.find_all("div", {"class": "ellipsis rank03"})
         ]
-        image = soup.find("img", {"onerror": "WEBPOCIMG.defaultAlbumImg(this);"}).get(
-            "src"
-        )
+        image = soup.find("img", {"onerror": "WEBPOCIMG.defaultAlbumImg(this);"}).get("src")
 
         content = discord.Embed(color=discord.Color.from_rgb(0, 205, 60))
         content.set_author(
@@ -483,9 +478,7 @@ class Media(commands.Cog):
                 content.clear_fields()
 
             content.add_field(
-                name=f"`#{i+1}` {song}",
-                value=f"*by* **{artist}** *on* **{album}**",
-                inline=False,
+                name=f"`#{i+1}` {song}", value=f"*by* **{artist}** *on* **{album}**", inline=False,
             )
 
         if content._fields:
@@ -524,9 +517,7 @@ class Media(commands.Cog):
             query = await self.bot.loop.run_in_executor(None, wikipedia.random)
 
         try:
-            page = await self.bot.loop.run_in_executor(
-                None, lambda: wikipedia.page(query)
-            )
+            page = await self.bot.loop.run_in_executor(None, lambda: wikipedia.page(query))
             await ctx.send(page.url)
         except wikipedia.exceptions.DisambiguationError as disabiguation_page:
             await ctx.send(f"```{str(disabiguation_page)}```")
@@ -537,9 +528,7 @@ class Media(commands.Cog):
         results = await self.bot.loop.run_in_executor(
             None, lambda: googlesearch.search(query, stop=10, pause=1.0)
         )
-        pages = util.TwoWayIterator(
-            [f"`#{i+1}` {x}" for i, x in enumerate(list(results))]
-        )
+        pages = util.TwoWayIterator([f"`#{i+1}` {x}" for i, x in enumerate(list(results))])
         msg = await ctx.send(pages.current())
 
         async def next_result():
@@ -555,9 +544,70 @@ class Media(commands.Cog):
             await msg.edit(content=new_content, embed=None)
 
         functions = {"⬅": previous_result, "➡": next_result}
-        asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, functions, only_author=True)
-        )
+        asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions, only_author=True))
+
+    @commands.command()
+    async def lyrics(self, ctx, *, query):
+        """Search for song lyrics."""
+
+        # patrons = db.query("select user_id from patrons where currently_active = 1")
+        # if ctx.author != self.bot.owner:
+        #     if ctx.author.id not in [x[0] for x in patrons]:
+        #         return await ctx.send(
+        #             ":no_entry: Due to not being a free service, this command \
+        #             is restricted to patrons only for now, sorry! <https://patreon.com/joinemm>"
+        #         )
+
+        url = "https://api.audd.io/findLyrics/"
+        request_data = {
+            "api_token": AUDDIO_TOKEN,
+            "q": query,
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url=url, data=request_data) as response:
+                data = await response.json()
+
+        if data["status"] != "success":
+            return await ctx.send(f":warning: Something went wrong! `status: {data['status']}`")
+
+        results = data["result"]
+        if not results:
+            return await ctx.send("Found nothing!")
+
+        if len(results) > 1:
+            picker_content = discord.Embed(title="Type number to choose result")
+            found_titles = []
+            for i, result in enumerate(results, start=1):
+                found_titles.append(f"`{i}.` {result['full_title']}")
+
+            picker_content.description = "\n".join(found_titles)
+            bot_msg = await ctx.send(embed=picker_content)
+
+            def check(message):
+                if message.author == ctx.author and message.channel == ctx.channel:
+                    try:
+                        num = int(message.content)
+                    except ValueError:
+                        return False
+                    else:
+                        return num <= len(results) and num > 0
+                else:
+                    return False
+
+            try:
+                msg = await self.bot.wait_for("message", check=check, timeout=60)
+            except asyncio.TimeoutError:
+                return await ctx.send("number selection timed out")
+            else:
+                result = results[int(msg.content) - 1]
+                await bot_msg.delete()
+
+        else:
+            result = results[0]
+
+        rows = html.unescape(result["lyrics"]).split("\n")
+        content = discord.Embed(title=result["full_title"])
+        await util.send_as_pages(ctx, content, rows, maxrows=20)
 
 
 def setup(bot):
