@@ -12,6 +12,7 @@ class WebServer(commands.Cog):
         self.app.router.add_get("/", self.index)
         self.app.router.add_get("/guilds", self.guild_count)
         self.app.router.add_get("/ping", self.ping_handler)
+        self.app.router.add_get("/userinfo", self.userinfo)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -30,6 +31,20 @@ class WebServer(commands.Cog):
 
     async def guild_count(self, request):
         return web.Response(text=f"{len(self.bot.guilds)}")
+
+    async def userinfo(self, request):
+        try:
+            userid = request.rel_url.query["userid"]
+            user = self.bot.get_user(int(userid))
+            return web.json_response({
+                "name": user.name,
+                "id": user.id,
+                "discriminator": user.discriminator,
+                "avatar": str(user.avatar_url),
+                "bot": user.bot
+            })
+        except Exception as e:
+            return web.Response(text=f"Error: {e}")
 
 
 def setup(bot):
