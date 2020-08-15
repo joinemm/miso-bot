@@ -730,7 +730,7 @@ class LastFm(commands.Cog):
 
         image = None
         imagesize = 0
-        while image is None or imagesize >= 3:
+        while image is None or imagesize < 4:
             image = await get_image(self.cover_base_urls[imagesize].format(album_art_id))
             imagesize += 1
 
@@ -1270,7 +1270,7 @@ class LastFm(commands.Cog):
         rows = []
         for artist, playcount in sorted(crownartists, key=itemgetter(1), reverse=True):
             rows.append(
-                f"**{util.escape_md(artist)}** with **{playcount}** {format_plays(playcount)}"
+                f"**{util.escape_md(str(artist))}** with **{playcount}** {format_plays(playcount)}"
             )
 
         content = discord.Embed(
