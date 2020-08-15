@@ -729,10 +729,10 @@ class LastFm(commands.Cog):
                     return None
 
         image = None
-        imagesize = 0
-        while image is None or imagesize < 4:
-            image = await get_image(self.cover_base_urls[imagesize].format(album_art_id))
-            imagesize += 1
+        for base_url in self.cover_base_urls:
+            image = await get_image(base_url.format(album_art_id))
+            if image is not None:
+                break
 
         if image is None:
             return None
