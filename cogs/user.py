@@ -666,15 +666,9 @@ class User(commands.Cog):
         )
         await ctx.send(":white_check_mark: Profile description updated!")
 
+    @util.patrons_only()
     @editprofile.command(name="background")
     async def editprofile_background(self, ctx, url):
-        patrons = db.query("select user_id from patrons where currently_active = 1")
-        if ctx.author != self.bot.owner:
-            if ctx.author.id not in [x[0] for x in patrons]:
-                return await ctx.send(
-                    "Become a patreon supporter to use this feature! <https://patreon.com/joinemm>"
-                )
-
         db.execute(
             "INSERT OR IGNORE INTO profiles VALUES (?, ?, ?, ?)",
             (ctx.author.id, None, None, None),
@@ -699,4 +693,3 @@ def get_activity_table(timeframe):
         return "This month", "activity_month"
     else:
         return None, "activity"
-

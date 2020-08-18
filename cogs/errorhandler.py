@@ -60,8 +60,11 @@ class Events(commands.Cog):
 
         elif isinstance(error, commands.NoPrivateMessage):
             await ctx.author.send(
-                ":warning: You cannot use commands in private messages"
+                ":warning: You cannot use this command in private messages"
             )
+
+        elif isinstance(error, util.PatronCheckFailure):
+            await ctx.send(":no_entry: Support me on patreon to use this command! <https://patreon.com/joinemm>")
 
         elif isinstance(error, (commands.NotOwner, commands.CheckFailure)):
             await ctx.send(

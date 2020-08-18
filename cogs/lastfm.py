@@ -501,14 +501,16 @@ class LastFm(commands.Cog):
         album, data = await self.album_top_tracks(ctx, period, artistname, albumname)
         if album is None or not data:
             if period == "overall":
-                return await ctx.send(f"You have never listened to **{albumname}** by **{artistname}**!")
+                return await ctx.send(
+                    f"You have never listened to **{albumname}** by **{artistname}**!"
+                )
             else:
                 return await ctx.send(
                     f"You have not listened to **{albumname}** by **{artistname}** in the past {period}s!"
                 )
 
-        artistname = album['artist']
-        albumname = album['formatted_name']
+        artistname = album["artist"]
+        albumname = album["formatted_name"]
         image_colour = await util.color_from_image_url(album["image_url"])
 
         total_plays = 0
@@ -1358,17 +1360,10 @@ class LastFm(commands.Cog):
             util.reaction_buttons(ctx, msg, functions, single_use=True, only_owner=True)
         )
 
+    @util.patrons_only()
     @commands.command()
     async def lyrics(self, ctx, *, query):
         """Search for song lyrics."""
-
-        # patrons = db.query("select user_id from patrons where currently_active = 1")
-        # if ctx.author != self.bot.owner:
-        #     if ctx.author.id not in [x[0] for x in patrons]:
-        #         return await ctx.send(
-        #             ":no_entry: Due to not being a free service, this command \
-        #             is restricted to patrons only for now, sorry! <https://patreon.com/joinemm>"
-        #         )
 
         if query.lower() == "np":
             npd = await getnowplaying(ctx)
@@ -1388,8 +1383,10 @@ class LastFm(commands.Cog):
                 data = await response.json()
 
         if data["status"] != "success":
-            print(data)
-            return await ctx.send(f":warning: Something went wrong! `status: {data['status']}`")
+            return await ctx.send(
+                f":warning: Something went wrong! `error {data['error']['error_code']}: \
+                {data['error']['error_message']}`"
+            )
 
         results = data["result"]
         if not results:

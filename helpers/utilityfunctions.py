@@ -17,6 +17,8 @@ from data import database as db
 class ErrorMessage(Exception):
     pass
 
+class PatronCheckFailure(commands.CheckFailure):
+    pass
 
 async def determine_prefix(bot, message):
     """Get the prefix used in the invocation context."""
@@ -629,6 +631,19 @@ def activities_string(activities, markdown=True, show_emoji=True):
         text += message
 
     return text if text != "" else None
+
+
+def patrons_only():
+    def predicate(ctx):
+        if ctx.author.id == ctx.bot.owner.id and False:
+            return True
+        else:
+            patrons = db.query("select user_id from patrons where currently_active = 1")
+            if ctx.author.id in [x[0] for x in patrons]:
+                return True
+            else:
+                raise PatronCheckFailure
+    return commands.check(predicate)
 
 
 class TwoWayIterator:
