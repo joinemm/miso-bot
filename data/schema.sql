@@ -319,3 +319,21 @@ CREATE TABLE IF NOT EXISTS "blacklisted_users"(
   "user_id"INTEGER NOT NULL,
   PRIMARY KEY("guild_id","user_id")
 );
+CREATE TABLE IF NOT EXISTS "album_color_cache"(
+  "image_id"TEXT,
+  "rgb"TEXT NOT NULL,
+  PRIMARY KEY("image_id")
+);
+CREATE TABLE IF NOT EXISTS "lastfm_blacklist"("username"	TEXT,
+PRIMARY KEY("username"));
+CREATE TABLE IF NOT EXISTS "api_usage"(
+  "api_name"	TEXT,
+  "month"	INTEGER,
+  "count"	INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY("api_name","month")
+);
+CREATE TABLE IF NOT EXISTS "rate_limits"(
+  "api_name"	TEXT,
+  "usage_limit"	INTEGER,
+  PRIMARY KEY("api_name")
+);
