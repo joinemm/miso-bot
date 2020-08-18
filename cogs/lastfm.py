@@ -119,6 +119,7 @@ class LastFm(commands.Cog):
             "q": f"{artist} {track}",
             "key": GOOGLE_API_KEY,
         }
+        db.update_rate_limit("youtube")
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
@@ -1364,6 +1365,8 @@ class LastFm(commands.Cog):
     @commands.command()
     async def lyrics(self, ctx, *, query):
         """Search for song lyrics."""
+        if not db.check_rate_limit("auddio"):
+            return await ctx.send(":warning: Monthly API usage limit reached")
 
         if query.lower() == "np":
             npd = await getnowplaying(ctx)
@@ -1381,6 +1384,8 @@ class LastFm(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.post(url=url, data=request_data) as response:
                 data = await response.json()
+
+        db.update_rate_limit("auddio")
 
         if data["status"] != "success":
             return await ctx.send(
@@ -1685,6 +1690,7 @@ async def api_request(params, ignore_errors=False):
                 try:
                     content = await response.json()
                     if response.status == 200 and content.get("error") is None:
+                        db.update_rate_limit("lastfm")
                         return content
                     else:
                         if int(content.get("error")) in [6, 8]:

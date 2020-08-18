@@ -1,4 +1,5 @@
 import sqlite3
+import arrow
 import json
 import random
 from collections import namedtuple
@@ -106,8 +107,7 @@ def global_activitydata(user_id, tablename="activity"):
 
 def get_user_activity(guild_id, user_id, tablename="activity"):
     data = query(
-        "select * from %s where guild_id = ? and user_id = ?" % tablename,
-        (guild_id, user_id),
+        "select * from %s where guild_id = ? and user_id = ?" % tablename, (guild_id, user_id),
     )
     if data is None:
         return None
@@ -139,6 +139,27 @@ def update_user(user_id, column, new_value):
     execute("update users set %s = ? where user_id = ?" % column, (new_value, user_id))
 
 
+def update_rate_limit(api_name):
+    month = int(arrow.now().format("M"))
+    execute("insert or ignore into api_usage(api_name, month) values(?, ?)", (api_name, month))
+    execute("update api_usage set count=count+1 where api_name=? AND month=?", (api_name, month))
+
+
+def check_rate_limit(api_name):
+    month = int(arrow.now().format("M"))
+    data = query(
+        """select count, usage_limit from api_usage
+        inner join rate_limits
+        on api_usage.api_name = rate_limits.api_name
+        where rate_limits.api_name=? AND month=?""",
+        (api_name, month),
+    )
+    if data is None:
+        return True
+    else:
+        return data[0][0] < data[0][1]
+
+
 def add_fishy(user_id, fishtype, amount, timestamp, fisher_id=None):
     execute("insert or ignore into fishy(user_id) values(?)", (user_id,))
     if fisher_id is None:
@@ -161,18 +182,12 @@ def add_fishy(user_id, fishtype, amount, timestamp, fisher_id=None):
         )
 
     if amount > 0:
-        biggest = (
-            query("SELECT biggest FROM fishy WHERE user_id = ?", (user_id,))[0][0] or 0
-        )
+        biggest = query("SELECT biggest FROM fishy WHERE user_id = ?", (user_id,))[0][0] or 0
         if amount > biggest:
             execute("UPDATE fishy SET biggest = ? WHERE user_id = ?", (amount, user_id))
 
         leaderboard = query("SELECT size FROM fishysize ORDER BY size")
-        if (
-            leaderboard[0][0] is None
-            or amount >= leaderboard[0][0]
-            or len(leaderboard) < 15
-        ):
+        if leaderboard[0][0] is None or amount >= leaderboard[0][0] or len(leaderboard) < 15:
             execute(
                 "INSERT INTO fishysize VALUES (null, ?, ?, ?, ?)",
                 (timestamp, fisher_id, user_id, amount),
@@ -195,9 +210,7 @@ def get_keywords(message):
 
 def update_setting(guild_id, setting, new_value):
     execute("insert or ignore into guilds(guild_id) values(?)", (guild_id,))
-    execute(
-        "update guilds set %s = ? where guild_id = ?" % setting, (new_value, guild_id)
-    )
+    execute("update guilds set %s = ? where guild_id = ?" % setting, (new_value, guild_id))
 
 
 def get_setting(guild_id, setting, default=None):
@@ -210,12 +223,10 @@ def get_setting(guild_id, setting, default=None):
 
 def add_crown(artist, guild_id, user_id, playcount):
     data = query(
-        "SELECT user_id FROM crowns WHERE artist = ? and guild_id = ?",
-        (artist, guild_id),
+        "SELECT user_id FROM crowns WHERE artist = ? and guild_id = ?", (artist, guild_id),
     )
     execute(
-        "REPLACE INTO crowns VALUES (?, ?, ?, ?)",
-        (artist, guild_id, user_id, playcount),
+        "REPLACE INTO crowns VALUES (?, ?, ?, ?)", (artist, guild_id, user_id, playcount),
     )
     if data is None:
         return None
@@ -225,8 +236,7 @@ def add_crown(artist, guild_id, user_id, playcount):
 
 def rolepicker_role(guild_id, rolename):
     data = query(
-        "SELECT role_id FROM roles WHERE rolename = ? AND guild_id = ?",
-        (rolename, guild_id),
+        "SELECT role_id FROM roles WHERE rolename = ? AND guild_id = ?", (rolename, guild_id),
     )
 
     if data is None:
@@ -240,10 +250,7 @@ def random_kpop_idol(gender=None):
         data = query("SELECT * FROM idols", database=SQLKPOPDB, maketuple=True)
     else:
         data = query(
-            "SELECT * FROM idols WHERE gender = ?",
-            (gender,),
-            database=SQLKPOPDB,
-            maketuple=True,
+            "SELECT * FROM idols WHERE gender = ?", (gender,), database=SQLKPOPDB, maketuple=True,
         )
     return random.choice(data)
 
@@ -279,21 +286,12 @@ def getter(d, key):
 def log_command_usage(ctx):
     execute(
         "INSERT OR IGNORE INTO command_usage VALUES(?, ?, ?, ?)",
-        (
-            (ctx.guild.id if ctx.guild is not None else "DM"),
-            ctx.author.id,
-            str(ctx.command),
-            0,
-        ),
+        ((ctx.guild.id if ctx.guild is not None else "DM"), ctx.author.id, str(ctx.command), 0,),
     )
     execute(
         """UPDATE command_usage SET count = count + 1
         WHERE (guild_id = ? AND user_id = ? AND command = ?)""",
-        (
-            (ctx.guild.id if ctx.guild is not None else "DM"),
-            ctx.author.id,
-            str(ctx.command),
-        ),
+        ((ctx.guild.id if ctx.guild is not None else "DM"), ctx.author.id, str(ctx.command),),
     )
 
 
@@ -331,8 +329,7 @@ def log_emoji_usage(message, custom_emoji, unicode_emoji):
 
 def get_blacklist(guild_id, column, table):
     data = query(
-        "SELECT %s FROM blacklisted_%s WHERE guild_id = ?" % (column, table),
-        (guild_id,),
+        "SELECT %s FROM blacklisted_%s WHERE guild_id = ?" % (column, table), (guild_id,),
     )
     if data is None:
         return []
@@ -357,9 +354,7 @@ def is_patron(user_id, tier=(1, 2, 3)):
 
 
 def is_blacklisted(ctx):
-    bl_global = query(
-        "SELECT * FROM blacklist_global_users WHERE user_id = ?", (ctx.author.id,)
-    )
+    bl_global = query("SELECT * FROM blacklist_global_users WHERE user_id = ?", (ctx.author.id,))
     if bl_global is not None:
         raise exceptions.BlacklistTrigger(ctx, "global")
 

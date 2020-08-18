@@ -110,6 +110,7 @@ class Utility(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
                 json_data = await response.json()
+                db.update_rate_limit("googlemaps")
         try:
             json_data = json_data["results"][0]
         except IndexError:
@@ -128,13 +129,13 @@ class Utility(commands.Cog):
             url = f"https://api.darksky.net/forecast/{DARKSKY_API_KEY}/{lat},{lon}?units=si"
             async with session.get(url) as response:
                 json_data = await response.json()
+                db.update_rate_limit("darksky")
 
         current = json_data["currently"]
         hourly = json_data["hourly"]
         localtime = await get_timezone({"lat": lat, "lon": lon})
 
         content = discord.Embed(color=await util.get_color(ctx, "#e1e8ed"))
-        # content.set_thumbnail(url=f"http://flagpedia.net/data/flags/w580/{country}.png")
         content.title = f":flag_{country}: {formatted_name}"
         content.add_field(
             name=f"{weather_icons.get(current['icon'], '')} {hourly['summary']}",
@@ -158,6 +159,7 @@ class Utility(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(url=url, params=params) as response:
                 data = await response.json()
+                db.update_rate_limit("dictionaryapi")
 
         if isinstance(data[0], dict):
             api_icon = "https://dictionaryapi.com/images/MWLogo_120x120_2x.png"
@@ -200,6 +202,7 @@ class Utility(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{api_url}lemmas/en/{word}", headers=headers) as response:
                 data = await response.json()
+                db.update_rate_limit("oxforddictionaries")
 
         # searched for word id, now use the word id to get definition
         all_entries = []
@@ -275,6 +278,7 @@ class Utility(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params={"term": word}) as response:
                 data = await response.json()
+                db.update_rate_limit("urbandictionary")
 
         pages = []
         if data["list"]:
@@ -321,8 +325,11 @@ class Utility(commands.Cog):
         """
         text = text.strip(" ")
         languages = text.partition(" ")[0]
-        if "/" in languages:
-            source, target = languages.split("/")
+        if "/" in languages or "->" in languages:
+            if "/" in languages:
+                source, target = languages.split("/")
+            elif "->" in languages:
+                source, target = languages.split("->")
             text = text.partition(" ")[2]
             if source == "":
                 source = await detect_language(text)
@@ -355,6 +362,7 @@ class Utility(commands.Cog):
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, headers=headers, data=params) as response:
                     translation = (await response.json())["message"]["result"]["translatedText"]
+                    db.update_rate_limit("papago")
 
         else:
             # use google
@@ -370,6 +378,7 @@ class Utility(commands.Cog):
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params) as response:
                     data = await response.json()
+                    db.update_rate_limit("googletranslate")
 
             try:
                 translation = html.unescape(data["data"]["translations"][0]["translatedText"])
@@ -388,6 +397,7 @@ class Utility(commands.Cog):
             "output": "json",
             "units": "metric",
         }
+        db.update_rate_limit("wolframalpha")
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
@@ -407,6 +417,7 @@ class Utility(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=params, headers=auth_headers) as response:
                 data = await response.json()
+                db.update_rate_limit("gfycat")
 
         try:
             gfyname = data["gfyname"]
@@ -422,6 +433,7 @@ class Utility(commands.Cog):
             while True:
                 async with session.get(url, headers=auth_headers) as response:
                     data = await response.json()
+                    db.update_rate_limit("gfycat")
                     task = data["task"]
 
                 if task == "encoding":
@@ -455,6 +467,7 @@ class Utility(commands.Cog):
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params, auth=auth, headers=headers) as response:
+                db.update_rate_limit("streamable")
                 if response.status != 200:
                     try:
                         data = await response.json()
@@ -479,6 +492,7 @@ class Utility(commands.Cog):
         async with aiohttp.ClientSession() as session:
             while True:
                 async with session.get(link, headers=headers) as response:
+                    db.update_rate_limit("streamable")
                     soup = BeautifulSoup(await response.text(), "html.parser")
                     meta = soup.find("meta", {"property": "og:url"})
 
@@ -538,6 +552,7 @@ class Utility(commands.Cog):
             url = "https://finnhub.io/api/v1/quote"
             async with session.get(url, params=params) as response:
                 quote_data = await response.json()
+                db.update_rate_limit("finnhub")
 
             error = quote_data.get("error")
             if error is not None:
@@ -547,6 +562,7 @@ class Utility(commands.Cog):
             params['symbol'] = profile_ticker(params['symbol'])
             async with session.get(url, params=params) as response:
                 company_profile = await response.json()
+                db.update_rate_limit("finnhub")
 
         change = float(quote_data["c"]) - float(quote_data["pc"])
         gains = change > 0
@@ -599,6 +615,7 @@ async def get_timezone(coord, clocktype="12hour"):
         "lat": str(coord["lat"]),
         "lng": str(coord["lon"]),
     }
+    db.update_rate_limit("timezonedb")
 
     async with aiohttp.ClientSession() as session:
         async with session.get(url, params=params) as response:
@@ -633,6 +650,7 @@ async def detect_language(string):
     async with aiohttp.ClientSession() as session:
         async with session.get(url, params=params) as response:
             data = await response.json()
+            db.update_rate_limit("googletranslate")
             language = data["data"]["detections"][0][0]["language"]
 
     return language
@@ -649,6 +667,7 @@ async def gfycat_oauth():
     async with aiohttp.ClientSession() as session:
         async with session.post(url, json=params) as response:
             data = await response.json()
+            db.update_rate_limit("gfycat")
             access_token = data["access_token"]
 
     auth_headers = {"Authorization": f"Bearer {access_token}"}
