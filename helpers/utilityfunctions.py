@@ -635,7 +635,7 @@ def activities_string(activities, markdown=True, show_emoji=True):
 
 def patrons_only():
     def predicate(ctx):
-        if ctx.author.id == ctx.bot.owner.id and False:
+        if ctx.author.id == ctx.bot.owner.id:
             return True
         else:
             patrons = db.query("select user_id from patrons where currently_active = 1")
