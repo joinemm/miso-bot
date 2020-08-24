@@ -1,4 +1,7 @@
 import discord
+import random
+import more_itertools as mit
+import colorsys
 import kdtree
 import os
 import asyncio
@@ -40,7 +43,7 @@ class AlbumColorNode(object):
         return f"rgb{self.rgb}"
 
     def __repr__(self):
-        return f"AlbumColorNode({self.rgb}, {self.image_url})"
+        return f"AlbumColorNode({self.rgb}, {self.data})"
 
 
 class LastFm(commands.Cog):
@@ -768,26 +771,39 @@ class LastFm(commands.Cog):
         return topalbums
 
     @fm.command(aliases=["colourchart"])
-    async def colorchart(self, ctx, colour: discord.Colour, size="3x3"):
+    async def colorchart(self, ctx, colour, size="3x3"):
         """
         Color based album chart.
 
         Usage:
-            >fm colorchart #<hex color>
+            >fm colorchart #<hex color> [NxN]
+            >fm colorchart rainbow
+            >fm colorchart rainbowdiagonal
         """
-        dim = size.split("x")
-        width = int(dim[0])
-        if len(dim) > 1:
-            height = abs(int(dim[1]))
+        rainbow = colour.lower() in ["rainbow", "rainbowdiagonal"]
+        diagonal = colour.lower() == "rainbowdiagonal"
+        if not rainbow:
+            max_size = 30
+            try:
+                colour = discord.Color(value=int(colour, 16))
+                query_color = colour.to_rgb()
+            except ValueError:
+                return await ctx.send(f":warning: `{colour}` is not a valid hex colour")
+
+            dim = size.split("x")
+            width = int(dim[0])
+            if len(dim) > 1:
+                height = abs(int(dim[1]))
+            else:
+                height = abs(int(dim[0]))
+
+            if width + height > max_size:
+                return await ctx.send(
+                    f"Size is too big! Chart `width` + `height` total must not exceed `{max_size}`"
+                )
         else:
-            height = abs(int(dim[0]))
-
-        if width + height > 30:
-            return await ctx.send(
-                "Size is too big! Chart `width` + `height` total must not exceed `30`"
-            )
-
-        query_color = colour.to_rgb()
+            width = 7
+            height = 7
 
         topalbums = await self.get_all_albums(ctx.username)
 
@@ -836,27 +852,84 @@ class LastFm(commands.Cog):
 
                 db.executemany("INSERT INTO album_color_cache VALUES(?, ?)", to_cache)
 
-            tree = kdtree.create(album_color_nodes)
-            nearest = tree.search_knn(query_color, width * height)
-            final_albums = [
-                (
-                    self.cover_base_urls[3].format(alb[0].data.data),
-                    f"rgb{alb[0].data.rgb}, dist {alb[1]:.2f}",
-                )
-                for alb in nearest
-            ]
+            if rainbow:
+                if diagonal:
+                    rainbow_colors = [
+                        (255, 79, 0),
+                        (255, 33, 0),
+                        (217, 29, 82),
+                        (151, 27, 147),
+                        (81, 35, 205),
+                        (0, 48, 255),
+                        (0, 147, 147),
+                        (0, 249, 0),
+                        (203, 250, 0),
+                        (255, 251, 0),
+                        (255, 200, 0),
+                        (255, 148, 0),
+                    ]
+                else:
+                    rainbow_colors = [
+                        (255, 0, 0),  # red
+                        (255, 127, 0),  # orange
+                        (255, 255, 0),  # yellow
+                        (0, 255, 0),  # green
+                        (0, 0, 255),  # blue
+                        (75, 0, 130),  # purple
+                        (148, 0, 211),  # violet
+                    ]
+
+                chunks = []
+                tree = kdtree.create(album_color_nodes)
+                for rgb in rainbow_colors:
+                    chunks.append(list(tree.search_knn(rgb, width + height)))
+
+                random_offset = random.randint(0, 6)
+                final_albums = []
+                for album_index in range(width * height):
+                    if diagonal:
+                        choice_index = (album_index % width + (album_index // height) + random_offset) % len(
+                            chunks
+                        )
+                    else:
+                        choice_index = album_index % width
+
+                    choose_from = chunks[choice_index]
+                    choice = choose_from[album_index // height]
+                    final_albums.append(
+                        (
+                            self.cover_base_urls[3].format(choice[0].data.data),
+                            f"rgb{choice[0].data.rgb}, dist {choice[1]:.2f}",
+                        )
+                    )
+
+            else:
+                tree = kdtree.create(album_color_nodes)
+                nearest = tree.search_knn(query_color, width * height)
+
+                final_albums = [
+                    (
+                        self.cover_base_urls[3].format(alb[0].data.data),
+                        f"rgb{alb[0].data.rgb}, dist {alb[1]:.2f}",
+                    )
+                    for alb in nearest
+                ]
 
         buffer = await self.chart_factory(final_albums, width, height, show_labels=False)
 
+        if rainbow:
+            colour = f"{'diagonal ' if diagonal else ''}rainbow"
+
         await ctx.send(
-            f"`{ctx.username} album color chart for {colour}`"
+            f"`{ctx.username} {colour} album chart`"
             + (
                 f"\n`{len(to_fetch)} fetched, {len(albumcolors)-len(to_fetch)} from cache`"
                 if to_fetch
                 else ""
             ),
             file=discord.File(
-                fp=buffer, filename=f"fmcolorchart_{ctx.username}_{str(colour).strip('#')}.jpeg"
+                fp=buffer,
+                filename=f"fmcolorchart_{ctx.username}_{str(colour).strip('#').replace(' ', '_')}.jpeg",
             ),
         )
 
