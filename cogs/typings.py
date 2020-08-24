@@ -227,7 +227,8 @@ class Typings(commands.Cog):
                 await ctx.send(
                     f"{message.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**"
                 )
-                save_wpm(ctx.author, wpm, accuracy, wordcount, language, 1)
+                # TODO: fix this shit
+                # save_wpm(ctx.author, wpm, accuracy, wordcount, language, 1)
 
                 results[str(message.author.id)] = wpm
                 completed_players.add(message.author)
