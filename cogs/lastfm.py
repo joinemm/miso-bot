@@ -850,7 +850,7 @@ class LastFm(commands.Cog):
                         to_cache.append((to_fetch[i], str(color)))
                         album_color_nodes.append(AlbumColorNode(color, to_fetch[i]))
 
-                db.executemany("INSERT INTO album_color_cache VALUES(?, ?)", to_cache)
+                db.executemany("INSERT OR IGNORE INTO album_color_cache VALUES(?, ?)", to_cache)
 
             if rainbow:
                 if diagonal:
