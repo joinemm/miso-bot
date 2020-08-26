@@ -68,7 +68,6 @@ class Fishy(commands.Cog):
             gift = False
 
         fishdata = db.fishdata(ctx.author.id)
-
         if fishdata is not None and fishdata.timestamp is not None:
             time_since_fishy = ctx.message.created_at.timestamp() - fishdata.timestamp
         else:
@@ -98,7 +97,23 @@ class Fishy(commands.Cog):
                 fisher_id=(ctx.author.id if gift else None),
             )
 
-    @commands.command()
+    @commands.command(aliases=["fintimer", "fisytimer", "foshytimer"])
+    async def fishytimer(self, ctx):
+        """Check your fishy timer without actually fishing."""
+        fishdata = db.fishdata(ctx.author.id)
+        if fishdata is not None and fishdata.timestamp is not None:
+            time_since_fishy = ctx.message.created_at.timestamp() - fishdata.timestamp
+
+            if time_since_fishy < COOLDOWN:
+                wait_time = f"**{util.stringfromtime(COOLDOWN - time_since_fishy, 2)}**"
+                await ctx.send(f":clock4: You will need to wait **{wait_time}** to fish again.")
+            else:
+                await ctx.send(":sparkles: Good news! You can fish right now!")
+
+        else:
+            await ctx.send("You have never fished...?")
+
+    @commands.command(aliases=["finstats", "fisystats", "foshystats"])
     async def fishystats(self, ctx, user=None):
         """Show fishing statistics.
 
@@ -157,28 +172,6 @@ class Fishy(commands.Cog):
             )
 
         await ctx.send(embed=content)
-
-    @commands.command(hidden=True)
-    @commands.is_owner()
-    async def fishdistributiontest(self, ctx, amount=100):
-        """Test the distribution of fish."""
-        fishes = {
-            "trash": 0,
-            "fish_common": 0,
-            "fish_uncommon": 0,
-            "fish_rare": 0,
-            "fish_legendary": 0,
-        }
-        for i in range(amount):
-            f = self.FISHTYPES[
-                random.choices(list(self.FISHTYPES.keys()), self.WEIGHTS)[0]
-            ].__name__
-            fishes[f] += 1
-
-        await ctx.send(
-            f"**Fishing {amount} times...**\n"
-            + "\n".join(f"{k} : {v}" for k, v in fishes.items())
-        )
 
 
 async def fish_common(ctx, user, gift):
