@@ -55,9 +55,10 @@ class Miscellaneous(commands.Cog):
     @commands.command()
     async def ascii(self, ctx, *, text):
         """Turn text into fancy ascii art."""
+        font = "small"
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                f"https://artii.herokuapp.com/make?text={text}"
+                f"https://artii.herokuapp.com/make?text={text}&font={font}"
             ) as response:
                 content = await response.text()
 
@@ -121,6 +122,8 @@ class Miscellaneous(commands.Cog):
         artist_list_new = set()
         urls_to_scrape = [
             "https://kprofiles.com/k-pop-girl-groups/",
+            "https://kprofiles.com/disbanded-kpop-groups-list/",
+            "https://kprofiles.com/disbanded-kpop-boy-groups/",
             "https://kprofiles.com/k-pop-boy-groups/",
             "https://kprofiles.com/co-ed-groups-profiles/",
             "https://kprofiles.com/kpop-duets-profiles/",
@@ -435,7 +438,6 @@ class Miscellaneous(commands.Cog):
             emoji_name = emoji_name.strip(":")
             emoji_url = f"https://twemoji.maxcdn.com/v/13.0.0/72x72/{ord(emoji):x}.png"
 
-        print(emoji_url)
         color_hex = await util.color_from_image_url(str(emoji_url))
         content = discord.Embed(
             title=f"`:{emoji_name}:`", color=await util.get_color(ctx, color_hex)
