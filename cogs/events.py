@@ -20,7 +20,6 @@ class Events(commands.Cog):
             ("watching", lambda: f"{len(self.bot.guilds)} servers"),
             ("listening", lambda: f"{len(set(self.bot.get_all_members()))} users"),
             ("playing", lambda: "misobot.xyz"),
-            ("playing", lambda: "cutt.ly/misob"),
         ]
         self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
         self.current_status = None
@@ -134,9 +133,13 @@ class Events(commands.Cog):
             message_format = "Welcome **{username}** {mention} to **{server}**"
 
         if db.get_setting(member.guild.id, "welcome_embed") == 0:
-            await channel.send(util.create_welcome_without_embed(member, member.guild, message_format))
+            await channel.send(
+                util.create_welcome_without_embed(member, member.guild, message_format)
+            )
         else:
-            await channel.send(embed=util.create_welcome_embed(member, member.guild, message_format))
+            await channel.send(
+                embed=util.create_welcome_embed(member, member.guild, message_format)
+            )
 
         # add autorole
         role = member.guild.get_role(db.get_setting(member.guild.id, "autorole"))
@@ -161,8 +164,7 @@ class Events(commands.Cog):
                 f"Cannot announce ban of {user} from {guild.name} (invalid channel)"
             )
 
-        await channel.send(f"**{user.name}** (`{user.id}`) has been permanently banned")
-        logger.info(f"{user} was just banned from {guild.name}")
+        await channel.send(f":hammer: **{user}** (`{user.id}`) has just been banned")
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
@@ -182,7 +184,6 @@ class Events(commands.Cog):
             message_format = "Goodbye {mention} ( **{user}** )"
 
         await channel.send(util.create_goodbye_message(member, member.guild, message_format))
-        logger.info(f"Said goodbye to {member.name} from {member.guild.name}")
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
@@ -197,6 +198,15 @@ class Events(commands.Cog):
 
         # ignore empty messages
         if len(message.content) == 0 and len(message.attachments) == 0:
+            return
+
+        # ignored channels
+        if (
+            db.query(
+                "select * from deleted_messages_mask where channel_id = ?", (message.channel.id,)
+            )
+            is not None
+        ):
             return
 
         channel_id = db.get_setting(message.guild.id, "deleted_messages_channel")

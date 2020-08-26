@@ -315,16 +315,19 @@ def log_emoji_usage(message, custom_emoji, unicode_emoji):
     for emoji in unicode_emoji:
         all_emoji.append((emoji, "unicode"))
 
+    insert_query = "INSERT OR IGNORE INTO emoji_usage VALUES(?, ?, ?, ?, ?)"
+    insert_param = []
+    update_query = """
+        UPDATE emoji_usage SET count = count + 1
+        WHERE (guild_id = ? AND user_id = ? AND emoji = ? AND emojitype = ?)"""
+
+    update_param = []
     for emoji, emojitype in all_emoji:
-        execute(
-            "INSERT OR IGNORE INTO emoji_usage VALUES(?, ?, ?, ?, ?)",
-            (message.guild.id, message.author.id, emoji, emojitype, 0),
-        )
-        execute(
-            "UPDATE emoji_usage SET count = count + 1 "
-            "WHERE (guild_id = ? AND user_id = ? AND emoji = ? AND emojitype = ?)",
-            (message.guild.id, message.author.id, emoji, emojitype),
-        )
+        insert_param.append((message.guild.id, message.author.id, emoji, emojitype, 0))
+        update_param.append((message.guild.id, message.author.id, emoji, emojitype))
+
+    executemany(insert_query, insert_param)
+    executemany(update_query, update_param)
 
 
 def get_blacklist(guild_id, column, table):
