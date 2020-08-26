@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS "guilds"(
   "welcome_toggle"	INTEGER NOT NULL DEFAULT 1,
   "welcome_channel"	INTEGER,
   "welcome_message"	TEXT,
+  "welcome_embed" INTEGER DEFAULT 1,
   "starboard_toggle"	INTEGER NOT NULL DEFAULT 0,
   "starboard_channel"	INTEGER,
   "starboard_amount"	INTEGER NOT NULL DEFAULT 3,
