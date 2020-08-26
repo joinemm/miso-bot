@@ -98,11 +98,19 @@ class Config(commands.Cog):
             db.update_setting(ctx.guild.id, "welcome_message", None)
             return await ctx.send("Welcome message has been reset to default.")
 
-        welcomepreview = util.create_welcome_embed(ctx.author, ctx.guild, message)
         db.update_setting(ctx.guild.id, "welcome_message", message)
-        await ctx.send(
-            f"New welcome message set:\n```{message}```Preview:", embed=welcomepreview
-        )
+
+        if db.get_setting(ctx.guild.id, "welcome_embed") == 0:
+            preview = util.create_welcome_without_embed(ctx.author, ctx.guild, message)
+            await ctx.send(
+                f"New welcome message set:\n```{message}```\n> Preview:"
+            )
+            await ctx.send(preview)
+        else:
+            preview = util.create_welcome_embed(ctx.author, ctx.guild, message)
+            await ctx.send(
+                f"New welcome message set:\n```{message}```Preview:", embed=preview
+            )
 
     @logmessages_welcome.command(name="embed")
     async def welcome_embed(self, ctx, state: bool):
