@@ -566,6 +566,11 @@ def create_welcome_embed(user, guild, messageformat):
     return content
 
 
+def create_welcome_without_embed(user, guild, messageformat):
+    """Creates a welcome message from the given format without wrapping it in embed"""
+    return messageformat.format(mention=user.mention, user=user, id=user.id, server=guild.name, username=user.name)
+
+
 def create_goodbye_message(user, guild, messageformat):
     """Formats a goodbye message."""
     return messageformat.format(

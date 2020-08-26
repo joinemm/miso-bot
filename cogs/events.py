@@ -133,8 +133,10 @@ class Events(commands.Cog):
         if message_format is None:
             message_format = "Welcome **{username}** {mention} to **{server}**"
 
-        await channel.send(embed=util.create_welcome_embed(member, member.guild, message_format))
-        logger.info(f"Welcomed {member.name} to {member.guild.name}")
+        if db.get_setting(member.guild.id, "welcome_embed") == 0:
+            await channel.send(util.create_welcome_without_embed(member, member.guild, message_format))
+        else:
+            await channel.send(embed=util.create_welcome_embed(member, member.guild, message_format))
 
         # add autorole
         role = member.guild.get_role(db.get_setting(member.guild.id, "autorole"))
@@ -381,7 +383,7 @@ class Events(commands.Cog):
                     )
                 except discord.errors.Forbidden:
                     logger.warning(
-                        "Unable to send message to starboard in {channel.guild} due to missing permissions!"
+                        f"Unable to send message to starboard in {channel.guild} due to missing permissions!"
                     )
 
             else:
