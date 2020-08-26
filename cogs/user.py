@@ -440,20 +440,16 @@ class User(commands.Cog):
     @leaderboard.command(name="wpm")
     async def leaderboard_wpm(self, ctx, scope=""):
         _global_ = scope == "global"
-        userids = db.query("SELECT DISTINCT user_id FROM typingdata")
-        if userids is None:
-            return await ctx.send("No typing data exists yet!")
 
-        users = []
-        for userid in userids:
-            userid = userid[0]
-            data = db.query(
-                "SELECT MAX(wpm), `timestamp` FROM typingdata WHERE user_id = ?",
-                (userid,),
-            )[0]
-            wpm = data[0]
-            timestamp = data[1]
+        data = db.query("""
+            SELECT user_id, MAX(wpm), timestamp FROM typingdata
+            GROUP BY user_id ORDER BY wpm desc
+            """)
 
+        rank_icon = [":first_place:", ":second_place:", ":third_place:"]
+        rows = []
+        i = 1
+        for userid, wpm, timestamp in data:
             if _global_:
                 user = self.bot.get_user(userid)
             else:
@@ -461,23 +457,19 @@ class User(commands.Cog):
             if user is None:
                 continue
 
-            users.append((user, wpm, timestamp))
-
-        if not users:
-            return await ctx.send("No typing data exists yet on this server!")
-
-        rows = []
-        rank_icon = [":first_place:", ":second_place:", ":third_place:"]
-        for i, (user, wpm, timestamp) in enumerate(
-            sorted(users, key=itemgetter(1), reverse=True), start=1
-        ):
             if i <= len(rank_icon):
                 ranking = rank_icon[i - 1]
             else:
                 ranking = f"`{i}.`"
+
             rows.append(
                 f"{ranking} **{int(wpm)}** WPM — **{util.escape_md(user.name)}** ( {arrow.get(timestamp).humanize()} )"
             )
+            i += 1
+
+        if not rows:
+            return await ctx.send("No typing data exists yet on this server!")
+
         content = discord.Embed(
             title=":keyboard: WPM Leaderboard", color=discord.Color.orange()
         )
