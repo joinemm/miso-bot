@@ -104,6 +104,12 @@ class Config(commands.Cog):
             f"New welcome message set:\n```{message}```Preview:", embed=welcomepreview
         )
 
+    @logmessages_welcome.command(name="embed")
+    async def welcome_embed(self, ctx, state: bool):
+        """Toggle whether welcome messages use embed or only text."""
+        db.update_setting(ctx.guild.id, "welcome_embed", (1 if state else 0))
+        await ctx.send(f"Welcome message embeds are now **{('enabled' if state else 'disabled')}**")
+
     @logmessages.group(name="goodbye")
     async def logmessages_goodbye(self, ctx):
         """Configure the goodbye message."""
