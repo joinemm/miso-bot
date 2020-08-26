@@ -13,7 +13,7 @@ JSONDATABASE = "data/data.json"
 
 
 def query(command, parameters=(), maketuple=False, database=SQLDATABASE):
-    connection = sqlite3.connect(database)
+    connection = sqlite3.connect(database, timeout=10)
     cursor = connection.cursor()
     cursor.execute(command, parameters)
     data = cursor.fetchall()
@@ -37,7 +37,7 @@ def query(command, parameters=(), maketuple=False, database=SQLDATABASE):
 
 
 def execute(command, parameters=(), database=SQLDATABASE):
-    connection = sqlite3.connect(database)
+    connection = sqlite3.connect(database, timeout=10)
     cursor = connection.cursor()
     cursor.execute(command, parameters)
     connection.commit()
@@ -46,7 +46,7 @@ def execute(command, parameters=(), database=SQLDATABASE):
 
 def executemany(command, parameters: list, database=SQLDATABASE):
     """execute many. parameters is list of tuples."""
-    connection = sqlite3.connect(database)
+    connection = sqlite3.connect(database, timeout=10)
     cursor = connection.cursor()
     cursor.executemany(command, parameters)
     connection.commit()
@@ -54,7 +54,7 @@ def executemany(command, parameters: list, database=SQLDATABASE):
 
 
 def album_colors_from_cache(image_ids):
-    connection = sqlite3.connect(SQLDATABASE)
+    connection = sqlite3.connect(SQLDATABASE, timeout=10)
     cursor = connection.cursor()
     cursor.execute("CREATE TEMPORARY TABLE temp_images (image_id TEXT)")
     cursor.executemany("INSERT INTO temp_images VALUES(?)", [(img,) for img in image_ids])
