@@ -161,8 +161,13 @@ class Config(commands.Cog):
         else:
             await ctx.send(f"Bans will now be logged in {channel.mention}")
 
-    @logmessages.command(name="deletedmessages")
-    async def logmessages_messages(self, ctx, *, channel: ChannelSetting):
+    @logmessages.group(name="deleted")
+    async def logmessages_deleted(self, ctx):
+        """Configure deleted messages logging."""
+        await util.command_group_help(ctx)
+
+    @logmessages_deleted.command(name="channel")
+    async def deleted_channel(self, ctx, *, channel: ChannelSetting):
         """Set channel where deleted messages are logged."""
         db.update_setting(
             ctx.guild.id,
@@ -173,6 +178,18 @@ class Config(commands.Cog):
             await ctx.send("Deleted messages logs disabled.")
         else:
             await ctx.send(f"Deleted messages will now be logged in {channel.mention}")
+
+    @logmessages_deleted.command(name="ignore")
+    async def deleted_ignore(self, ctx, *, channel: discord.TextChannel):
+        """Ignore channel from logging deleted messages."""
+        db.execute("insert or ignore into deleted_messages_mask values (?, ?)", (ctx.guild.id, channel.id))
+        await ctx.send(f"{channel.mention} is now ignored from message logging")
+
+    @logmessages_deleted.command(name="unignore")
+    async def deleted_unignore(self, ctx, *, channel: discord.TextChannel):
+        """Unignore channel from logging deleted messages."""
+        db.execute("delete from deleted_messages_mask where guild_id = ? and channel_id = ?", (ctx.guild.id, channel.id))
+        await ctx.send(f"{channel.mention} is no longer ignored from message logging")
 
     @logmessages.command(name="levelups")
     async def logmessages_levelups(self, ctx, state: bool):
