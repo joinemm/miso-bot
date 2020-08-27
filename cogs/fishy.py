@@ -97,7 +97,7 @@ class Fishy(commands.Cog):
                 fisher_id=(ctx.author.id if gift else None),
             )
 
-    @commands.command(aliases=["fintimer", "fisytimer", "foshytimer"])
+    @commands.command(aliases=["fintimer", "fisytimer", "foshytimer", "ft"])
     async def fishytimer(self, ctx):
         """Check your fishy timer without actually fishing."""
         fishdata = db.fishdata(ctx.author.id)
@@ -113,7 +113,7 @@ class Fishy(commands.Cog):
         else:
             await ctx.send("You have never fished...?")
 
-    @commands.command(aliases=["finstats", "fisystats", "foshystats"])
+    @commands.command(aliases=["finstats", "fisystats", "foshystats", "fs"])
     async def fishystats(self, ctx, user=None):
         """Show fishing statistics.
 
