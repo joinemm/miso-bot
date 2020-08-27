@@ -196,14 +196,12 @@ class Info(commands.Cog):
             icon_url=data[0]["author"]["avatar_url"],
             url=f"https://github.com/{author}/{repo}/commits/master",
         )
-        content.set_thumbnail(
-            url="http://www.logospng.com/images/182/github-icon-182553.png"
-        )
+        content.set_thumbnail(url="https://i.imgur.com/NomDwkT.png")
 
         pages = []
         i = 0
         for commit in data:
-            if i == 7:
+            if i == 10:
                 pages.append(content)
                 content = copy.deepcopy(content)
                 content.clear_fields()
@@ -211,68 +209,18 @@ class Info(commands.Cog):
 
             i += 1
             sha = commit["sha"][:7]
-            author = commit["author"].get("login") if commit["author"] else "UNKNOWN"
+            author = commit["commit"]["committer"]["name"]
             date = commit["commit"]["author"].get("date")
             arrow_date = arrow.get(date)
             url = commit["html_url"]
             content.add_field(
-                name=f"[`{sha}`] {commit['commit'].get('message')}",
-                value=f"**{author}** committed {arrow_date.humanize()} | [link]({url})",
+                name=commit["commit"].get("message"),
+                value=f"`{author}` committed {arrow_date.humanize()} | [{sha}]({url})",
                 inline=False,
             )
 
         pages.append(content)
         await util.page_switcher(ctx, pages)
-
-    @commands.command()
-    async def inspect(self, ctx, snowflake: int):
-        """Inspect discord snowflake."""
-        guild = self.bot.get_guild(snowflake)
-        if guild is None:
-            guild = ctx.guild
-            member = guild.get_member(snowflake)
-            if member is None:
-                user = self.bot.get_user(snowflake)
-                if user is None:
-                    channel = self.bot.get_channel(snowflake)
-                    if channel is None:
-                        role = guild.get_role(snowflake)
-                        if role is None:
-                            emoji = discord.utils.get(self.bot.emojis, id=snowflake)
-                            if emoji is None:
-                                result = None
-                            else:
-                                result = emoji
-                        else:
-                            result = role
-                    else:
-                        result = channel
-                else:
-                    result = user
-            else:
-                result = member
-        else:
-            result = guild
-
-        classname = str(result.__class__).replace("class", "").strip("<' >")
-        content = discord.Embed(
-            title=f":mag_right: {classname}",
-            color=discord.Color.from_rgb(189, 221, 244),
-        )
-        if result is None:
-            result_formatted = result
-        else:
-            result_formatted = ""
-            longest_thing = 1
-            for thing in result.__slots__:
-                if len(thing) > longest_thing:
-                    longest_thing = len(thing)
-            for thing in result.__slots__:
-                thing_value = getattr(result, thing)
-                result_formatted += f"{thing:>{longest_thing}s}: {thing_value}\n"
-
-        content.description = f"```yaml\n{result_formatted}\n```"
-        await ctx.send(embed=content)
 
     @commands.command()
     async def emojistats(self, ctx, scope="server"):
