@@ -141,8 +141,12 @@ def update_user(user_id, column, new_value):
 
 def update_rate_limit(api_name):
     month = int(arrow.now().format("M"))
-    execute("insert or ignore into api_usage(api_name, month) values(?, ?)", (api_name, month))
-    execute("update api_usage set count=count+1 where api_name=? AND month=?", (api_name, month))
+    execute(
+        "insert or ignore into api_usage(api_name, month) values(?, ?)", (api_name, month),
+    )
+    execute(
+        "update api_usage set count=count+1 where api_name=? AND month=?", (api_name, month),
+    )
 
 
 def check_rate_limit(api_name):
@@ -360,6 +364,9 @@ def is_blacklisted(ctx):
     bl_global = query("SELECT * FROM blacklist_global_users WHERE user_id = ?", (ctx.author.id,))
     if bl_global is not None:
         raise exceptions.BlacklistTrigger(ctx, "global")
+
+    if ctx.guild is None:
+        return True
 
     bl_command = query(
         "SELECT * FROM blacklisted_commands WHERE guild_id = ? AND command = ?",

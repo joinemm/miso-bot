@@ -1,7 +1,5 @@
 import discord
 import random
-import more_itertools as mit
-import colorsys
 import kdtree
 import os
 import asyncio
@@ -17,6 +15,7 @@ from discord.ext import commands
 from helpers import utilityfunctions as util
 from data import database as db
 from helpers.exceptions import LastFMError
+from helpers import emojis
 from PIL import Image
 import io
 import colorgram
@@ -161,7 +160,7 @@ class LastFm(commands.Cog):
 
         # tags and playcount
         trackdata = await api_request(
-            {"user": ctx.username, "method": "track.getInfo", "artist": artist, "track": track},
+            {"user": ctx.username, "method": "track.getInfo", "artist": artist, "track": track,},
             ignore_errors=True,
         )
         if trackdata is not None:
@@ -841,7 +840,7 @@ class LastFm(commands.Cog):
                 if len(tasks) > 500:
                     warn = await ctx.send(
                         ":exclamation:Your library includes over 500 uncached album colours, "
-                        "this might take a while <a:loading:643419324941336587>"
+                        f"this might take a while {emojis.LOADING}"
                     )
 
                 colordata = await asyncio.gather(*tasks)
@@ -888,9 +887,9 @@ class LastFm(commands.Cog):
                 final_albums = []
                 for album_index in range(width * height):
                     if diagonal:
-                        choice_index = (album_index % width + (album_index // height) + random_offset) % len(
-                            chunks
-                        )
+                        choice_index = (
+                            album_index % width + (album_index // height) + random_offset
+                        ) % len(chunks)
                     else:
                         choice_index = album_index % width
 
@@ -1380,7 +1379,7 @@ class LastFm(commands.Cog):
 
         async def confirm_ban():
             content.add_field(
-                name="Reported by", value=f"{ctx.author} (`{ctx.author.id}`)", inline=False
+                name="Reported by", value=f"{ctx.author} (`{ctx.author.id}`)", inline=False,
             )
             data = db.query(
                 "select user_id from users where LOWER(lastfm_username) = ?",
@@ -1393,7 +1392,7 @@ class LastFm(commands.Cog):
                     connected_accounts.append(f"{user} (`{user.id}`)")
 
                 content.add_field(
-                    name="Connected by", value=", ".join(connected_accounts), inline=False
+                    name="Connected by", value=", ".join(connected_accounts), inline=False,
                 )
             content.set_footer(text=f">fmban {lastfm_username}")
             content.description = ""
@@ -1411,7 +1410,7 @@ class LastFm(commands.Cog):
         )
 
     async def send_report(self, ctx, content, lastfm_username):
-        reports_channel = self.bot.get_channel(648153195356356619)  # 729736304677486723)
+        reports_channel = self.bot.get_channel(729736304677486723)
         if reports_channel is None:
             return await ctx.send(":warning: Something went wrong.")
 
@@ -1593,7 +1592,7 @@ async def get_playcount_album(artist, album, username, reference=None):
 
 async def get_playcount(artist, username, reference=None):
     data = await api_request(
-        {"method": "artist.getinfo", "user": username, "artist": artist, "autocorrect": 1}
+        {"method": "artist.getinfo", "user": username, "artist": artist, "autocorrect": 1,}
     )
     try:
         count = int(data["artist"]["stats"]["userplaycount"])

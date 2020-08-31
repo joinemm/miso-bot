@@ -70,9 +70,6 @@ async def before_any_command(ctx):
 @bot.check
 async def check_for_blacklist(ctx):
     """Check command invocation context for blacklist triggers"""
-    if ctx.guild is None:
-        # raise commands.NoPrivateMessage
-        return True
     return db.is_blacklisted(ctx)
 
 
@@ -85,4 +82,5 @@ if __name__ == "__main__":
             logger.error(f"Error loading [ {extension} ]")
             traceback.print_exception(type(error), error, error.__traceback__)
 
+    bot.start_time = time()
     bot.run(TOKEN)
