@@ -1,8 +1,8 @@
 import discord
-from time import time
 from discord.ext import commands, tasks
 import helpers.log as log
 import helpers.utilityfunctions as util
+from helpers import emojis
 import data.database as db
 import re
 import random
@@ -25,14 +25,13 @@ class Events(commands.Cog):
         self.current_status = None
         self.status_loop.start()
         self.settings = db.get_from_data_json(["bot_settings"])
-        self.emojis = None
 
     def cog_unload(self):
         self.status_loop.cancel()
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx):
-        """Runs when any command is completed succesfully"""
+        """Runs when any command is completed succesfully."""
         # prevent double invocation for subcommands
         if ctx.invoked_subcommand is None:
             command_logger.info(log.log_command(ctx))
@@ -40,24 +39,13 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        """Runs when the bot connects to the discord servers"""
+        """Runs when the bot connects to the discord servers."""
         # cache owner from appinfo
         self.bot.owner = (await self.bot.application_info()).owner
-        self.bot.start_time = time()
         latencies = self.bot.latencies
         logger.info(f"Loading complete | running {len(latencies)} shards")
         for shard_id, latency in latencies:
             logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
-
-        if self.emojis is None:
-            self.emojis = {
-                "upvote": self.bot.get_emoji(
-                    db.query("select id from emojis where name = 'upvote'")[0][0]
-                ),
-                "downvote": self.bot.get_emoji(
-                    db.query("select id from emojis where name = 'downvote'")[0][0]
-                ),
-            }
 
     @tasks.loop(minutes=3.0)
     async def status_loop(self):
@@ -73,7 +61,7 @@ class Events(commands.Cog):
         logger.info("Starting status loop")
 
     async def next_status(self):
-        """switch to the next status message"""
+        """switch to the next status message."""
         new_status_id = self.current_status
         while new_status_id == self.current_status:
             new_status_id = random.randrange(0, len(self.statuses))
@@ -203,7 +191,7 @@ class Events(commands.Cog):
         # ignored channels
         if (
             db.query(
-                "select * from deleted_messages_mask where channel_id = ?", (message.channel.id,)
+                "select * from deleted_messages_mask where channel_id = ?", (message.channel.id,),
             )
             is not None
         ):
@@ -238,8 +226,8 @@ class Events(commands.Cog):
             )
             is not None
         ):
-            await message.add_reaction(self.emojis.get("upvote"))
-            await message.add_reaction(self.emojis.get("downvote"))
+            await message.add_reaction(emojis.UPVOTE)
+            await message.add_reaction(emojis.DOWNVOTE)
 
         # xp gain
         message_xp = util.xp_from_message(message)

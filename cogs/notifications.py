@@ -2,33 +2,17 @@ import discord
 from discord.ext import commands
 import data.database as db
 import helpers.utilityfunctions as util
+from helpers import emojis
 import re
-import helpers.log as log
-
-logger = log.get_logger(__name__)
 
 
 class Notifications(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.emojis = {}
-        self.cache_emojis()
-
-    def cache_emojis(self):
-        for emoji in ["vivismirk", "hyunjinwtf"]:
-            try:
-                self.emojis[emoji] = self.bot.get_emoji(
-                    db.query("select id from emojis where name = ?", (emoji,))[0][0]
-                )
-            except TypeError:
-                self.emojis[emoji] = None
-
-            if self.emojis[emoji] is None:
-                logger.error(f"Unable to retrieve {emoji}")
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """Notification handler"""
+        """Notification message handler."""
         if message.guild is None:
             return
 
@@ -55,7 +39,10 @@ class Notifications(commands.Cog):
 
     @commands.group(case_insensitive=True, aliases=["noti"])
     async def notification(self, ctx):
-        """Add keyword notifications on this server"""
+        """
+        Add keyword notifications on this server.
+        Use in DMs to manage global notifications.
+        """
         await util.command_group_help(ctx)
 
     @notification.command()
@@ -74,27 +61,25 @@ class Notifications(commands.Cog):
         )
 
         if check is not None:
-            return await ctx.send(
-                f"You already have this notification {self.emojis.get('hyunjinwtf')}"
-            )
+            return await ctx.send(":warning: You already have this notification!")
 
         db.execute(
             "REPLACE INTO notifications values(?, ?, ?)",
             (guild_id, ctx.author.id, keyword),
         )
         await ctx.author.send(
-            f"New notification for keyword `{keyword}` set "
+            f":white_check_mark: New keyword notification `{keyword}` set "
             + ("globally" if dm else f"in `{ctx.guild.name}`")
         )
         if not dm:
             await ctx.send(
                 "Set a notification!"
-                + ("" if dm else f" Check your DMs {self.emojis.get('vivismirk')}")
+                + ("" if dm else f" Check your DMs {emojis.VIVISMIRK}")
             )
 
     @notification.command()
     async def remove(self, ctx, *, keyword):
-        """Remove notification"""
+        """Remove notification."""
         dm = ctx.guild is None
         if dm:
             guild_id = 0
@@ -108,27 +93,26 @@ class Notifications(commands.Cog):
         )
 
         if check is None:
-            return await ctx.send(
-                f"You don't have that notification {self.emojis.get('hyunjinwtf')}"
-            )
+            return await ctx.send(":warning: You don't have that notification.")
 
         db.execute(
             "DELETE FROM notifications where guild_id = ? and user_id = ? and keyword = ?",
             (guild_id, ctx.author.id, keyword),
         )
         await ctx.author.send(
-            f"Notification for keyword `{keyword}` removed "
-            + ("globally" if dm else f"for `{ctx.guild.name}`")
+            f":white_check_mark: Keyword notification `{keyword}` that you set "
+            + ("globally" if dm else f"in `{ctx.guild.name}`")
+            + " has been removed."
         )
         if not dm:
             await ctx.send(
                 "removed a notification!"
-                + ("" if dm else f" Check your DMs {self.emojis.get('vivismirk')}")
+                + ("" if dm else f" Check your DMs {emojis.VIVISMIRK}")
             )
 
     @notification.command()
     async def list(self, ctx):
-        """List your current notifications"""
+        """List your current notifications."""
         words = db.query(
             "SELECT guild_id, keyword FROM notifications where user_id = ? ORDER BY keyword",
             (ctx.author.id,),
@@ -160,7 +144,7 @@ class Notifications(commands.Cog):
 
         await ctx.author.send(embed=content)
         if ctx.guild is not None:
-            await ctx.send(f"List sent to your DMs {self.emojis.get('vivismirk')}")
+            await ctx.send(f"Notification list sent to your DMs {emojis.VIVISMIRK}")
 
 
 def setup(bot):
