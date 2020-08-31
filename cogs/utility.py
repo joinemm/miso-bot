@@ -9,7 +9,7 @@ from time import time
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from data import database as db
-from helpers import log, utilityfunctions as util
+from helpers import log, emojis, utilityfunctions as util
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
 DARKSKY_API_KEY = os.environ.get("DARK_SKY_KEY")
@@ -424,7 +424,7 @@ class Utility(commands.Cog):
         except KeyError:
             return await ctx.send(":warning: Unable to create gif from this link!")
 
-        message = await ctx.send("Encoding <a:loading:643419324941336587>")
+        message = await ctx.send(f"Encoding {emojis.LOADING}")
 
         i = 1
         url = f"https://api.gfycat.com/v1/gfycats/fetch/status/{gfyname}"
@@ -485,7 +485,7 @@ class Utility(commands.Cog):
 
                 data = await response.json()
                 link = "https://streamable.com/" + data.get("shortcode")
-                message = await ctx.send("Processing Video <a:loading:643419324941336587>")
+                message = await ctx.send(f"Processing Video {emojis.LOADING}")
 
         i = 1
         await asyncio.sleep(5)
@@ -559,7 +559,7 @@ class Utility(commands.Cog):
                 return await ctx.send(error)
 
             url = "https://finnhub.io/api/v1/stock/profile2"
-            params['symbol'] = profile_ticker(params['symbol'])
+            params["symbol"] = profile_ticker(params["symbol"])
             async with session.get(url, params=params) as response:
                 company_profile = await response.json()
                 db.update_rate_limit("finnhub")
@@ -567,21 +567,28 @@ class Utility(commands.Cog):
         change = float(quote_data["c"]) - float(quote_data["pc"])
         gains = change > 0
         if gains:
-            tri = "<:green_triangle_up:733281394364514407>"
+            tri = emojis.GREEN_UP
         else:
-            tri = "<:red_triangle_down:733281284012638260>"
+            tri = emojis.RED_DOWN
+
+        percentage = ((float(quote_data["c"]) / float(quote_data["pc"])) - 1) * 100
 
         def getcur(s):
             return f"${quote_data[s]}"
 
-        if company_profile.get('name') is not None:
-            content = discord.Embed(title=f"${company_profile['ticker']} | {company_profile['name']}")
+        if company_profile.get("name") is not None:
+            content = discord.Embed(
+                title=f"${company_profile['ticker']} | {company_profile['name']}"
+            )
             content.set_thumbnail(url=company_profile.get("logo"))
             content.set_footer(text=company_profile["exchange"])
         else:
             content = discord.Embed(title=f"${symbol}")
 
-        content.add_field(name="Change", value=f"{'+$' if gains else '-$'}{abs(change):.2f}{tri}")
+        content.add_field(
+            name="Change",
+            value=f"{'+$' if gains else '-$'}{abs(change):.2f}{tri}\n({percentage:.2f}%)",
+        )
         content.add_field(name="Open", value=getcur("o"))
         content.add_field(name="Previous close", value=getcur("pc"))
 
@@ -600,9 +607,7 @@ def setup(client):
 
 
 def profile_ticker(ticker):
-    subs = {
-        "GOOG": "GOOGL"
-    }
+    subs = {"GOOG": "GOOGL"}
     return subs.get(ticker) or ticker
 
 
