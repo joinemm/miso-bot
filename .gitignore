@@ -6,3 +6,5 @@ stash/
 tests/
 .ycm_extra_conf.py
 data/database.db
+.vscode/
+polls.yaml
