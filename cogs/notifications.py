@@ -12,9 +12,6 @@ class Notifications(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.emojis = {}
-
-    @commands.Cog.listener()
-    async def on_ready(self):
         self.cache_emojis()
 
     def cache_emojis(self):
@@ -44,7 +41,7 @@ class Notifications(commands.Cog):
 
         for word, user_id in keywords:
             pattern = re.compile(
-                r"(?:^|\W){0}(?:$|\W)".format(word), flags=re.IGNORECASE
+                r"(?:^|\s){0}(?:$|\W)".format(word), flags=re.IGNORECASE
             )
             if pattern.findall(message.content):
                 member = message.guild.get_member(user_id)
