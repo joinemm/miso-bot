@@ -88,7 +88,7 @@ class CustomCommands(commands.Cog):
             )
 
         owner = db.query("""SELECT added_by FROM customcommands WHERE command = ?""", (name,))
-        if owner is not None and owner != ctx.author.id:
+        if owner is not None and owner[0][0] != ctx.author.id:
             if not ctx.author.guild_permissions.manage_guild:
                 return await ctx.send(
                     ":warning: You can only remove commands you have added, "
