@@ -87,7 +87,7 @@ class CustomCommands(commands.Cog):
                 f"Cannot delete command `{ctx.prefix}{name}` as it does not exist"
             )
 
-        owner = db.query("""SELECT added_by FROM customcommands WHERE command = ?""", (name,))
+        owner = db.query("""SELECT added_by FROM customcommands WHERE command = ? AND guild_id = ?""", (name, ctx.guild.id))
         if owner is not None and owner[0][0] != ctx.author.id:
             if not ctx.author.guild_permissions.manage_guild:
                 return await ctx.send(
