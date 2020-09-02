@@ -44,7 +44,4 @@ ANIMATED_HUGS = [
 
 
 def random_hug(a=True):
-    eligible = HUGS
-    if a:
-        eligible += ANIMATED_HUGS
-    return random.choice(eligible)
+    return random.choice(HUGS + ANIMATED_HUGS if a else [])
