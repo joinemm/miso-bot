@@ -107,27 +107,25 @@ class Events(commands.Cog):
     async def on_member_join(self, member):
         """Called when a new member joins a guild."""
         channel_id = db.get_setting(member.guild.id, "welcome_channel")
-        if channel_id is None:
-            return
+        if channel_id is not None:
+            channel = member.guild.get_channel(channel_id)
+            if channel is None:
+                logger.warning(
+                    f"Cannot welcome {member} to {member.guild.name} (invalid channel)"
+                )
+            else:
+                message_format = db.get_setting(member.guild.id, "welcome_message")
+                if message_format is None:
+                    message_format = "Welcome **{username}** {mention} to **{server}**"
 
-        channel = member.guild.get_channel(channel_id)
-        if channel is None:
-            return logger.warning(
-                f"Cannot welcome {member} to {member.guild.name} (invalid channel)"
-            )
-
-        message_format = db.get_setting(member.guild.id, "welcome_message")
-        if message_format is None:
-            message_format = "Welcome **{username}** {mention} to **{server}**"
-
-        if db.get_setting(member.guild.id, "welcome_embed") == 0:
-            await channel.send(
-                util.create_welcome_without_embed(member, member.guild, message_format)
-            )
-        else:
-            await channel.send(
-                embed=util.create_welcome_embed(member, member.guild, message_format)
-            )
+                if db.get_setting(member.guild.id, "welcome_embed") == 0:
+                    await channel.send(
+                        util.create_welcome_without_embed(member, member.guild, message_format)
+                    )
+                else:
+                    await channel.send(
+                        embed=util.create_welcome_embed(member, member.guild, message_format)
+                    )
 
         # add autorole
         role = member.guild.get_role(db.get_setting(member.guild.id, "autorole"))
