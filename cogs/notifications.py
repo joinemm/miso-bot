@@ -25,7 +25,7 @@ class Notifications(commands.Cog):
 
         for word, user_id in keywords:
             pattern = re.compile(
-                r"(?:^|\s){0}(?:$|\W)".format(word), flags=re.IGNORECASE
+                r"(?:^|\s|[~*`_\/]){0}(?:$|\W)".format(re.escape(word)), flags=re.IGNORECASE
             )
             if pattern.findall(message.content):
                 member = message.guild.get_member(user_id)
@@ -64,8 +64,7 @@ class Notifications(commands.Cog):
             return await ctx.send(":warning: You already have this notification!")
 
         db.execute(
-            "REPLACE INTO notifications values(?, ?, ?)",
-            (guild_id, ctx.author.id, keyword),
+            "REPLACE INTO notifications values(?, ?, ?)", (guild_id, ctx.author.id, keyword),
         )
         await ctx.author.send(
             f":white_check_mark: New keyword notification `{keyword}` set "
@@ -73,8 +72,7 @@ class Notifications(commands.Cog):
         )
         if not dm:
             await ctx.send(
-                "Set a notification!"
-                + ("" if dm else f" Check your DMs {emojis.VIVISMIRK}")
+                "Set a notification!" + ("" if dm else f" Check your DMs {emojis.VIVISMIRK}")
             )
 
     @notification.command()
@@ -106,8 +104,7 @@ class Notifications(commands.Cog):
         )
         if not dm:
             await ctx.send(
-                "removed a notification!"
-                + ("" if dm else f" Check your DMs {emojis.VIVISMIRK}")
+                "removed a notification!" + ("" if dm else f" Check your DMs {emojis.VIVISMIRK}")
             )
 
     @notification.command()
@@ -138,8 +135,7 @@ class Notifications(commands.Cog):
                 guild_name = server.name
 
             content.add_field(
-                name=guild_name,
-                value="\n".join(f"└`{x}`" for x in guilds.get(guild_id)),
+                name=guild_name, value="\n".join(f"└`{x}`" for x in guilds.get(guild_id)),
             )
 
         await ctx.author.send(embed=content)
@@ -159,8 +155,7 @@ async def send_notification(user, message, pattern=None):
 
     content.description = f"{quoted_text}\n[Go to message]({message.jump_url})"
     content.set_footer(
-        text=f"{message.guild.name} | #{message.channel.name}",
-        icon_url=message.guild.icon_url,
+        text=f"{message.guild.name} | #{message.channel.name}", icon_url=message.guild.icon_url,
     )
     content.timestamp = message.created_at
 
