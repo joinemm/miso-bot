@@ -95,13 +95,15 @@ class User(commands.Cog):
         except AttributeError:
             status = "Unavailable"
 
-        activity = util.activities_string(user.activities)
-
         content = discord.Embed()
         content.title = f"{user.name}#{user.discriminator} | #{user.id}"
         content.set_thumbnail(url=user.avatar_url)
         content.add_field(name="Status", value=status)
-        content.add_field(name="Activity", value=activity)
+
+        if isinstance(user, discord.Member):
+            activity = util.activities_string(user.activities)
+            content.add_field(name="Activity", value=activity)
+
         content.add_field(name="Fishy", value=f"{fishydata.fishy if fishydata is not None else 0}")
         content.add_field(name="Last fishy", value=fishy_time)
         content.add_field(name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M"))
@@ -159,7 +161,7 @@ class User(commands.Cog):
         rows = []
         for i, member in enumerate(sorted_members):
             jointime = member.joined_at.strftime("%y%m%d %H:%M")
-            rows.append(f"[`{jointime}`] **#{len(sorted_members)-i}** : **{member.name}**")
+            rows.append(f"[`{jointime}`] **#{len(sorted_members)-i}** : **{member}**")
 
         await util.send_as_pages(ctx, content, rows)
 
@@ -169,9 +171,7 @@ class User(commands.Cog):
         image_small = str(ctx.guild.icon_url_as(format="png", size=64))
         content = discord.Embed(color=int(await util.color_from_image_url(image_small), 16))
         content.title = f"**{ctx.guild.name}** | #{ctx.guild.id}"
-        content.add_field(
-            name="Owner", value=f"{ctx.guild.owner.name}#{ctx.guild.owner.discriminator}",
-        )
+        content.add_field(name="Owner", value=str(ctx.guild.owner))
         content.add_field(name="Region", value=str(ctx.guild.region))
         content.add_field(name="Created At", value=ctx.guild.created_at.strftime("%d/%m/%Y %H:%M"))
         content.add_field(name="Members", value=str(ctx.guild.member_count))
@@ -315,7 +315,7 @@ class User(commands.Cog):
             else:
                 ranking = f"`{rank}.`"
 
-            rows.append(f"{ranking} {util.escape_md(user.name)} - **{fishy}** fishy")
+            rows.append(f"{ranking} {util.displayname(user)} - **{fishy}** fishy")
             rank += 1
 
         if not rows:
@@ -367,7 +367,11 @@ class User(commands.Cog):
                 "ORDER BY %s DESC" % (ALLSUM, table, ALLSUM)
             )
             for user_id, xp, messages in user_rows:
-                user = self.bot.get_user(user_id)
+                if _global_:
+                    user = self.bot.get_user(user_id)
+                else:
+                    user = ctx.guild.get_member(user_id)
+
                 if user is None or user.bot:
                     continue
 
@@ -397,7 +401,7 @@ class User(commands.Cog):
             rows.append(
                 f"`#{i:2}` "
                 + (f"LVL **{util.get_level(xp)}** - " if time is None else "")
-                + f"**{util.escape_md(user.name)}** `[{xp} XP | {messages} messages]`"
+                + f"**{util.displayname(user)}** `[{xp} XP | {messages} messages]`"
             )
 
         content = discord.Embed(color=discord.Color.teal())
@@ -425,6 +429,7 @@ class User(commands.Cog):
                 user = self.bot.get_user(userid)
             else:
                 user = ctx.guild.get_member(userid)
+
             if user is None:
                 continue
 
@@ -434,7 +439,7 @@ class User(commands.Cog):
                 ranking = f"`{i}.`"
 
             rows.append(
-                f"{ranking} **{int(wpm)}** WPM — **{util.escape_md(user.name)}** ( {arrow.get(timestamp).humanize()} )"
+                f"{ranking} **{int(wpm)}** WPM — **{util.displayname(user)}** ( {arrow.get(timestamp).humanize()} )"
             )
             i += 1
 
@@ -464,7 +469,7 @@ class User(commands.Cog):
 
             rows.append(
                 (f"`{rank}:`" if rank > 1 else ":crown:")
-                + f" **{count}** crowns - **{util.escape_md(user.name)}**"
+                + f" **{count}** crowns - **{util.displayname(user)}**"
             )
             rank += 1
         content = discord.Embed(color=discord.Color.gold())
