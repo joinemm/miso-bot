@@ -14,7 +14,7 @@ from operator import itemgetter
 from discord.ext import commands
 from helpers import utilityfunctions as util
 from data import database as db
-from helpers.exceptions import LastFMError
+from helpers.exceptions import LastFMError, RendererError
 from helpers import emojis
 from PIL import Image
 import io
@@ -144,7 +144,6 @@ class LastFm(commands.Cog):
         if not tracks:
             return await ctx.send("You have not listened to anything yet!")
 
-        username = data["recenttracks"]["@attr"]["user"]
         artist = tracks[0]["artist"]["#text"]
         album = tracks[0]["album"]["#text"]
         track = tracks[0]["name"]
@@ -160,7 +159,7 @@ class LastFm(commands.Cog):
 
         # tags and playcount
         trackdata = await api_request(
-            {"user": ctx.username, "method": "track.getInfo", "artist": artist, "track": track,},
+            {"user": ctx.username, "method": "track.getInfo", "artist": artist, "track": track},
             ignore_errors=True,
         )
         if trackdata is not None:
@@ -177,12 +176,14 @@ class LastFm(commands.Cog):
                 pass
 
         # play state
-        state = "— Most recent track"
-        if "@attr" in tracks[0]:
-            if "nowplaying" in tracks[0]["@attr"]:
-                state = "— Now Playing"
+        np = "@attr" in tracks[0] and "nowplaying" in tracks[0]["@attr"]
+        state = "> Now Playing" if np else "II Last track"
+        if not np:
+            content.timestamp = arrow.get(int(tracks[0]["date"]["uts"])).datetime
 
-        content.set_author(name=f"{username} {state}", icon_url=ctx.usertarget.avatar_url)
+        content.set_author(
+            name=f"{util.displayname(ctx.usertarget)} {state}", icon_url=ctx.usertarget.avatar_url,
+        )
 
         await ctx.send(embed=content)
 
@@ -227,7 +228,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique artists: {user_attr['total']}")
         content.set_author(
-            name=f"{user_attr['user']} — {formatted_timeframe} top artists",
+            name=f"{util.displayname(ctx.usertarget)} > {formatted_timeframe} top artists",
             icon_url=ctx.usertarget.avatar_url,
         )
 
@@ -278,7 +279,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique albums: {user_attr['total']}")
         content.set_author(
-            name=f"{user_attr['user']} — {formatted_timeframe} top albums",
+            name=f"{util.displayname(ctx.usertarget)} > {formatted_timeframe} top albums",
             icon_url=ctx.usertarget.avatar_url,
         )
 
@@ -345,7 +346,7 @@ class LastFm(commands.Cog):
 
         content.set_footer(text=f"Total unique tracks: {user_attr['total']}")
         content.set_author(
-            name=f"{user_attr['user']} — {formatted_timeframe} top tracks",
+            name=f"{util.displayname(ctx.usertarget)} > {formatted_timeframe} top tracks",
             icon_url=ctx.usertarget.avatar_url,
         )
 
@@ -390,7 +391,8 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total scrobbles: {user_attr['total']}")
         content.set_author(
-            name=f"{user_attr['user']} — Recent tracks", icon_url=ctx.usertarget.avatar_url,
+            name=f"{util.displayname(ctx.usertarget)} > Recent tracks",
+            icon_url=ctx.usertarget.avatar_url,
         )
 
         await util.send_as_pages(ctx, content, rows, 15)
@@ -469,9 +471,9 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=artist["image_url"])
         content.colour = int(image_colour, 16)
         content.set_author(
-            name=f"{ctx.usertarget.name} — "
+            name=f"{util.displayname(ctx.usertarget)} > "
             + (f"{humanized_period(period)} " if period != "overall" else "")
-            + f"Top 50 {datatype} for {artist['formatted_name']}",
+            + f"Top {datatype} by {artist['formatted_name']}",
             icon_url=ctx.usertarget.avatar_url,
             url=f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
             f"+{datatype}?date_preset={period_http_format(period)}",
@@ -530,7 +532,7 @@ class LastFm(commands.Cog):
         content.set_footer(text=f"Total album plays: {total_plays}")
         content.colour = int(image_colour, 16)
         content.set_author(
-            name=f"{ctx.usertarget.name}'s "
+            name=f"{util.displayname(ctx.usertarget)} > "
             + (f"{humanized_period(period)} " if period != "overall" else "")
             + titlestring,
             icon_url=ctx.usertarget.avatar_url,
@@ -623,6 +625,7 @@ class LastFm(commands.Cog):
         albums = []
         tracks = []
         metadata = [None, None, None]
+        artistinfo = await api_request({"method": "artist.getInfo", "artist": artistname})
         async with aiohttp.ClientSession() as session:
             url = (
                 f"https://last.fm/user/{ctx.username}/library/music/"
@@ -672,14 +675,17 @@ class LastFm(commands.Cog):
         }
 
         image_colour = await util.color_from_image_url(artist["image_url"])
-        similar, listeners = await get_similar_artists(artist["formatted_name"])
         artistname = urllib.parse.quote_plus(artistname)
+        listeners = artistinfo["artist"]["stats"]["listeners"]
+        globalplaycount = artistinfo["artist"]["stats"]["playcount"]
+        similar = [a["name"] for a in artistinfo["artist"]["similar"]["artist"]]
+        tags = [t["name"] for t in artistinfo["artist"]["tags"]["tag"]]
 
         content = discord.Embed()
         content.set_thumbnail(url=artist["image_url"])
         content.colour = int(image_colour, 16)
         content.set_author(
-            name=f"{ctx.usertarget.name} — {artist['formatted_name']} "
+            name=f"{util.displayname(ctx.usertarget)} > {artist['formatted_name']} "
             + (f"{humanized_period(period)} " if period != "overall" else "")
             + "Overview",
             icon_url=ctx.usertarget.avatar_url,
@@ -687,7 +693,9 @@ class LastFm(commands.Cog):
             f"?date_preset={period_http_format(period)}",
         )
 
-        content.set_footer(text=f"{listeners} Listeners | Similar to: {', '.join(similar)}")
+        content.set_footer(
+            text=f"{listeners} Listeners | {globalplaycount} Scrobbles | {', '.join(tags)}"
+        )
 
         crown_holder = db.query(
             """
@@ -723,6 +731,8 @@ class LastFm(commands.Cog):
             ),
             inline=True,
         )
+        content.add_field(name="Similar artists", value=", ".join(similar), inline=False)
+
         await ctx.send(embed=content)
 
     async def fetch_color(self, session, album_art_id):
@@ -753,7 +763,7 @@ class LastFm(commands.Cog):
             "user": username,
             "method": "user.gettopalbums",
             "period": "overall",
-            "limit": 500,
+            "limit": 1000,
         }
         data = await api_request(dict(params, **{"page": 1}))
         topalbums = data["topalbums"]["album"]
@@ -784,7 +794,7 @@ class LastFm(commands.Cog):
         if not rainbow:
             max_size = 30
             try:
-                colour = discord.Color(value=int(colour, 16))
+                colour = discord.Color(value=int(colour.strip("#"), 16))
                 query_color = colour.to_rgb()
             except ValueError:
                 return await ctx.send(f":warning: `{colour}` is not a valid hex colour")
@@ -920,7 +930,7 @@ class LastFm(commands.Cog):
             colour = f"{'diagonal ' if diagonal else ''}rainbow"
 
         await ctx.send(
-            f"`{ctx.username} {colour} album chart`"
+            f"`{util.displayname(ctx.usertarget)} {colour} album chart`"
             + (
                 f"\n`{len(to_fetch)} fetched, {len(albumcolors)-len(to_fetch)} from cache`"
                 if to_fetch
@@ -941,7 +951,7 @@ class LastFm(commands.Cog):
         Visual chart of your top albums or artists.
 
         Usage:
-            >fm chart [album | artist] [timeframe] [width]x[height]
+            >fm chart [album | artist] [timeframe] [width]x[height] [notitle]
         """
         arguments = parse_chart_arguments(args)
         if arguments["width"] + arguments["height"] > 30:
@@ -992,7 +1002,9 @@ class LastFm(commands.Cog):
                 artist = track["artist"]["#text"]
                 chart.append((track["image"][3]["#text"], f"{name} - {artist}"))
 
-        buffer = await self.chart_factory(chart, arguments["width"], arguments["height"])
+        buffer = await self.chart_factory(
+            chart, arguments["width"], arguments["height"], show_labels=arguments["showtitles"]
+        )
 
         await ctx.send(
             f"`{ctx.username} {humanized_period(arguments['period'])} "
@@ -1031,8 +1043,11 @@ class LastFm(commands.Cog):
         }
 
         async with aiohttp.ClientSession() as session:
-            async with session.post("http://localhost:3000/html", data=payload) as response:
-                buffer = io.BytesIO(await response.read())
+            try:
+                async with session.post("http://localhost:3000/html", data=payload) as response:
+                    buffer = io.BytesIO(await response.read())
+            except aiohttp.client_exceptions.ClientConnectorError:
+                raise RendererError("Unable to connect to the HTML Rendering server")
 
         return buffer
 
@@ -1068,7 +1083,7 @@ class LastFm(commands.Cog):
         rows = []
         for song, member in listeners:
             rows.append(
-                f"{member.mention} **{util.escape_md(song.get('artist'))}** — ***{util.escape_md(song.get('name'))}***"
+                f"**{util.displayname(member)} >** {util.escape_md(song.get('artist'))} — *{util.escape_md(song.get('name'))}*"
             )
 
         content = discord.Embed()
@@ -1079,12 +1094,14 @@ class LastFm(commands.Cog):
         content.colour = int(
             await util.color_from_image_url(str(ctx.guild.icon_url_as(size=64))), 16
         )
-        content.set_footer(text=f"{total_listening} / {total_linked} Members")
+        content.set_footer(
+            text=f"{total_listening} / {total_linked} Members are listening to music"
+        )
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command(aliases=["wk"])
     @commands.guild_only()
-    @commands.cooldown(2, 15, type=commands.BucketType.user)
+    @commands.cooldown(2, 30, type=commands.BucketType.user)
     async def whoknows(self, ctx, *, artistname=None):
         """
         Check who has listened to a given artist the most.
@@ -1108,9 +1125,9 @@ class LastFm(commands.Cog):
             "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
             " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
         )
-        for user in userslist if userslist is not None else []:
-            lastfm_username = user[1]
-            member = ctx.guild.get_member(user[0])
+        for member in userslist if userslist is not None else []:
+            lastfm_username = member[1]
+            member = ctx.guild.get_member(member[0])
             if member is None:
                 continue
 
@@ -1118,10 +1135,10 @@ class LastFm(commands.Cog):
 
         if tasks:
             data = await asyncio.gather(*tasks)
-            for playcount, user, name in data:
+            for playcount, member, name in data:
                 artistname = name
                 if playcount > 0:
-                    listeners.append((playcount, user))
+                    listeners.append((playcount, member))
         else:
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
@@ -1131,18 +1148,20 @@ class LastFm(commands.Cog):
         old_king = None
         new_king = None
         total = 0
-        for i, (playcount, user) in enumerate(
+        for i, (playcount, member) in enumerate(
             sorted(listeners, key=lambda p: p[0], reverse=True), start=1
         ):
             if i == 1:
                 rank = ":crown:"
-                old_king = db.add_crown(artistname, ctx.guild.id, user.id, playcount)
+                old_king = db.add_crown(artistname, ctx.guild.id, member.id, playcount)
                 if old_king is not None:
                     old_king = ctx.guild.get_member(old_king)
-                new_king = user
+                new_king = member
             else:
                 rank = f"`#{i:2}`"
-            rows.append(f"{rank} **{user.name}** — **{playcount}** {format_plays(playcount)}")
+            rows.append(
+                f"{rank} **{util.displayname(member)}** — **{playcount}** {format_plays(playcount)}"
+            )
             total += playcount
 
         if not rows:
@@ -1161,12 +1180,12 @@ class LastFm(commands.Cog):
             return
 
         await ctx.send(
-            f"> **{new_king.name}** just stole the **{artistname}** crown from **{old_king.name}**"
+            f"> **{util.displayname(new_king)}** just stole the **{artistname}** crown from **{util.displayname(old_king)}**"
         )
 
     @commands.command(aliases=["wkt", "whoknowst"])
     @commands.guild_only()
-    @commands.cooldown(2, 15, type=commands.BucketType.user)
+    @commands.cooldown(2, 30, type=commands.BucketType.user)
     async def whoknowstrack(self, ctx, *, track=None):
         """
         Check who has listened to a given song the most.
@@ -1224,7 +1243,9 @@ class LastFm(commands.Cog):
         for i, (playcount, user) in enumerate(
             sorted(listeners, key=lambda p: p[0], reverse=True), start=1
         ):
-            rows.append(f"`#{i:2}` **{user.name}** — **{playcount}** {format_plays(playcount)}")
+            rows.append(
+                f"`#{i:2}` **{util.displayname(member)}** — **{playcount}** {format_plays(playcount)}"
+            )
             total += playcount
 
         if not rows:
@@ -1246,7 +1267,7 @@ class LastFm(commands.Cog):
 
     @commands.command(aliases=["wka", "whoknowsa"])
     @commands.guild_only()
-    @commands.cooldown(2, 15, type=commands.BucketType.user)
+    @commands.cooldown(2, 30, type=commands.BucketType.user)
     async def whoknowsalbum(self, ctx, *, album):
         """
         Check who has listened to a given album the most.
@@ -1304,7 +1325,9 @@ class LastFm(commands.Cog):
         for i, (playcount, user) in enumerate(
             sorted(listeners, key=lambda p: p[0], reverse=True), start=1
         ):
-            rows.append(f"`#{i:2}` **{user.name}** — **{playcount}** {format_plays(playcount)}")
+            rows.append(
+                f"`#{i:2}` **{util.displayname(user)}** — **{playcount}** {format_plays(playcount)}"
+            )
             total += playcount
 
         if not rows:
@@ -1339,7 +1362,7 @@ class LastFm(commands.Cog):
         if crownartists is None:
             return await ctx.send(
                 "You haven't acquired any crowns yet! "
-                "Use the `>whoknows` command to claim crowns :crown:"
+                "Use the `>whoknows` command to claim crowns of your favourite artists :crown:"
             )
 
         rows = []
@@ -1348,10 +1371,11 @@ class LastFm(commands.Cog):
                 f"**{util.escape_md(str(artist))}** with **{playcount}** {format_plays(playcount)}"
             )
 
-        content = discord.Embed(
-            title=f"Artist crowns for {user.name} — Total {len(crownartists)} crowns",
-            color=discord.Color.gold(),
+        content = discord.Embed(color=discord.Color.gold())
+        content.set_author(
+            name=f"👑 Artist crowns of {util.displayname(user)}", icon_url=user.avatar_url,
         )
+        content.set_footer(f"Total {len(crownartists)} crowns")
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
@@ -1592,7 +1616,7 @@ async def get_playcount_album(artist, album, username, reference=None):
 
 async def get_playcount(artist, username, reference=None):
     data = await api_request(
-        {"method": "artist.getinfo", "user": username, "artist": artist, "autocorrect": 1,}
+        {"method": "artist.getinfo", "user": username, "artist": artist, "autocorrect": 1}
     )
     try:
         count = int(data["artist"]["stats"]["userplaycount"])
@@ -1626,20 +1650,6 @@ async def get_np(username, ref):
             pass
 
     return song, ref
-
-
-async def get_similar_artists(artistname):
-    similar = []
-    url = f"https://last.fm/music/{artistname}"
-    async with aiohttp.ClientSession() as session:
-        data = await fetch(session, url, handling="text")
-        soup = BeautifulSoup(data, "html.parser")
-        for artist in soup.findAll("h3", {"class": "artist-similar-artists-sidebar-item-name"}):
-            similar.append(artist.find("a").text)
-        listeners = (
-            soup.find("li", {"class": "header-metadata-tnew-item--listeners"}).find("abbr").text
-        )
-    return similar, listeners
 
 
 def get_period(timeframe, allow_custom=True):
@@ -1709,6 +1719,7 @@ def parse_chart_arguments(args):
         "height": None,
         "method": None,
         "path": None,
+        "showtitles": None,
     }
     for a in args:
         a = a.lower()
@@ -1738,6 +1749,9 @@ def parse_chart_arguments(args):
         if parsed["period"] is None:
             parsed["period"] = get_period(a, allow_custom=False)
 
+        if parsed["showtitles"] is None and a == "notitle":
+            parsed["showtitles"] = False
+
     if parsed["period"] is None:
         parsed["period"] = "7day"
     if parsed["width"] is None:
@@ -1745,6 +1759,8 @@ def parse_chart_arguments(args):
         parsed["height"] = 3
     if parsed["method"] is None:
         parsed["method"] = "user.gettopalbums"
+    if parsed["showtitles"] is None:
+        parsed["showtitles"] = True
     parsed["amount"] = parsed["width"] * parsed["height"]
     return parsed
 
@@ -1996,7 +2012,7 @@ async def username_to_ctx(ctx):
             )
         else:
             raise util.ErrorMessage(
-                f":warning: **{ctx.usertarget.name}** has not saved their lastfm username."
+                f":warning: {ctx.usertarget.mention} has not saved their lastfm username."
             )
 
 
