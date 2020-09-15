@@ -228,7 +228,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique artists: {user_attr['total']}")
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} > {formatted_timeframe} top artists",
+            name=f"{util.displayname(ctx.usertarget)} — {formatted_timeframe} top artists",
             icon_url=ctx.usertarget.avatar_url,
         )
 
@@ -279,7 +279,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique albums: {user_attr['total']}")
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} > {formatted_timeframe} top albums",
+            name=f"{util.displayname(ctx.usertarget)} — {formatted_timeframe} top albums",
             icon_url=ctx.usertarget.avatar_url,
         )
 
@@ -346,7 +346,7 @@ class LastFm(commands.Cog):
 
         content.set_footer(text=f"Total unique tracks: {user_attr['total']}")
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} > {formatted_timeframe} top tracks",
+            name=f"{util.displayname(ctx.usertarget)} — {formatted_timeframe} top tracks",
             icon_url=ctx.usertarget.avatar_url,
         )
 
@@ -391,7 +391,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total scrobbles: {user_attr['total']}")
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} > Recent tracks",
+            name=f"{util.displayname(ctx.usertarget)} — Recent tracks",
             icon_url=ctx.usertarget.avatar_url,
         )
 
@@ -471,7 +471,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=artist["image_url"])
         content.colour = int(image_colour, 16)
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} > "
+            name=f"{util.displayname(ctx.usertarget)} — "
             + (f"{humanized_period(period)} " if period != "overall" else "")
             + f"Top {datatype} by {artist['formatted_name']}",
             icon_url=ctx.usertarget.avatar_url,
@@ -532,7 +532,7 @@ class LastFm(commands.Cog):
         content.set_footer(text=f"Total album plays: {total_plays}")
         content.colour = int(image_colour, 16)
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} > "
+            name=f"{util.displayname(ctx.usertarget)} — "
             + (f"{humanized_period(period)} " if period != "overall" else "")
             + titlestring,
             icon_url=ctx.usertarget.avatar_url,
@@ -685,7 +685,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=artist["image_url"])
         content.colour = int(image_colour, 16)
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} > {artist['formatted_name']} "
+            name=f"{util.displayname(ctx.usertarget)} \n {artist['formatted_name']} "
             + (f"{humanized_period(period)} " if period != "overall" else "")
             + "Overview",
             icon_url=ctx.usertarget.avatar_url,
@@ -979,7 +979,7 @@ class LastFm(commands.Cog):
                 chart.append(
                     (
                         album["image"][3]["#text"],
-                        f"{plays} {format_plays(plays)}<br>" f"{name} - {artist}",
+                        f"{plays} {format_plays(plays)}<br>" f"{name} — {artist}",
                     )
                 )
 
@@ -1000,14 +1000,14 @@ class LastFm(commands.Cog):
             for track in tracks:
                 name = track["name"]
                 artist = track["artist"]["#text"]
-                chart.append((track["image"][3]["#text"], f"{name} - {artist}"))
+                chart.append((track["image"][3]["#text"], f"{name} — {artist}"))
 
         buffer = await self.chart_factory(
             chart, arguments["width"], arguments["height"], show_labels=arguments["showtitles"]
         )
 
         await ctx.send(
-            f"`{ctx.username} {humanized_period(arguments['period'])} "
+            f"`{util.displayname(ctx.usertarget)} {humanized_period(arguments['period'])} "
             f"{arguments['width']}x{arguments['height']} {chart_type} chart`",
             file=discord.File(
                 fp=buffer, filename=f"fmchart_{ctx.username}_{arguments['period']}.jpeg"
@@ -1083,7 +1083,7 @@ class LastFm(commands.Cog):
         rows = []
         for song, member in listeners:
             rows.append(
-                f"**{util.displayname(member)} >** {util.escape_md(song.get('artist'))} — *{util.escape_md(song.get('name'))}*"
+                f"**{util.displayname(member)}** - {util.escape_md(song.get('artist'))} — *{util.escape_md(song.get('name'))}*"
             )
 
         content = discord.Embed()
