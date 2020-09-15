@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import data.database as db
 import helpers.utilityfunctions as util
+from libraries import unicode_codes
 
 
 class ChannelSetting(commands.TextChannelConverter):
@@ -17,29 +18,6 @@ class ChannelSetting(commands.TextChannelConverter):
 class Config(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-    @commands.command(hidden=True)
-    @commands.is_owner()
-    async def help2(self, ctx):
-        """WIP"""
-        pages = []
-        for cog in self.bot.cogs:
-            this_cog_commands = self.bot.get_cog(cog).get_commands()
-            if this_cog_commands:
-                this_page = discord.Embed(title=f"{cog}")
-                for command in this_cog_commands:
-                    this_page.add_field(
-                        name=command.name
-                        + (
-                            f' [{" | ".join(command.aliases)}]'
-                            if command.aliases
-                            else ""
-                        ),
-                        inline=False,
-                        value=command.short_doc or "-no help yet-",
-                    )
-                pages.append(this_page)
-        await util.page_switcher(ctx, pages)
 
     @commands.command()
     @commands.has_permissions(administrator=True)
@@ -102,21 +80,19 @@ class Config(commands.Cog):
 
         if db.get_setting(ctx.guild.id, "welcome_embed") == 0:
             preview = util.create_welcome_without_embed(ctx.author, ctx.guild, message)
-            await ctx.send(
-                f"New welcome message set:\n```{message}```\n> Preview:"
-            )
+            await ctx.send(f"New welcome message set:\n```{message}```\n> Preview:")
             await ctx.send(preview)
         else:
             preview = util.create_welcome_embed(ctx.author, ctx.guild, message)
-            await ctx.send(
-                f"New welcome message set:\n```{message}```Preview:", embed=preview
-            )
+            await ctx.send(f"New welcome message set:\n```{message}```Preview:", embed=preview)
 
     @logmessages_welcome.command(name="embed")
     async def welcome_embed(self, ctx, state: bool):
         """Toggle whether welcome messages use embed or only text."""
         db.update_setting(ctx.guild.id, "welcome_embed", (1 if state else 0))
-        await ctx.send(f"Welcome message embeds are now **{('enabled' if state else 'disabled')}**")
+        await ctx.send(
+            f"Welcome message embeds are now **{('enabled' if state else 'disabled')}**"
+        )
 
     @logmessages.group(name="goodbye")
     async def logmessages_goodbye(self, ctx):
@@ -153,9 +129,7 @@ class Config(commands.Cog):
     @logmessages.command(name="bans")
     async def logmessages_bans(self, ctx, *, channel: ChannelSetting):
         """Set channel where bans are announced."""
-        db.update_setting(
-            ctx.guild.id, "bans_channel", (None if channel is None else channel.id)
-        )
+        db.update_setting(ctx.guild.id, "bans_channel", (None if channel is None else channel.id))
         if channel is None:
             await ctx.send("Ban messages disabled.")
         else:
@@ -170,9 +144,7 @@ class Config(commands.Cog):
     async def deleted_channel(self, ctx, *, channel: ChannelSetting):
         """Set channel where deleted messages are logged."""
         db.update_setting(
-            ctx.guild.id,
-            "deleted_messages_channel",
-            (None if channel is None else channel.id),
+            ctx.guild.id, "deleted_messages_channel", (None if channel is None else channel.id),
         )
         if channel is None:
             await ctx.send("Deleted messages logs disabled.")
@@ -182,13 +154,18 @@ class Config(commands.Cog):
     @logmessages_deleted.command(name="ignore")
     async def deleted_ignore(self, ctx, *, channel: discord.TextChannel):
         """Ignore channel from logging deleted messages."""
-        db.execute("insert or ignore into deleted_messages_mask values (?, ?)", (ctx.guild.id, channel.id))
+        db.execute(
+            "insert or ignore into deleted_messages_mask values (?, ?)", (ctx.guild.id, channel.id)
+        )
         await ctx.send(f"{channel.mention} is now ignored from message logging")
 
     @logmessages_deleted.command(name="unignore")
     async def deleted_unignore(self, ctx, *, channel: discord.TextChannel):
         """Unignore channel from logging deleted messages."""
-        db.execute("delete from deleted_messages_mask where guild_id = ? and channel_id = ?", (ctx.guild.id, channel.id))
+        db.execute(
+            "delete from deleted_messages_mask where guild_id = ? and channel_id = ?",
+            (ctx.guild.id, channel.id),
+        )
         await ctx.send(f"{channel.mention} is no longer ignored from message logging")
 
     @logmessages.command(name="levelups")
@@ -227,6 +204,29 @@ class Config(commands.Cog):
         db.update_setting(ctx.guild.id, "starboard_toggle", 0)
         await ctx.send("Starboard **disabled**")
 
+    @starboard.command(name="emoji")
+    async def starboard_emoji(self, ctx, emoji):
+        """Change the emoji to use for starboard."""
+        if emoji[0] == "<":
+            # is custom emoji
+            emoji_obj = await util.get_emoji(ctx, emoji)
+            if emoji_obj is None:
+                return await ctx.send(":warning: I don't know this emoji!")
+
+            db.update_setting(ctx.guild.id, "starboard_emoji_is_custom", 1)
+            db.update_setting(ctx.guild.id, "starboard_emoji", emoji_obj.id)
+            await ctx.send(
+                f"Starboard emoji updated! Now looking for {emoji} reactions (emoji id `{emoji_obj.id}`)"
+            )
+        else:
+            # unicode emoji
+            if unicode_codes.UNICODE_EMOJI.get(emoji) is None:
+                return await ctx.send(":warning: I don't know this emoji!")
+
+            db.update_setting(ctx.guild.id, "starboard_emoji_is_custom", 0)
+            db.update_setting(ctx.guild.id, "starboard_emoji", emoji)
+            await ctx.send(f"Starboard emoji updated! Now looking for {emoji} reactions")
+
     @commands.group()
     @commands.has_permissions(manage_channels=True)
     async def votechannel(self, ctx):
@@ -234,13 +234,19 @@ class Config(commands.Cog):
         await util.command_group_help(ctx)
 
     @votechannel.command(name="add")
-    async def votechannel_add(self, ctx, *, channel: discord.TextChannel):
-        """Set a channel to be a voting channel."""
+    async def votechannel_add(self, ctx, channel: discord.TextChannel, channeltype=None):
+        """
+        Set a channel to be a voting channel.
+
+        Available types: [ vote | rate ]
+        Defaults to vote
+        """
+        ctype = "rating" if channeltype.lower() == "rate" else None
         db.execute(
-            "INSERT OR IGNORE INTO votechannels values(?, ?)",
-            (ctx.guild.id, channel.id),
+            "INSERT OR REPLACE INTO votechannels values(?, ?, ?)",
+            (ctx.guild.id, channel.id, ctype),
         )
-        await ctx.send(f"{channel.mention} is now a voting channel.")
+        await ctx.send(f"{channel.mention} is now a voting channel of type `{ctype or 'vote'}`")
 
     @votechannel.command(name="remove")
     async def votechannel_remove(self, ctx, *, channel: discord.TextChannel):
@@ -252,9 +258,7 @@ class Config(commands.Cog):
             )
             is None
         ):
-            return await ctx.send(
-                f":warning: {channel.mention} is not a voting channel!"
-            )
+            return await ctx.send(f":warning: {channel.mention} is not a voting channel!")
 
         db.execute(
             "DELETE FROM votechannels where guild_id = ? and channel_id = ?",
@@ -302,9 +306,7 @@ class Config(commands.Cog):
 
         db.update_setting(ctx.guild.id, "muterole", thisrole.id)
         await ctx.send(
-            embed=discord.Embed(
-                description=f"Muting someone now gives them {thisrole.mention}"
-            )
+            embed=discord.Embed(description=f"Muting someone now gives them {thisrole.mention}")
         )
 
     @commands.command()

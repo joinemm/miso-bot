@@ -110,22 +110,23 @@ class Events(commands.Cog):
         if channel_id is not None:
             channel = member.guild.get_channel(channel_id)
             if channel is None:
-                logger.warning(
-                    f"Cannot welcome {member} to {member.guild.name} (invalid channel)"
-                )
+                logger.warning(f"Cannot welcome {member} to {member.guild.name} (invalid channel)")
             else:
                 message_format = db.get_setting(member.guild.id, "welcome_message")
                 if message_format is None:
                     message_format = "Welcome **{username}** {mention} to **{server}**"
 
-                if db.get_setting(member.guild.id, "welcome_embed") == 0:
-                    await channel.send(
-                        util.create_welcome_without_embed(member, member.guild, message_format)
-                    )
-                else:
-                    await channel.send(
-                        embed=util.create_welcome_embed(member, member.guild, message_format)
-                    )
+                try:
+                    if db.get_setting(member.guild.id, "welcome_embed") == 0:
+                        await channel.send(
+                            util.create_welcome_without_embed(member, member.guild, message_format)
+                        )
+                    else:
+                        await channel.send(
+                            embed=util.create_welcome_embed(member, member.guild, message_format)
+                        )
+                except discord.errors.Forbidden:
+                    pass
 
         # add autorole
         role = member.guild.get_role(db.get_setting(member.guild.id, "autorole"))
@@ -150,7 +151,10 @@ class Events(commands.Cog):
                 f"Cannot announce ban of {user} from {guild.name} (invalid channel)"
             )
 
-        await channel.send(f":hammer: **{user}** (`{user.id}`) has just been banned")
+        try:
+            await channel.send(f":hammer: **{user}** (`{user.id}`) has just been banned")
+        except discord.errors.Forbidden:
+            pass
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
@@ -169,7 +173,10 @@ class Events(commands.Cog):
         if message_format is None:
             message_format = "Goodbye {mention} ( **{user}** )"
 
-        await channel.send(util.create_goodbye_message(member, member.guild, message_format))
+        try:
+            await channel.send(util.create_goodbye_message(member, member.guild, message_format))
+        except discord.errors.Forbidden:
+            pass
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
@@ -216,16 +223,19 @@ class Events(commands.Cog):
             return
 
         # votechannels
-        if (
-            db.query(
-                """SELECT * FROM votechannels
-                WHERE guild_id = ? and channel_id = ?""",
-                (message.guild.id, message.channel.id),
-            )
-            is not None
-        ):
-            await message.add_reaction(emojis.UPVOTE)
-            await message.add_reaction(emojis.DOWNVOTE)
+
+        data = db.query(
+            """SELECT channeltype FROM votechannels
+            WHERE guild_id = ? and channel_id = ?""",
+            (message.guild.id, message.channel.id),
+        )
+        if data is not None:
+            if data[0][0] == "rating":
+                for e in ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]:
+                    await message.add_reaction(e)
+            else:
+                await message.add_reaction(emojis.UPVOTE)
+                await message.add_reaction(emojis.DOWNVOTE)
 
         # xp gain
         message_xp = util.xp_from_message(message)
@@ -274,10 +284,19 @@ class Events(commands.Cog):
             except discord.errors.Forbidden:
                 pass
 
+        stripped_content = message.content.lower().strip("!.?~ ")
+
         # hi
-        if message.content.lower().strip("!.?~ ") == "hi" and random.randint(0, 19) == 0:
+        if stripped_content == "hi" and random.randint(0, 19) == 0:
             try:
                 await message.channel.send("hi")
+            except discord.errors.Forbidden:
+                pass
+
+        # hello there
+        elif stripped_content == "hello there" and random.randint(0, 2) == 0:
+            try:
+                await message.channel.send("General Kenobi")
             except discord.errors.Forbidden:
                 pass
 
@@ -319,34 +338,56 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         """Starboard event handler."""
-        if payload.emoji.name == "⭐":
-            starboard_settings = db.query(
-                """SELECT starboard_toggle, starboard_amount, starboard_channel
-                FROM guilds WHERE guild_id = ?""",
-                (payload.guild_id,),
-            )
-            if starboard_settings is None:
-                # starboard not configured on this server
-                return
-            else:
-                starboard_settings = starboard_settings[0]
+        starboard_settings = db.query(
+            """
+            SELECT starboard_toggle, starboard_amount, starboard_channel, starboard_emoji, starboard_emoji_is_custom
+            FROM guilds WHERE guild_id = ?""",
+            (payload.guild_id,),
+        )
+        if starboard_settings is None:
+            return
+        else:
+            starboard_settings = starboard_settings[0]
 
+        if not util.int_to_bool(starboard_settings[0]):
+            return
+
+        custom_emoji = False
+        if starboard_settings[3] is None:
+            star_emoji = "⭐"
+        else:
+            star_emoji = starboard_settings[3]
+            if starboard_settings[4] == 1:
+                custom_emoji = True
+
+        is_correct = False
+        if custom_emoji and payload.emoji.id == int(star_emoji):
+            is_correct = True
+        elif payload.emoji.name == star_emoji:
+            is_correct = True
+
+        if is_correct:
             channel = self.bot.get_channel(payload.channel_id)
             if channel.id == starboard_settings[2]:
                 # trying to star a starboard message
                 return
 
-            if not util.int_to_bool(starboard_settings[0]):
-                return
-
             message = await channel.fetch_message(payload.message_id)
             for react in message.reactions:
-                if react.emoji == payload.emoji.name:
-                    if react.count < starboard_settings[1]:
-                        return
-                    else:
+                if custom_emoji:
+                    if (
+                        isinstance(react.emoji, (discord.Emoji, discord.PartialEmoji))
+                        and react.emoji.id == payload.emoji.id
+                    ):
                         reaction_count = react.count
                         break
+                else:
+                    if react.emoji == payload.emoji.name:
+                        reaction_count = react.count
+                        break
+
+            if react.count < starboard_settings[1]:
+                return
 
             channel_id = starboard_settings[2]
             channel = payload.member.guild.get_channel(channel_id)
@@ -357,6 +398,7 @@ class Events(commands.Cog):
                 """SELECT starboard_message_id FROM starboard WHERE message_id = ?""",
                 (payload.message_id,),
             )
+            reaction_emoji = star_emoji if not custom_emoji else "⭐"
             try:
                 assert board_msg_id is not None
                 board_message = await channel.fetch_message(board_msg_id[0][0])
@@ -367,7 +409,9 @@ class Events(commands.Cog):
                 jump = f"\n\n[context]({message.jump_url})"
                 content.description = message.content[: 2048 - len(jump)] + jump
                 content.timestamp = message.created_at
-                content.set_footer(text=f"{reaction_count} ⭐ #{message.channel.name}")
+                content.set_footer(
+                    text=f"{reaction_count} {reaction_emoji} #{message.channel.name}"
+                )
                 if len(message.attachments) > 0:
                     content.set_image(url=message.attachments[0].url)
 
@@ -385,7 +429,9 @@ class Events(commands.Cog):
             else:
                 # message is on board, update star count
                 content = board_message.embeds[0]
-                content.set_footer(text=f"{reaction_count} ⭐ #{message.channel.name}")
+                content.set_footer(
+                    text=f"{reaction_count} {reaction_emoji} #{message.channel.name}"
+                )
                 await board_message.edit(embed=content)
 
 
