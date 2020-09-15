@@ -1375,7 +1375,7 @@ class LastFm(commands.Cog):
         content.set_author(
             name=f"👑 Artist crowns of {util.displayname(user)}", icon_url=user.avatar_url,
         )
-        content.set_footer(f"Total {len(crownartists)} crowns")
+        content.set_footer(text=f"Total {len(crownartists)} crowns")
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
