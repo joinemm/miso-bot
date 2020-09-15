@@ -22,6 +22,10 @@ class PatronCheckFailure(commands.CheckFailure):
     pass
 
 
+def displayname(member: discord.Member):
+    return member.nick or member.name
+
+
 async def determine_prefix(bot, message):
     """Get the prefix used in the invocation context."""
     guild = message.guild
