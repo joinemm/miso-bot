@@ -22,8 +22,12 @@ class PatronCheckFailure(commands.CheckFailure):
     pass
 
 
-def displayname(member: discord.Member):
-    return member.nick or member.name
+def displayname(member):
+    name = member.name
+    if isinstance(member, discord.Member):
+        name = member.nick or member.name
+
+    return escape_md(name)
 
 
 async def determine_prefix(bot, message):
