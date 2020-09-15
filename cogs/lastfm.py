@@ -1244,7 +1244,7 @@ class LastFm(commands.Cog):
             sorted(listeners, key=lambda p: p[0], reverse=True), start=1
         ):
             rows.append(
-                f"`#{i:2}` **{util.displayname(member)}** — **{playcount}** {format_plays(playcount)}"
+                f"`#{i:2}` **{util.displayname(user)}** — **{playcount}** {format_plays(playcount)}"
             )
             total += playcount
 
