@@ -134,17 +134,11 @@ class Miscellaneous(commands.Cog):
             artists = []
             async with session.get(url) as response:
                 soup = BeautifulSoup(await response.text(), "html.parser")
-                content = soup.find(
-                    "div", {"class": "entry-content herald-entry-content"}
-                )
+                content = soup.find("div", {"class": "entry-content herald-entry-content"})
                 outer = content.find_all("p")
                 for p in outer:
                     for artist in p.find_all("a"):
-                        artist = (
-                            artist.text.replace("Profile", "")
-                            .replace("profile", "")
-                            .strip()
-                        )
+                        artist = artist.text.replace("Profile", "").replace("profile", "").strip()
                         if not artist == "":
                             artists.append(artist)
             return artists
@@ -190,9 +184,7 @@ class Miscellaneous(commands.Cog):
                 data = await response.text()
                 soup = BeautifulSoup(data, "html.parser")
 
-        percentage = int(
-            soup.find("div", {"class": "result__score"}).text.strip(" %\n")
-        )
+        percentage = int(soup.find("div", {"class": "result__score"}).text.strip(" %\n"))
         text = soup.find("div", {"class": "result-text"}).text
 
         if percentage < 26:
@@ -228,22 +220,16 @@ class Miscellaneous(commands.Cog):
                 port = 25565
 
             db.execute(
-                """REPLACE INTO minecraft VALUES (?, ?, ?)""",
-                (ctx.guild.id, address, port),
+                """REPLACE INTO minecraft VALUES (?, ?, ?)""", (ctx.guild.id, address, port),
             )
-            return await ctx.send(
-                f"Minecraft server of this discord set to `{address}:{port}`"
-            )
+            return await ctx.send(f"Minecraft server of this discord set to `{address}:{port}`")
 
         if address is None:
             serverdata = db.query(
-                """SELECT address, port FROM minecraft WHERE guild_id = ?""",
-                (ctx.guild.id,),
+                """SELECT address, port FROM minecraft WHERE guild_id = ?""", (ctx.guild.id,),
             )
             if serverdata is None:
-                return await ctx.send(
-                    "No minecraft server saved for this discord server!"
-                )
+                return await ctx.send("No minecraft server saved for this discord server!")
             else:
                 address, port = serverdata[0]
 
@@ -309,9 +295,7 @@ class Miscellaneous(commands.Cog):
         content.description = data["description"]
 
         content.add_field(name="Mood", value=data["mood"], inline=True)
-        content.add_field(
-            name="Compatibility", value=data["compatibility"], inline=True
-        )
+        content.add_field(name="Compatibility", value=data["compatibility"], inline=True)
         content.add_field(name="Color", value=data["color"], inline=True)
         content.add_field(name="Lucky number", value=data["lucky_number"], inline=True)
         content.add_field(name="Lucky time", value=data["lucky_time"], inline=True)
@@ -395,19 +379,13 @@ class Miscellaneous(commands.Cog):
         )
         content = discord.Embed(color=discord.Color.blurple())
         content.set_image(url=image)
-        content.title = (
-            f"{data.group} " if data.group is not None else ""
-        ) + data.stage_name
+        content.title = (f"{data.group} " if data.group is not None else "") + data.stage_name
         content.description = (
             f"**Full name:** {data.full_name}\n"
             f"**Korean name:** {data.k_stage_name} ({data.korean_name})\n"
             f"**Birthday:** {data.date_of_birth}\n"
             f"**Country:** {data.country}\n"
-            + (
-                f"**Birthplace:** {data.birthplace}"
-                if data.birthplace is not None
-                else ""
-            )
+            + (f"**Birthplace:** {data.birthplace}" if data.birthplace is not None else "")
         )
 
         await ctx.send(embed=content)
