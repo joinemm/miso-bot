@@ -685,7 +685,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=artist["image_url"])
         content.colour = int(image_colour, 16)
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} \n {artist['formatted_name']} "
+            name=f"{util.displayname(ctx.usertarget)}\n{artist['formatted_name']} "
             + (f"{humanized_period(period)} " if period != "overall" else "")
             + "Overview",
             icon_url=ctx.usertarget.avatar_url,
@@ -731,7 +731,9 @@ class LastFm(commands.Cog):
             ),
             inline=True,
         )
-        content.add_field(name="Similar artists", value=", ".join(similar), inline=False)
+
+        if similar:
+            content.add_field(name="Similar artists", value=", ".join(similar), inline=False)
 
         await ctx.send(embed=content)
 
