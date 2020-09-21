@@ -8,3 +8,4 @@ tests/
 data/database.db
 .vscode/
 polls.yaml
+.env
