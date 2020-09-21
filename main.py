@@ -9,7 +9,9 @@ from helpers import log
 from helpers import help
 from helpers import utilityfunctions as util
 from data import database as db
+from dotenv import load_dotenv
 
+load_dotenv(verbose=True)
 uvloop.install()
 
 logger = log.get_logger(__name__)
@@ -71,6 +73,15 @@ async def before_any_command(ctx):
 async def check_for_blacklist(ctx):
     """Check command invocation context for blacklist triggers"""
     return db.is_blacklisted(ctx)
+
+
+@bot.event
+async def on_message(message):
+    """Overloads the default on_message event to check for cache readiness."""
+    if not bot.is_ready:
+        return
+
+    await bot.process_commands(message)
 
 
 if __name__ == "__main__":

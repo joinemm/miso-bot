@@ -13,6 +13,10 @@ class Notifications(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Notification message handler."""
+        # make sure bot cache is ready
+        if not self.bot.is_ready:
+            return
+
         if message.guild is None:
             return
 
