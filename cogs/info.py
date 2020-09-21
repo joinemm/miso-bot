@@ -27,26 +27,44 @@ class Info(commands.Cog):
         url = discord.utils.oauth_url(
             "500385855072894982", permissions=discord.Permissions(1074654407)
         )
-        await ctx.send(
-            f">>> Use this link to invite me to your server!\n"
-            "The selected permissions are **required** for everything to function properly, "
-            f"make sure to not disable any!\n<{url}>"
+        content = discord.Embed(title="Invite me to your server!")
+        content.set_thumbnail(url=self.bot.user.avatar_url)
+        content.add_field(
+            name="Required permissions are selected automatically, don't touch them.",
+            value=f"[Click here]({url})",
         )
+        await ctx.send(embed=content)
 
-    @commands.command(aliases=["donate"])
+    @commands.command()
     async def patreon(self, ctx):
         """Link to the patreon page."""
         await ctx.send("https://www.patreon.com/joinemm")
 
     @commands.command()
-    async def patrons(self, ctx):
-        """List the current patreons."""
+    async def kofi(self, ctx):
+        """Link to the Ko-Fi page."""
+        await ctx.send("https://ko-fi.com/joinemm")
+
+    @commands.command()
+    async def donate(self, ctx):
+        """Donate to keep the bot running smoothly!"""
+        content = discord.Embed(
+            title="Donate to keep Miso Bot online!", colour=discord.Colour.orange()
+        )
+        content.add_field(name="Ko-Fi", value="https://ko-fi.com/joinemm", inline=False)
+        content.add_field(name="Patreon", value="https://www.patreon.com/joinemm", inline=False)
+        content.set_footer(text="Donations will be used to pay for server costs")
+        await ctx.send(embed=content)
+
+    @commands.command(aliases=["patrons", "supporters"])
+    async def donators(self, ctx):
+        """List of people who have donated."""
         tier_badges = [":coffee:", ":beer:", ":moneybag:"]
         patrons = db.query("select tier, user_id, currently_active from patrons")
         content = discord.Embed(
             title="Patreon supporters ❤",
             color=int("f96854", 16),
-            description="https://patreon.com/joinemm",
+            description="https://patreon.com/joinemm\nhttps://ko-fi.com/joinemm",
         )
         current = []
         former = []
@@ -59,14 +77,10 @@ class Info(commands.Cog):
                 former.append(f"{user or user_id}")
 
         if current:
-            content.add_field(
-                inline=False, name="Current patrons", value="\n".join(current)
-            )
+            content.add_field(inline=False, name="Current patrons", value="\n".join(current))
 
         if former:
-            content.add_field(
-                inline=False, name="Former patrons", value="\n".join(former)
-            )
+            content.add_field(inline=False, name="Former patrons", value="\n".join(former))
 
         await ctx.send(embed=content)
 
@@ -82,19 +96,12 @@ class Info(commands.Cog):
             f"Use `{ctx.prefix}help` to get help on any commands, \n"
             f"or visit the website for more detailed instructions.\n\n"
             f"Currently active in **{len(self.bot.guilds)}** servers,\n"
-            f"totaling **{membercount}** unique users."
+            f"totalling **{membercount}** unique users."
         )
         content.set_thumbnail(url=self.bot.user.avatar_url)
         content.add_field(name="Website", value="https://misobot.xyz", inline=False)
-        content.add_field(
-            name="Github", value="https://github.com/joinemm/miso-bot", inline=False
-        )
-        content.add_field(
-            name="Patreon", value="https://www.patreon.com/joinemm", inline=False
-        )
-        content.add_field(
-            name="Discord", value="https://discord.gg/RzDW3Ne", inline=False
-        )
+        content.add_field(name="Github", value="https://github.com/joinemm/miso-bot", inline=False)
+        content.add_field(name="Discord", value="https://discord.gg/RzDW3Ne", inline=False)
 
         data = await get_commits("joinemm", "miso-bot")
         last_update = data[0]["commit"]["author"].get("date")
@@ -106,9 +113,7 @@ class Info(commands.Cog):
     async def ping(self, ctx):
         """Get the bot's ping."""
         test_message = await ctx.send(":ping_pong:")
-        cmd_lat = (
-            test_message.created_at - ctx.message.created_at
-        ).total_seconds() * 1000
+        cmd_lat = (test_message.created_at - ctx.message.created_at).total_seconds() * 1000
         discord_lat = self.bot.latency * 1000
         content = discord.Embed(
             colour=discord.Color.red(),
@@ -117,9 +122,9 @@ class Info(commands.Cog):
         )
         await test_message.edit(content="", embed=content)
 
-    @commands.command()
+    @commands.command(aliases=["status"])
     async def system(self, ctx):
-        """Get status of the server system."""
+        """Get status of the system."""
         process_uptime = time.time() - self.bot.start_time
         system_uptime = time.time() - psutil.boot_time()
         mem = psutil.virtual_memory()
@@ -144,7 +149,7 @@ class Info(commands.Cog):
 
     @commands.command()
     async def stats(self, ctx):
-        """Get various statistics."""
+        """Get various bot statistics."""
         most_used_command = db.query(
             """
             SELECT command, MAX(countsum) FROM(
@@ -169,10 +174,7 @@ class Info(commands.Cog):
 
         data = [
             ("Amount of commands", len(self.bot.commands)),
-            (
-                "Most used command",
-                f"`>{most_used_command[0]}` ({most_used_command[1]})",
-            ),
+            ("Most used command", f"`>{most_used_command[0]}` ({most_used_command[1]})",),
             (
                 "Most total command uses",
                 f"{self.bot.get_user(most_command_uses_by[0])} ({most_command_uses_by[1]})",
@@ -268,9 +270,7 @@ class Info(commands.Cog):
 
                     emoji_repr = "`" + emojiname + "`"
 
-            rows.append(
-                f"`#{i:2}` {emoji_repr} — **{count}** Use" + ("s" if count > 1 else "")
-            )
+            rows.append(f"`#{i:2}` {emoji_repr} — **{count}** Use" + ("s" if count > 1 else ""))
 
         content = discord.Embed(
             title="Most used emojis"
@@ -331,11 +331,7 @@ class Info(commands.Cog):
 
             rows.append(
                 f"**{count}** x `>{command}`"
-                + (
-                    ""
-                    if biggest_user is None
-                    else f" ( {biggest_user[1]} by {biggest_user[0]} )"
-                )
+                + ("" if biggest_user is None else f" ( {biggest_user[1]} by {biggest_user[0]} )")
             )
 
         content.set_footer(text=f"Total {total} commands")
@@ -354,9 +350,7 @@ class Info(commands.Cog):
                 (user.id,),
             )
         else:
-            data = db.query(
-                """SELECT command, SUM(count) FROM command_usage GROUP BY command"""
-            )
+            data = db.query("""SELECT command, SUM(count) FROM command_usage GROUP BY command""")
 
         rows = []
         total = 0
@@ -374,11 +368,7 @@ class Info(commands.Cog):
 
             rows.append(
                 f"**{count}** x `>{command}`"
-                + (
-                    ""
-                    if biggest_user is None
-                    else f" ( {biggest_user[1]} by {biggest_user[0]} )"
-                )
+                + ("" if biggest_user is None else f" ( {biggest_user[1]} by {biggest_user[0]} )")
             )
 
         content.set_footer(text=f"Total {total} commands")
@@ -396,8 +386,7 @@ class Info(commands.Cog):
 
         # get data from database
         usage_data = db.query(
-            """SELECT SUM(count) FROM command_usage WHERE command = ?""",
-            (command_name,),
+            """SELECT SUM(count) FROM command_usage WHERE command = ?""", (command_name,),
         )[0][0]
 
         usage_data_server = db.query(
@@ -437,16 +426,12 @@ class Info(commands.Cog):
         # additional data for command groups
         if hasattr(command, "commands"):
             content.description = "command group"
-            subcommands_string = ", ".join(
-                f"'{command.name} {x.name}'" for x in command.commands
-            )
+            subcommands_string = ", ".join(f"'{command.name} {x.name}'" for x in command.commands)
             subcommand_usage = db.query(
                 """SELECT SUM(count) FROM command_usage WHERE command IN (%s)"""
                 % subcommands_string
             )[0][0]
-            content.add_field(
-                inline=False, name="Total subcommand uses", value=subcommand_usage
-            )
+            content.add_field(inline=False, name="Total subcommand uses", value=subcommand_usage)
 
         await ctx.send(embed=content)
 
@@ -462,9 +447,7 @@ class Info(commands.Cog):
         content.set_author(name=str(guild), url=guild.icon_url)
         content.set_image(url=guild.icon_url_as(static_format="png"))
         stats = await util.image_info_from_url(guild.icon_url)
-        color = await util.color_from_image_url(
-            str(guild.icon_url_as(size=128, format="png"))
-        )
+        color = await util.color_from_image_url(str(guild.icon_url_as(size=128, format="png")))
         content.colour = await util.get_color(ctx, color)
         content.set_footer(
             text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
