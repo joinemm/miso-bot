@@ -5,12 +5,7 @@ import matplotlib.ticker as plticker
 
 
 def create_graph(
-    data,
-    usercolor,
-    title=None,
-    dimensions=(6, 3),
-    draw=False,
-    background_color="#2f3136",
+    data, usercolor, title=None, dimensions=(6, 3), draw=False, background_color="#2f3136",
 ):
     plt.rcParams["figure.figsize"] = [dimensions[0], dimensions[1]]
     T = np.array(list(range(0, len(data))))
@@ -37,7 +32,7 @@ def create_graph(
     loc = plticker.MultipleLocator(base=1.0)
     ax.xaxis.set_major_locator(loc)
     ax.set_facecolor(background_color)
-    ax.set_xlabel("Hour")
+    ax.set_xlabel("Hour (UTC)")
     # ax.set_ylabel('XP gain')
 
     ax.spines["bottom"].set_color("white")
