@@ -25,6 +25,7 @@ logger.info(f"Developer mode is {'ON' if DEV else 'OFF'}")
 
 TOKEN = os.environ["MISO_BOT_TOKEN_BETA" if DEV else "MISO_BOT_TOKEN"]
 bot = commands.AutoShardedBot(
+    owner_id=133311691852218378,
     help_command=help.EmbedHelpCommand(),
     command_prefix=util.determine_prefix,
     case_insensitive=True,
