@@ -409,12 +409,15 @@ class Miscellaneous(commands.Cog):
             emoji_name = emoji.name
         else:
             # unicode emoji
-            emoji_name = unicode_codes.UNICODE_EMOJI.get(emoji)
+            emoji_name = unicode_codes.UNICODE_EMOJI_ALIAS.get(emoji)
             if emoji_name is None:
                 return await ctx.send(":warning: I don't know this emoji!")
 
+            codepoint = "-".join(
+                f"{ord(e):x}" for e in unicode_codes.EMOJI_ALIAS_UNICODE.get(emoji_name)
+            )
             emoji_name = emoji_name.strip(":")
-            emoji_url = f"https://twemoji.maxcdn.com/v/13.0.0/72x72/{ord(emoji):x}.png"
+            emoji_url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
 
         color_hex = await util.color_from_image_url(str(emoji_url))
         content = discord.Embed(
