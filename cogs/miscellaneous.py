@@ -159,7 +159,7 @@ class Miscellaneous(commands.Cog):
 
     @commands.command()
     async def ship(self, ctx, *, names):
-        """Ship two names.
+        """Ship two names and get your chance for succesful love.
 
         Usage:
             >ship <name> and <name>
@@ -170,29 +170,52 @@ class Miscellaneous(commands.Cog):
             if len(nameslist) < 2:
                 return await ctx.send("Please give two names separated with `and`")
 
-        url = "https://www.lovecalculator.com/love.php"
-        params = {
-            "name1": nameslist[0],
-            "name2": nameslist[1],
-        }
-        async with aiohttp.ClientSession() as session:
-            headers = {
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0",
-            }
-            async with session.get(url, params=params, headers=headers) as response:
-                data = await response.text()
-                soup = BeautifulSoup(data, "html.parser")
+        lovenums = [0, 0, 0, 0, 0]
+        for c in names:
+            if c == "L" or c == "l":
+                lovenums[0] += 1
+            elif c == "O" or c == "o":
+                lovenums[1] += 1
+            elif c == "V" or c == "v":
+                lovenums[2] += 1
+            elif c == "E" or c == "e":
+                lovenums[3] += 1
+            elif c == "S" or c == "s":
+                lovenums[4] += 1
 
-        percentage = int(soup.find("div", {"class": "result__score"}).text.strip(" %\n"))
-        text = soup.find("div", {"class": "result-text"}).text
+        while len(lovenums) > 2:
+            newnums = []
+            for i in range(0, len(lovenums) - 1):
+                pairsum = lovenums[i] + lovenums[i + 1]
+                if pairsum < 10:
+                    newnums.append(pairsum)
+                else:
+                    newnums.append(1)
+                    newnums.append(pairsum % 10)
+            lovenums = newnums
 
-        if percentage < 26:
+        percentage = lovenums[0] * 10 + lovenums[1]
+
+        if percentage < 25:
             emoji = ":broken_heart:"
-        elif percentage > 74:
-            emoji = ":sparkling_heart:"
-        else:
+            text = "Dr. Love thinks a relationship might work out between {} and {}, but the chance is very small. A successful relationship is possible, but you both have to work on it. Do not sit back and think that it will all work out fine, because it might not be working out the way you wanted it to. Spend as much time with each other as possible. Again, the chance of this relationship working out is very small, so even when you do work hard on it, it still might not work out.".format(
+                nameslist[0], nameslist[1]
+            )
+        elif percentage < 50:
             emoji = ":heart:"
+            text = "The chance of a relationship working out between {} and {} is not very big, but a relationship is very well possible, if the two of you really want it to, and are prepared to make some sacrifices for it. You'll have to spend a lot of quality time together. You must be aware of the fact that this relationship might not work out at all, no matter how much time you invest in it.".format(
+                nameslist[0], nameslist[1]
+            )
+        elif percentage < 75:
+            emoji = ":heart:"
+            text = "Dr. Love thinks that a relationship between {} and {} has a reasonable chance of working out, but on the other hand, it might not. Your relationship may suffer good and bad times. If things might not be working out as you would like them to, do not hesitate to talk about it with the person involved. Spend time together, talk with each other.".format(
+                nameslist[0], nameslist[1]
+            )
+        else:
+            emoji = ":sparkling_heart:"
+            text = "Dr. Love thinks that a relationship between {} and {} has a very good chance of being successful, but this doesn't mean that you don't have to work on the relationship. Remember that every relationship needs spending time together, talking with each other etc.".format(
+                nameslist[0], nameslist[1]
+            )
 
         content = discord.Embed(
             title=f"{nameslist[0]} {emoji} {nameslist[1]} - {percentage}%",
