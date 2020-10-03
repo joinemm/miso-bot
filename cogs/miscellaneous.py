@@ -182,9 +182,21 @@ class Miscellaneous(commands.Cog):
                 lovenums[3] += 1
             elif c == "S" or c == "s":
                 lovenums[4] += 1
-
-        while len(lovenums) > 2:
+        while max(lovenums) > 9:
             newnums = []
+            for n in lovenums:
+                if n > 9:
+                    newnums.append(n // 10)
+                    newnums.append(n % 10)
+                else:
+                    newnums.append(n)
+            lovenums = newnums
+        it = 0
+        maxit = 100 # Maximum iterations allowed in below algorithm to attempt convergence
+        maxlen = 100 # Maximum length of generated list allowed (some cases grow list infinitely)
+        while len(lovenums) > 2 and it < maxit and len(lovenums) < maxlen:
+            newnums = []
+            it += 1
             for i in range(0, len(lovenums) - 1):
                 pairsum = lovenums[i] + lovenums[i + 1]
                 if pairsum < 10:
@@ -193,8 +205,12 @@ class Miscellaneous(commands.Cog):
                     newnums.append(1)
                     newnums.append(pairsum % 10)
             lovenums = newnums
-
-        percentage = lovenums[0] * 10 + lovenums[1]
+        # This if-else matches with original site alg handling of non-convergent result. (i.e. defaulting to 1%)
+        # Technically, you can leave this section as it was previously and still get a non-trivial outputtable result since the length is always at least 2.
+        if len(lovenums) == 2:
+            percentage = lovenums[0] * 10 + lovenums[1]
+        else:
+            percentage = 1 # Same default that original site algorithm used
 
         if percentage < 25:
             emoji = ":broken_heart:"
