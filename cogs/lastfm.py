@@ -1101,6 +1101,64 @@ class LastFm(commands.Cog):
         )
         await util.send_as_pages(ctx, content, rows)
 
+    @fm.command(aliases=["sr"])
+    async def serverrecent(self, ctx):
+        """What people on this server are and were last listening to."""
+        listeners = []
+        tasks = []
+        userslist = db.query(
+            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
+        )
+        for user in userslist if userslist is not None else []:
+            lastfm_username = user[1]
+            member = ctx.guild.get_member(user[0])
+            if member is None:
+                continue
+
+            tasks.append(get_lastplayed(lastfm_username, member))
+
+        total_linked = len(tasks)
+        total_listening = 0
+        if tasks:
+            data = await asyncio.gather(*tasks)
+            for song, member_ref in data:
+                if song is not None:
+                    if song.get('nowplaying'):
+                        total_listening += 1
+                    listeners.append((song, member_ref))
+        else:
+            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+
+        if not listeners:
+            return await ctx.send("Nobody on this server is listening to anything at the moment!")
+
+        listeners = sorted(listeners, key=lambda l: l[0].get('date'), reverse=True)
+        rows = []
+        for song, member in listeners:
+            prefix = ""
+            suffix = ""
+            if song.get('nowplaying'):
+                prefix = ":notes: "
+            else:
+                suffix = f" | {arrow.get(song.get('date')).humanize()}"
+
+            row = f"{prefix}**{util.displayname(member)}** - {util.escape_md(song.get('artist'))} —" \
+                  f" *{util.escape_md(song.get('name'))}*{suffix}"
+            rows.append(row)
+
+        content = discord.Embed()
+        content.set_author(
+            name=f"What is {ctx.guild.name} listening to?",
+            icon_url=ctx.guild.icon_url_as(size=64),
+        )
+        content.colour = int(
+            await util.color_from_image_url(str(ctx.guild.icon_url_as(size=64))), 16
+        )
+        content.set_footer(
+            text=f"{total_listening} / {total_linked} Members are listening to music right now"
+        )
+        await util.send_as_pages(ctx, content, rows)
+
     @commands.command(aliases=["wk"])
     @commands.guild_only()
     @commands.cooldown(2, 30, type=commands.BucketType.user)
@@ -1648,6 +1706,37 @@ async def get_np(username, ref):
                             "artist": tracks[0]["artist"]["#text"],
                             "name": tracks[0]["name"],
                         }
+        except KeyError:
+            pass
+
+    return song, ref
+
+
+async def get_lastplayed(username, ref):
+    data = await api_request(
+        {"method": "user.getrecenttracks", "user": username, "limit": 1}, ignore_errors=True,
+    )
+    song = None
+    if data is not None:
+        try:
+            tracks = data["recenttracks"]["track"]
+            if tracks:
+                nowplaying = False
+                if tracks[0].get("@attr"):
+                    if tracks[0]["@attr"].get("nowplaying"):
+                        nowplaying = True
+
+                if tracks[0].get("date"):
+                    date = tracks[0]["date"]["uts"]
+                else:
+                    date = arrow.now().timestamp
+
+                song = {
+                    "artist": tracks[0]["artist"]["#text"],
+                    "name": tracks[0]["name"],
+                    "nowplaying": nowplaying,
+                    "date": int(date)
+                }
         except KeyError:
             pass
 
