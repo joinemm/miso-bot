@@ -40,8 +40,6 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         """Runs when the bot connects to the discord servers."""
-        # cache owner from appinfo
-        self.bot.owner = (await self.bot.application_info()).owner
         latencies = self.bot.latencies
         logger.info(f"Loading complete | running {len(latencies)} shards")
         for shard_id, latency in latencies:
@@ -218,6 +216,10 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Listener that gets called on every message."""
+        # make sure cache is ready
+        if not self.bot.is_ready:
+            return
+
         # ignore DMs
         if message.guild is None:
             return
