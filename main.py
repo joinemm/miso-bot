@@ -30,6 +30,7 @@ bot = commands.AutoShardedBot(
     command_prefix=util.determine_prefix,
     case_insensitive=True,
     allowed_mentions=discord.AllowedMentions(everyone=False),
+    intents=discord.Intents.all(),
 )
 
 bot.default_prefix = "<" if DEV else ">"
