@@ -19,8 +19,6 @@ from helpers import emojis
 from PIL import Image
 import io
 import colorgram
-import calendar
-import time
 
 
 LASTFM_APPID = os.environ.get("LASTFM_APIKEY")
@@ -1142,7 +1140,7 @@ class LastFm(commands.Cog):
             if song.get('nowplaying'):
                 prefix = ":notes: "
             else:
-                suffix = f" `{arrow.get(song.get('date')).humanize()}`"
+                suffix = f" | {arrow.get(song.get('date')).humanize()}"
 
             row = f"{prefix}**{util.displayname(member)}** - {util.escape_md(song.get('artist'))} —" \
                   f" *{util.escape_md(song.get('name'))}*{suffix}"
@@ -1723,16 +1721,15 @@ async def get_lastplayed(username, ref):
         try:
             tracks = data["recenttracks"]["track"]
             if tracks:
+                nowplaying = False
                 if tracks[0].get("@attr"):
                     if tracks[0]["@attr"].get("nowplaying"):
                         nowplaying = True
-                    else:
-                        nowplaying = False
 
                 if tracks[0].get("date"):
                     date = tracks[0]["date"]["uts"]
                 else:
-                    date = str(calendar.timegm(time.gmtime()))
+                    date = arrow.now().timestamp
 
                 song = {
                     "artist": tracks[0]["artist"]["#text"],
