@@ -1,3 +1,5 @@
+###### Documentation updated 01/09/2020
+
 # Syntax
 
 This page will list most of the commands this bot has to offer.   
@@ -65,7 +67,7 @@ Enable and disable the rolepicker
 
 Add and remove assignable roles.
 
-> \>rolepicker add <role\> <keyword\>  
+> \>rolepicker add <role\> <keyword\>    
 > \>rolepicker remove <keyword\>
 
 List all the roles currently available in the rolepicker.
@@ -83,6 +85,10 @@ Go fishing and receive random fish.
 You can also gift fishy to other members:
 
 > \>fishy [member]
+
+Check your fishy timer without actually fishing.
+
+> \>fishytimer
 
 See statistics about your or other user's fishing.
 
@@ -149,7 +155,7 @@ Reverse any blacklisting you might have done
 Set specific keywords as notifications, so you will get notified when someone mentions them in the server.  
 All information will be delivered to you in private messages so others wont know your keywords.
 
-> \>notification add <keyword>  
+> \>notification add <keyword>    
 > \>notification remove <keyword>
 
 Lists all your notification keywords.
@@ -166,7 +172,7 @@ Melon music charts.
 
 Get a random or specific xkcd comic.
 
-> \>xkcd  
+> \>xkcd    
 > \>xkcd <id\>
 
 #### Colors
@@ -174,10 +180,10 @@ Get a random or specific xkcd comic.
 Get a hex color, the color of a member or role, color from image, or a random color.  
 You can chain any of these sources together to form a palette.
 
-> \>color <#hex>  
-> \>color <member\>  
-> \>color <role\>  
-> \>color <image_url\>  
+> \>color <#hex>    
+> \>color <member\>    
+> \>color <role\>    
+> \>color <image_url\>    
 > \>color random [amount]
 
 #### Social media
@@ -220,8 +226,7 @@ Use any DuckDuckGo [bangs](https://duckduckgo.com/bang) to quickly search the in
 Integration with the music tracking service, last.fm.    
 For anything requiring artist name, the name must be formatted **exactly** as is shows up in the lastfm website.
 
-You can mention anyone at the end of an command, making sure it doesn't conflict with other arguments, and you will see the mentioned user's stats instead, 
-as long as they have connected their last.fm username.
+You can mention anyone at the end of an command, making sure it doesn't conflict with other arguments, and you will see the mentioned user's stats instead, as long as they have connected their last.fm username.
 
 First connect your lastfm account by using
 
@@ -241,9 +246,30 @@ Valid timeframes are `[day | week | month | 3month | 6month | year | alltime]` (
 
 Show your most recently listened to tracks, or the one currently playing in embed or youtube link form.
 
-> \>fm recent  
-> \>fm nowplaying
+> \>fm recent    
+> \>fm nowplaying    
 > \>fm youtube
+
+Generate a visual chart of your data.    
+You can optionally specify datatype `[ artist | album | recent ]`, timeframe or size of the chart.    
+Defaults to albums week 3x3.
+
+> \>fm chart [datatype] [timeframe] [size] [notitle]
+
+Chart that is based on a hex color instead of amount of plays
+
+> \>fm colorchart <color\> [size]    
+> \>fm colorchart [ rainbow | rainbowdiagonal ]
+
+Check who has listened to given artist most on this server. Top listener gains a crown.
+You can also give `np` as the sole argument to any of the commands and it will use your currently playing song / artist /album.
+
+> \>whoknows <artist\>
+
+You can also check individual songs or albums, but those will not award any crowns.
+
+> \>whoknowstrack <track\> | <artist\>    
+> \>whoknowsalbum <album\> | <artist\>
 
 Show artist specific data from your listens.
 
@@ -254,30 +280,17 @@ Show overview of your top tracks and albums for artist.
 
 > \>fm artist [timeframe] overview <artist\>
 
-Generate a visual chart of your data.    
-You can optionally specify datatype `[ artist | album | recent ]`, timeframe or size of the chart.    
-Defaults to albums week 3x3.
+Show overview of given album's tracks.
 
-> \>fm chart [datatype] [timeframe] [size]
-
-Chart that is based on a hex color instead of amount of plays
-
-> \>fm colorchart <color\> [size]
-
-Check who has listened to given artist most on this server.    
-Top listener gains a crown.
-You can also give `np` as the sole argument to any of the commands and it will use your currenctly playing song.
-
-> \>whoknows <artist\>
-
-You can also check individual songs or albums, but those will not award any crowns.
-
-> \>whoknowstrack <track\> | <artist\>
-> \>whoknowsalbum <album\> | <artist\>
+> \>fm album <album\> | <artist\>
 
 See what people are listening to on the server.
 
 > \>fm servernp
+
+Including recent tracks.
+
+> \>fm serverrecent
 
 See your artist crowns on this server.
 
@@ -286,6 +299,11 @@ See your artist crowns on this server.
 Report someone who is botting plays for crowns.
 
 > \>report <lastfm_username\> <reason... \>
+
+Search for song lyrics.
+
+> \>lyrics <query\>    
+> \>lyrics np
 
 Unlink you last.fm account.
 
@@ -299,7 +317,7 @@ Unlink you last.fm account.
 
 Every message you send will net you a certain amount of experience, based on the word count of your message. Posting images will also get you xp.  
 Once you gain enough experience, you will level up. The amount of experience required for leveling up will increase every time.  
-The bot will start counting xp from the moment it's invited, so past messages wont matter. In case you want past messages to be counted, just ask and I will index your server. (< 100 000 messages)
+The bot will start counting xp from the moment it's invited, so past messages wont matter.
 
 ---
 Shows your server activity graph per hour, along with your xp and level information.
@@ -354,7 +372,7 @@ Get list of all roles on the server, and information about them.
 
 > \>roleslist
 
-Server icon
+Get server's icon.
 
 > \>servericon
 
@@ -385,6 +403,10 @@ Create streamable link from a video url / twitter link / instagram link.
 Get a definition for a word from the Oxford Dictionary.
 
 > \>define <word\>
+
+Get synonyms for a word.
+
+> \>thesaurus <word\>
 
 Get a definition for a word from the Urban Dictionary.
 
@@ -417,8 +439,13 @@ Ask something from wolfram alpha.
 
 Set a reminder, and Miso will remind you!
 
-> \>remindme in <some time\> to <something\>  
+> \>remindme in <some time\> to <something\>    
 > \>remindme on <YYYY/MM/DD\> [HH:mm:ss] to <something\>
+
+US stock market data.
+
+> \>stock <ticker\>    
+> \>stock <company\>
 
 ---
 
@@ -488,7 +515,8 @@ Get big image and info about some emoji.
 Get your daily horoscope. Save your sunsign by using `set`.  
 List all sunsigns and their ranges by using `list`.
 
-> \>horoscope [tomorrow | yesterday]
+> \>horoscope
+> \>horoscope [ tomorrow | yesterday ]
 > \>horoscope set  
 > \>horoscope list
 
@@ -509,7 +537,13 @@ Don't like `>`? Don't worry you can now change it to whatever you want.
 
 > \>prefix <something\>
 
-#### Member messages
+#### User formatting
+
+Change whether nicknames are displayed across commands to reference users, or only usernames.
+
+> \> nicknamedisplay <boolean\>
+
+#### Automatic messages
 
 Logger sends various automatic messages.
 
@@ -529,9 +563,17 @@ You can use these placeholders in message and they will be filled accordingly:
 - `{mention}` = `@username`
 - `{guild}` = `servername`
 
-Log deleted messages.
+Change whether welcome message is wrapped in an embed or not.
 
-> \>logger deletedmessages <textchannel\>
+> \>logger welcome embed <boolean\>
+
+Log deleted messages to a channel.
+
+> \>logger deleted channel <textchannel\>
+
+Ignore certain channels from deleted messages logging.
+
+> \>logger deleted [ ignore | unignore ] <textchannel\>
 
 Send message when user gets banned.
 
@@ -562,12 +604,20 @@ Enable or disable the starboard functionality
 
 > \>starboard [ enable | disable ]
 
+Change emoji used to trigger the starboard
+
+> \>starboard emoji <:emoji:\>
+
 #### Votechannels
 
 Messages posted on votechannels will automatically get upvote and downvote reactions.    
 Useful in suggestion channels and such.
 
 > \>votechannel [ add | remove ] <textchannel\>    
+
+Change the type of voting channel (up/down votes or ranking from 0 to 5)
+
+> \>votechannel type [ vote | rate ]
 
 #### Roles
 
