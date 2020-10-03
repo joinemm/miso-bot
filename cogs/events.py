@@ -388,7 +388,7 @@ class Events(commands.Cog):
                         reaction_count = react.count
                         break
 
-            if react.count < starboard_settings[1]:
+            if reaction_count < starboard_settings[1]:
                 return
 
             channel_id = starboard_settings[2]
@@ -401,10 +401,12 @@ class Events(commands.Cog):
                 (payload.message_id,),
             )
             reaction_emoji = star_emoji if not custom_emoji else "⭐"
+            if board_msg_id is not None:
+                board_msg_id = board_msg_id[0][0]
+
             try:
-                assert board_msg_id is not None
-                board_message = await channel.fetch_message(board_msg_id[0][0])
-            except (discord.errors.NotFound, AssertionError):
+                board_message = await channel.fetch_message(board_msg_id)
+            except discord.errors.NotFound:
                 # message is not on board yet, or it was deleted
                 content = discord.Embed(color=discord.Color.gold())
                 content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
