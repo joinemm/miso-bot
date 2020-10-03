@@ -196,7 +196,7 @@ async def reaction_buttons(
             and str(payload.emoji) in functions
             and not payload.member == ctx.bot.user
             and (
-                (payload.member == ctx.bot.owner)
+                (payload.member.id == ctx.bot.owner_id)
                 if only_owner
                 else (payload.member == ctx.author or not only_author)
             )
@@ -652,7 +652,7 @@ def activities_string(activities, markdown=True, show_emoji=True):
 
 def patrons_only():
     def predicate(ctx):
-        if ctx.author.id == ctx.bot.owner.id:
+        if ctx.author.id == ctx.bot.owner_id:
             return True
         else:
             patrons = db.query("select user_id from patrons where currently_active = 1")

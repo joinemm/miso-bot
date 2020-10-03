@@ -134,17 +134,11 @@ class Miscellaneous(commands.Cog):
             artists = []
             async with session.get(url) as response:
                 soup = BeautifulSoup(await response.text(), "html.parser")
-                content = soup.find(
-                    "div", {"class": "entry-content herald-entry-content"}
-                )
+                content = soup.find("div", {"class": "entry-content herald-entry-content"})
                 outer = content.find_all("p")
                 for p in outer:
                     for artist in p.find_all("a"):
-                        artist = (
-                            artist.text.replace("Profile", "")
-                            .replace("profile", "")
-                            .strip()
-                        )
+                        artist = artist.text.replace("Profile", "").replace("profile", "").strip()
                         if not artist == "":
                             artists.append(artist)
             return artists
@@ -165,7 +159,7 @@ class Miscellaneous(commands.Cog):
 
     @commands.command()
     async def ship(self, ctx, *, names):
-        """Ship two names.
+        """Ship two names and get your chance for succesful love.
 
         Usage:
             >ship <name> and <name>
@@ -173,24 +167,26 @@ class Miscellaneous(commands.Cog):
         nameslist = names.split(" and ")
         if not len(nameslist) == 2:
             nameslist = names.split(" ", 1)
-        if len(nameslist) < 2:
-            return await ctx.send("Please give two names separated with `and`")
-        lovenums = [0,0,0,0,0]
+            if len(nameslist) < 2:
+                return await ctx.send("Please give two names separated with `and`")
+
+        lovenums = [0, 0, 0, 0, 0]
         for c in names:
-            if c == 'L' or c =='l':
+            if c == "L" or c == "l":
                 lovenums[0] += 1
-            elif c == 'O' or c =='o':
+            elif c == "O" or c == "o":
                 lovenums[1] += 1
-            elif c == 'V' or c =='v':
+            elif c == "V" or c == "v":
                 lovenums[2] += 1
-            elif c == 'E' or c =='e':
+            elif c == "E" or c == "e":
                 lovenums[3] += 1
-            elif c == 'S' or c =='s':
+            elif c == "S" or c == "s":
                 lovenums[4] += 1
+
         while len(lovenums) > 2:
             newnums = []
-            for i in range(0,len(lovenums)-1):
-                pairsum = lovenums[i]+lovenums[i+1]
+            for i in range(0, len(lovenums) - 1):
+                pairsum = lovenums[i] + lovenums[i + 1]
                 if pairsum < 10:
                     newnums.append(pairsum)
                 else:
@@ -198,20 +194,28 @@ class Miscellaneous(commands.Cog):
                     newnums.append(pairsum % 10)
             lovenums = newnums
 
-        percentage = lovenums[0]*10 + lovenums[1]
+        percentage = lovenums[0] * 10 + lovenums[1]
 
         if percentage < 25:
             emoji = ":broken_heart:"
-            text = "Dr. Love thinks a relationship might work out between {} and {}, but the chance is very small. A successful relationship is possible, but you both have to work on it. Do not sit back and think that it will all work out fine, because it might not be working out the way you wanted it to. Spend as much time with each other as possible. Again, the chance of this relationship working out is very small, so even when you do work hard on it, it still might not work out.".format(nameslist[0],nameslist[1])
+            text = "Dr. Love thinks a relationship might work out between {} and {}, but the chance is very small. A successful relationship is possible, but you both have to work on it. Do not sit back and think that it will all work out fine, because it might not be working out the way you wanted it to. Spend as much time with each other as possible. Again, the chance of this relationship working out is very small, so even when you do work hard on it, it still might not work out.".format(
+                nameslist[0], nameslist[1]
+            )
         elif percentage < 50:
             emoji = ":heart:"
-            text = "The chance of a relationship working out between {} and {} is not very big, but a relationship is very well possible, if the two of you really want it to, and are prepared to make some sacrifices for it. You'll have to spend a lot of quality time together. You must be aware of the fact that this relationship might not work out at all, no matter how much time you invest in it.".format(nameslist[0],nameslist[1])
+            text = "The chance of a relationship working out between {} and {} is not very big, but a relationship is very well possible, if the two of you really want it to, and are prepared to make some sacrifices for it. You'll have to spend a lot of quality time together. You must be aware of the fact that this relationship might not work out at all, no matter how much time you invest in it.".format(
+                nameslist[0], nameslist[1]
+            )
         elif percentage < 75:
             emoji = ":heart:"
-            text = "Dr. Love thinks that a relationship between {} and {} has a reasonable chance of working out, but on the other hand, it might not. Your relationship may suffer good and bad times. If things might not be working out as you would like them to, do not hesitate to talk about it with the person involved. Spend time together, talk with each other.".format(nameslist[0],nameslist[1])
+            text = "Dr. Love thinks that a relationship between {} and {} has a reasonable chance of working out, but on the other hand, it might not. Your relationship may suffer good and bad times. If things might not be working out as you would like them to, do not hesitate to talk about it with the person involved. Spend time together, talk with each other.".format(
+                nameslist[0], nameslist[1]
+            )
         else:
             emoji = ":sparkling_heart:"
-            text = "Dr. Love thinks that a relationship between {} and {} has a very good chance of being successful, but this doesn't mean that you don't have to work on the relationship. Remember that every relationship needs spending time together, talking with each other etc.".format(nameslist[0],nameslist[1])
+            text = "Dr. Love thinks that a relationship between {} and {} has a very good chance of being successful, but this doesn't mean that you don't have to work on the relationship. Remember that every relationship needs spending time together, talking with each other etc.".format(
+                nameslist[0], nameslist[1]
+            )
 
         content = discord.Embed(
             title=f"{nameslist[0]} {emoji} {nameslist[1]} - {percentage}%",
@@ -239,22 +243,16 @@ class Miscellaneous(commands.Cog):
                 port = 25565
 
             db.execute(
-                """REPLACE INTO minecraft VALUES (?, ?, ?)""",
-                (ctx.guild.id, address, port),
+                """REPLACE INTO minecraft VALUES (?, ?, ?)""", (ctx.guild.id, address, port),
             )
-            return await ctx.send(
-                f"Minecraft server of this discord set to `{address}:{port}`"
-            )
+            return await ctx.send(f"Minecraft server of this discord set to `{address}:{port}`")
 
         if address is None:
             serverdata = db.query(
-                """SELECT address, port FROM minecraft WHERE guild_id = ?""",
-                (ctx.guild.id,),
+                """SELECT address, port FROM minecraft WHERE guild_id = ?""", (ctx.guild.id,),
             )
             if serverdata is None:
-                return await ctx.send(
-                    "No minecraft server saved for this discord server!"
-                )
+                return await ctx.send("No minecraft server saved for this discord server!")
             else:
                 address, port = serverdata[0]
 
@@ -320,9 +318,7 @@ class Miscellaneous(commands.Cog):
         content.description = data["description"]
 
         content.add_field(name="Mood", value=data["mood"], inline=True)
-        content.add_field(
-            name="Compatibility", value=data["compatibility"], inline=True
-        )
+        content.add_field(name="Compatibility", value=data["compatibility"], inline=True)
         content.add_field(name="Color", value=data["color"], inline=True)
         content.add_field(name="Lucky number", value=data["lucky_number"], inline=True)
         content.add_field(name="Lucky time", value=data["lucky_time"], inline=True)
@@ -406,19 +402,13 @@ class Miscellaneous(commands.Cog):
         )
         content = discord.Embed(color=discord.Color.blurple())
         content.set_image(url=image)
-        content.title = (
-            f"{data.group} " if data.group is not None else ""
-        ) + data.stage_name
+        content.title = (f"{data.group} " if data.group is not None else "") + data.stage_name
         content.description = (
             f"**Full name:** {data.full_name}\n"
             f"**Korean name:** {data.k_stage_name} ({data.korean_name})\n"
             f"**Birthday:** {data.date_of_birth}\n"
             f"**Country:** {data.country}\n"
-            + (
-                f"**Birthplace:** {data.birthplace}"
-                if data.birthplace is not None
-                else ""
-            )
+            + (f"**Birthplace:** {data.birthplace}" if data.birthplace is not None else "")
         )
 
         await ctx.send(embed=content)
@@ -442,12 +432,15 @@ class Miscellaneous(commands.Cog):
             emoji_name = emoji.name
         else:
             # unicode emoji
-            emoji_name = unicode_codes.UNICODE_EMOJI.get(emoji)
+            emoji_name = unicode_codes.UNICODE_EMOJI_ALIAS.get(emoji)
             if emoji_name is None:
                 return await ctx.send(":warning: I don't know this emoji!")
 
+            codepoint = "-".join(
+                f"{ord(e):x}" for e in unicode_codes.EMOJI_ALIAS_UNICODE.get(emoji_name)
+            )
             emoji_name = emoji_name.strip(":")
-            emoji_url = f"https://twemoji.maxcdn.com/v/13.0.0/72x72/{ord(emoji):x}.png"
+            emoji_url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
 
         color_hex = await util.color_from_image_url(str(emoji_url))
         content = discord.Embed(

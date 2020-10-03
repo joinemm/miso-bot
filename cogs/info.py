@@ -91,11 +91,12 @@ class Info(commands.Cog):
         content = discord.Embed(
             title=f"Miso Bot | version {self.bot.version}", colour=discord.Colour.blue()
         )
+        owner = self.bot.get_user(self.bot.owner_id)
         content.description = (
-            f"Created by **{self.bot.owner}** {self.bot.owner.mention} using discord.py\n\n"
+            f"Created by **{owner}** {owner.mention} using discord.py\n\n"
             f"Use `{ctx.prefix}help` to get help on any commands, \n"
             f"or visit the website for more detailed instructions.\n\n"
-            f"Currently active in **{len(self.bot.guilds)}** servers,\n"
+            f"Currently in **{len(self.bot.guilds)}** servers across **{len(self.bot.latencies)}** shards,\n"
             f"totalling **{membercount}** unique users."
         )
         content.set_thumbnail(url=self.bot.user.avatar_url)
@@ -145,6 +146,19 @@ class Info(commands.Cog):
             colour=int("5dadec", 16),
             description="\n".join(f"**{x[0]}** {x[1]}" for x in data),
         )
+        await ctx.send(embed=content)
+
+    @commands.command(aliases=["shards"])
+    async def shardinfo(self, ctx):
+        """Get information about the current shards."""
+        content = discord.Embed(title=f"Running {len(self.bot.shards)} shards")
+        for shard in self.bot.shards.values():
+            content.add_field(
+                name=f"Shard [`{shard.id}`]"
+                + (" :point_left:" if ctx.guild.shard_id == shard.id else ""),
+                value=f"```Count: {shard.shard_count}\nClosed: {shard.is_closed()}\nLatency: {shard.latency:.2f}ms```",
+            )
+
         await ctx.send(embed=content)
 
     @commands.command()

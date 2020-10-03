@@ -378,7 +378,7 @@ class User(commands.Cog):
                 users.append((user, messages, xp))
         else:
             # guild selector for owner only
-            if ctx.author.id == self.bot.owner.id and scope != "":
+            if ctx.author.id == self.bot.owner_id and scope != "":
                 try:
                     guild = self.bot.get_guild(int(scope))
                     if guild is None:
@@ -522,7 +522,7 @@ class User(commands.Cog):
         if global_xp_rows is not None:
             global_xp = sum(sum(row[3:]) for row in global_xp_rows)
 
-        if user.id == self.bot.owner.id:
+        if user.id == self.bot.owner_id:
             badges.append(make_badge(badge_classes["dev"]))
 
         if user.bot:
