@@ -24,7 +24,7 @@ class Events(commands.Cog):
         self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
         self.current_status = None
         self.status_loop.start()
-        self.settings = db.get_from_data_json(["bot_settings"])
+        self.guildlog = 652916681299066900
 
     def cog_unload(self):
         self.status_loop.cancel()
@@ -84,7 +84,7 @@ class Events(commands.Cog):
         )
         content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")
-        logchannel = self.bot.get_channel(self.settings["log_channel"])
+        logchannel = self.bot.get_channel(self.guildlog)
         await logchannel.send(embed=content)
 
     @commands.Cog.listener()
@@ -98,7 +98,7 @@ class Events(commands.Cog):
         )
         content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")
-        logchannel = self.bot.get_channel(self.settings["log_channel"])
+        logchannel = self.bot.get_channel(self.guildlog)
         await logchannel.send(embed=content)
 
     @commands.Cog.listener()
@@ -401,12 +401,17 @@ class Events(commands.Cog):
                 (payload.message_id,),
             )
             reaction_emoji = star_emoji if not custom_emoji else "⭐"
+
+            board_message = None
             if board_msg_id is not None:
                 board_msg_id = board_msg_id[0][0]
+                if board_msg_id is not None:
+                    try:
+                        board_message = await channel.fetch_message(board_msg_id)
+                    except discord.errors.NotFound:
+                        board_message = None
 
-            try:
-                board_message = await channel.fetch_message(board_msg_id)
-            except discord.errors.NotFound:
+            if board_message is None:
                 # message is not on board yet, or it was deleted
                 content = discord.Embed(color=discord.Color.gold())
                 content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
