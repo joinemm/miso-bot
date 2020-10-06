@@ -98,5 +98,5 @@ class EmbedHelpCommand(commands.HelpCommand):
         embed = discord.Embed(colour=self.COLOUR)
         embed.description = "`" + ctx.prefix + group.qualified_name
         embed.description += f" [{' | '.join(c.name for c in group.commands)}]`"
-        embed.set_footer(text=f"Use {ctx.prefix}help {group.qualified_name} [subcommand] for more info")
+        embed.set_footer(text=f"Use {ctx.prefix}help {group.qualified_name} for more details")
         await ctx.send(embed=embed)
