@@ -2,7 +2,7 @@ import discord
 import arrow
 import asyncpraw
 import os
-from discord.ext import commands
+from discord.ext import commands, flags
 from helpers import emojis, utilityfunctions as util
 
 
@@ -33,17 +33,29 @@ class Reddit(commands.Cog):
         """Reddit commands."""
         await util.command_group_help(ctx)
 
+    @flags.add_flag("-i", "--images", "--image", action="store_true")
     @reddit.command(name="random", aliases=["r"])
-    async def reddit_random(self, ctx, subreddit):
+    async def reddit_random(self, ctx, subreddit, **options):
         """Get random post from given subreddit."""
-        subreddit = await self.client.subreddit(subreddit)
+        subreddit = await self.client.subreddit(subreddit.lower())
         post = await subreddit.random()
         if post is None:
             return await ctx.send(
                 "Sorry, this subreddit does not support the random post feature!"
             )
 
-        await self.send_post(ctx, subreddit, post)
+        if options["image"]:
+            i = 0
+            while i < 25 or not is_image_post(post):
+                post = await subreddit.random()
+                i += 1
+
+            if not is_image_post(post):
+                return await ctx.send(
+                    ":warning: Could not find any image post from this subreddit after 25 tries."
+                )
+
+        await self.send_post(ctx, subreddit, post, f"Random post from r/{subreddit}")
 
     @reddit.command(name="hot", aliases=["h"])
     async def reddit_hot(self, ctx, subreddit, number="1"):
@@ -51,7 +63,7 @@ class Reddit(commands.Cog):
         if not await self.check_n(ctx, number):
             return
 
-        subreddit = await self.client.subreddit(subreddit)
+        subreddit = await self.client.subreddit(subreddit.lower())
         post = await get_n_post(subreddit.hot(), number)
 
         await self.send_post(ctx, subreddit, post, f"#{number} hottest post from r/{subreddit}")
@@ -63,7 +75,7 @@ class Reddit(commands.Cog):
         if timespan is None or not await self.check_n(ctx, number):
             return
 
-        subreddit = await self.client.subreddit(subreddit)
+        subreddit = await self.client.subreddit(subreddit.lower())
         post = await get_n_post(subreddit.controversial(timespan), number)
 
         await self.send_post(
@@ -80,7 +92,7 @@ class Reddit(commands.Cog):
         if timespan is None or not await self.check_n(ctx, number):
             return
 
-        subreddit = await self.client.subreddit(subreddit)
+        subreddit = await self.client.subreddit(subreddit.lower())
         post = await get_n_post(subreddit.top(timespan), number)
 
         await self.send_post(
@@ -96,7 +108,7 @@ class Reddit(commands.Cog):
         if not await self.check_n(ctx, number):
             return
 
-        subreddit = await self.client.subreddit(subreddit)
+        subreddit = await self.client.subreddit(subreddit.lower())
         post = await get_n_post(subreddit.new(), number)
 
         await self.send_post(ctx, subreddit, post, f"#{number} newest post from r/{subreddit}")
@@ -107,19 +119,34 @@ class Reddit(commands.Cog):
         """Checks for eligibility for sending submission and sends it."""
         try:
             await subreddit.load()
-            if not can_send_nsfw(ctx, subreddit):
-                return await ctx.send(
-                    ":underage: NSFW subreddits can only be viewed in an NSFW channel!"
-                )
-        except Exception:
-            pass
+        except asyncpraw.exceptions.NotFound as e:
+            if str(subreddit) != "all":
+                if e.response.status == 404:
+                    return await ctx.send(
+                        ":warning: `r/{subreddit}` is either banned or doesn't exist!"
+                    )
+                elif e.response.status == 403:
+                    return await ctx.send(
+                        ":warning: `r/{subreddit}` is either quarantined or private!"
+                    )
+                else:
+                    raise e
 
-        content = await self.render_submission(post, not ctx.channel.is_nsfw())
+        if not can_send_nsfw(ctx, subreddit):
+            return await ctx.send(
+                ":underage: NSFW subreddits can only be viewed in an NSFW channel!"
+            )
+
+        content, message_content = await self.render_submission(post, not ctx.channel.is_nsfw())
         content.set_footer(text=footer)
-        await ctx.send(embed=content)
+        if message_content is None:
+            await ctx.send(embed=content)
+        else:
+            await ctx.send(message_content, embed=content)
 
     async def render_submission(self, submission, censor=True):
         """Turns reddit submission into a discord embed."""
+        message_text = None
         content = discord.Embed()
         content.title = (
             f"`[{submission.link_flair_text}]` " if submission.link_flair_text is not None else ""
@@ -136,7 +163,7 @@ class Reddit(commands.Cog):
             content.set_author(
                 name=f"u/{redditor.name}",
                 url=f"https://old.reddit.com/u/{redditor.name}",
-                icon_url=redditor.icon_img,
+                icon_url=(redditor.icon_img if hasattr(redditor, "icon_img") else None),
             )
 
         suffix_elements = [
@@ -153,27 +180,31 @@ class Reddit(commands.Cog):
             else:
                 content.description = submission.selftext
         else:
-            if submission.spoiler or (submission.over_18 and censor):
-                content.description = "||" + submission.url + "||"
-            elif submission.url.endswith((".png", ".jpg", ".jpeg", ".gif")):
+            hide = submission.spoiler or (submission.over_18 and censor)
+            content.description = ""
+            if not hide and is_image_post(submission):
                 content.set_image(url=submission.url)
-                content.description = ""
             else:
-                content.description = submission.url
+                url = submission.url
+                if hide:
+                    url = "||" + url + "||"
+                if self_embeds(submission.url):
+                    message_text = url
+                else:
+                    content.description = url
 
         content.description.strip()
         if submission.over_18:
             content.title = "`[NSFW]` " + content.title
-            if submission.is_self and censor:
-                content.description = "||" + content.description + "||"
 
         elif submission.spoiler:
             content.title = "`[SPOILER]` " + content.title
-            if submission.is_self:
-                content.description = "||" + content.description + "||"
+
+        if submission.is_self and ((censor and submission.over_18) or submission.spoiler):
+            content.description = "||" + content.description + "||"
 
         content.description += suffix
-        return content
+        return content, message_text
 
     async def check_ts(self, ctx, timespan):
         """Validates timespan argument."""
@@ -211,6 +242,16 @@ async def get_n_post(gen, n, ignore_sticky=True):
             return post
         else:
             i += 1
+
+
+def is_image_post(submission):
+    """is submission content embedable image."""
+    return (not submission.is_self) and submission.url.endswith((".png", ".jpg", ".jpeg", ".gif"))
+
+
+def self_embeds(url):
+    """Does this url generate a usable embed on it's own when sent on discord?"""
+    return url.startswith("https://youtube.com") or url.startswith("https://youtu.be") or url.startswith("https://imgur.com")
 
 
 def can_send_nsfw(ctx, content):
