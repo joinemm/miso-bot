@@ -162,47 +162,6 @@ class Info(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def stats(self, ctx):
-        """Get various bot statistics."""
-        most_used_command = db.query(
-            """
-            SELECT command, MAX(countsum) FROM(
-                SELECT command, SUM(count) as countsum FROM command_usage GROUP BY command
-            )"""
-        )[0]
-
-        most_command_uses_by = db.query(
-            """
-            SELECT user_id, MAX(countsum) FROM(
-                SELECT user_id, SUM(count) as countsum FROM command_usage GROUP BY user_id
-            )"""
-        )[0]
-
-        most_used_emoji = db.query(
-            """
-            SELECT emoji, MAX(countsum) FROM(
-                SELECT emoji, sum(count) as countsum FROM emoji_usage GROUP BY emoji
-            )"""
-        )[0]
-        emoji_repr = unicode_codes.EMOJI_ALIAS_UNICODE.get(most_used_emoji[0])
-
-        data = [
-            ("Amount of commands", len(self.bot.commands)),
-            ("Most used command", f"`>{most_used_command[0]}` ({most_used_command[1]})",),
-            (
-                "Most total command uses",
-                f"{self.bot.get_user(most_command_uses_by[0])} ({most_command_uses_by[1]})",
-            ),
-            ("Most used emoji", f"{emoji_repr} ({most_used_emoji[1]})",),
-        ]
-
-        content = discord.Embed(
-            title=":bar_chart: Bot stats",
-            description="\n".join(f"**{x[0]}** {x[1]}" for x in data),
-        )
-        await ctx.send(embed=content)
-
-    @commands.command()
     async def changelog(self, ctx, author="joinemm", repo="miso-bot"):
         """Github commit history."""
         data = await get_commits(author, repo)
