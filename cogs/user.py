@@ -287,7 +287,7 @@ class User(commands.Cog):
         content.colour = ctx.author.color
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.group(case_insensitive=True)
+    @commands.group(case_insensitive=True, aliases=["lb"])
     async def leaderboard(self, ctx):
         """Show various leaderboards."""
         await util.command_group_help(ctx)
@@ -325,31 +325,6 @@ class User(commands.Cog):
             title=f"{'global' if _global_ else ctx.guild.name} fishy leaderboard",
             color=discord.Color.blue(),
         )
-        await util.send_as_pages(ctx, content, rows)
-
-    @leaderboard.command(name="fishysize")
-    async def leaderboard_fishysize(self, ctx):
-        data = db.query("SELECT * FROM fishysize ORDER BY size DESC")
-        content = discord.Embed(title="Biggest fishies caught :fish:", color=discord.Color.blue())
-        rows = []
-        rank_icon = [":first_place:", ":second_place:", ":third_place:"]
-        for i, row in enumerate(data, start=1):
-            fisher = self.bot.get_user(row[2] or "")
-            receiver = self.bot.get_user(row[3])
-            if fisher is None:
-                fisher = receiver
-                receiver = None
-
-            if i <= len(rank_icon):
-                rank = rank_icon[i - 1]
-            else:
-                rank = f"`{i}.`"
-
-            rows.append(
-                f"{rank} **{row[4]} Kg** caught by **{fisher}**"
-                + (f" for **{receiver}**" if receiver is not None else "")
-            )
-
         await util.send_as_pages(ctx, content, rows)
 
     @leaderboard.command(name="levels")
@@ -511,7 +486,8 @@ class User(commands.Cog):
         fishydata = db.fishdata(user.id)
 
         local_xp_rows = db.query(
-            "SELECT * FROM activity WHERE user_id = ? AND guild_id = ?", (user.id, ctx.guild.id),
+            "SELECT * FROM activity WHERE user_id = ? AND guild_id = ?",
+            (user.id, ctx.guild.id),
         )
         local_xp = 0
         if local_xp_rows is not None:
@@ -616,7 +592,8 @@ class User(commands.Cog):
             (ctx.author.id, None, None, None),
         )
         db.execute(
-            "UPDATE profiles SET description = ? WHERE user_id = ?", (text[1:], ctx.author.id),
+            "UPDATE profiles SET description = ? WHERE user_id = ?",
+            (text[1:], ctx.author.id),
         )
         await ctx.send(":white_check_mark: Profile description updated!")
 
@@ -628,7 +605,8 @@ class User(commands.Cog):
             (ctx.author.id, None, None, None),
         )
         db.execute(
-            "UPDATE profiles SET background_url = ? WHERE user_id = ?", (url, ctx.author.id),
+            "UPDATE profiles SET background_url = ? WHERE user_id = ?",
+            (url, ctx.author.id),
         )
         await ctx.send(":white_check_mark: Background image updated!")
 
