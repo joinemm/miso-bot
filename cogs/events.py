@@ -76,6 +76,11 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         """Called when bot joins a new guild."""
+        blacklisted = db.query("SELECT * FROM blacklist_guilds WHERE guild_id = ?", (guild.id,))
+        if blacklisted is not None:
+            logger.info(f"Tried to join blacklisted guild {guild}")
+            return await guild.leave()
+
         logger.info(f"New guild : {guild}")
         content = discord.Embed(color=discord.Color.green())
         content.title = "New guild!"
@@ -90,7 +95,11 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         """Called when bot leaves a guild."""
-        logger.info(f"Left guild : {guild}")
+        logger.info(f"Left guild {guild}")
+        blacklisted = db.query("SELECT * FROM blacklist_guilds WHERE guild_id = ?", (guild.id,))
+        if blacklisted is not None:
+            return
+
         content = discord.Embed(color=discord.Color.red())
         content.title = "Left guild!"
         content.description = (
@@ -194,7 +203,8 @@ class Events(commands.Cog):
         # ignored channels
         if (
             db.query(
-                "select * from deleted_messages_mask where channel_id = ?", (message.channel.id,),
+                "select * from deleted_messages_mask where channel_id = ?",
+                (message.channel.id,),
             )
             is not None
         ):
@@ -318,8 +328,12 @@ class Events(commands.Cog):
                     "           <command> [<args>]```"
                 )
             elif gitcommand == "--version":
-                msg = "`git version 2.17.1`"
+                msg = "`git version 2.28.0`"
             elif gitcommand in [
+                "init",
+                "reset",
+                "rebase",
+                "fetch",
                 "commit",
                 "push",
                 "pull",
@@ -327,6 +341,7 @@ class Events(commands.Cog):
                 "status",
                 "init",
                 "add",
+                "clone",
             ]:
                 return
             else:
