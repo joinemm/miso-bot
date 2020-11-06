@@ -25,9 +25,7 @@ class Typings(commands.Cog):
 
     def anticheat(self, message):
         remainder = "".join(
-            set(message.content).intersection(
-                self.fancy_font + "".join(self.separators)
-            )
+            set(message.content).intersection(self.fancy_font + "".join(self.separators))
         )
         return remainder != ""
 
@@ -70,13 +68,11 @@ class Typings(commands.Cog):
             return await ctx.send("Too slow.")
 
         else:
-            if self.anticheat(message):
+            wpm, accuracy = calculate_entry(message, og_msg, wordlist)
+            if self.anticheat(message) or wpm > 216:
                 return await ctx.send(f"{ctx.author.mention} Stop cheating >:(")
 
-            wpm, accuracy = calculate_entry(message, og_msg, wordlist)
-            await ctx.send(
-                f"{ctx.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**"
-            )
+            await ctx.send(f"{ctx.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
             save_wpm(ctx.author, wpm, accuracy, wordcount, language, 0)
 
     @typing.command(name="race")
@@ -126,9 +122,7 @@ class Typings(commands.Cog):
 
         while not race_in_progress:
             try:
-                reaction, user = await ctx.bot.wait_for(
-                    "reaction_add", timeout=300.0, check=check
-                )
+                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=300.0, check=check)
             except asyncio.TimeoutError:
                 try:
                     for emoji in [note_emoji, check_emoji]:
@@ -190,9 +184,7 @@ class Typings(commands.Cog):
                 f"Currently supported languages are:\n>>> {langs}"
             )
 
-        await words_message.edit(
-            content=f"```\n{self.obfuscate(' '.join(wordlist))}\n```"
-        )
+        await words_message.edit(content=f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
 
         results = {}
         for player in players:
@@ -210,20 +202,18 @@ class Typings(commands.Cog):
                 )
 
             try:
-                message = await self.bot.wait_for(
-                    "message", timeout=300.0, check=progress_check
-                )
+                message = await self.bot.wait_for("message", timeout=300.0, check=progress_check)
             except asyncio.TimeoutError:
                 race_in_progress = False
 
             else:
-                if self.anticheat(message):
+                wpm, accuracy = calculate_entry(message, words_message, wordlist)
+                if self.anticheat(message) or wpm > 216:
                     results[str(message.author.id)] = 0
                     completed_players.add(message.author)
                     await ctx.send(f"{message.author.mention} Stop cheating >:(")
                     continue
 
-                wpm, accuracy = calculate_entry(message, words_message, wordlist)
                 await ctx.send(
                     f"{message.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**"
                 )
@@ -308,9 +298,9 @@ class Typings(commands.Cog):
                 + " taken any typing tests yet!"
             )
 
-        racedata = db.query(
-            "SELECT SUM(wins) FROM typeracer WHERE user_id = ?", (user.id,)
-        )
+        # racedata = db.query(
+        #    "SELECT SUM(wins) FROM typeracer WHERE user_id = ?", (user.id,)
+        # )
         wpm_list = [x[2] for x in data]
         wpm_avg = sum(wpm_list) / len(wpm_list)
         acc_list = [x[3] for x in data]
@@ -319,13 +309,13 @@ class Typings(commands.Cog):
         wpm_avg_re = sum(wpm_list_re) / len(wpm_list_re)
         acc_list_re = [x[3] for x in data[:10]]
         acc_avg_re = sum(acc_list_re) / len(acc_list_re)
-        wins = racedata[0][0] if racedata is not None else "N/A"
+        # wins = racedata[0][0] if racedata is not None else "N/A"
         content = discord.Embed(
             title=f":keyboard: {user.name} typing stats", color=discord.Color.gold()
         )
         content.description = (
             f"Tests taken: **{len(data)}**\n"
-            f"Races won: **{wins}**\n"
+            # f"Races won: **{wins}**\n"
             f"Average WPM: **{int(wpm_avg)}**\n"
             f"Average Accuracy: **{acc_avg:.1f}%**\n"
             f"Recent average WPM: **{int(wpm_avg_re)}**\n"
