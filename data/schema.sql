@@ -345,3 +345,7 @@ CREATE TABLE IF NOT EXISTS "reminders"(
   "thing"	TEXT NOT NULL,
   "message_link"	TEXT
 );
+CREATE TABLE IF NOT EXISTS "blacklist_guilds"(
+  "guild_id"    INTEGER NOT NULL,
+  PRIMARY KEY("guild_id")
+);

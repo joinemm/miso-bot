@@ -41,13 +41,20 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
         )
 
         rows = []
-        for guild in sorted(
-            self.bot.guilds, key=lambda x: x.member_count, reverse=True
-        ):
-            rows.append(
-                f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
-            )
+        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
+            rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
 
+        await util.send_as_pages(ctx, content, rows)
+
+    @commands.command()
+    async def findguild(self, ctx, *, search_term):
+        """Find a guild by name."""
+        rows = []
+        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
+            if search_term.lower() in guild.name.lower():
+                rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
+
+        content = discord.Embed(title=f"Found **{len(rows)}** guilds matching search term")
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
@@ -66,9 +73,7 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
     async def patron_add(self, ctx, user: discord.User, tier: int):
         """Add a new patron."""
         since_ts = arrow.utcnow().timestamp
-        db.execute(
-            "INSERT INTO patrons VALUES(?, ?, ?, ?)", (user.id, tier, since_ts, 1)
-        )
+        db.execute("INSERT INTO patrons VALUES(?, ?, ?, ?)", (user.id, tier, since_ts, 1))
         await ctx.send(f"**{user}** is now a patron!")
 
     @patron.command(name="remove")
@@ -81,9 +86,7 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
     async def patron_toggle(self, ctx, user: discord.User):
         """Toggle user's patron status."""
         current = util.int_to_bool(
-            db.query(
-                "SELECT currently_active FROM patrons WHERE user_id = ?", (user.id,)
-            )[0][0]
+            db.query("SELECT currently_active FROM patrons WHERE user_id = ?", (user.id,))[0][0]
         )
         db.execute(
             "UPDATE patrons SET currently_active = ? WHERE user_id = ?",
@@ -144,9 +147,7 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
             self.bot.reload_extension(module)
         except Exception as error:
             await ctx.send(
-                "```py\n"
-                + "".join(traceback.format_exception(None, error, None))
-                + "\n```"
+                "```py\n" + "".join(traceback.format_exception(None, error, None)) + "\n```"
             )
         else:
             logger.info(f"Reloaded {module}")
@@ -189,12 +190,16 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
     @commands.command()
     async def fmban(self, ctx, lastfm_username):
         """Ban someone from the leaderboards."""
-        data = db.query("select * from lastfm_blacklist where username = ?", (lastfm_username.lower(),))
+        data = db.query(
+            "select * from lastfm_blacklist where username = ?", (lastfm_username.lower(),)
+        )
         if data is None:
             db.execute("INSERT INTO lastfm_blacklist VALUES(?)", (lastfm_username.lower(),))
             await ctx.send(f":ok_hand: Flagged lastfm profile `{lastfm_username}` as a cheater.")
         else:
-            db.execute("DELETE FROM lastfm_blacklist WHERE username = ?", (lastfm_username.lower(),))
+            db.execute(
+                "DELETE FROM lastfm_blacklist WHERE username = ?", (lastfm_username.lower(),)
+            )
             await ctx.send(f":ok_hand: Removed cheater flag from `{lastfm_username}`")
 
 
