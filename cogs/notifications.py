@@ -33,6 +33,8 @@ class Notifications(commands.Cog):
             )
             if pattern.findall(message.content):
                 member = message.guild.get_member(user_id)
+                if member.dm_channel is None:
+                    continue
                 if member is None:
                     continue
                 if member not in message.channel.members:
@@ -41,7 +43,7 @@ class Notifications(commands.Cog):
                 # create and send notification message
                 await send_notification(member, message, pattern)
 
-    @commands.group(case_insensitive=True, aliases=["noti"])
+    @commands.group(case_insensitive=True, aliases=["noti", "notif"])
     async def notification(self, ctx):
         """
         Add keyword notifications on this server.
@@ -68,7 +70,8 @@ class Notifications(commands.Cog):
             return await ctx.send(":warning: You already have this notification!")
 
         db.execute(
-            "REPLACE INTO notifications values(?, ?, ?)", (guild_id, ctx.author.id, keyword),
+            "REPLACE INTO notifications values(?, ?, ?)",
+            (guild_id, ctx.author.id, keyword),
         )
         await ctx.author.send(
             f":white_check_mark: New keyword notification `{keyword}` set "
@@ -139,12 +142,17 @@ class Notifications(commands.Cog):
                 guild_name = server.name
 
             content.add_field(
-                name=guild_name, value="\n".join(f"└`{x}`" for x in guilds.get(guild_id)),
+                name=guild_name,
+                value="\n".join(f"└`{x}`" for x in guilds.get(guild_id)),
             )
 
         await ctx.author.send(embed=content)
         if ctx.guild is not None:
             await ctx.send(f"Notification list sent to your DMs {emojis.VIVISMIRK}")
+
+    @notification.command()
+    async def test(self, ctx):
+        await send_notification(ctx.author, ctx.message)
 
 
 def setup(bot):
@@ -153,14 +161,24 @@ def setup(bot):
 
 async def send_notification(user, message, pattern=None):
     content = discord.Embed(color=message.author.color)
-    content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
-    highlighted_text = re.sub(pattern, lambda x: f"**{x.group(0)}**", message.content)
-    quoted_text = "> " + highlighted_text.replace("\n", "\n> ")
+    content.set_author(
+        name=f"{message.author} | click to jump",
+        icon_url=message.author.avatar_url,
+        url=message.jump_url,
+    )
+    if pattern is None:
+        highlighted_text = message.content
+    else:
+        highlighted_text = re.sub(pattern, lambda x: f"**{x.group(0)}**", message.content)
 
-    content.description = f"{quoted_text}\n[Go to message]({message.jump_url})"
+    content.description = highlighted_text
     content.set_footer(
-        text=f"{message.guild.name} | #{message.channel.name}", icon_url=message.guild.icon_url,
+        text=f"{message.guild.name} | #{message.channel.name}",
+        icon_url=message.guild.icon_url,
     )
     content.timestamp = message.created_at
 
-    await user.send(embed=content)
+    try:
+        await user.send(embed=content)
+    except discord.errors.Forbidden:
+        pass
