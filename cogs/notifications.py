@@ -35,7 +35,7 @@ class Notifications(commands.Cog):
                 member = message.guild.get_member(user_id)
                 if (
                     member is None
-                    or member.dm_channel is None
+                    # or member.dm_channel is None
                     or member not in message.channel.members
                 ):
                     continue
