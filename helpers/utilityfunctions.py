@@ -12,6 +12,7 @@ import aiohttp
 from discord.ext import commands
 from PIL import Image
 from data import database as db
+from durations_nlp import Duration
 
 
 class ErrorMessage(Exception):
@@ -246,26 +247,11 @@ def message_embed(message):
 
 
 def timefromstring(s):
-    """
+    """q
     :param s : String to parse time from
     :returns : Time in seconds
     """
-    t = 0
-    words = s.split(" ")
-    prev = words[0]
-    for word in words[1:]:
-        try:
-            if word in ["hours", "hour"]:
-                t += int(prev) * 3600
-            elif word in ["minutes", "minute", "min"]:
-                t += int(prev) * 60
-            elif word in ["seconds", "second", "sec"]:
-                t += int(prev)
-        except ValueError:
-            pass
-        prev = word
-
-    return t
+    return int(Duration(s).to_seconds())
 
 
 def stringfromtime(t, accuracy=4):
@@ -279,13 +265,13 @@ def stringfromtime(t, accuracy=4):
 
     components = []
     if d > 0:
-        components.append(f"{int(d)} day" + ("s" if d > 1 else ""))
+        components.append(f"{int(d)} day" + ("s" if d != 1 else ""))
     if h > 0:
-        components.append(f"{int(h)} hour" + ("s" if h > 1 else ""))
+        components.append(f"{int(h)} hour" + ("s" if h != 1 else ""))
     if m > 0:
-        components.append(f"{int(m)} minute" + ("s" if m > 1 else ""))
+        components.append(f"{int(m)} minute" + ("s" if m != 1 else ""))
     if s > 0:
-        components.append(f"{int(s)} second" + ("s" if s > 1 else ""))
+        components.append(f"{int(s)} second" + ("s" if s != 1 else ""))
 
     return " ".join(components[:accuracy])
 
@@ -325,6 +311,8 @@ def xp_from_message(message):
     xp = eligible_words + (10 * len(message.attachments))
     if xp == 0:
         xp = 1
+    if xp > 50:
+        xp = 50
     return xp
 
 
@@ -571,7 +559,11 @@ def create_welcome_embed(user, guild, messageformat):
     content.timestamp = datetime.datetime.utcnow()
     content.set_footer(text=f"👤#{len(guild.members)}")
     content.description = messageformat.format(
-        mention=user.mention, user=user, id=user.id, server=guild.name, username=user.name,
+        mention=user.mention,
+        user=user,
+        id=user.id,
+        server=guild.name,
+        username=user.name,
     )
     return content
 
@@ -586,7 +578,11 @@ def create_welcome_without_embed(user, guild, messageformat):
 def create_goodbye_message(user, guild, messageformat):
     """Formats a goodbye message."""
     return messageformat.format(
-        mention=user.mention, user=user, id=user.id, server=guild.name, username=user.name,
+        mention=user.mention,
+        user=user,
+        id=user.id,
+        server=guild.name,
+        username=user.name,
     )
 
 
