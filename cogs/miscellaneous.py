@@ -192,8 +192,8 @@ class Miscellaneous(commands.Cog):
                     newnums.append(n)
             lovenums = newnums
         it = 0
-        maxit = 100 # Maximum iterations allowed in below algorithm to attempt convergence
-        maxlen = 100 # Maximum length of generated list allowed (some cases grow list infinitely)
+        maxit = 100  # Maximum iterations allowed in below algorithm to attempt convergence
+        maxlen = 100  # Maximum length of generated list allowed (some cases grow list infinitely)
         while len(lovenums) > 2 and it < maxit and len(lovenums) < maxlen:
             newnums = []
             it += 1
@@ -210,7 +210,7 @@ class Miscellaneous(commands.Cog):
         if len(lovenums) == 2:
             percentage = lovenums[0] * 10 + lovenums[1]
         else:
-            percentage = 1 # Same default that original site algorithm used
+            percentage = 1  # Same default that original site algorithm used
 
         if percentage < 25:
             emoji = ":broken_heart:"
@@ -259,13 +259,15 @@ class Miscellaneous(commands.Cog):
                 port = 25565
 
             db.execute(
-                """REPLACE INTO minecraft VALUES (?, ?, ?)""", (ctx.guild.id, address, port),
+                """REPLACE INTO minecraft VALUES (?, ?, ?)""",
+                (ctx.guild.id, address, port),
             )
             return await ctx.send(f"Minecraft server of this discord set to `{address}:{port}`")
 
         if address is None:
             serverdata = db.query(
-                """SELECT address, port FROM minecraft WHERE guild_id = ?""", (ctx.guild.id,),
+                """SELECT address, port FROM minecraft WHERE guild_id = ?""",
+                (ctx.guild.id,),
             )
             if serverdata is None:
                 return await ctx.send("No minecraft server saved for this discord server!")

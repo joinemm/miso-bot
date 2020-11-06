@@ -11,7 +11,6 @@ from data import database as db
 from helpers import utilityfunctions as util
 from helpers import emojis
 
-
 ALLSUM = (
     "SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23)"
 )
@@ -56,7 +55,7 @@ class User(commands.Cog):
 
         return f"#{ranking} / {total}"
 
-    @commands.command(aliases=["dp"])
+    @commands.command(aliases=["dp", "av"])
     async def avatar(self, ctx, *, user: discord.User = None):
         """Get user's profile picture."""
         if user is None:
@@ -74,7 +73,8 @@ class User(commands.Cog):
 
         await ctx.send(embed=content)
 
-    @commands.command()
+    @commands.command(aliases=["uinfo"])
+    @commands.cooldown(3, 30, type=commands.BucketType.user)
     async def userinfo(self, ctx, *, user=None):
         """Get information about user"""
         user = await util.get_member(ctx, user, ctx.author, try_user=True)
@@ -120,12 +120,10 @@ class User(commands.Cog):
                 if member.joined_at < user.joined_at:
                     member_number += 1
             content.add_field(name="Member", value=f"#{member_number} / {len(ctx.guild.members)}")
-
-            content.add_field(name="Rank", value=await self.get_rank(ctx, user))
-
-            content.add_field(
-                name="Global Rank", value=await self.get_rank(ctx, user, _global=True)
-            )
+            content.add_field(name="Server rank", value=await self.get_rank(ctx, user))
+            # content.add_field(
+            #    name="Global Rank", value=await self.get_rank(ctx, user, _global=True)
+            # )
 
             role_string = (
                 " ".join(role.mention for role in reversed(user.roles[1:]))
@@ -156,16 +154,16 @@ class User(commands.Cog):
     async def members(self, ctx):
         """Show the newest members of this server."""
         sorted_members = sorted(ctx.guild.members, key=lambda x: x.joined_at, reverse=True)
-
+        membercount = len(sorted_members)
         content = discord.Embed(title=f"{ctx.guild.name} members")
         rows = []
         for i, member in enumerate(sorted_members):
             jointime = member.joined_at.strftime("%y%m%d %H:%M")
-            rows.append(f"[`{jointime}`] **#{len(sorted_members)-i}** : **{member}**")
+            rows.append(f"[`{jointime}`] **#{membercount-i}** : **{member}**")
 
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.command()
+    @commands.command(aliases=["sinfo"])
     async def serverinfo(self, ctx):
         """Get information about this server."""
         image_small = str(ctx.guild.icon_url_as(format="png", size=64))
@@ -186,7 +184,7 @@ class User(commands.Cog):
 
         await ctx.send(embed=content)
 
-    @commands.command()
+    @commands.command(aliases=["roles"])
     async def roleslist(self, ctx):
         """List the roles of this server."""
         content = discord.Embed(title=f"Roles in {ctx.message.guild.name}")
@@ -234,7 +232,8 @@ class User(commands.Cog):
                 file=discord.File(img),
             )
 
-    @commands.command()
+    @commands.command(aliases=["ranking"])
+    @commands.cooldown(3, 30, type=commands.BucketType.user)
     async def rank(self, ctx, user: discord.Member = None):
         """See your xp ranking."""
         if user is None:
@@ -327,7 +326,7 @@ class User(commands.Cog):
         )
         await util.send_as_pages(ctx, content, rows)
 
-    @leaderboard.command(name="levels")
+    @leaderboard.command(name="levels", aliases=["xp", "level"])
     async def leaderboard_levels(self, ctx, scope="", timeframe=""):
         _global_ = scope == "global"
         if timeframe == "":
@@ -385,7 +384,7 @@ class User(commands.Cog):
             content.title += f" - {time}"
         await util.send_as_pages(ctx, content, rows)
 
-    @leaderboard.command(name="wpm")
+    @leaderboard.command(name="wpm", aliases=["typing"])
     async def leaderboard_wpm(self, ctx, scope=""):
         _global_ = scope == "global"
 

@@ -107,7 +107,8 @@ def global_activitydata(user_id, tablename="activity"):
 
 def get_user_activity(guild_id, user_id, tablename="activity"):
     data = query(
-        "select * from %s where guild_id = ? and user_id = ?" % tablename, (guild_id, user_id),
+        "select * from %s where guild_id = ? and user_id = ?" % tablename,
+        (guild_id, user_id),
     )
     if data is None:
         return None
@@ -142,10 +143,12 @@ def update_user(user_id, column, new_value):
 def update_rate_limit(api_name):
     month = int(arrow.now().format("M"))
     execute(
-        "insert or ignore into api_usage(api_name, month) values(?, ?)", (api_name, month),
+        "insert or ignore into api_usage(api_name, month) values(?, ?)",
+        (api_name, month),
     )
     execute(
-        "update api_usage set count=count+1 where api_name=? AND month=?", (api_name, month),
+        "update api_usage set count=count+1 where api_name=? AND month=?",
+        (api_name, month),
     )
 
 
@@ -227,10 +230,12 @@ def get_setting(guild_id, setting, default=None):
 
 def add_crown(artist, guild_id, user_id, playcount):
     data = query(
-        "SELECT user_id FROM crowns WHERE artist = ? and guild_id = ?", (artist, guild_id),
+        "SELECT user_id FROM crowns WHERE artist = ? and guild_id = ?",
+        (artist, guild_id),
     )
     execute(
-        "REPLACE INTO crowns VALUES (?, ?, ?, ?)", (artist, guild_id, user_id, playcount),
+        "REPLACE INTO crowns VALUES (?, ?, ?, ?)",
+        (artist, guild_id, user_id, playcount),
     )
     if data is None:
         return None
@@ -240,7 +245,8 @@ def add_crown(artist, guild_id, user_id, playcount):
 
 def rolepicker_role(guild_id, rolename):
     data = query(
-        "SELECT role_id FROM roles WHERE rolename = ? AND guild_id = ?", (rolename, guild_id),
+        "SELECT role_id FROM roles WHERE rolename = ? AND guild_id = ?",
+        (rolename, guild_id),
     )
 
     if data is None:
@@ -254,7 +260,10 @@ def random_kpop_idol(gender=None):
         data = query("SELECT * FROM idols", database=SQLKPOPDB, maketuple=True)
     else:
         data = query(
-            "SELECT * FROM idols WHERE gender = ?", (gender,), database=SQLKPOPDB, maketuple=True,
+            "SELECT * FROM idols WHERE gender = ?",
+            (gender,),
+            database=SQLKPOPDB,
+            maketuple=True,
         )
     return random.choice(data)
 
@@ -290,12 +299,21 @@ def getter(d, key):
 def log_command_usage(ctx):
     execute(
         "INSERT OR IGNORE INTO command_usage VALUES(?, ?, ?, ?)",
-        ((ctx.guild.id if ctx.guild is not None else "DM"), ctx.author.id, str(ctx.command), 0,),
+        (
+            (ctx.guild.id if ctx.guild is not None else "DM"),
+            ctx.author.id,
+            str(ctx.command),
+            0,
+        ),
     )
     execute(
         """UPDATE command_usage SET count = count + 1
         WHERE (guild_id = ? AND user_id = ? AND command = ?)""",
-        ((ctx.guild.id if ctx.guild is not None else "DM"), ctx.author.id, str(ctx.command),),
+        (
+            (ctx.guild.id if ctx.guild is not None else "DM"),
+            ctx.author.id,
+            str(ctx.command),
+        ),
     )
 
 
@@ -326,7 +344,7 @@ def log_emoji_usage(message, custom_emoji, unicode_emoji):
         WHERE (guild_id = ? AND user_id = ? AND emoji = ? AND emojitype = ?)"""
 
     update_param = []
-    for emoji, emojitype in all_emoji:
+    for emoji, emojitype in set(all_emoji):
         insert_param.append((message.guild.id, message.author.id, emoji, emojitype, 0))
         update_param.append((message.guild.id, message.author.id, emoji, emojitype))
 
@@ -336,7 +354,8 @@ def log_emoji_usage(message, custom_emoji, unicode_emoji):
 
 def get_blacklist(guild_id, column, table):
     data = query(
-        "SELECT %s FROM blacklisted_%s WHERE guild_id = ?" % (column, table), (guild_id,),
+        "SELECT %s FROM blacklisted_%s WHERE guild_id = ?" % (column, table),
+        (guild_id,),
     )
     if data is None:
         return []
@@ -367,6 +386,13 @@ def is_blacklisted(ctx):
 
     if ctx.guild is None:
         return True
+
+    bl_guild = query(
+        "SELECT * FROM blacklist_guilds WHERE guild_id = ?",
+        (ctx.guild.id,),
+    )
+    if bl_guild is not None:
+        raise exceptions.BlacklistTrigger(ctx, "guild")
 
     bl_command = query(
         "SELECT * FROM blacklisted_commands WHERE guild_id = ? AND command = ?",
