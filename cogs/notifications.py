@@ -33,11 +33,11 @@ class Notifications(commands.Cog):
             )
             if pattern.findall(message.content):
                 member = message.guild.get_member(user_id)
-                if member.dm_channel is None:
-                    continue
-                if member is None:
-                    continue
-                if member not in message.channel.members:
+                if (
+                    member is None
+                    or member.dm_channel is None
+                    or member not in message.channel.members
+                ):
                     continue
 
                 # create and send notification message
