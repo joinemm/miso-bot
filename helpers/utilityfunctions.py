@@ -555,38 +555,59 @@ async def image_info_from_url(url):
             }
 
 
+class OptionalSubstitute(dict):
+    def __missing__(self, key):
+        return "{" + key + "}"
+
+
 def create_welcome_embed(user, guild, messageformat):
     """Creates and returns embed for welcome message."""
     content = discord.Embed(title="New member! :wave:", color=discord.Color.green())
     content.set_thumbnail(url=user.avatar_url)
     content.timestamp = datetime.datetime.utcnow()
     content.set_footer(text=f"👤#{len(guild.members)}")
-    content.description = messageformat.format(
-        mention=user.mention,
-        user=user,
-        id=user.id,
-        server=guild.name,
-        username=user.name,
+    substitutes = OptionalSubstitute(
+        {
+            "mention": user.mention,
+            "user": user,
+            "id": user.id,
+            "server": guild.name,
+            "guild": guild.name,
+            "username": user.name,
+        }
     )
+    content.description = messageformat.format(substitutes)
     return content
 
 
 def create_welcome_without_embed(user, guild, messageformat):
     """Creates a welcome message from the given format without wrapping it in embed"""
-    return messageformat.format(
-        mention=user.mention, user=user, id=user.id, server=guild.name, username=user.name
+    substitutes = OptionalSubstitute(
+        {
+            "mention": user.mention,
+            "user": user,
+            "id": user.id,
+            "server": guild.name,
+            "guild": guild.name,
+            "username": user.name,
+        }
     )
+    return messageformat.format(substitutes)
 
 
 def create_goodbye_message(user, guild, messageformat):
     """Formats a goodbye message."""
-    return messageformat.format(
-        mention=user.mention,
-        user=user,
-        id=user.id,
-        server=guild.name,
-        username=user.name,
+    substitutes = OptionalSubstitute(
+        {
+            "mention": user.mention,
+            "user": user,
+            "id": user.id,
+            "server": guild.name,
+            "guild": guild.name,
+            "username": user.name,
+        }
     )
+    return messageformat.format_map(substitutes)
 
 
 def get_full_class_name(obj, limit=2):
