@@ -149,7 +149,9 @@ class Reddit(commands.Cog):
         message_text = None
         content = discord.Embed()
         content.title = (
-            f"`[{submission.link_flair_text}]` " if submission.link_flair_text is not None else ""
+            f"`[{submission.link_flair_text}]` "
+            if hasattr(submission, "link_flair_text") and submission.link_flair_text is not None
+            else ""
         )
         content.title += submission.title
         content.timestamp = arrow.get(submission.created_utc).datetime
