@@ -69,18 +69,21 @@ class Notifications(commands.Cog):
         if check is not None:
             return await ctx.send(":warning: You already have this notification!")
 
-        db.execute(
-            "REPLACE INTO notifications values(?, ?, ?)",
-            (guild_id, ctx.author.id, keyword),
-        )
-        await ctx.author.send(
-            f":white_check_mark: New keyword notification `{keyword}` set "
-            + ("globally" if dm else f"in `{ctx.guild.name}`")
-        )
-        if not dm:
-            await ctx.send(
-                "Set a notification!" + ("" if dm else f" Check your DMs {emojis.VIVISMIRK}")
+        try:
+            await ctx.author.send(
+                f":white_check_mark: New keyword notification `{keyword}` set "
+                + ("globally" if dm else f"in `{ctx.guild.name}`")
             )
+            db.execute(
+                "REPLACE INTO notifications values(?, ?, ?)",
+                (guild_id, ctx.author.id, keyword),
+            )
+            if not dm:
+                await ctx.send(
+                    "Set a notification!" + ("" if dm else f" Check your DMs {emojis.VIVISMIRK}")
+                )
+        except discord.errors.Forbidden:
+            await ctx.send(":warning: I was unable to send you a DM. Please change your settings.")
 
     @notification.command()
     async def remove(self, ctx, *, keyword):
@@ -100,19 +103,23 @@ class Notifications(commands.Cog):
         if check is None:
             return await ctx.send(":warning: You don't have that notification.")
 
-        db.execute(
-            "DELETE FROM notifications where guild_id = ? and user_id = ? and keyword = ?",
-            (guild_id, ctx.author.id, keyword),
-        )
-        await ctx.author.send(
-            f":white_check_mark: Keyword notification `{keyword}` that you set "
-            + ("globally" if dm else f"in `{ctx.guild.name}`")
-            + " has been removed."
-        )
-        if not dm:
-            await ctx.send(
-                "removed a notification!" + ("" if dm else f" Check your DMs {emojis.VIVISMIRK}")
+        try:
+            await ctx.author.send(
+                f":white_check_mark: Keyword notification `{keyword}` that you set "
+                + ("globally" if dm else f"in `{ctx.guild.name}`")
+                + " has been removed."
             )
+            db.execute(
+                "DELETE FROM notifications where guild_id = ? and user_id = ? and keyword = ?",
+                (guild_id, ctx.author.id, keyword),
+            )
+            if not dm:
+                await ctx.send(
+                    "removed a notification!"
+                    + ("" if dm else f" Check your DMs {emojis.VIVISMIRK}")
+                )
+        except discord.errors.Forbidden:
+            await ctx.send(":warning: I was unable to send you a DM. Please change your settings.")
 
     @notification.command()
     async def list(self, ctx):
@@ -146,9 +153,12 @@ class Notifications(commands.Cog):
                 value="\n".join(f"└`{x}`" for x in guilds.get(guild_id)),
             )
 
-        await ctx.author.send(embed=content)
-        if ctx.guild is not None:
-            await ctx.send(f"Notification list sent to your DMs {emojis.VIVISMIRK}")
+        try:
+            await ctx.author.send(embed=content)
+            if ctx.guild is not None:
+                await ctx.send(f"Notification list sent to your DMs {emojis.VIVISMIRK}")
+        except discord.errors.Forbidden:
+            await ctx.send(":warning: I was unable to send you a DM. Please change your settings.")
 
     @notification.command()
     async def test(self, ctx):
@@ -161,17 +171,14 @@ def setup(bot):
 
 async def send_notification(user, message, pattern=None):
     content = discord.Embed(color=message.author.color)
-    content.set_author(
-        name=f"{message.author} | click to jump",
-        icon_url=message.author.avatar_url,
-        url=message.jump_url,
-    )
+    content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
     if pattern is None:
         highlighted_text = message.content
     else:
         highlighted_text = re.sub(pattern, lambda x: f"**{x.group(0)}**", message.content)
 
     content.description = highlighted_text
+    content.add_field(name="context", value=f"[Jump to message]({message.jump_url})", inline=True)
     content.set_footer(
         text=f"{message.guild.name} | #{message.channel.name}",
         icon_url=message.guild.icon_url,
