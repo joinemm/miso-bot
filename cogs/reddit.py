@@ -3,11 +3,16 @@ import arrow
 import asyncpraw
 import os
 from discord.ext import commands, flags
+import asyncprawcore
 from helpers import emojis, utilityfunctions as util
 
 
 CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET")
+
+
+class RedditError(commands.CommandError):
+    pass
 
 
 class Reddit(commands.Cog):
@@ -34,16 +39,30 @@ class Reddit(commands.Cog):
         await util.command_group_help(ctx)
 
     @flags.add_flag("-i", "--images", action="store_true")
-    @reddit.command(name="random", aliases=["r"])
+    @reddit.command(cls=flags.FlagCommand, name="random", aliases=["r"])
     async def reddit_random(self, ctx, subreddit, **options):
         """Get random post from given subreddit."""
         subreddit = await self.client.subreddit(subreddit.lower())
-        post = await subreddit.random()
+        try:
+            post = await subreddit.random()
+        except asyncprawcore.exceptions.NotFound as e:
+            if e.response.status == 404:
+                return await ctx.send(
+                    f":warning: `r/{subreddit}` is either banned or doesn't exist!"
+                )
+            elif e.response.status == 403:
+                return await ctx.send(
+                    f":warning: `r/{subreddit}` is either quarantined or private!"
+                )
+            else:
+                raise e
+
         if post is None:
             return await ctx.send(
                 "Sorry, this subreddit does not support the random post feature!"
             )
 
+        print(options)
         if options["images"]:
             i = 0
             while i < 25 or not is_image_post(post):
@@ -121,16 +140,7 @@ class Reddit(commands.Cog):
             await subreddit.load()
         except asyncpraw.exceptions.NotFound as e:
             if str(subreddit) != "all":
-                if e.response.status == 404:
-                    return await ctx.send(
-                        ":warning: `r/{subreddit}` is either banned or doesn't exist!"
-                    )
-                elif e.response.status == 403:
-                    return await ctx.send(
-                        ":warning: `r/{subreddit}` is either quarantined or private!"
-                    )
-                else:
-                    raise e
+                raise e
 
         if not can_send_nsfw(ctx, subreddit):
             return await ctx.send(
@@ -139,10 +149,9 @@ class Reddit(commands.Cog):
 
         content, message_content = await self.render_submission(post, not ctx.channel.is_nsfw())
         content.set_footer(text=footer)
-        if message_content is None:
-            await ctx.send(embed=content)
-        else:
-            await ctx.send(message_content, embed=content)
+        await ctx.send(embed=content)
+        if message_content is not None:
+            await ctx.send(message_content)
 
     async def render_submission(self, submission, censor=True):
         """Turns reddit submission into a discord embed."""
@@ -239,13 +248,16 @@ async def get_n_post(gen, n, ignore_sticky=True):
     """Gets the n:th submission from given PRAW ListingGenerator."""
     n = int(n)
     i = 1
-    async for post in gen:
-        if post.stickied and ignore_sticky:
-            n += 1
-        if i >= n:
-            return post
-        else:
-            i += 1
+    try:
+        async for post in gen:
+            if post.stickied and ignore_sticky:
+                n += 1
+            if i >= n:
+                return post
+            else:
+                i += 1
+    except asyncprawcore.exceptions.Redirect:
+        raise RedditError("this subreddit doesn't seem to exist!")
 
 
 def is_image_post(submission):
@@ -256,9 +268,14 @@ def is_image_post(submission):
 def self_embeds(url):
     """Does this url generate a usable embed on it's own when sent on discord?"""
     return (
-        url.startswith("https://youtube.com")
+        url.startswith("https://www.youtube.com")
         or url.startswith("https://youtu.be")
         or url.startswith("https://imgur.com")
+        or url.startswith("https://www.imgur.com")
+        or url.startswith("https://gfycat.com")
+        or url.startswith("https://www.gfycat.com")
+        or url.startswith("https://redgifs.com")
+        or url.startswith("https://www.redgifs.com")
     )
 
 
