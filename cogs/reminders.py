@@ -107,6 +107,11 @@ class Reminders(commands.Cog):
         else:
             return await ctx.send(f"Invalid prefix `{pre}`\nUse `on` for date and `in` for time")
 
+        if seconds < 1:
+            return await ctx.send(
+                ":warning: You must give a valid time at least 1 second in the future"
+            )
+
         db.execute(
             "INSERT INTO reminders VALUES(?, ?, ?, ?, ?, ?)",
             (
