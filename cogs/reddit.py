@@ -33,7 +33,7 @@ class Reddit(commands.Cog):
         """Reddit commands."""
         await util.command_group_help(ctx)
 
-    @flags.add_flag("-i", "--images", "--image", action="store_true")
+    @flags.add_flag("-i", "--images", action="store_true")
     @reddit.command(name="random", aliases=["r"])
     async def reddit_random(self, ctx, subreddit, **options):
         """Get random post from given subreddit."""
@@ -44,7 +44,7 @@ class Reddit(commands.Cog):
                 "Sorry, this subreddit does not support the random post feature!"
             )
 
-        if options["image"]:
+        if options["images"]:
             i = 0
             while i < 25 or not is_image_post(post):
                 post = await subreddit.random()
@@ -251,7 +251,11 @@ def is_image_post(submission):
 
 def self_embeds(url):
     """Does this url generate a usable embed on it's own when sent on discord?"""
-    return url.startswith("https://youtube.com") or url.startswith("https://youtu.be") or url.startswith("https://imgur.com")
+    return (
+        url.startswith("https://youtube.com")
+        or url.startswith("https://youtu.be")
+        or url.startswith("https://imgur.com")
+    )
 
 
 def can_send_nsfw(ctx, content):
