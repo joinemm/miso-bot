@@ -163,7 +163,9 @@ class Reddit(commands.Cog):
             content.set_author(
                 name=f"u/{redditor.name}",
                 url=f"https://old.reddit.com/u/{redditor.name}",
-                icon_url=(redditor.icon_img if hasattr(redditor, "icon_img") else None),
+                icon_url=(
+                    redditor.icon_img if hasattr(redditor, "icon_img") else discord.Embed.Empty
+                ),
             )
 
         suffix_elements = [
