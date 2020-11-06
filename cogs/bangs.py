@@ -1,5 +1,6 @@
 import aiohttp
 from time import time
+import discord
 from discord.ext import commands
 from helpers import log
 from data import database as db
@@ -53,7 +54,11 @@ class Bangs(commands.Cog):
         if not hasattr(ctx, "iscallback"):
             return await ctx.send_help(ctx.command)
 
-        await ctx.trigger_typing()
+        try:
+            await ctx.trigger_typing()
+        except discord.errors.Forbidden:
+            pass
+
         command_logger.info(log.log_command(ctx))
         db.log_command_usage(ctx)
         try:
