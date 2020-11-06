@@ -18,9 +18,7 @@ class Mod(commands.Cog):
         Usage:
             >purge <amount> [mentions...]"""
         if amount > 100:
-            return await ctx.send(
-                ":warning: You cannot bulk delete more than 100 messages."
-            )
+            return await ctx.send(":warning: You cannot delete more than 100 messages at a time.")
 
         await ctx.message.delete()
 
@@ -52,7 +50,7 @@ class Mod(commands.Cog):
         muterole = ctx.message.guild.get_role(db.get_setting(ctx.guild.id, "muterole"))
         if muterole is None:
             return await ctx.send(
-                f"Muterole for this server is invalid or not set, please use `>muterole` to set it."
+                "Muterole for this server is invalid or not set, please use `>muterole` to set it."
             )
 
         member = await util.get_member(ctx, user)
@@ -68,17 +66,14 @@ class Mod(commands.Cog):
 
         await member.add_roles(muterole)
         await ctx.send(
-            f"Muted {member.mention}"
-            + (f"for **{util.stringfromtime(t)}**" if t else "")
+            f"Muted {member.mention}" + (f"for **{util.stringfromtime(t)}**" if t else "")
         )
 
         if t:
             await asyncio.sleep(t)
             if muterole in member.roles:
                 await member.remove_roles(muterole)
-                await ctx.send(
-                    f"Unmuted {member.mention} (**{util.stringfromtime(t)}** passed)"
-                )
+                await ctx.send(f"Unmuted {member.mention} (**{util.stringfromtime(t)}** passed)")
 
     @commands.command()
     @commands.has_permissions(manage_roles=True)
@@ -133,9 +128,7 @@ class Mod(commands.Cog):
 
         functions = {"✅": confirm_ban, "❌": cancel_ban}
 
-        await util.reaction_buttons(
-            ctx, msg, functions, only_author=True, single_use=True
-        )
+        await util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
 
     @commands.group()
     @commands.has_permissions(administrator=True)
@@ -164,9 +157,7 @@ class Mod(commands.Cog):
         if blacklisted_channels:
             content.add_field(
                 name="Channels",
-                value="\n".join(
-                    f"<#{channel_id}>" for channel_id in blacklisted_channels
-                ),
+                value="\n".join(f"<#{channel_id}>" for channel_id in blacklisted_channels),
             )
         if blacklisted_users:
             content.add_field(
@@ -214,18 +205,25 @@ class Mod(commands.Cog):
             "INSERT OR IGNORE INTO blacklisted_commands VALUES(?, ?)",
             (ctx.guild.id, str(cmd)),
         )
-        await ctx.send(
-            f":white_check_mark: `{cmd}` has been blacklisted on this server"
-        )
+        await ctx.send(f":white_check_mark: `{cmd}` has been blacklisted on this server")
 
     @blacklist.command(name="global")
     @commands.is_owner()
     async def blacklist_global(self, ctx, *, user: discord.User):
-        """Blacklist someone from Miso Bot"""
+        """Blacklist someone from Miso Bot."""
         db.execute("INSERT OR IGNORE INTO blacklist_global_users VALUES(?)", (user.id,))
         await ctx.send(
             f":white_check_mark: **{user}** is now globally blacklisted from using Miso Bot"
         )
+
+    @blacklist.command(name="guild")
+    @commands.is_owner()
+    async def blacklist_guild(self, ctx, guild_id: int):
+        """Blacklist a guild from adding or using Miso Bot."""
+        guild = self.bot.get_guild(guild_id)
+        db.execute("INSERT OR IGNORE INTO blacklist_guilds VALUES (?)", (guild.id,))
+        await guild.leave()
+        await ctx.send(f":white_check_mark: **{guild}** can no longer use Miso Bot")
 
     @commands.group()
     @commands.has_permissions(administrator=True)
@@ -240,9 +238,7 @@ class Mod(commands.Cog):
             "DELETE FROM blacklisted_channels WHERE guild_id = ? AND channel_id = ?",
             (ctx.guild.id, textchannel.id),
         )
-        await ctx.send(
-            f":white_check_mark: {textchannel.mention} is no longer blacklisted"
-        )
+        await ctx.send(f":white_check_mark: {textchannel.mention} is no longer blacklisted")
 
     @whitelist.command(name="user")
     async def whitelist_user(self, ctx, *, member: discord.Member):
