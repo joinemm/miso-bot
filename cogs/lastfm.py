@@ -182,7 +182,8 @@ class LastFm(commands.Cog):
             content.timestamp = arrow.get(int(tracks[0]["date"]["uts"])).datetime
 
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} {state}", icon_url=ctx.usertarget.avatar_url,
+            name=f"{util.displayname(ctx.usertarget)} {state}",
+            icon_url=ctx.usertarget.avatar_url,
         )
 
         await ctx.send(embed=content)
@@ -464,7 +465,9 @@ class LastFm(commands.Cog):
 
         rows = []
         for i, (name, playcount) in enumerate(data, start=1):
-            rows.append(f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{name}**")
+            rows.append(
+                f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{util.escape_md(name)}**"
+            )
 
         artistname = urllib.parse.quote_plus(artistname)
         content = discord.Embed()
@@ -522,7 +525,9 @@ class LastFm(commands.Cog):
         rows = []
         for i, (name, playcount) in enumerate(data, start=1):
             total_plays += playcount
-            rows.append(f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{name}**")
+            rows.append(
+                f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{util.escape_md(name)}**"
+            )
 
         titlestring = f"top tracks from {albumname}\n— by {artistname}"
         artistname = urllib.parse.quote_plus(artistname)
@@ -552,6 +557,9 @@ class LastFm(commands.Cog):
                 f"{albumname}?date_preset={period_http_format(period)}"
             )
             data = await fetch(session, url, handling="text")
+            if data is None:
+                raise LastFMError(404, "Album page not found")
+
             soup = BeautifulSoup(data, "html.parser")
             data = []
             try:
@@ -592,6 +600,9 @@ class LastFm(commands.Cog):
                 f"+{datatype}?date_preset={period_http_format(period)}"
             )
             data = await fetch(session, url, handling="text")
+            if data is None:
+                raise LastFMError(404, "Artist page not found")
+
             soup = BeautifulSoup(data, "html.parser")
             data = []
             try:
@@ -633,6 +644,9 @@ class LastFm(commands.Cog):
                 f"?date_preset={period_http_format(period)}"
             )
             data = await fetch(session, url, handling="text")
+            if data is None:
+                raise LastFMError(404, "Artist page not found")
+
             soup = BeautifulSoup(data, "html.parser")
             try:
                 albumsdiv, tracksdiv, _ = soup.findAll(
@@ -718,7 +732,7 @@ class LastFm(commands.Cog):
         content.add_field(
             name="Top albums",
             value="\n".join(
-                f"`#{i:2}` **{item}** ({playcount})"
+                f"`#{i:2}` **{util.escape_md(item)}** ({playcount})"
                 for i, (item, playcount) in enumerate(albums, start=1)
             ),
             inline=True,
@@ -726,7 +740,7 @@ class LastFm(commands.Cog):
         content.add_field(
             name="Top tracks",
             value="\n".join(
-                f"`#{i:2}` **{item}** ({playcount})"
+                f"`#{i:2}` **{util.escape_md(item)}** ({playcount})"
                 for i, (item, playcount) in enumerate(tracks, start=1)
             ),
             inline=True,
@@ -961,14 +975,17 @@ class LastFm(commands.Cog):
                 "Size is too big! Chart `width` + `height` total must not exceed `30`"
             )
 
-        data = await api_request(
-            {
-                "user": ctx.username,
-                "method": arguments["method"],
-                "period": arguments["period"],
-                "limit": arguments["amount"],
-            }
-        )
+        if arguments["period"] == "today":
+            data = await custom_period(ctx.username, arguments["method"])
+        else:
+            data = await api_request(
+                {
+                    "user": ctx.username,
+                    "method": arguments["method"],
+                    "period": arguments["period"],
+                    "limit": arguments["amount"],
+                }
+            )
         chart = []
         chart_type = "ERROR"
         if arguments["method"] == "user.gettopalbums":
@@ -1009,7 +1026,7 @@ class LastFm(commands.Cog):
         )
 
         await ctx.send(
-            f"`{util.displayname(ctx.usertarget)} {humanized_period(arguments['period'])} "
+            f"`{util.displayname(ctx.usertarget, escape=False)} {humanized_period(arguments['period'])} "
             f"{arguments['width']}x{arguments['height']} {chart_type} chart`",
             file=discord.File(
                 fp=buffer, filename=f"fmchart_{ctx.username}_{arguments['period']}.jpeg"
@@ -1101,7 +1118,7 @@ class LastFm(commands.Cog):
         )
         await util.send_as_pages(ctx, content, rows)
 
-    @fm.command(aliases=["sr"])
+    @fm.command(aliases=["sre"])
     async def serverrecent(self, ctx):
         """What people on this server are and were last listening to."""
         listeners = []
@@ -1123,7 +1140,7 @@ class LastFm(commands.Cog):
             data = await asyncio.gather(*tasks)
             for song, member_ref in data:
                 if song is not None:
-                    if song.get('nowplaying'):
+                    if song.get("nowplaying"):
                         total_listening += 1
                     listeners.append((song, member_ref))
         else:
@@ -1132,18 +1149,20 @@ class LastFm(commands.Cog):
         if not listeners:
             return await ctx.send("Nobody on this server is listening to anything at the moment!")
 
-        listeners = sorted(listeners, key=lambda l: l[0].get('date'), reverse=True)
+        listeners = sorted(listeners, key=lambda l: l[0].get("date"), reverse=True)
         rows = []
         for song, member in listeners:
             prefix = ""
             suffix = ""
-            if song.get('nowplaying'):
+            if song.get("nowplaying"):
                 prefix = ":notes: "
             else:
                 suffix = f" | {arrow.get(song.get('date')).humanize()}"
 
-            row = f"{prefix}**{util.displayname(member)}** - {util.escape_md(song.get('artist'))} —" \
-                  f" *{util.escape_md(song.get('name'))}*{suffix}"
+            row = (
+                f"{prefix}**{util.displayname(member)}** - {util.escape_md(song.get('artist'))} —"
+                f" *{util.escape_md(song.get('name'))}*{suffix}"
+            )
             rows.append(row)
 
         content = discord.Embed()
@@ -1433,7 +1452,8 @@ class LastFm(commands.Cog):
 
         content = discord.Embed(color=discord.Color.gold())
         content.set_author(
-            name=f"👑 Artist crowns of {util.displayname(user)}", icon_url=user.avatar_url,
+            name=f"👑 Artist crowns of {util.displayname(user)}",
+            icon_url=user.avatar_url,
         )
         content.set_footer(text=f"Total {len(crownartists)} crowns")
         await util.send_as_pages(ctx, content, rows)
@@ -1463,7 +1483,9 @@ class LastFm(commands.Cog):
 
         async def confirm_ban():
             content.add_field(
-                name="Reported by", value=f"{ctx.author} (`{ctx.author.id}`)", inline=False,
+                name="Reported by",
+                value=f"{ctx.author} (`{ctx.author.id}`)",
+                inline=False,
             )
             data = db.query(
                 "select user_id from users where LOWER(lastfm_username) = ?",
@@ -1476,7 +1498,9 @@ class LastFm(commands.Cog):
                     connected_accounts.append(f"{user} (`{user.id}`)")
 
                 content.add_field(
-                    name="Connected by", value=", ".join(connected_accounts), inline=False,
+                    name="Connected by",
+                    value=", ".join(connected_accounts),
+                    inline=False,
                 )
             content.set_footer(text=f">fmban {lastfm_username}")
             content.description = ""
@@ -1693,7 +1717,8 @@ async def get_playcount(artist, username, reference=None):
 
 async def get_np(username, ref):
     data = await api_request(
-        {"method": "user.getrecenttracks", "user": username, "limit": 1}, ignore_errors=True,
+        {"method": "user.getrecenttracks", "user": username, "limit": 1},
+        ignore_errors=True,
     )
     song = None
     if data is not None:
@@ -1714,7 +1739,8 @@ async def get_np(username, ref):
 
 async def get_lastplayed(username, ref):
     data = await api_request(
-        {"method": "user.getrecenttracks", "user": username, "limit": 1}, ignore_errors=True,
+        {"method": "user.getrecenttracks", "user": username, "limit": 1},
+        ignore_errors=True,
     )
     song = None
     if data is not None:
@@ -1735,7 +1761,7 @@ async def get_lastplayed(username, ref):
                     "artist": tracks[0]["artist"]["#text"],
                     "name": tracks[0]["name"],
                     "nowplaying": nowplaying,
-                    "date": int(date)
+                    "date": int(date),
                 }
         except KeyError:
             pass
@@ -1862,17 +1888,22 @@ async def api_request(params, ignore_errors=False):
     params["api_key"] = LASTFM_APPID
     params["format"] = "json"
     tries = 0
-    max_tries = 3
+    max_tries = 2
     while True:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
                 try:
                     content = await response.json()
+                    if content is None:
+                        raise LastFMError(
+                            error_code=408,
+                            message="Could not connect to LastFM",
+                        )
                     if response.status == 200 and content.get("error") is None:
                         db.update_rate_limit("lastfm")
                         return content
                     else:
-                        if int(content.get("error")) in [6, 8]:
+                        if int(content.get("error")) == 8:
                             tries += 1
                             if tries < max_tries:
                                 continue
@@ -1881,7 +1912,8 @@ async def api_request(params, ignore_errors=False):
                             return None
                         else:
                             raise LastFMError(
-                                f"Error {content.get('error')} : {content.get('message')}"
+                                error_code=content.get("error"),
+                                message=content.get("message"),
                             )
 
                 except aiohttp.client_exceptions.ContentTypeError:
@@ -1914,7 +1946,7 @@ async def custom_period(user, group_by, shift_hours=24):
             data["recenttracks"]["track"] += newdata["recenttracks"]["track"]
 
     formatted_data = {}
-    if group_by == "album":
+    if group_by in ["album", "user.gettopalbums"]:
         for track in data["recenttracks"]["track"]:
             album_name = track["album"]["#text"]
             artist_name = track["artist"]["#text"]
@@ -1939,7 +1971,7 @@ async def custom_period(user, group_by, shift_hours=24):
             }
         }
 
-    elif group_by == "track":
+    elif group_by in ["track", "user.gettoptracks"]:
         for track in data["recenttracks"]["track"]:
             track_name = track["name"]
             artist_name = track["artist"]["#text"]
@@ -1964,7 +1996,7 @@ async def custom_period(user, group_by, shift_hours=24):
             }
         }
 
-    elif group_by == "artist":
+    elif group_by in ["artist", "user.gettopartists"]:
         for track in data["recenttracks"]["track"]:
             artist_name = track["artist"]["#text"]
             if artist_name in formatted_data:
@@ -2023,11 +2055,10 @@ async def scrape_artist_image(artist):
     url = f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
     async with aiohttp.ClientSession() as session:
         data = await fetch(session, url, handling="text")
-
-    soup = BeautifulSoup(data, "html.parser")
-    if soup is None:
+    if data is None:
         return ""
 
+    soup = BeautifulSoup(data, "html.parser")
     image = soup.find("img", {"class": "image-list-image"})
     if image is None:
         try:
@@ -2040,6 +2071,8 @@ async def scrape_artist_image(artist):
 
 async def fetch(session, url, params=None, handling="json"):
     async with session.get(url, params=params) as response:
+        if response.status != 200:
+            return None
         if handling == "json":
             return await response.json()
         elif handling == "text":
@@ -2112,6 +2145,9 @@ async def listening_overview(ctx, timeframe):
     async with aiohttp.ClientSession() as session:
         url = f"https://last.fm/user/{ctx.username}/listening-report/{timeframe}"
         data = await fetch(session, url, handling="text")
+        if data is None:
+            raise LastFMError(404, "Artist page not found")
+
         soup = BeautifulSoup(data, "html.parser")
 
         if soup.find("a", {"class": "btn-subscribe"}) is not None:

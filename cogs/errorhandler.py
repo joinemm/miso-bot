@@ -37,9 +37,7 @@ class Events(commands.Cog):
 
         if isinstance(error, commands.MissingPermissions):
             perms = ", ".join(f"`{x}`" for x in error.missing_perms)
-            return await ctx.send(
-                f":warning: You require {perms} permission to use this command!"
-            )
+            return await ctx.send(f":warning: You require {perms} permission to use this command!")
 
         elif isinstance(error, commands.BotMissingPermissions):
             perms = ", ".join(f"`{x}`" for x in error.missing_perms)
@@ -52,39 +50,39 @@ class Events(commands.Cog):
                 return await ctx.reinvoke()
             else:
                 return await ctx.send(
-                    f":hourglass: This command is on a cooldown! (`{error.retry_after:.2f}s` remaining)"
+                    f":hourglass_flowing_sand: You are on cooldown. Please wait `{error.retry_after:.0f} seconds`"
                 )
 
         elif isinstance(error, commands.DisabledCommand):
             await ctx.send(f":warning: `{ctx.command}` has been disabled!")
 
         elif isinstance(error, commands.NoPrivateMessage):
-            await ctx.author.send(
-                ":warning: You cannot use this command in private messages"
-            )
+            await ctx.author.send(":warning: You cannot use this command in private messages")
 
         elif isinstance(error, util.PatronCheckFailure):
-            await ctx.send(":no_entry: Support me on patreon to use this command! <https://patreon.com/joinemm>")
+            await ctx.send(
+                ":no_entry: Support me on patreon to use this command! <https://patreon.com/joinemm>"
+            )
 
         elif isinstance(error, (commands.NotOwner, commands.CheckFailure)):
-            await ctx.send(
-                ":warning: Sorry, you are not authorized to use this command!"
-            )
+            await ctx.send(":warning: Sorry, you are not authorized to use this command!")
 
         elif isinstance(error, exceptions.BlacklistTrigger):
             if error.blacklist_type == "command":
                 message = "This command has been blacklisted by the server moderators"
             elif error.blacklist_type == "channel":
-                message = "Command usage on this channel has been blacklisted by the server moderators"
+                message = (
+                    "Command usage on this channel has been blacklisted by the server moderators"
+                )
             elif error.blacklist_type == "user":
                 message = "You have been blacklisted from using commands by the server moderators"
             elif error.blacklist_type == "global":
                 message = "You have been blacklisted from using Miso Bot"
+            elif error.blacklist_type == "guild":
+                message = "This server is blacklisted from using Miso Bot"
 
             delete = error.do_delete
-            await ctx.send(
-                f":no_entry_sign: `{message}`", delete_after=(5 if delete else None)
-            )
+            await ctx.send(f":no_entry_sign: `{message}`", delete_after=(5 if delete else None))
             if delete:
                 await asyncio.sleep(5)
                 await ctx.message.delete()
@@ -102,7 +100,16 @@ class Events(commands.Cog):
                     logger.error(str(error))
 
         elif isinstance(error, exceptions.LastFMError):
-            await ctx.send(f"```{str(error)}```")
+            if error.error_code == 8:
+                message = "There was a problem connecting to LastFM servers. LastFM might be down. Try again later."
+            elif error.error_code == 17:
+                message = "Unable to get listening information. Please check you LastFM privacy settings."
+            elif error.error_code == 29:
+                message = "LastFM rate limit exceeded. Please try again in 60 seconds."
+            else:
+                message = error.display()
+
+            await ctx.send(f"```{message}```")
 
         else:
             traceback.print_exception(type(error), error, error.__traceback__)

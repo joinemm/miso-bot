@@ -3,7 +3,16 @@ from data import database as db
 
 
 class LastFMError(commands.CommandError):
-    pass
+    def __init__(self, error_code, message):
+        super().__init__()
+        self.error_code = error_code
+        self.message = message
+
+    def __str__(self):
+        return f"LastFM error {self.error_code}"
+
+    def display(self):
+        return f"LastFM error {self.error_code} : {self.message}"
 
 
 class RendererError(commands.CommandError):
