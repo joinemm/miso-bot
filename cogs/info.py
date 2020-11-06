@@ -77,10 +77,10 @@ class Info(commands.Cog):
                 former.append(f"{user or user_id}")
 
         if current:
-            content.add_field(inline=False, name="Current patrons", value="\n".join(current))
+            content.add_field(inline=True, name="Current patrons", value="\n".join(current))
 
         if former:
-            content.add_field(inline=False, name="Former patrons", value="\n".join(former))
+            content.add_field(inline=True, name="Former patrons", value="\n".join(former))
 
         await ctx.send(embed=content)
 
@@ -156,7 +156,7 @@ class Info(commands.Cog):
             content.add_field(
                 name=f"Shard [`{shard.id}`]"
                 + (" :point_left:" if ctx.guild.shard_id == shard.id else ""),
-                value=f"```Count: {shard.shard_count}\nClosed: {shard.is_closed()}\nLatency: {shard.latency:.2f}ms```",
+                value=f"```Connected: {not shard.is_closed()}\nHeartbeat: {shard.latency * 1000:.2f} ms```",
             )
 
         await ctx.send(embed=content)
@@ -359,7 +359,8 @@ class Info(commands.Cog):
 
         # get data from database
         usage_data = db.query(
-            """SELECT SUM(count) FROM command_usage WHERE command = ?""", (command_name,),
+            """SELECT SUM(count) FROM command_usage WHERE command = ?""",
+            (command_name,),
         )[0][0]
 
         usage_data_server = db.query(
