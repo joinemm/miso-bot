@@ -33,6 +33,7 @@ bot = commands.AutoShardedBot(
     intents=discord.Intents.all(),
 )
 
+cd = commands.CooldownMapping.from_cooldown(10, 60, commands.BucketType.member)
 bot.default_prefix = "<" if DEV else ">"
 
 extensions = [
@@ -52,7 +53,6 @@ extensions = [
     "user",
     "images",
     "utility",
-    "wordcloud",
     "typings",
     "reminders",
     "bangs",
@@ -78,9 +78,19 @@ async def check_for_blacklist(ctx):
     return db.is_blacklisted(ctx)
 
 
+@bot.check
+async def cooldown_check(ctx):
+    """Global bot cooldown to prevent spam"""
+    bucket = cd.get_bucket(ctx.message)
+    retry_after = bucket.update_rate_limit()
+    if retry_after:
+        raise commands.CommandOnCooldown(bucket, retry_after)
+    return True
+
+
 @bot.event
 async def on_message(message):
-    """Overloads the default on_message event to check for cache readiness."""
+    """Overloads the default on_message event to check for cache readiness"""
     if not bot.is_ready:
         return
 
