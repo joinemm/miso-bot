@@ -43,7 +43,10 @@ class Miscellaneous(commands.Cog):
             >rng <n>
             >rng <n-m>
         """
-        values = [int(x) for x in number_range.split("-")]
+        try:
+            values = [int(x) for x in number_range.split("-")]
+        except ValueError:
+            return await ctx.send(":warning: Please give a valid number range to choose from")
         if len(values) == 2:
             start, end = values
         else:
@@ -80,7 +83,6 @@ class Miscellaneous(commands.Cog):
             "No",
             "Most likely not",
             "Absolutely not!",
-            "There is no way",
         ]
         answer = random.choice(choices)
         question = question + ("?" if not question.endswith("?") else "")
@@ -172,16 +174,18 @@ class Miscellaneous(commands.Cog):
 
         lovenums = [0, 0, 0, 0, 0]
         for c in names:
-            if c == "L" or c == "l":
+            c = c.lower()
+            if c == "l":
                 lovenums[0] += 1
-            elif c == "O" or c == "o":
+            elif c == "o":
                 lovenums[1] += 1
-            elif c == "V" or c == "v":
+            elif c == "v":
                 lovenums[2] += 1
-            elif c == "E" or c == "e":
+            elif c == "e":
                 lovenums[3] += 1
-            elif c == "S" or c == "s":
+            elif c == "s":
                 lovenums[4] += 1
+
         while max(lovenums) > 9:
             newnums = []
             for n in lovenums:
@@ -191,6 +195,7 @@ class Miscellaneous(commands.Cog):
                 else:
                     newnums.append(n)
             lovenums = newnums
+
         it = 0
         maxit = 100  # Maximum iterations allowed in below algorithm to attempt convergence
         maxlen = 100  # Maximum length of generated list allowed (some cases grow list infinitely)
@@ -205,6 +210,7 @@ class Miscellaneous(commands.Cog):
                     newnums.append(1)
                     newnums.append(pairsum % 10)
             lovenums = newnums
+
         # This if-else matches with original site alg handling of non-convergent result. (i.e. defaulting to 1%)
         # Technically, you can leave this section as it was previously and still get a non-trivial outputtable result since the length is always at least 2.
         if len(lovenums) == 2:
