@@ -81,6 +81,10 @@ async def check_for_blacklist(ctx):
 @bot.check
 async def cooldown_check(ctx):
     """Global bot cooldown to prevent spam"""
+    # prevent users getting rate limited when help command does filter_commands()
+    if str(ctx.invoked_with).lower() == "help":
+        return True
+
     bucket = cd.get_bucket(ctx.message)
     retry_after = bucket.update_rate_limit()
     if retry_after:
