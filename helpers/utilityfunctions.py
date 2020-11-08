@@ -576,7 +576,7 @@ def create_welcome_embed(user, guild, messageformat):
             "username": user.name,
         }
     )
-    content.description = messageformat.format(substitutes)
+    content.description = messageformat.format_map(substitutes)
     return content
 
 
@@ -592,7 +592,7 @@ def create_welcome_without_embed(user, guild, messageformat):
             "username": user.name,
         }
     )
-    return messageformat.format(substitutes)
+    return messageformat.format_map(substitutes)
 
 
 def create_goodbye_message(user, guild, messageformat):
