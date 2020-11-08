@@ -37,7 +37,7 @@ class Rolepicker(commands.Cog):
             )
             await ctx.send(f"Removed `{name}` from the role picker.")
         else:
-            return await ctx.send(":warning: Could not find this role from the picker")
+            return await ctx.send(":warning: Could not find this role in the picker")
 
     @rolepicker.command()
     async def channel(self, ctx, channel):
@@ -51,7 +51,7 @@ class Rolepicker(commands.Cog):
 
         await ctx.send(
             f"Rolepicker channel set to {this_channel.mention}\n"
-            f"Now enable the rolepicker once you want messages in the channel to be deleted."
+            f"Use `{ctx.prefix}rolepicker enable` once you've set everything up."
         )
 
     @rolepicker.command()
@@ -75,18 +75,6 @@ class Rolepicker(commands.Cog):
         else:
             content.description = "No roles set on this server"
         await ctx.send(embed=content)
-
-    @rolepicker.command(enabled=False)
-    async def case(self, ctx, boolean):
-        """Toggle case sensitivity."""
-        if boolean.lower() == "true":
-            newvalue = 1
-        elif boolean.lower() == "false":
-            newvalue = 0
-        else:
-            return await ctx.send("Invalid value, use `true` or `false`")
-        db.update_setting(ctx.guild.id, "rolepicker_case", newvalue)
-        await ctx.send(f"Roles are now {('' if newvalue == 1 else 'not ')}case sensitive!")
 
     @rolepicker.command()
     async def enable(self, ctx):

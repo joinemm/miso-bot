@@ -245,8 +245,8 @@ def add_crown(artist, guild_id, user_id, playcount):
 
 def rolepicker_role(guild_id, rolename):
     data = query(
-        "SELECT role_id FROM roles WHERE rolename = ? AND guild_id = ?",
-        (rolename, guild_id),
+        "SELECT role_id FROM roles WHERE LOWER(rolename) = ? AND guild_id = ?",
+        (rolename.lower(), guild_id),
     )
 
     if data is None:
