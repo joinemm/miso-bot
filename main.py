@@ -110,5 +110,6 @@ if __name__ == "__main__":
             logger.error(f"Error loading [ {extension} ]")
             traceback.print_exception(type(error), error, error.__traceback__)
 
+    bot.load_extension("jishaku")
     bot.start_time = time()
     bot.run(TOKEN)
