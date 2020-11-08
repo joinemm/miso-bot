@@ -38,9 +38,6 @@ class EmbedHelpCommand(commands.HelpCommand):
             filtered = await self.filter_commands(bot_commands, sort=True)
             if filtered:
                 value = "\n".join(f"`{self.clean_prefix}{c.name}`" for c in bot_commands)
-                if cog and cog.description:
-                    value = f"{cog.description}\n{value}"
-
                 embed.add_field(name=name, value=value)
 
         embed.set_footer(text=self.get_ending_note())
