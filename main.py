@@ -33,7 +33,7 @@ bot = commands.AutoShardedBot(
     intents=discord.Intents.all(),
 )
 
-cd = commands.CooldownMapping.from_cooldown(10, 60, commands.BucketType.member)
+cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
 bot.default_prefix = "<" if DEV else ">"
 
 extensions = [
