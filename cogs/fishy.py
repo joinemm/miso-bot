@@ -51,9 +51,8 @@ class Fishy(commands.Cog):
         }
         self.WEIGHTS = [9, 60, 20, 10, 1]
 
-    @commands.command(
-        aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"]
-    )
+    @commands.max_concurrency(1, per=commands.BucketType.user)
+    @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
     async def fishy(self, ctx, user=None):
         """Go fishing and receive or give random fish.
 
@@ -83,6 +82,7 @@ class Fishy(commands.Cog):
                 "Please wait {time} to fish again!",
                 "Sorry, but you have to wait {time} to fish again!",
                 "Not so fast! Please wait {time}",
+                "You must wait {time} to fish again!",
             ]
             wait_time = f"**{util.stringfromtime(COOLDOWN - time_since_fishy, 2)}**"
             await ctx.send(random.choice(not_yet_quotes).format(time=wait_time))
