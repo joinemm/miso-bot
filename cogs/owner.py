@@ -58,6 +58,18 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
+    async def userguilds(self, ctx, user: discord.User):
+        """Get all guilds user is part of."""
+        rows = []
+        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
+            guildmember = guild.get_member(user.id)
+            if guildmember is not None:
+                rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
+
+        content = discord.Embed(title=f"User **{user}** found in **{len(rows)}** guilds")
+        await util.send_as_pages(ctx, content, rows)
+
+    @commands.command()
     async def logout(self, ctx):
         """Shut down the bot."""
         print("LOGGING OUT")
