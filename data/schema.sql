@@ -212,14 +212,6 @@ CREATE TABLE IF NOT EXISTS "command_usage"(
   "count" INTEGER NOT NULL,
   PRIMARY KEY("guild_id", "user_id", "command")
 );
-CREATE TABLE IF NOT EXISTS "fishysize"(
-  "id"INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
-  "timestamp"INTEGER NOT NULL,
-  "user_id_catcher"INTEGER,
-  "user_id_receiver"INTEGER NOT NULL,
-  "size"INTEGER NOT NULL
-);
-CREATE TABLE sqlite_sequence(name,seq);
 CREATE TABLE IF NOT EXISTS "typingdata"(
   "timestamp"REAL NOT NULL,
   "user_id"INTEGER NOT NULL,
