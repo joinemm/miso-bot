@@ -53,6 +53,9 @@ class Events(commands.Cog):
                     f":hourglass_flowing_sand: You are on cooldown. Please wait `{error.retry_after:.0f} seconds`"
                 )
 
+        elif isinstance(error, commands.errors.MaxConcurrencyReached):
+            await ctx.send("Stop spamming! >:(")
+
         elif isinstance(error, commands.DisabledCommand):
             await ctx.send(f":warning: `{ctx.command}` has been disabled!")
 
