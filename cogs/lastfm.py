@@ -314,6 +314,10 @@ class LastFm(commands.Cog):
 
         rows = []
         for i, track in enumerate(tracks, start=1):
+            if i == 1:
+                image_url = await scrape_artist_image(tracks[0]["artist"]["name"])
+                image_colour = await util.color_from_image_url(image_url)
+
             name = util.escape_md(track["name"])
             artist_name = util.escape_md(track["artist"]["name"])
             plays = track["playcount"]
@@ -321,30 +325,11 @@ class LastFm(commands.Cog):
                 f"`#{i:2}` **{plays}** {format_plays(plays)} : **{artist_name}** — ***{name}***"
             )
 
-        trackdata = await api_request(
-            {
-                "user": ctx.username,
-                "method": "track.getInfo",
-                "artist": tracks[0]["artist"]["name"],
-                "track": tracks[0]["name"],
-            },
-            ignore_errors=True,
-        )
-        content = discord.Embed()
-        try:
-            if trackdata is None:
-                raise KeyError
-            image_url = trackdata["track"]["album"]["image"][-1]["#text"]
-            image_url_small = trackdata["track"]["album"]["image"][1]["#text"]
-            image_colour = await util.color_from_image_url(image_url_small)
-        except KeyError:
-            image_url = await scrape_artist_image(tracks[0]["artist"]["name"])
-            image_colour = await util.color_from_image_url(image_url)
-
         formatted_timeframe = humanized_period(arguments["period"]).capitalize()
+
+        content = discord.Embed()
         content.colour = int(image_colour, 16)
         content.set_thumbnail(url=image_url)
-
         content.set_footer(text=f"Total unique tracks: {user_attr['total']}")
         content.set_author(
             name=f"{util.displayname(ctx.usertarget)} — {formatted_timeframe} top tracks",
@@ -1070,8 +1055,14 @@ class LastFm(commands.Cog):
 
         return buffer
 
-    @fm.command(aliases=["snp"])
-    async def servernp(self, ctx):
+    @fm.group(aliases=["s", "guild"])
+    @commands.guild_only()
+    @commands.cooldown(6, 60, type=commands.BucketType.user)
+    async def server(self, ctx):
+        await util.command_group_help(ctx)
+
+    @server.command(name="nowplaying", aliases=["np"])
+    async def server_nowplaying(self, ctx):
         """What people on this server are listening to at the moment."""
         listeners = []
         tasks = []
@@ -1118,8 +1109,8 @@ class LastFm(commands.Cog):
         )
         await util.send_as_pages(ctx, content, rows)
 
-    @fm.command(aliases=["sre"])
-    async def serverrecent(self, ctx):
+    @server.command(name="recent", aliases=["re"])
+    async def server_recent(self, ctx):
         """What people on this server are and were last listening to."""
         listeners = []
         tasks = []
@@ -1177,6 +1168,189 @@ class LastFm(commands.Cog):
             text=f"{total_listening} / {total_linked} Members are listening to music right now"
         )
         await util.send_as_pages(ctx, content, rows)
+
+    @server.command(name="topartists", aliases=["ta"])
+    async def server_topartists(self, ctx):
+        artist_map = {}
+        tasks = []
+        total_users = 0
+        total_plays = 0
+        userslist = db.query(
+            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
+            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
+        )
+        for member in userslist if userslist is not None else []:
+            lastfm_username = member[1]
+            member = ctx.guild.get_member(member[0])
+            if member is None:
+                continue
+
+            tasks.append(self.get_server_top(lastfm_username, "artist"))
+
+        if tasks:
+            data = await asyncio.gather(*tasks)
+            for user_data in data:
+                total_users += 1
+                for data_block in user_data:
+                    name = data_block["name"]
+                    plays = int(data_block["playcount"])
+                    total_plays += plays
+                    if name in artist_map:
+                        artist_map[name] += plays
+                    else:
+                        artist_map[name] = plays
+        else:
+            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+
+        rows = []
+        content = discord.Embed(title=f"Most listened to artists in {ctx.guild}")
+        content.set_footer(text=f"Taking into account top 100 artists of {total_users} members")
+        for i, (artistname, playcount) in enumerate(
+            sorted(artist_map.items(), key=lambda x: x[1], reverse=True), start=1
+        ):
+            if i == 1:
+                image_url = await scrape_artist_image(artistname)
+                image_colour = await util.color_from_image_url(image_url)
+                content.colour = int(image_colour, 16)
+                content.set_thumbnail(url=image_url)
+
+            rows.append(
+                f"`#{i:2}` **{playcount}** {format_plays(playcount)} : **{util.escape_md(artistname)}**"
+            )
+
+        await util.send_as_pages(ctx, content, rows, 15)
+
+    @server.command(name="topalbums", aliases=["talb"])
+    async def server_topalbums(self, ctx):
+        album_map = {}
+        tasks = []
+        total_users = 0
+        total_plays = 0
+        userslist = db.query(
+            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
+            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
+        )
+        for member in userslist if userslist is not None else []:
+            lastfm_username = member[1]
+            member = ctx.guild.get_member(member[0])
+            if member is None:
+                continue
+
+            tasks.append(self.get_server_top(lastfm_username, "album"))
+
+        if tasks:
+            data = await asyncio.gather(*tasks)
+            for user_data in data:
+                total_users += 1
+                for data_block in user_data:
+                    name = f'{util.escape_md(data_block["artist"]["name"])} — *{util.escape_md(data_block["name"])}*'
+                    plays = int(data_block["playcount"])
+                    image_url = data_block["image"][-1]["#text"]
+                    total_plays += plays
+                    if name in album_map:
+                        album_map[name]["plays"] += plays
+                    else:
+                        album_map[name] = {"plays": plays, "image": image_url}
+        else:
+            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+
+        rows = []
+        content = discord.Embed(title=f"Most listened to albums in {ctx.guild}")
+        content.set_footer(text=f"Taking into account top 100 albums of {total_users} members")
+        for i, (albumname, albumdata) in enumerate(
+            sorted(album_map.items(), key=lambda x: x[1]["plays"], reverse=True), start=1
+        ):
+            if i == 1:
+                image_url = albumdata["image"]
+                image_colour = await util.color_from_image_url(image_url)
+                content.colour = int(image_colour, 16)
+                content.set_thumbnail(url=image_url)
+
+            playcount = albumdata["plays"]
+            rows.append(f"`#{i:2}` **{playcount}** {format_plays(playcount)} : **{albumname}**")
+
+        await util.send_as_pages(ctx, content, rows, 15)
+
+    @server.command(name="toptracks", aliases=["tt"])
+    async def server_toptracks(self, ctx):
+        track_map = {}
+        tasks = []
+        total_users = 0
+        total_plays = 0
+        userslist = db.query(
+            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
+            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
+        )
+        for member in userslist if userslist is not None else []:
+            lastfm_username = member[1]
+            member = ctx.guild.get_member(member[0])
+            if member is None:
+                continue
+
+            tasks.append(self.get_server_top(lastfm_username, "track"))
+
+        if tasks:
+            data = await asyncio.gather(*tasks)
+            for user_data in data:
+                total_users += 1
+                for data_block in user_data:
+                    name = f'{util.escape_md(data_block["artist"]["name"])} — *{util.escape_md(data_block["name"])}*'
+                    plays = int(data_block["playcount"])
+                    artistname = data_block["artist"]["name"]
+                    total_plays += plays
+                    if name in track_map:
+                        track_map[name]["plays"] += plays
+                    else:
+                        track_map[name] = {"plays": plays, "artist": artistname}
+        else:
+            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+
+        rows = []
+        content = discord.Embed(title=f"Most listened to tracks in {ctx.guild}")
+        content.set_footer(text=f"Taking into account top 100 tracks of {total_users} members")
+        for i, (trackname, trackdata) in enumerate(
+            sorted(track_map.items(), key=lambda x: x[1]["plays"], reverse=True), start=1
+        ):
+            if i == 1:
+                image_url = await scrape_artist_image(trackdata["artist"])
+                image_colour = await util.color_from_image_url(image_url)
+                content.colour = int(image_colour, 16)
+                content.set_thumbnail(url=image_url)
+
+            playcount = trackdata["plays"]
+            rows.append(f"`#{i:2}` **{playcount}** {format_plays(playcount)} : **{trackname}**")
+
+        await util.send_as_pages(ctx, content, rows, 15)
+
+    async def get_server_top(self, username, datatype):
+        limit = 100
+        if datatype == "artist":
+            data = await api_request(
+                {
+                    "user": username,
+                    "method": "user.gettopartists",
+                    "limit": limit,
+                }
+            )
+            return data["topartists"]["artist"]
+        elif datatype == "album":
+            data = await api_request(
+                {
+                    "user": username,
+                    "method": "user.gettopalbums",
+                    "limit": limit,
+                }
+            )
+            return data["topalbums"]["album"]
+        elif datatype == "track":
+            data = await api_request(
+                {
+                    "user": username,
+                    "method": "user.gettoptracks",
+                    "limit": limit,
+                }
+            )
+            return data["toptracks"]["track"]
 
     @commands.command(aliases=["wk"])
     @commands.guild_only()
