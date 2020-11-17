@@ -189,14 +189,7 @@ class Media(commands.Cog):
     @flags.command(aliases=["ig", "insta"])
     async def instagram(self, ctx, **flags):
         """Get all the images from one or more instagram posts."""
-        try:
-            # delete discord automatic embed
-            await ctx.message.edit(suppress=True)
-        except discord.Forbidden:
-            pass
-
         for url in flags["urls"]:
-
             result = regex.findall("/p/(.*?)(/|\\Z)", url)
             if result:
                 url = f"https://www.instagram.com/p/{result[0][0]}"
@@ -210,7 +203,9 @@ class Media(commands.Cog):
             newurl = "https://www.instagram.com/graphql/query/"
             params = {
                 "query_hash": "505f2f2dfcfce5b99cb7ac4155cbf299",
-                "variables": '{"shortcode":"' + post_id + '"}',
+                "variables": '{"shortcode":"'
+                + post_id
+                + '","include_reel":false,"include_logged_out":true}',
             }
 
             async with aiohttp.ClientSession() as session:
@@ -276,19 +271,18 @@ class Media(commands.Cog):
                     content.description = None
                     content._author = None
 
-    @flags.add_flag("urls", nargs="+")
-    @flags.add_flag("-d", "--download", action="store_true")
-    @flags.command(aliases=["twt"])
-    async def twitter(self, ctx, **flags):
-        """Get all the images from one or more tweets."""
         try:
             # delete discord automatic embed
             await ctx.message.edit(suppress=True)
         except discord.Forbidden:
             pass
 
+    @flags.add_flag("urls", nargs="+")
+    @flags.add_flag("-d", "--download", action="store_true")
+    @flags.command(aliases=["twt"])
+    async def twitter(self, ctx, **flags):
+        """Get all the images from one or more tweets."""
         for tweet_url in flags["urls"]:
-
             if "status" in tweet_url:
                 tweet_id = re.search(r"status/(\d+)", tweet_url).group(1)
             else:
@@ -379,6 +373,12 @@ class Media(commands.Cog):
                         await ctx.send(file[2])
 
                     content._author = None
+
+        try:
+            # delete discord automatic embed
+            await ctx.message.edit(suppress=True)
+        except discord.Forbidden:
+            pass
 
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx, *, query):
@@ -476,7 +476,9 @@ class Media(commands.Cog):
                 content.clear_fields()
 
             content.add_field(
-                name=f"`#{i+1}` {song}", value=f"*by* **{artist}** *on* **{album}**", inline=False,
+                name=f"`#{i+1}` {song}",
+                value=f"*by* **{artist}** *on* **{album}**",
+                inline=False,
             )
 
         if content._fields:
