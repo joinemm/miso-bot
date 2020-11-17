@@ -1190,6 +1190,8 @@ class LastFm(commands.Cog):
         if tasks:
             data = await asyncio.gather(*tasks)
             for user_data in data:
+                if user_data is None:
+                    continue
                 total_users += 1
                 for data_block in user_data:
                     name = data_block["name"]
@@ -1241,6 +1243,8 @@ class LastFm(commands.Cog):
         if tasks:
             data = await asyncio.gather(*tasks)
             for user_data in data:
+                if user_data is None:
+                    continue
                 total_users += 1
                 for data_block in user_data:
                     name = f'{util.escape_md(data_block["artist"]["name"])} — *{util.escape_md(data_block["name"])}*'
@@ -1292,6 +1296,8 @@ class LastFm(commands.Cog):
         if tasks:
             data = await asyncio.gather(*tasks)
             for user_data in data:
+                if user_data is None:
+                    continue
                 total_users += 1
                 for data_block in user_data:
                     name = f'{util.escape_md(data_block["artist"]["name"])} — *{util.escape_md(data_block["name"])}*'
@@ -1330,27 +1336,30 @@ class LastFm(commands.Cog):
                     "user": username,
                     "method": "user.gettopartists",
                     "limit": limit,
-                }
+                },
+                ignore_errors=True,
             )
-            return data["topartists"]["artist"]
+            return data["topartists"]["artist"] if data is not None else None
         elif datatype == "album":
             data = await api_request(
                 {
                     "user": username,
                     "method": "user.gettopalbums",
                     "limit": limit,
-                }
+                },
+                ignore_errors=True,
             )
-            return data["topalbums"]["album"]
+            return data["topalbums"]["album"] if data is not None else None
         elif datatype == "track":
             data = await api_request(
                 {
                     "user": username,
                     "method": "user.gettoptracks",
                     "limit": limit,
-                }
+                },
+                ignore_errors=True,
             )
-            return data["toptracks"]["track"]
+            return data["toptracks"]["track"] if data is not None else None
 
     @commands.command(aliases=["wk"])
     @commands.guild_only()
