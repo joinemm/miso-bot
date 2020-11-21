@@ -59,7 +59,7 @@ class Info(commands.Cog):
     @commands.command(aliases=["patrons", "supporters"])
     async def donators(self, ctx):
         """List of people who have donated."""
-        tier_badges = [":coffee:", ":beer:", ":moneybag:"]
+        tier_badges = [":coffee:", ":beer:", ":moneybag:", ":bank:"]
         patrons = db.query("select tier, user_id, currently_active from patrons")
         content = discord.Embed(
             title="Patreon supporters ❤",
