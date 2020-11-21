@@ -43,7 +43,10 @@ class User(commands.Cog):
         i = 0
         ranking = "N/A"
         for user_id, total_x in rows:
-            this_user = self.bot.get_user(user_id)
+            if _global:
+                this_user = self.bot.get_user(user_id)
+            else:
+                this_user = ctx.guild.get_member(user_id)
             if this_user is None or this_user.bot:
                 continue
             else:
@@ -55,7 +58,7 @@ class User(commands.Cog):
 
         return f"#{ranking} / {total}"
 
-    @commands.command(aliases=["dp", "av"])
+    @commands.command(aliases=["dp", "av", "pfp"])
     async def avatar(self, ctx, *, user: discord.User = None):
         """Get user's profile picture."""
         if user is None:
@@ -67,9 +70,10 @@ class User(commands.Cog):
         stats = await util.image_info_from_url(user.avatar_url)
         color = await util.color_from_image_url(str(user.avatar_url_as(size=128, format="png")))
         content.colour = await util.get_color(ctx, color)
-        content.set_footer(
-            text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
-        )
+        if stats is not None:
+            content.set_footer(
+                text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
+            )
 
         await ctx.send(embed=content)
 

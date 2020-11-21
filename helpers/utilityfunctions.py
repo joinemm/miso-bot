@@ -10,7 +10,7 @@ import io
 import emoji
 import aiohttp
 from discord.ext import commands
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from data import database as db
 from durations_nlp import Duration
 
@@ -541,7 +541,11 @@ async def image_info_from_url(url):
         async with session.get(str(url)) as response:
             filesize = int(response.headers.get("Content-Length")) / 1024
             filetype = response.headers.get("Content-Type")
-            image = Image.open(io.BytesIO(await response.read()))
+            try:
+                image = Image.open(io.BytesIO(await response.read()))
+            except UnidentifiedImageError:
+                return None
+
             dimensions = image.size
             if filesize > 1024:
                 filesize = f"{filesize/1024:.2f}MB"
