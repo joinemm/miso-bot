@@ -69,6 +69,10 @@ class Media(commands.Cog):
                     i += 1
                 except (IndexError, ValueError):
                     amount = 1
+
+                if amount > 51:
+                    amount = 51
+
                 for x in range(amount):
                     colors.append("{:06x}".format(random.randint(0, 0xFFFFFF)))
                 continue
