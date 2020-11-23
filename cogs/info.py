@@ -36,6 +36,11 @@ class Info(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
+    async def github(self, ctx):
+        """See the source code."""
+        await ctx.send("https://github.com/joinemm/miso-bot")
+
+    @commands.command()
     async def patreon(self, ctx):
         """Link to the patreon page."""
         await ctx.send("https://www.patreon.com/joinemm")
@@ -46,41 +51,51 @@ class Info(commands.Cog):
         await ctx.send("https://ko-fi.com/joinemm")
 
     @commands.command()
+    async def sponsor(self, ctx):
+        """Link to the Github sponsors page."""
+        await ctx.send("https://github.com/sponsors/joinemm")
+
+    @commands.command()
     async def donate(self, ctx):
         """Donate to keep the bot running smoothly!"""
         content = discord.Embed(
-            title="Donate to keep Miso Bot online!", colour=discord.Colour.orange()
+            title="Consider donating to help keep Miso Bot online!", colour=discord.Colour.orange()
         )
-        content.add_field(name="Ko-Fi", value="https://ko-fi.com/joinemm", inline=False)
+        content.add_field(
+            name="Github Sponsor", value="https://github.com/sponsors/joinemm", inline=False
+        )
         content.add_field(name="Patreon", value="https://www.patreon.com/joinemm", inline=False)
-        content.set_footer(text="Donations will be used to pay for server costs")
+        content.add_field(name="Ko-Fi", value="https://ko-fi.com/joinemm", inline=False)
+        content.set_footer(text="Donations will be used to pay for server and upkeep costs")
         await ctx.send(embed=content)
 
-    @commands.command(aliases=["patrons", "supporters"])
+    @commands.command(aliases=["patrons", "supporters", "sponsors"])
     async def donators(self, ctx):
         """List of people who have donated."""
         tier_badges = [":coffee:", ":beer:", ":moneybag:", ":bank:"]
         patrons = db.query("select tier, user_id, currently_active from patrons")
         content = discord.Embed(
-            title="Patreon supporters ❤",
+            title="List of donators ❤",
             color=int("f96854", 16),
-            description="https://patreon.com/joinemm\nhttps://ko-fi.com/joinemm",
+            description="https://github.com/sponsors/joinemm\nhttps://patreon.com/joinemm\nhttps://ko-fi.com/joinemm",
         )
         current = []
         former = []
         for tier, user_id, state in sorted(patrons, key=lambda x: x[0], reverse=True):
             user = self.bot.get_user(user_id)
+            if user is None:
+                continue
 
             if util.int_to_bool(state):
-                current.append(f"**{user or user_id}** {tier_badges[tier-1]}")
+                current.append(f"**{user}** {tier_badges[tier-1]}")
             else:
-                former.append(f"{user or user_id}")
+                former.append(f"{user}")
 
         if current:
-            content.add_field(inline=True, name="Current patrons", value="\n".join(current))
+            content.add_field(inline=True, name="Current donators", value="\n".join(current))
 
         if former:
-            content.add_field(inline=True, name="Former patrons", value="\n".join(former))
+            content.add_field(inline=True, name="Former donators", value="\n".join(former))
 
         await ctx.send(embed=content)
 
