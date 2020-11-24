@@ -20,7 +20,6 @@ TRASH_ICONS = (
     ":high_heel:",
     ":saxophone:",
     ":trumpet:",
-    ":scooter:",
     ":anchor:",
     ":shopping_cart:",
     ":paperclips:",
@@ -28,14 +27,44 @@ TRASH_ICONS = (
     ":prayer_beads:",
     ":oil:",
     ":compression:",
-    ":keyboard:",
     ":radio:",
-    ":tv:",
     ":fax:",
     ":movie_camera:",
     ":projector:",
     ":guitar:",
     ":violin:",
+    ":telephone:",
+    ":alarm_clock:",
+    ":fire_extinguisher:",
+    ":screwdriver:",
+    ":wrench:",
+    ":magnet:",
+    ":coffin:",
+    ":urn:",
+    ":amphora:",
+    ":crystal_ball:",
+    ":telescope:",
+    ":microscope:",
+    ":microbe:",
+    ":broom:",
+    ":basket:",
+    ":sewing_needle:",
+    ":roll_of_paper:",
+    ":plunger:",
+    ":bucket:",
+    ":toothbrush:",
+    ":soap:",
+    ":razor:",
+    ":sponge:",
+    ":squeeze_bottle:",
+    ":key:",
+    ":teddy_bear:",
+    ":frame_photo:",
+    ":nesting_dolls:",
+    ":izakaya_lantern:",
+    ":wind_chime:",
+    ":safety_pin:",
+    ":newspaper2:",
 )
 
 
@@ -161,8 +190,7 @@ class Fishy(commands.Cog):
             content.description = (
                 f"Total fishy: **{fishdata.fishy}**\n"
                 f"Fishy gifted: **{fishdata.fishy_gifted}**\n"
-                f"Total fish count: **{total}**\n\n"
-                f"Biggest fish: **{fishdata.biggest} Kg**\n"
+                f"Total fish count: **{total}**\n"
                 f"Average fishy: **{fishdata.fishy / total:.2f}**\n\n"
                 f"Trash: **{fishdata.trash}** - {(fishdata.trash / total) * 100:.1f}%\n"
                 f"Common: **{fishdata.common}** - {(fishdata.common / total) * 100:.1f}%\n"
