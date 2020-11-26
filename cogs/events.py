@@ -3,9 +3,9 @@ from discord.ext import commands, tasks
 import helpers.log as log
 import helpers.utilityfunctions as util
 from helpers import emojis
-import data.database as db
 import re
 import random
+from libraries import unicode_codes
 import asyncio
 
 logger = log.get_logger(__name__)
@@ -35,7 +35,19 @@ class Events(commands.Cog):
         # prevent double invocation for subcommands
         if ctx.invoked_subcommand is None:
             command_logger.info(log.log_command(ctx))
-            db.log_command_usage(ctx)
+            if ctx.guild is not None:
+                self.bot.db.execute(
+                    """
+                    INSERT INTO command_usage (guild_id, user_id, command_name, command_type)
+                        VALUES (%s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        uses = uses + 1
+                    """,
+                    ctx.guild.id,
+                    ctx.author.id,
+                    ctx.command.name,
+                    "internal",
+                )
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -76,9 +88,11 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         """Called when bot joins a new guild."""
-        blacklisted = db.query("SELECT * FROM blacklist_guilds WHERE guild_id = ?", (guild.id,))
-        if blacklisted is not None:
-            logger.info(f"Tried to join blacklisted guild {guild}")
+        blacklisted = await self.bot.db.execute(
+            "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
+        )
+        if blacklisted:
+            logger.info(f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}")
             return await guild.leave()
 
         logger.info(f"New guild : {guild}")
@@ -96,8 +110,10 @@ class Events(commands.Cog):
     async def on_guild_remove(self, guild):
         """Called when bot leaves a guild."""
         logger.info(f"Left guild {guild}")
-        blacklisted = db.query("SELECT * FROM blacklist_guilds WHERE guild_id = ?", (guild.id,))
-        if blacklisted is not None:
+        blacklisted = await self.bot.db.execute(
+            "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
+        )
+        if blacklisted:
             return
 
         content = discord.Embed(color=discord.Color.red())
@@ -113,77 +129,83 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         """Called when a new member joins a guild."""
-        channel_id = db.get_setting(member.guild.id, "welcome_channel")
-        if channel_id is not None:
-            channel = member.guild.get_channel(channel_id)
-            if channel is None:
-                logger.warning(f"Cannot welcome {member} to {member.guild.name} (invalid channel)")
-            else:
-                message_format = db.get_setting(member.guild.id, "welcome_message")
-                if message_format is None:
-                    message_format = "Welcome **{username}** {mention} to **{server}**"
+        # welcome message
+        greeter = await self.bot.db.execute(
+            "SELECT channel_id, is_enabled, message_format FROM greeter_settings WHERE guild_id = %s",
+            member.guild.id,
+        )
+        if greeter:
+            channel_id, is_enabled, message_format = greeter
+            if is_enabled:
+                channel = member.guild.get_channel(channel_id)
+                if channel is not None:
+                    if message_format is None:
+                        message_format = "Welcome **{username}** {mention} to **{server}**"
 
-                try:
-                    if db.get_setting(member.guild.id, "welcome_embed") == 0:
-                        await channel.send(
-                            util.create_welcome_without_embed(member, member.guild, message_format)
-                        )
-                    else:
+                    try:
                         await channel.send(
                             embed=util.create_welcome_embed(member, member.guild, message_format)
                         )
-                except discord.errors.Forbidden:
-                    pass
+                    except discord.errors.Forbidden:
+                        pass
 
-        # add autorole
-        role = member.guild.get_role(db.get_setting(member.guild.id, "autorole"))
-        if role is not None:
+        # add autoroles
+        roles = await self.bot.db.execute(
+            "SELECT role_id FROM autorole WHERE guild_id = %s", member.guild.id
+        )
+        for role_id in roles:
+            role = member.guild.get_role(role_id[0])
+            if role is None:
+                continue
             try:
                 await member.add_roles(role)
             except discord.errors.Forbidden:
-                logger.error(
-                    f"Trying to add autorole failed in {member.guild.name} (no permissions)"
-                )
+                pass
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         """Called when user gets banned from a server."""
-        channel_id = db.get_setting(guild.id, "bans_channel")
-        if channel_id is None:
+        channel_id = await self.bot.db.execute(
+            "SELECT ban_log_channel FROM logging_settings WHERE guild_id = %s",
+            guild.id,
+            one_value=True,
+        )
+        if not channel_id:
             return
 
         channel = guild.get_channel(channel_id)
-        if channel is None:
-            return logger.warning(
-                f"Cannot announce ban of {user} from {guild.name} (invalid channel)"
-            )
-
-        try:
-            await channel.send(f":hammer: **{user}** (`{user.id}`) has just been banned")
-        except discord.errors.Forbidden:
-            pass
+        if channel is not None:
+            try:
+                await channel.send(
+                    embed=discord.Embed(
+                        description=f":hammer: Banned **{user}** {user.mention}",
+                        color=int("f4900c", 16),
+                    )
+                )
+            except discord.errors.Forbidden:
+                pass
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         """Called when member leaves a guild."""
-        channel_id = db.get_setting(member.guild.id, "goodbye_channel")
-        if channel_id is None:
-            return
+        goodbye = await self.bot.db.execute(
+            "SELECT channel_id, is_enabled, message_format FROM goodbye_settings WHERE guild_id = %s",
+            member.guild.id,
+        )
+        if goodbye:
+            channel_id, is_enabled, message_format = goodbye
+            if is_enabled:
+                channel = member.guild.get_channel(channel_id)
+                if channel is not None:
+                    if message_format is None:
+                        message_format = "Goodbye **{user}** {mention}"
 
-        channel = member.guild.get_channel(channel_id)
-        if channel is None:
-            return logger.warning(
-                f"Cannot say goodbye to {member} from {member.guild.name} (invalid channel)"
-            )
-
-        message_format = db.get_setting(member.guild.id, "goodbye_message")
-        if message_format is None:
-            message_format = "Goodbye {mention} ( **{user}** )"
-
-        try:
-            await channel.send(util.create_goodbye_message(member, member.guild, message_format))
-        except discord.errors.Forbidden:
-            pass
+            try:
+                await channel.send(
+                    util.create_goodbye_message(member, member.guild, message_format)
+                )
+            except discord.errors.Forbidden:
+                pass
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
@@ -201,91 +223,139 @@ class Events(commands.Cog):
             return
 
         # ignored channels
-        if (
-            db.query(
-                "select * from deleted_messages_mask where channel_id = ?",
-                (message.channel.id,),
-            )
-            is not None
+        if await self.bot.db.execute(
+            "SELECT channel_id FROM message_log_ignore WHERE channel_id = %s",
+            message.channel.id,
+            one_value=True,
         ):
             return
 
-        channel_id = db.get_setting(message.guild.id, "deleted_messages_channel")
-        if channel_id is None:
-            return
-
-        channel = message.guild.get_channel(channel_id)
-        if channel is None or message.channel == channel:
-            return
-
-        try:
-            await channel.send(embed=util.message_embed(message))
-        except discord.errors.Forbidden:
-            pass
+        channel_id = await self.bot.db.execute(
+            "SELECT message_log_channel FROM logging_settings WHERE guild_id = %s",
+            message.guild.id,
+            one_value=True,
+        )
+        if channel_id:
+            channel = message.guild.get_channel(channel_id)
+            if channel is not None and message.channel != channel:
+                try:
+                    await channel.send(embed=util.message_embed(message))
+                except discord.errors.Forbidden:
+                    pass
 
     @commands.Cog.listener()
     async def on_message(self, message):
         """Listener that gets called on every message."""
-        # make sure cache is ready
-        if not self.bot.is_ready:
-            return
-
         # ignore DMs
         if message.guild is None:
             return
 
         # votechannels
-
-        data = db.query(
-            """SELECT channeltype FROM votechannels
-            WHERE guild_id = ? and channel_id = ?""",
-            (message.guild.id, message.channel.id),
+        votechannel_type = await self.bot.db.execute(
+            "SELECT voting_type FROM voting_channel WHERE channel_id = %s",
+            message.channel.id,
+            one_value=True,
         )
-        if data is not None:
-            if data[0][0] == "rating":
-                for e in ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]:
-                    await message.add_reaction(e)
-            else:
-                await message.add_reaction(emojis.UPVOTE)
-                await message.add_reaction(emojis.DOWNVOTE)
+        if votechannel_type == "rating":
+            for e in ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]:
+                await message.add_reaction(e)
+        elif votechannel_type == "voting":
+            await message.add_reaction(emojis.UPVOTE)
+            await message.add_reaction(emojis.DOWNVOTE)
 
         # xp gain
         message_xp = util.xp_from_message(message)
         currenthour = message.created_at.hour
-        db.add_activity(message.guild.id, message.author.id, message_xp, currenthour)
+        for activity_table in [
+            "user_activity",
+            "user_activity_day",
+            "user_activity_week",
+            "user_activity_month",
+            "user_activity_year",
+        ]:
+            await self.bot.db.execute(
+                f"""
+                INSERT INTO {activity_table} (guild_id, user_id, h{currenthour})
+                    VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    h{currenthour} = h{currenthour} + %s,
+                    message_count = message_count + 1
+                """,
+                message.guild.id,
+                message.author.id,
+                message_xp,
+                message_xp,
+            )
 
         # if bot account, ignore everything after this
         if message.author.bot:
             return
 
-        if db.get_setting(message.guild.id, "autoresponses") == 1:
-            await self.easter_eggs(message)
+        guild_settings = await self.bot.db.execute(
+            "SELECT levelup_messages, autoresponses FROM guild_settings WHERE guild_id = %s",
+            message.guild.id,
+            one_row=True,
+        )
+        if guild_settings:
+            announce_levelup, autoresponses = guild_settings
+        else:
+            announce_levelup = False
+            autoresponses = True
 
         # log emojis
         unicode_emojis = util.find_unicode_emojis(message.content)
         custom_emojis = util.find_custom_emojis(message.content)
-        if unicode_emojis or custom_emojis:
-            db.log_emoji_usage(message, custom_emojis, unicode_emojis)
+        for emoji_name in unicode_emojis:
+            await self.bot.db.execute(
+                """
+                INSERT INTO unicode_emoji_usage (guild_id, user_id, emoji_name)
+                    VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    uses = uses + 1
+                """,
+                message.guild.id,
+                message.author.id,
+                emoji_name,
+            )
+
+        for emoji_name, emoji_id in custom_emojis:
+            await self.bot.db.execute(
+                """
+                INSERT INTO custom_emoji_usage (guild_id, user_id, emoji_name, emoji_id)
+                    VALUES (%s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    uses = uses + 1
+                """,
+                message.guild.id,
+                message.author.id,
+                emoji_name,
+                emoji_id,
+            )
+
+        if autoresponses:
+            await self.easter_eggs(message)
 
         # level up message
-        announce = db.get_setting(message.guild.id, "levelup_toggle")
-        if announce != 0:
-            activity_data = db.get_user_activity(message.guild.id, message.author.id)
-            if activity_data is None:
-                return
+        if announce_levelup:
+            activity_data = await self.bot.db.execute(
+                "SELECT * FROM user_activity WHERE user_id = %s AND guild_id = %s",
+                message.author.id,
+                message.guild.id,
+                one_row=True,
+            )
+            if activity_data:
+                xp = sum(activity_data[3:])
+                level_before = util.get_level(xp - message_xp)
+                level_now = util.get_level(xp)
 
-            xp = sum(activity_data)
-            level_before = util.get_level(xp - message_xp)
-            level_now = util.get_level(xp)
-
-            if level_now > level_before:
-                try:
-                    await message.channel.send(
-                        f"{message.author.mention} just leveled up! (level **{level_now}**)",
-                        delete_after=5,
-                    )
-                except discord.errors.Forbidden:
-                    pass
+                if level_now > level_before:
+                    try:
+                        await message.channel.send(
+                            f"{message.author.mention} just leveled up! (level **{level_now}**)",
+                            delete_after=5,
+                        )
+                    except discord.errors.Forbidden:
+                        pass
 
     async def easter_eggs(self, message):
         """Easter eggs handler."""
@@ -355,43 +425,43 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         """Starboard event handler."""
-        starboard_settings = db.query(
+        starboard_settings = await self.bot.db.execute(
             """
-            SELECT starboard_toggle, starboard_amount, starboard_channel, starboard_emoji, starboard_emoji_is_custom
-            FROM guilds WHERE guild_id = ?""",
-            (payload.guild_id,),
+            SELECT is_enabled, channel_id, reaction_count, emoji_name, emoji_id, emoji_type
+            FROM starboard_settings WHERE guild_id = %s
+            """,
+            payload.guild_id,
+            one_row=True,
         )
-        if starboard_settings is None:
-            return
-        else:
-            starboard_settings = starboard_settings[0]
 
-        if not util.int_to_bool(starboard_settings[0]):
+        if not starboard_settings:
             return
 
-        custom_emoji = False
-        if starboard_settings[3] is None:
-            star_emoji = "⭐"
-        else:
-            star_emoji = starboard_settings[3]
-            if starboard_settings[4] == 1:
-                custom_emoji = True
+        (
+            is_enabled,
+            board_channel_id,
+            required_reaction_count,
+            emoji_name,
+            emoji_id,
+            emoji_type,
+        ) = starboard_settings
+        board_channel = self.bot.get_channel.get_channel(board_channel_id)
+        if not is_enabled or board_channel is None:
+            return
 
-        is_correct = False
-        if custom_emoji and payload.emoji.id == int(star_emoji):
-            is_correct = True
-        elif payload.emoji.name == star_emoji:
-            is_correct = True
+        if (emoji_type == "custom" and payload.emoji.id == emoji_id) or (
+            emoji_type == "unicode"
+            and unicode_codes.UNICODE_EMOJI.get(payload.emoji.name) == emoji_name
+        ):
+            message_channel = self.bot.get_channel(payload.channel_id)
 
-        if is_correct:
-            channel = self.bot.get_channel(payload.channel_id)
-            if channel.id == starboard_settings[2]:
-                # trying to star a starboard message
+            # trying to star a starboard message
+            if message_channel.id == board_channel_id:
                 return
 
-            message = await channel.fetch_message(payload.message_id)
+            message = await message_channel.fetch_message(payload.message_id)
             for react in message.reactions:
-                if custom_emoji:
+                if emoji_type == "custom":
                     if (
                         isinstance(react.emoji, (discord.Emoji, discord.PartialEmoji))
                         and react.emoji.id == payload.emoji.id
@@ -403,58 +473,59 @@ class Events(commands.Cog):
                         reaction_count = react.count
                         break
 
-            if reaction_count < starboard_settings[1]:
+            if reaction_count < required_reaction_count:
                 return
 
-            channel_id = starboard_settings[2]
-            channel = payload.member.guild.get_channel(channel_id)
-            if channel is None:
-                return
-
-            board_msg_id = db.query(
-                """SELECT starboard_message_id FROM starboard WHERE message_id = ?""",
-                (payload.message_id,),
+            board_message_id = self.bot.db.execute(
+                "SELECT starboard_message_id FROM starboard_message WHERE original_message_id = %s",
+                payload.message.id,
+                one_value=True,
             )
-            reaction_emoji = star_emoji if not custom_emoji else "⭐"
+            emoji_display = (
+                "⭐" if emoji_type == "custom" else unicode_codes.EMOJI_UNICODE(emoji_name)
+            )
 
             board_message = None
-            if board_msg_id is not None:
-                board_msg_id = board_msg_id[0][0]
-                if board_msg_id is not None:
-                    try:
-                        board_message = await channel.fetch_message(board_msg_id)
-                    except discord.errors.NotFound:
-                        board_message = None
+            if board_message_id:
+                try:
+                    board_message = await message_channel.fetch_message(board_message_id)
+                except discord.errors.NotFound:
+                    pass
 
             if board_message is None:
                 # message is not on board yet, or it was deleted
-                content = discord.Embed(color=discord.Color.gold())
+                content = discord.Embed(color=int("ffac33", 16))
                 content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
                 jump = f"\n\n[context]({message.jump_url})"
                 content.description = message.content[: 2048 - len(jump)] + jump
                 content.timestamp = message.created_at
                 content.set_footer(
-                    text=f"{reaction_count} {reaction_emoji} #{message.channel.name}"
+                    text=f"{reaction_count} {emoji_display} #{message.channel.name}"
                 )
                 if len(message.attachments) > 0:
                     content.set_image(url=message.attachments[0].url)
 
                 try:
-                    board_message = await channel.send(embed=content)
-                    db.execute(
-                        "REPLACE INTO starboard VALUES(?, ?)",
-                        (payload.message_id, board_message.id),
+                    board_message = await message_channel.send(embed=content)
+                    await self.bot.db.execute(
+                        """
+                        INSERT INTO starboard_message
+                            VALUES(%s, %s)
+                        ON DUPLICATE KEY UPDATE
+                            starboard_message_id = %s
+                        """,
+                        payload.message_id,
+                        board_message.id,
+                        board_message_id,
                     )
                 except discord.errors.Forbidden:
-                    logger.warning(
-                        f"Unable to send message to starboard in {channel.guild} due to missing permissions!"
-                    )
+                    pass
 
             else:
                 # message is on board, update star count
                 content = board_message.embeds[0]
                 content.set_footer(
-                    text=f"{reaction_count} {reaction_emoji} #{message.channel.name}"
+                    text=f"{reaction_count} {emoji_display} #{message.channel.name}"
                 )
                 await board_message.edit(embed=content)
 
