@@ -1,0 +1,3 @@
+DROP DATABASE misobot;
+
+CREATE DATABASE misobot;

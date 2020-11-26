@@ -8,8 +8,8 @@ from time import time
 from helpers import log
 from helpers import help
 from helpers import utilityfunctions as util
-from data import database as db
 from dotenv import load_dotenv
+from modules import maria, queries
 
 load_dotenv(verbose=True)
 uvloop.install()
@@ -24,7 +24,29 @@ else:
 logger.info(f"Developer mode is {'ON' if DEV else 'OFF'}")
 
 TOKEN = os.environ["MISO_BOT_TOKEN_BETA" if DEV else "MISO_BOT_TOKEN"]
-bot = commands.AutoShardedBot(
+
+
+class MisoBot(commands.AutoShardedBot):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.default_prefix = ("<" if DEV else ">",)
+        self.logger = logger
+        self.start_time = time()
+        self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
+        self.db = maria.MariaDB(self)
+
+    async def close(self):
+        await self.db.cleanup()
+        await super().close()
+
+    async def on_message(self, message):
+        if not bot.is_ready:
+            return
+
+        await super().on_message(message)
+
+
+bot = MisoBot(
     owner_id=133311691852218378,
     help_command=help.EmbedHelpCommand(),
     command_prefix=util.determine_prefix,
@@ -32,9 +54,6 @@ bot = commands.AutoShardedBot(
     allowed_mentions=discord.AllowedMentions(everyone=False),
     intents=discord.Intents.all(),
 )
-
-cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
-bot.default_prefix = "<" if DEV else ">"
 
 extensions = [
     "events",
@@ -75,7 +94,7 @@ async def before_any_command(ctx):
 @bot.check
 async def check_for_blacklist(ctx):
     """Check command invocation context for blacklist triggers"""
-    return db.is_blacklisted(ctx)
+    return await queries.is_blacklisted(ctx)
 
 
 @bot.check
@@ -85,20 +104,11 @@ async def cooldown_check(ctx):
     if str(ctx.invoked_with).lower() == "help":
         return True
 
-    bucket = cd.get_bucket(ctx.message)
+    bucket = ctx.bot.global_cd.get_bucket(ctx.message)
     retry_after = bucket.update_rate_limit()
     if retry_after:
         raise commands.CommandOnCooldown(bucket, retry_after)
     return True
-
-
-@bot.event
-async def on_message(message):
-    """Overloads the default on_message event to check for cache readiness"""
-    if not bot.is_ready:
-        return
-
-    await bot.process_commands(message)
 
 
 if __name__ == "__main__":
