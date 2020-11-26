@@ -4,13 +4,12 @@ import psutil
 import time
 import os
 import arrow
+import typing
 import copy
 import aiohttp
 from discord.ext import commands
 from operator import itemgetter
 from helpers import utilityfunctions as util
-from data import database as db
-from libraries import unicode_codes
 
 
 class Info(commands.Cog):
@@ -40,22 +39,7 @@ class Info(commands.Cog):
         """See the source code."""
         await ctx.send("https://github.com/joinemm/miso-bot")
 
-    @commands.command()
-    async def patreon(self, ctx):
-        """Link to the patreon page."""
-        await ctx.send("https://www.patreon.com/joinemm")
-
-    @commands.command()
-    async def kofi(self, ctx):
-        """Link to the Ko-Fi page."""
-        await ctx.send("https://ko-fi.com/joinemm")
-
-    @commands.command()
-    async def sponsor(self, ctx):
-        """Link to the Github sponsors page."""
-        await ctx.send("https://github.com/sponsors/joinemm")
-
-    @commands.command()
+    @commands.command(aliases=["patreon", "kofi", "sponsor", "ko-fi"])
     async def donate(self, ctx):
         """Donate to keep the bot running smoothly!"""
         content = discord.Embed(
@@ -72,27 +56,58 @@ class Info(commands.Cog):
     @commands.command(aliases=["patrons", "supporters", "sponsors"])
     async def donators(self, ctx):
         """List of people who have donated."""
-        tier_badges = [":coffee:", ":beer:", ":moneybag:", ":bank:"]
-        patrons = db.query("select tier, user_id, currently_active from patrons")
+        patrons = await self.bot.db.execute(
+            """
+            SELECT user_id, platform, donation_tier, currently_active, emoji
+            FROM donator LEFT OUTER JOIN donation_tier ON donation_tier=id
+            """
+        )
+        donations = await self.bot.db.execute("SELECT user_id, amount FROM donation")
         content = discord.Embed(
             title="List of donators ❤",
-            color=int("f96854", 16),
-            description="https://github.com/sponsors/joinemm\nhttps://patreon.com/joinemm\nhttps://ko-fi.com/joinemm",
+            color=int("dd2e44", 16),
+            description="\n".join(
+                [
+                    "https://github.com/sponsors/joinemm",
+                    "https://patreon.com/joinemm",
+                    "https://ko-fi.com/joinemm",
+                    "https://paypal.me/joinemm",
+                ]
+            ),
         )
-        current = []
+        current = {"patreon": [], "kofi": [], "github": [], "paypal": []}
         former = []
-        for tier, user_id, state in sorted(patrons, key=lambda x: x[0], reverse=True):
+        for user_id, platform, tier, is_active, emoji in sorted(
+            patrons, key=lambda x: x[2], reverse=True
+        ):
             user = self.bot.get_user(user_id)
             if user is None:
                 continue
 
-            if util.int_to_bool(state):
-                current.append(f"**{user}** {tier_badges[tier-1]}")
+            if is_active:
+                current[platform].append(f"**{user}** {emoji}")
             else:
                 former.append(f"{user}")
 
-        if current:
-            content.add_field(inline=True, name="Current donators", value="\n".join(current))
+        single = []
+        for user_id, amount in sorted(donations, key=lambda x: x[1], reverse=True):
+            user = self.bot.get_user(user_id)
+            if user is None:
+                continue
+
+            single.append(f"**{user}** - ${int(amount)}")
+
+        if current["patreon"]:
+            content.add_field(inline=True, name="Patreon", value="\n".join(current["patreon"]))
+
+        if current["kofi"]:
+            content.add_field(inline=True, name="Ko-fi", value="\n".join(current["kofi"]))
+
+        if current["github"]:
+            content.add_field(inline=True, name="Github", value="\n".join(current["github"]))
+
+        if single:
+            content.add_field(inline=True, name="One time donations", value="\n".join(single))
 
         if former:
             content.add_field(inline=True, name="Former donators", value="\n".join(former))
@@ -213,60 +228,62 @@ class Info(commands.Cog):
         await util.page_switcher(ctx, pages)
 
     @commands.command()
-    async def emojistats(self, ctx, scope="server"):
+    async def emojistats(self, ctx, user: typing.Optional[discord.Member] = None):
         """
-        See most used emojis on server, globally, and optionally filtered by user.
+        See most used emojis on server, optionally filtered by user.
 
         Usage:
             >emojistats
             >emojistats [mention]
-            >emojistats global
-            >emojistats global [mention]
         """
-        g = scope == "global"
-        usertarget = ctx.message.mentions[0] if ctx.message.mentions else None
-        query = "SELECT emoji, sum(count), emojitype FROM emoji_usage"
-        params = []
-        if not g:
-            query += " WHERE guild_id = ?"
-            params.append(ctx.guild.id)
+        opt = []
+        if user is not None:
+            opt.append(user.id)
 
-        if usertarget is not None:
-            if not g:
-                query += " AND user_id = ?"
+        custom_emojis = await self.bot.db.execute(
+            f"""
+            SELECT sum(uses), emoji_id, emoji_name
+            FROM custom_emoji_usage WHERE guild_id = %s {'AND user_id = %s' if user is not None else ''}
+            GROUP BY emoji
+            """,
+            ctx.guild.id,
+            *opt,
+        )
+        default_emojis = await self.bot.db.execute(
+            f"""
+            SELECT sum(uses), emoji_name
+            FROM default_emoji_usage WHERE guild_id = %s {'AND user_id = %s' if user is not None else ''}
+            GROUP BY emoji
+            """,
+            ctx.guild.id,
+            *opt,
+        )
+
+        if not custom_emojis and not default_emojis:
+            return await ctx.send("No emojis have been used yet!")
+
+        all_emojis = default_emojis
+        for emoji_id, emoji_name, uses in custom_emojis:
+            emoji = self.bot.get_emoji(int(emoji_id))
+            if emoji is not None and emoji.is_usable():
+                emoji_repr = str(emoji)
             else:
-                query += " WHERE user_id = ?"
-            params.append(usertarget.id)
-
-        query += " GROUP BY emoji ORDER BY sum(count) DESC"
-        data = db.query(query, tuple(params))
-        if data is None:
-            return await ctx.send("No emojis found!")
+                emoji_repr = "`" + emoji_name + "`"
+            all_emojis.append((uses, emoji_repr))
 
         rows = []
-        for i, (emoji, count, emojitype) in enumerate(data, start=1):
-            if emojitype == "unicode":
-                emoji_repr = unicode_codes.EMOJI_ALIAS_UNICODE.get(emoji)
-            else:
-                emoji_obj = self.bot.get_emoji(int(emoji.split(":")[-1].strip(">")))
-                if emoji_obj is not None and emoji_obj.is_usable():
-                    emoji_repr = str(emoji_obj)
-                else:
-                    emojiname = emoji.split(":")[0].strip("<")
-                    if len(emojiname) < 2:
-                        emojiname = emoji.split(":")[1]
-
-                    emoji_repr = "`" + emojiname + "`"
-
-            rows.append(f"`#{i:2}` {emoji_repr} — **{count}** Use" + ("s" if count > 1 else ""))
+        for i, (uses, emoji_name) in enumerate(
+            sorted(all_emojis, key=lambda x: x[0], reverse=True)
+        ):
+            rows.append(f"`#{i:2}` {emoji_name} — **{uses}** Use" + ("s" if uses > 1 else ""))
 
         content = discord.Embed(
             title="Most used emojis"
-            + (f" by {usertarget.name}" if usertarget is not None else "")
-            + (", globally" if g else " on this server"),
+            + (f" by {user.name}" if user is not None else "")
+            + f" in {ctx.guild.name}",
             color=int("ffcc4d", 16),
         )
-        await util.send_as_pages(ctx, content, rows, maxrows=10)
+        await util.send_as_pages(ctx, content, rows, maxrows=15)
 
     @commands.group()
     async def commandstats(self, ctx):
