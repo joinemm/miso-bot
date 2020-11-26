@@ -1,13 +1,7 @@
 import discord
-import sqlite3
 import arrow
-import time
-import traceback
-import io
 from discord.ext import commands
 from helpers import log, utilityfunctions as util
-from data import database as db
-from contextlib import redirect_stdout
 
 
 logger = log.get_logger(__name__)
@@ -24,9 +18,9 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
         return await self.bot.is_owner(ctx.author)
 
     @commands.command(rest_is_raw=True)
-    async def say(self, ctx, channel, *, message):
+    async def say(self, ctx, channel: int, *, message):
         """Make the bot say something in a given channel."""
-        channel = self.bot.get_channel(int(channel))
+        channel = self.bot.get_channel(channel)
         guild = channel.guild
 
         await ctx.send(f"Sending message to **{guild}** <#{channel.id}>\n> {message}")
@@ -76,143 +70,100 @@ class Owner(commands.Cog, command_attrs=dict(hidden=True)):
         await ctx.send("Shutting down... :electric_plug:")
         await self.bot.logout()
 
-    @commands.group(case_insensitive=True)
-    async def patron(self, ctx):
-        """Manage patronage."""
+    @commands.group(aliases=["patron"], case_insensitive=True)
+    async def donator(self, ctx):
+        """Manage sponsors and donations."""
         await util.command_group_help(ctx)
 
-    @patron.command(name="add")
-    async def patron_add(self, ctx, user: discord.User, tier: int):
-        """Add a new patron."""
-        since_ts = arrow.utcnow().timestamp
-        db.execute("INSERT INTO patrons VALUES(?, ?, ?, ?)", (user.id, tier, since_ts, 1))
-        await ctx.send(f"**{user}** is now a patron!")
+    @donator.command(name="addsingle")
+    async def donator_addsingle(self, ctx, user: discord.User, platform, amount: float, ts=None):
+        """Add a new single time donation."""
+        if ts is None:
+            ts = arrow.utcnow().datetime
+        else:
+            ts = arrow.get(ts).datetime
 
-    @patron.command(name="remove")
-    async def patron_remove(self, ctx, user: discord.User):
-        """Remove a patron."""
-        db.execute("DELETE FROM patrons WHERE user_id = ?", (user.id,))
-        await ctx.send(f"Removed **{user}** from patrons")
-
-    @patron.command(name="toggle")
-    async def patron_toggle(self, ctx, user: discord.User):
-        """Toggle user's patron status."""
-        current = util.int_to_bool(
-            db.query("SELECT currently_active FROM patrons WHERE user_id = ?", (user.id,))[0][0]
+        await self.bot.db.execute(
+            "INSERT INTO donation (user_id, platform, amount, donated_on) VALUES (%s, %s, %s, %s)",
+            user.id,
+            platform,
+            amount,
+            ts,
         )
-        db.execute(
-            "UPDATE patrons SET currently_active = ? WHERE user_id = ?",
-            (util.bool_to_int(not current), user.id),
+        await util.send_success(
+            ctx,
+            f"New donation of **${amount}** by **{user}** added",
         )
-        await ctx.send(f"**{user}** patreon activity set to **{not current}**")
 
-    @patron.command(name="tier")
-    async def patron_tier(self, ctx, user: discord.User, new_tier: int):
-        """Change user's patreon tier."""
-        db.execute("UPDATE patrons SET tier = ? WHERE user_id = ?", (new_tier, user.id))
-        await ctx.send(f"Patreon tier of **{user}** changed to **{new_tier}**")
-
-    @commands.command(name="eval")
-    async def evaluate(self, ctx, *, python_code):
-        """Run python code."""
-        env = {"self": self, "ctx": ctx}
-
-        stdout = io.StringIO()
-
-        python_lines = clean_codeblock(python_code)
-        if not python_lines:
-            return await util.send_command_help(ctx)
-
-        func = "async def __ex():\n"
-        for line in python_lines:
-            func += f"    {line}\n"
-
-        try:
-            exec(func, env)
-        except Exception as error:
-            return await ctx.send(
-                ":warning: Compile error\n```py\n"
-                f"{''.join(traceback.format_exception(None, error, None))}```"
-            )
-
-        try:
-            with redirect_stdout(stdout):
-                await env["__ex"]()
-        except Exception as error:
-            result = stdout.getvalue()
-            await ctx.send(
-                f"```py\n{result}\n"
-                + "".join(traceback.format_exception(None, error, None))
-                + "```"
-            )
+    @donator.command(name="add")
+    async def donator_add(
+        self, ctx, user: discord.User, username, platform, tier: int, since_ts=None
+    ):
+        """Add a new monthly donator."""
+        if since_ts is None:
+            since_ts = arrow.utcnow().datetime
         else:
-            result = stdout.getvalue()
-            if result:
-                await ctx.send(f"```py\n{result}```")
-            else:
-                await ctx.send("```OK```")
+            since_ts = arrow.get(since_ts).datetime
 
-    @commands.command(name="reload")
-    async def reload_cog(self, ctx, *, module):
-        """Reload a cog."""
-        try:
-            self.bot.reload_extension(module)
-        except Exception as error:
-            await ctx.send(
-                "```py\n" + "".join(traceback.format_exception(None, error, None)) + "\n```"
-            )
-        else:
-            logger.info(f"Reloaded {module}")
-            await ctx.send("\N{OK HAND SIGN}")
+        await self.bot.db.execute(
+            "INSERT INTO donator (user_id, platform, external_username, donation_tier, donating_since) VALUES (%s, %s, %s, %s, %s)",
+            user.id,
+            platform,
+            username,
+            tier,
+            since_ts,
+        )
+        await util.send_success(
+            ctx, f"**{user}** is now a **Tier {tier}** donator on **{platform}** as *{username}*"
+        )
 
-    @commands.group()
-    async def sql(self, ctx):
-        """Execute SQL commands against the database."""
-        await util.command_group_help(ctx)
+    @donator.command(name="remove")
+    async def donator_remove(self, ctx, user: discord.User):
+        """Remove a donator."""
+        await self.bot.db.execute("DELETE FROM donator WHERE user_id = %s", user.id)
+        await util.send_success(ctx, f"Removed **{user}** from the donators list.")
 
-    @sql.command(name="query")
-    async def sql_query(self, ctx, *, statement):
-        """Query the database."""
-        with sqlite3.connect(db.SQLDATABASE) as connection:
-            cursor = connection.cursor()
-            cursor.execute(statement)
-            pretty_table = db.pp(cursor)
+    @donator.command(name="toggle")
+    async def donator_toggle(self, ctx, user: discord.User):
+        """Toggle user's donator status."""
+        await self.bot.db.execute(
+            "UPDATE donator SET currently_active = !currently_active WHERE user_id = %s", user.id
+        )
+        await util.send_success(ctx, f"**{user}** donator status changed.")
 
-        title = "\n".join(pretty_table[:2])
-        paginator = commands.Paginator(prefix=f"{title}", suffix="")
-        for row in pretty_table[2:]:
-            paginator.add_line(row)
+    @donator.command(name="tier")
+    async def donator_tier(self, ctx, user: discord.User, new_tier: int):
+        """Change user's donation tier."""
+        await self.bot.db.execute(
+            "UPDATE donator SET tier = %s WHERE user_id = %s", new_tier, user.id
+        )
+        await util.send_success(ctx, f"**{user}** donation changed to **Tier {new_tier}**")
 
-        if len(paginator.pages) > 1:
-            await util.text_based_page_switcher(ctx, paginator.pages)
-        else:
-            await ctx.send(f"```{paginator.pages[0]}```")
-
-    @sql.command(name="execute")
-    async def sql_execute(self, ctx, *, statement):
-        """Execute something in the database."""
-        start = time.time()
-        with sqlite3.connect(db.SQLDATABASE) as connection:
-            cursor = connection.cursor()
-            cursor.execute(statement)
-            connection.commit()
-
-        await ctx.send(f"```OK. Took {time.time() - start}s```")
+    @commands.command(name="db", aliases=["dbe", "dbq"])
+    @commands.is_owner()
+    async def database_query(self, ctx, *, statement):
+        """Execute something against the local MariaDB instance."""
+        data = await self.bot.db.execute(statement)
+        await ctx.send(f"```py\n{data}\n```")
 
     @commands.command()
-    async def fmban(self, ctx, lastfm_username):
-        """Ban someone from the leaderboards."""
-        data = db.query(
-            "select * from lastfm_blacklist where username = ?", (lastfm_username.lower(),)
+    async def fmflag(self, ctx, lastfm_username, *, reason):
+        """Flag LastFM account as a cheater."""
+        await self.bot.db.execute(
+            "INSERT INTO lastfm_cheater VALUES(%s, %s, %s)",
+            lastfm_username.lower(),
+            arrow.utcnow().datetime,
+            reason,
         )
-        if data is None:
-            db.execute("INSERT INTO lastfm_blacklist VALUES(?)", (lastfm_username.lower(),))
-            await ctx.send(f":ok_hand: Flagged lastfm profile `{lastfm_username}` as a cheater.")
-        else:
-            db.execute(
-                "DELETE FROM lastfm_blacklist WHERE username = ?", (lastfm_username.lower(),)
-            )
-            await ctx.send(f":ok_hand: Removed cheater flag from `{lastfm_username}`")
+        await util.send_success(ctx, f"Flagged LastFM profile `{lastfm_username}` as a cheater.")
+
+    @commands.command()
+    async def fmunflag(self, ctx, lastfm_username):
+        """Remove cheater flag from an LastFM account."""
+        await self.bot.db.execute(
+            "DELETE FROM lastfm_cheater WHERE lastfm_username = %s", lastfm_username.lower()
+        )
+        await util.send_success(ctx, f"`{lastfm_username}` is no longer flagged as a cheater.")
 
 
 def clean_codeblock(text):
