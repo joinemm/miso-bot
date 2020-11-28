@@ -7,12 +7,12 @@ import colorgram
 import random
 import datetime
 import io
-import emoji
 import aiohttp
 from discord.ext import commands
 from PIL import Image, UnidentifiedImageError
 from data import database as db
 from durations_nlp import Duration
+from libraries import unicode_codes
 
 
 class ErrorMessage(Exception):
@@ -32,6 +32,12 @@ def displayname(member, escape=True):
         return escape_md(name)
     else:
         return name
+
+
+async def send_success(ctx, message):
+    await ctx.send(
+        embed=discord.Embed(description=":white_check_mark: " + message, color=int("77b255", 16))
+    )
 
 
 async def determine_prefix(bot, message):
@@ -452,6 +458,12 @@ def escape_md(s):
     return pattern.sub(replace, s)
 
 
+def map_to_range(input_value, input_start, input_end, output_start, output_end):
+    return output_start + ((output_end - output_start) / (input_end - input_start)) * (
+        input_value - input_start
+    )
+
+
 def rgb_to_hex(rgb):
     """
     :param rgb : RBG color in tuple of 3
@@ -510,27 +522,27 @@ def int_to_bool(value):
 
 def find_unicode_emojis(text):
     """Finds and returns all unicode emojis from a string"""
-    emoji_list = []
+    emoji_list = set()
     data = regex.findall(r"\X", text)
     flags = regex.findall("[\U0001F1E6-\U0001F1FF]", text)
     for word in data:
-        if any(char in emoji.UNICODE_EMOJI for char in word):
+        if any(char in unicode_codes.UNICODE_EMOJI for char in word):
             if word in flags:
                 continue
-            emoji_list.append(emoji.demojize(word))
+            emoji_list.add(unicode_codes.UNICODE_EMOJI[word])
 
     for i in range(math.floor(len(flags) / 2)):
-        emoji_list.append("".join(emoji.demojize(x) for x in flags[i : i + 2]))
+        emoji_list.add("".join(unicode_codes.UNICODE_EMOJI[x] for x in flags[i : i + 2]))
 
     return emoji_list
 
 
 def find_custom_emojis(text):
     """Finds and returns all custom discord emojis from a string"""
-    emoji_list = []
+    emoji_list = set()
     data = regex.findall(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>", text)
     for a, emoji_name, emoji_id in data:
-        emoji_list.append(f"<{a}:{emoji_name}:{emoji_id}>")
+        emoji_list.add((emoji_name, emoji_id))
 
     return emoji_list
 
