@@ -1,9 +1,10 @@
 import discord
 import arrow
 from discord.ext import commands
-import data.database as db
 import helpers.utilityfunctions as util
 import helpers.log as log
+from helpers import exceptions
+from modules import queries
 
 command_logger = log.get_command_logger()
 
@@ -14,43 +15,91 @@ class CustomCommands(commands.Cog):
 
     def bot_command_list(self, match=""):
         """Returns list of bot commands."""
-        command_list = set()
+        command_list = []
+
+        def add_subcommands(command):
+            if hasattr(command, "commands"):
+                # is a group
+                for subcommand in command.commands:
+                    add_subcommands(subcommand)
+            else:
+                # is a command
+                command_list.append(command)
+
         for command in self.bot.commands:
-            if match.lower() in command.name.lower():
-                command_list.add(command.name)
-            for alias in command.aliases:
-                if match.lower() in alias.lower():
-                    command_list.add(alias)
+            add_subcommands(command)
+
+        if match == "":
+            filtered_commands = set(command_list)
+        else:
+            filtered_commands = set()
+            for command in command_list:
+                if match.lower() in command.qualified_name.lower():
+                    filtered_commands.add(command.qualified_name)
+                else:
+                    for alias in command.aliases:
+                        if match.lower() in alias.lower():
+                            filtered_commands.add(command.qualified_name)
+
+        return filtered_commands
+
+    async def custom_command_list(self, guild_id, match=""):
+        """Returns a list of custom commands on server."""
+        command_list = set()
+        data = await self.bot.db.execute(
+            "SELECT command_trigger FROM custom_command WHERE guild_id = %s", guild_id
+        )
+        print(data)
+        for command_name in data:
+            command_name = command_name[0]
+            if match == "" or match in command_name:
+                command_list.add(command_name)
 
         return command_list
 
-    async def everyone_or_manager(ctx):
-        if ctx.author.guild_permissions.manage_guild:
-            return True
+    async def can_add_commands(self, ctx):
+        """Checks if guild is restricting command adding and whether the current user can add commands."""
+        if not ctx.author.guild_permissions.manage_guild:
+            if await self.bot.db.execute(
+                "SELECT restrict_custom_commands FROM guild_settings WHERE guild_id = %s",
+                ctx.guild.id,
+                one_value=True,
+            ):
+                return False
 
-        setting = db.get_setting(ctx.guild.id, "custom_commands_everyone")
-        if setting != 0:
-            return True
-        else:
-            raise commands.MissingPermissions(["manage_server"])
+        return True
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        """only for CommandNotFound."""
+        """Check for custom commands on CommandNotFound."""
+        # no custom commands in DMs
         if ctx.guild is None:
             return
+
         error = getattr(error, "original", error)
         if isinstance(error, commands.CommandNotFound):
             keyword = ctx.message.content[len(ctx.prefix) :].split(" ", 1)[0]
-            data = db.query(
-                """SELECT response FROM customcommands
-                WHERE guild_id = ? and command = ?""",
-                (ctx.guild.id, keyword),
+            response = await self.bot.db.execute(
+                "SELECT content FROM custom_command WHERE guild_id = %s AND command_trigger = %s",
+                ctx.guild.id,
+                keyword,
+                one_value=True,
             )
-            if data is not None:
+            if response:
                 command_logger.info(log.custom_command_format(ctx, keyword))
-                await ctx.send(data[0][0])
-                db.log_custom_command_usage(ctx, keyword)
+                await ctx.send(response)
+                await self.bot.db.execute(
+                    """
+                    INSERT INTO command_usage (guild_id, user_id, command_name, command_type)
+                        VALUES (%s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        uses = uses + 1
+                    """,
+                    ctx.guild.id,
+                    ctx.author.id,
+                    keyword,
+                    "custom",
+                )
 
     @commands.group()
     @commands.guild_only()
@@ -59,48 +108,57 @@ class CustomCommands(commands.Cog):
         await util.command_group_help(ctx)
 
     @command.command()
-    @commands.check(everyone_or_manager)
     async def add(self, ctx, name, *, response):
         """Add a new custom command."""
+        if not await self.can_add_commands(ctx):
+            raise commands.MissingPermissions(["manage_server"])
+
         if name in self.bot_command_list():
-            return await ctx.send(f"Sorry, `{ctx.prefix}{name}` is already a built in command!")
-        elif name in custom_command_list(ctx.guild.id):
-            return await ctx.send(
-                f"Sorry, the custom command `{ctx.prefix}{name}` "
-                f"already exists on this server!"
+            raise exceptions.Warning(f"`{ctx.prefix}{name}` is already a built in command!")
+        if await self.bot.db.execute(
+            "SELECT content FROM custom_command WHERE guild_id = %s AND command_trigger = %s",
+            ctx.guild.id,
+            name,
+            one_value=True,
+        ):
+            raise exceptions.Warning(
+                f"Custom command `{ctx.prefix}{name}` already exists on this server!"
             )
 
-        db.execute(
-            """INSERT INTO customcommands VALUES (?, ?, ?, ?, ?)""",
-            (ctx.guild.id, name, response, arrow.utcnow().timestamp, ctx.author.id),
+        await self.bot.db.execute(
+            "INSERT INTO custom_command VALUES(%s, %s, %s, %s, %s)",
+            ctx.guild.id,
+            name,
+            response,
+            arrow.utcnow().datetime,
+            ctx.author.id,
         )
-        await ctx.send(
-            f"Custom command `{ctx.prefix}{name}` "
-            f"successfully added with the response `{response}`"
+        await util.send_success(
+            ctx, f"Custom command `{ctx.prefix}{name}` added with the response \n```{response}```"
         )
 
     @command.command()
     async def remove(self, ctx, name):
         """Remove a custom command."""
-        if name not in custom_command_list(ctx.guild.id):
-            return await ctx.send(
-                f"Cannot delete command `{ctx.prefix}{name}` as it does not exist"
-            )
+        owner_id = await self.bot.db.execute(
+            "SELECT added_by FROM custom_command WHERE command_trigger = %s", name, one_value=True
+        )
+        if not owner_id:
+            raise exceptions.Warning(f"Custom command `{ctx.prefix}{name}` does not exist")
 
-        owner = db.query("""SELECT added_by FROM customcommands WHERE command = ? AND guild_id = ?""", (name, ctx.guild.id))
-        if owner is not None and owner[0][0] != ctx.author.id:
+        owner = ctx.guild.get_member(owner_id)
+        if owner is not None and owner != ctx.author:
             if not ctx.author.guild_permissions.manage_guild:
-                return await ctx.send(
-                    ":warning: You can only remove commands you have added, "
-                    "unless you have the `manage_server` permission."
+                raise exceptions.Warning(
+                    f"`{ctx.prefix}{name}` can only be removed by **{owner}** unless you have `manage_server` permission."
                 )
 
-        db.execute(
-            """DELETE FROM customcommands
-            WHERE guild_id = ? and command = ?""",
-            (ctx.guild.id, name),
+        await self.bot.db.execute(
+            "DELETE FROM custom_command WHERE guild_id = %s AND command_trigger = %s",
+            ctx.guild.id,
+            name,
         )
-        await ctx.send(f"Custom command `{ctx.prefix}{name}` successfully deleted")
+        await util.send_success(ctx, f"Custom command `{ctx.prefix}{name}` has been deleted")
 
     @command.command()
     async def search(self, ctx, name):
@@ -114,7 +172,7 @@ class CustomCommands(commands.Cog):
             content.add_field(name="Internal commands", value="\n".join(internal_rows))
 
         custom_rows = []
-        for command in custom_command_list(ctx.guild.id, match=name):
+        for command in await self.custom_command_list(ctx.guild.id, match=name):
             custom_rows.append(f"{ctx.prefix}{command}")
         if custom_rows:
             content.add_field(name="Custom commands", value="\n".join(custom_rows))
@@ -128,40 +186,27 @@ class CustomCommands(commands.Cog):
     async def list(self, ctx):
         """List all commands on this server."""
         rows = []
-        for command in custom_command_list(ctx.guild.id):
+        for command in await self.custom_command_list(ctx.guild.id):
             rows.append(f"{ctx.prefix}{command}")
 
         if rows:
-            content = discord.Embed(title=f"{ctx.guild.name} commands")
-            await util.send_as_pages(ctx, content, rows, maxrows=25)
+            content = discord.Embed(title=f"{ctx.guild.name} custom commands")
+            await util.send_as_pages(ctx, content, rows)
         else:
             await ctx.send("No custom commands added on this server yet")
 
-    @command.command(name="eligibility")
-    async def command_eligibility(self, ctx, value: bool):
-        """Change whether everyone can add commands, or only server managers"""
-        db.update_setting(ctx.guild.id, "custom_commands_everyone", util.bool_to_int(value))
+    @command.command(name="restrict")
+    async def command_restrict(self, ctx, value: bool):
+        """Restrict command management to only people with manage_server permission."""
+        await queries.update_setting(ctx, "guild_settings", "restrict_custom_commands", value)
         if value:
-            await ctx.send("Everyone can now add custom commands!")
+            await util.send_success(
+                ctx, "Adding custom commands is now restricted to server managers."
+            )
         else:
-            await ctx.send("Adding commands now requires the `manage_server` permission!")
-
-
-def custom_command_list(guild_id, match=""):
-    """Returns a list of custom commands on server."""
-    command_list = set()
-    data = db.query(
-        """SELECT command FROM customcommands
-        WHERE guild_id = ?""",
-        (guild_id,),
-    )
-    if data is not None and len(data) > 0:
-        for command in data:
-            command = command[0]
-            if match in command:
-                command_list.add(command)
-
-    return command_list
+            await util.send_success(
+                ctx, "Adding custom commands is no longer restricted to server managers."
+            )
 
 
 def setup(bot):

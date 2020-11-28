@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS notification (
 CREATE TABLE IF NOT EXISTS custom_command (
     guild_id BIGINT,
     command_trigger VARCHAR(64),
+    content VARCHAR(2000),
     added_on DATETIME,
     added_by BIGINT,
     PRIMARY KEY (guild_id, command_trigger)
@@ -222,7 +223,7 @@ CREATE TABLE IF NOT EXISTS guild_settings (
 
 CREATE TABLE IF NOT EXISTS starboard_settings (
     guild_id BIGINT,
-    channel_id BIGINT,
+    channel_id BIGINT DEFAULT NULL,
     is_enabled BOOLEAN DEFAULT TRUE,
     reaction_count INT DEFAULT 3,
     emoji_name VARCHAR(32) DEFAULT ':star:',
@@ -233,7 +234,7 @@ CREATE TABLE IF NOT EXISTS starboard_settings (
 
 CREATE TABLE IF NOT EXISTS rolepicker_settings (
     guild_id BIGINT,
-    channel_id BIGINT,
+    channel_id BIGINT DEFAULT NULL,
     is_enabled BOOLEAN DEFAULT FALSE,
     case_sensitive BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (guild_id)
@@ -241,7 +242,7 @@ CREATE TABLE IF NOT EXISTS rolepicker_settings (
 
 CREATE TABLE IF NOT EXISTS greeter_settings (
     guild_id BIGINT,
-    channel_id BIGINT,
+    channel_id BIGINT DEFAULT NULL,
     is_enabled BOOLEAN DEFAULT TRUE,
     message_format VARCHAR(1024) DEFAULT NULL,
     PRIMARY KEY (guild_id)
@@ -249,7 +250,7 @@ CREATE TABLE IF NOT EXISTS greeter_settings (
 
 CREATE TABLE IF NOT EXISTS goodbye_settings (
     guild_id BIGINT,
-    channel_id BIGINT,
+    channel_id BIGINT DEFAULT NULL,
     is_enabled BOOLEAN DEFAULT TRUE,
     message_format VARCHAR(1024) DEFAULT NULL,
     PRIMARY KEY (guild_id)
@@ -257,9 +258,9 @@ CREATE TABLE IF NOT EXISTS goodbye_settings (
 
 CREATE TABLE IF NOT EXISTS logging_settings (
     guild_id BIGINT,
-    user_log_channel_id BIGINT,
-    ban_log_channel_id BIGINT,
-    message_log_channel_id BIGINT,
+    user_log_channel_id BIGINT DEFAULT NULL,
+    ban_log_channel_id BIGINT DEFAULT NULL,
+    message_log_channel_id BIGINT DEFAULT NULL,
     PRIMARY KEY (guild_id)
 );
 
