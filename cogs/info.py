@@ -8,8 +8,7 @@ import typing
 import copy
 import aiohttp
 from discord.ext import commands
-from operator import itemgetter
-from helpers import utilityfunctions as util
+from helpers import utilityfunctions as util, exceptions
 
 
 class Info(commands.Cog):
@@ -287,157 +286,182 @@ class Info(commands.Cog):
 
     @commands.group()
     async def commandstats(self, ctx):
-        """See the most used commands.
-
-        Usage:
-            >commandstats server [user]
-            >commandstats global [user]
-            >commandstats <command name>
+        """
+        See statistics of command usage.
+        use commandstats <command name> for stats of a specific command.
         """
         if ctx.invoked_subcommand is None:
             args = ctx.message.content.split()[1:]
             if not args:
-                await ctx.send(f"```{ctx.command.help}```")
+                await util.send_command_help(ctx)
             else:
                 await self.commandstats_single(ctx, " ".join(args))
 
     @commandstats.command(name="server")
     async def commandstats_server(self, ctx, user: discord.Member = None):
-        """Most used commands on this server."""
+        """Most used commands in this server."""
         content = discord.Embed(
-            title=f"`>_` Most used commands in {ctx.guild.name}"
+            title=f":bar_chart: Most used commands in {ctx.guild.name}"
             + ("" if user is None else f" by {user}")
         )
+        opt = []
         if user is not None:
-            data = db.query(
-                """SELECT command, SUM(count) FROM command_usage
-                WHERE guild_id = ? AND user_id = ? GROUP BY command""",
-                (ctx.guild.id, user.id),
-            )
-        else:
-            data = db.query(
-                """SELECT command, SUM(count) FROM command_usage
-                WHERE guild_id = ? GROUP BY command""",
-                (ctx.guild.id,),
-            )
+            opt = [user.id]
 
+        data = await self.bot.db.execute(
+            f"""
+            SELECT command_name, SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
+                SELECT command_name, SUM(uses) as use_sum, user_id FROM command_usage
+                    WHERE command_type = 'internal'
+                      AND guild_id = %s
+                    {'AND user_id = %s' if user is not None else ''}
+                GROUP BY command_name, user_id
+            ) as subq
+            GROUP BY command_name
+            ORDER BY total DESC
+            """,
+            ctx.guild.id,
+            *opt,
+        )
         rows = []
         total = 0
-        for command, count in sorted(data, key=itemgetter(1), reverse=True):
+        for i, (command_name, count, most_used_by_user_id, user_count) in enumerate(data, start=1):
             total += count
-            biggest_user = None
-            if user is None:
-                userdata = db.query(
-                    """SELECT user_id, MAX(count) AS highest FROM command_usage
-                    WHERE command = ? AND guild_id = ?""",
-                    (command, ctx.guild.id),
-                )
-                biggest_user = (self.bot.get_user(userdata[0][0]), userdata[0][1])
+            rows.append(f"**{count}** x `{ctx.prefix}{command_name}`")
 
-            rows.append(
-                f"**{count}** x `>{command}`"
-                + ("" if biggest_user is None else f" ( {biggest_user[1]} by {biggest_user[0]} )")
-            )
-
-        content.set_footer(text=f"Total {total} commands")
-        await util.send_as_pages(ctx, content, rows)
+        if rows:
+            content.set_footer(text=f"Total {total} commands")
+            await util.send_as_pages(ctx, content, rows)
+        else:
+            content.description = "No data :("
+            await ctx.send(embed=content)
 
     @commandstats.command(name="global")
     async def commandstats_global(self, ctx, user: discord.Member = None):
         """Most used commands globally."""
         content = discord.Embed(
-            title="`>_` Most used commands" + ("" if user is None else f" by {user}")
+            title=":bar_chart: Most used commands" + ("" if user is None else f" by {user}")
         )
+        opt = []
         if user is not None:
-            data = db.query(
-                """SELECT command, SUM(count) FROM command_usage
-                WHERE user_id = ? GROUP BY command""",
-                (user.id,),
-            )
-        else:
-            data = db.query("""SELECT command, SUM(count) FROM command_usage GROUP BY command""")
+            opt = [user.id]
 
+        data = await self.bot.db.execute(
+            f"""
+            SELECT command_name, SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
+                SELECT command_name, SUM(uses) as use_sum, user_id FROM command_usage
+                    WHERE command_type = 'internal'
+                    {'AND user_id = %s' if user is not None else ''}
+                GROUP BY command_name, user_id
+            ) as subq
+            GROUP BY command_name
+            ORDER BY total DESC
+            """,
+            *opt,
+        )
         rows = []
         total = 0
-        for command, count in sorted(data, key=itemgetter(1), reverse=True):
+        for i, (command_name, count, most_used_by_user_id, user_count) in enumerate(data, start=1):
             total += count
-            biggest_user = None
-            if user is None:
-                userdata = db.query(
-                    """SELECT user_id, MAX(countsum) FROM (
-                        SELECT user_id, SUM(count) as countsum FROM command_usage WHERE command = ? GROUP BY user_id
-                    )""",
-                    (command,),
-                )
-                biggest_user = (self.bot.get_user(userdata[0][0]), userdata[0][1])
-
             rows.append(
-                f"**{count}** x `>{command}`"
-                + ("" if biggest_user is None else f" ( {biggest_user[1]} by {biggest_user[0]} )")
+                f"`#{i:2}` **{count}** use{'' if count == 1 else 's'} : `{ctx.prefix}{command_name}`"
             )
 
-        content.set_footer(text=f"Total {total} commands")
-        await util.send_as_pages(ctx, content, rows)
+        if rows:
+            content.set_footer(text=f"Total {total} commands")
+            await util.send_as_pages(ctx, content, rows)
+        else:
+            content.description = "No data :("
+            await ctx.send(embed=content)
 
     async def commandstats_single(self, ctx, command_name):
         """Stats of a single command."""
         command = self.bot.get_command(command_name)
         if command is None:
-            return await ctx.send(f"> Command `>{command_name}` does not exist.")
+            raise exceptions.Info(f"Command `{ctx.prefix}{command_name}` does not exist!")
 
-        content = discord.Embed(title=f"`>{command}`")
+        content = discord.Embed(title=f":bar_chart: `{ctx.prefix}{command.qualified_name}`")
 
-        command_name = str(command)
+        # set command name to be tuple of subcommands if this is a command group
+        group = hasattr(command, "commands")
+        if group:
+            command_name = tuple(
+                [f"{command.name} {x.name}" for x in command.commands] + [command_name]
+            )
+        else:
+            command_name = command.qualified_name
 
-        # get data from database
-        usage_data = db.query(
-            """SELECT SUM(count) FROM command_usage WHERE command = ?""",
-            (command_name,),
-        )[0][0]
+        total_uses, most_used_by_user_id, most_used_by_user_amount = await self.bot.db.execute(
+            f"""
+            SELECT SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
+                SELECT SUM(uses) as use_sum, user_id FROM command_usage
+                    WHERE command_type = 'internal' AND command_name {'IN %s' if group else '= %s'}
+                GROUP BY user_id
+            ) as subq
+            """,
+            command_name,
+            one_row=True,
+        )
 
-        usage_data_server = db.query(
-            """SELECT SUM(count) FROM command_usage WHERE command = ? AND guild_id = ?""",
-            (command_name, ctx.guild.id),
-        )[0][0]
+        most_used_by_guild_id, most_used_by_guild_amount = await self.bot.db.execute(
+            f"""
+            SELECT guild_id, MAX(use_sum) FROM (
+                SELECT guild_id, SUM(uses) as use_sum FROM command_usage
+                    WHERE command_type = 'internal' AND command_name {'IN %s' if group else '= %s'}
+                GROUP BY guild_id
+            ) as subq
+            """,
+            command_name,
+            one_row=True,
+        )
 
-        most_uses_server = db.query(
-            """SELECT guild_id, MAX(countsum) FROM (
-                SELECT guild_id, SUM(count) as countsum FROM command_usage
-                WHERE command = ? GROUP BY guild_id
-            )""",
-            (command_name,),
-        )[0]
-
-        most_uses_user = db.query(
-            """SELECT user_id, MAX(countsum) FROM (
-                SELECT user_id, SUM(count) as countsum FROM command_usage
-                WHERE command = ? GROUP BY user_id
-            )""",
-            (command_name,),
-        )[0]
+        uses_in_this_server = (
+            await self.bot.db.execute(
+                f"""
+                SELECT SUM(uses) FROM command_usage
+                    WHERE command_type = 'internal'
+                    AND command_name {'IN %s' if group else '= %s'}
+                    AND guild_id = %s
+                GROUP BY guild_id
+                """,
+                command_name,
+                ctx.guild.id,
+                one_value=True,
+            )
+            or 0
+        )
 
         # show the data in embed fields
-        content.add_field(name="Uses", value=usage_data)
-        content.add_field(name="on this server", value=usage_data_server)
+        content.add_field(name="Uses", value=total_uses or 0)
+        content.add_field(name="on this server", value=uses_in_this_server)
         content.add_field(
             name="Server most used in",
-            value=f"{self.bot.get_guild(most_uses_server[0])} ({most_uses_server[1]})",
+            value=f"{self.bot.get_guild(most_used_by_guild_id)} ({most_used_by_guild_amount or 0})",
             inline=False,
         )
         content.add_field(
             name="Most total uses by",
-            value=f"{self.bot.get_user(most_uses_user[0])} ({most_uses_user[1]})",
+            value=f"{self.bot.get_user(most_used_by_user_id)} ({most_used_by_user_amount or 0})",
         )
 
         # additional data for command groups
-        if hasattr(command, "commands"):
-            content.description = "command group"
-            subcommands_string = ", ".join(f"'{command.name} {x.name}'" for x in command.commands)
-            subcommand_usage = db.query(
-                """SELECT SUM(count) FROM command_usage WHERE command IN (%s)"""
-                % subcommands_string
-            )[0][0]
-            content.add_field(inline=False, name="Total subcommand uses", value=subcommand_usage)
+        if group:
+            content.description = "Command Group"
+            subcommands_tuple = tuple([f"{command.name} {x.name}" for x in command.commands])
+            subcommand_usage = await self.bot.db.execute(
+                """
+                SELECT command_name, SUM(uses) FROM command_usage
+                    WHERE command_type = 'internal'
+                      AND command_name IN %s
+                GROUP BY command_name ORDER BY SUM(uses) DESC
+                """,
+                subcommands_tuple,
+            )
+            content.add_field(
+                name="Subcommand usage",
+                value="\n".join(f"{s[0]} - **{s[1]}**" for s in subcommand_usage),
+                inline=False,
+            )
 
         await ctx.send(embed=content)
 
@@ -455,9 +479,10 @@ class Info(commands.Cog):
         stats = await util.image_info_from_url(guild.icon_url)
         color = await util.color_from_image_url(str(guild.icon_url_as(size=128, format="png")))
         content.colour = await util.get_color(ctx, color)
-        content.set_footer(
-            text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
-        )
+        if stats is not None:
+            content.set_footer(
+                text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
+            )
 
         await ctx.send(embed=content)
 
