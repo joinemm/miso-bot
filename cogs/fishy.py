@@ -1,264 +1,283 @@
 import discord
 import random
 from discord.ext import commands
-from data import database as db
 from helpers import utilityfunctions as util
-
-COOLDOWN = 7200
-TRASH_ICONS = (
-    ":moyai:",
-    ":stopwatch:",
-    ":wrench:",
-    ":pick:",
-    ":nut_and_bolt:",
-    ":gear:",
-    ":toilet:",
-    ":alembic:",
-    ":bathtub:",
-    ":scissors:",
-    ":boot:",
-    ":high_heel:",
-    ":saxophone:",
-    ":trumpet:",
-    ":anchor:",
-    ":shopping_cart:",
-    ":paperclips:",
-    ":paperclip:",
-    ":prayer_beads:",
-    ":oil:",
-    ":compression:",
-    ":radio:",
-    ":fax:",
-    ":movie_camera:",
-    ":projector:",
-    ":guitar:",
-    ":violin:",
-    ":telephone:",
-    ":alarm_clock:",
-    ":fire_extinguisher:",
-    ":screwdriver:",
-    ":wrench:",
-    ":magnet:",
-    ":coffin:",
-    ":urn:",
-    ":amphora:",
-    ":crystal_ball:",
-    ":telescope:",
-    ":microscope:",
-    ":microbe:",
-    ":broom:",
-    ":basket:",
-    ":sewing_needle:",
-    ":roll_of_paper:",
-    ":plunger:",
-    ":bucket:",
-    ":toothbrush:",
-    ":soap:",
-    ":razor:",
-    ":sponge:",
-    ":squeeze_bottle:",
-    ":key:",
-    ":teddy_bear:",
-    ":frame_photo:",
-    ":nesting_dolls:",
-    ":izakaya_lantern:",
-    ":wind_chime:",
-    ":safety_pin:",
-    ":newspaper2:",
-)
 
 
 class Fishy(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.COOLDOWN = 7200
         self.FISHTYPES = {
-            "trash": trash,
-            "common": fish_common,
-            "uncommon": fish_uncommon,
-            "rare": fish_rare,
-            "legendary": fish_legendary,
+            "trash": self.trash,
+            "common": self.fish_common,
+            "uncommon": self.fish_uncommon,
+            "rare": self.fish_rare,
+            "legendary": self.fish_legendary,
         }
         self.WEIGHTS = [9, 60, 20, 10, 1]
+        self.COOLDOWN_STRINGS = [
+            "Bro chill, you can't fish yet! Please wait {time}",
+            "You can't fish yet, fool! Please wait {time}",
+            "You're fishing too fast! Please wait {time}",
+            "You're still on cooldown buddy. Please wait {time}",
+            "Please wait {time} to fish again!",
+            "Sorry, but you have to wait {time} to fish again!",
+            "Not so fast! Please wait {time}",
+            "You must wait {time} to fish again!",
+        ]
+        self.TRASH_ICONS = [
+            ":moyai:",
+            ":stopwatch:",
+            ":wrench:",
+            ":pick:",
+            ":nut_and_bolt:",
+            ":gear:",
+            ":toilet:",
+            ":alembic:",
+            ":bathtub:",
+            ":scissors:",
+            ":boot:",
+            ":high_heel:",
+            ":saxophone:",
+            ":trumpet:",
+            ":anchor:",
+            ":shopping_cart:",
+            ":paperclips:",
+            ":paperclip:",
+            ":prayer_beads:",
+            ":oil:",
+            ":compression:",
+            ":radio:",
+            ":fax:",
+            ":movie_camera:",
+            ":projector:",
+            ":guitar:",
+            ":violin:",
+            ":telephone:",
+            ":alarm_clock:",
+            ":fire_extinguisher:",
+            ":screwdriver:",
+            ":wrench:",
+            ":magnet:",
+            ":coffin:",
+            ":urn:",
+            ":amphora:",
+            ":crystal_ball:",
+            ":telescope:",
+            ":microscope:",
+            ":microbe:",
+            ":broom:",
+            ":basket:",
+            ":sewing_needle:",
+            ":roll_of_paper:",
+            ":plunger:",
+            ":bucket:",
+            ":toothbrush:",
+            ":soap:",
+            ":razor:",
+            ":sponge:",
+            ":squeeze_bottle:",
+            ":key:",
+            ":teddy_bear:",
+            ":frame_photo:",
+            ":nesting_dolls:",
+            ":izakaya_lantern:",
+            ":wind_chime:",
+            ":safety_pin:",
+            ":newspaper2:",
+        ]
 
     @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
     async def fishy(self, ctx, user=None):
-        """Go fishing and receive or give random fish.
-
-        Usage:
-            >fishy
-            >fishy <user>
-        """
+        """Go fishing."""
         receiver = await util.get_member(ctx, user, fallback=ctx.author)
         if receiver is not None and receiver is not ctx.author:
             gift = True
         else:
             gift = False
 
-        fishdata = db.fishdata(ctx.author.id)
-        if fishdata is not None and fishdata.timestamp is not None:
-            time_since_fishy = ctx.message.created_at.timestamp() - fishdata.timestamp
+        last_fishy = await self.bot.db.execute(
+            "SELECT last_fishy FROM fishy WHERE user_id = %s", ctx.author.id, one_value=True
+        )
+        if last_fishy:
+            time_since_fishy = ctx.message.created_at.timestamp() - last_fishy.timestamp()
         else:
-            time_since_fishy = COOLDOWN
+            time_since_fishy = self.COOLDOWN
 
         TESTING = False
-        if time_since_fishy < COOLDOWN and not TESTING:
-            not_yet_quotes = [
-                "Bro chill, you can't fish yet! Please wait {time}",
-                "You can't fish yet, fool! Please wait {time}",
-                "You're fishing too fast! Please wait {time}",
-                "You're still on cooldown buddy. Please wait {time}",
-                "Please wait {time} to fish again!",
-                "Sorry, but you have to wait {time} to fish again!",
-                "Not so fast! Please wait {time}",
-                "You must wait {time} to fish again!",
-            ]
-            wait_time = f"**{util.stringfromtime(COOLDOWN - time_since_fishy, 2)}**"
-            await ctx.send(random.choice(not_yet_quotes).format(time=wait_time))
+        if time_since_fishy < self.COOLDOWN and not TESTING:
+            wait_time = f"**{util.stringfromtime(self.COOLDOWN - time_since_fishy, 2)}**"
+            await ctx.send(random.choice(self.COOLDOWN_STRINGS).format(time=wait_time))
         else:
             catch = random.choices(list(self.FISHTYPES.keys()), self.WEIGHTS)[0]
             amount = await self.FISHTYPES[catch](ctx, receiver, gift)
-            db.add_fishy(
+            await self.bot.db.execute(
+                """
+                INSERT INTO fishy (user_id, fishy_count, biggest_fish)
+                    VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    fishy_count = fishy_count + VALUES(fishy_count),
+                    biggest_fish = GREATEST(biggest_fish, VALUES(biggest_fish))
+                """,
                 receiver.id,
-                catch,
                 amount,
-                ctx.message.created_at.timestamp(),
-                fisher_id=(ctx.author.id if gift else None),
+                amount,
+            )
+            await self.bot.db.execute(
+                f"""
+                INSERT INTO fish_type (user_id, {catch})
+                    VALUES (%s, 1)
+                ON DUPLICATE KEY
+                    UPDATE {catch} = {catch} + 1
+                """,
+                receiver.id,
+            )
+
+            await self.bot.db.execute(
+                """
+                INSERT INTO fishy (user_id, fishy_gifted_count, last_fishy)
+                    VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    fishy_gifted_count = fishy_gifted_count + VALUES(fishy_gifted_count),
+                    last_fishy = VALUES(last_fishy)
+                """,
+                ctx.author.id,
+                amount if gift else 0,
+                ctx.message.created_at,
             )
 
     @commands.command(aliases=["fintimer", "fisytimer", "foshytimer", "ft"])
     async def fishytimer(self, ctx):
         """Check your fishy timer without actually fishing."""
-        fishdata = db.fishdata(ctx.author.id)
-        if fishdata is not None and fishdata.timestamp is not None:
-            time_since_fishy = ctx.message.created_at.timestamp() - fishdata.timestamp
-
-            if time_since_fishy < COOLDOWN:
-                wait_time = f"**{util.stringfromtime(COOLDOWN - time_since_fishy, 2)}**"
-                await ctx.send(f":clock4: You will need to wait **{wait_time}** to fish again.")
+        last_fishy = await self.bot.db.execute(
+            "SELECT last_fishy FROM fishy WHERE user_id = %s", ctx.author.id, one_value=True
+        )
+        if last_fishy:
+            time_since_fishy = ctx.message.created_at.timestamp() - last_fishy.timestamp()
+            if time_since_fishy < self.COOLDOWN:
+                remaining = self.COOLDOWN - time_since_fishy
+                wait_time = f"**{util.stringfromtime(remaining, 2)}**"
+                clock_face = f":clock{int(util.map_to_range(remaining, 7200, 0, 1, 12))}:"
+                await ctx.send(f"{clock_face} You need to wait **{wait_time}** to fish again.")
             else:
                 await ctx.send(":sparkles: Good news! You can fish right now!")
-
         else:
-            await ctx.send("You have never fished...?")
+            await ctx.send(":thinking: You have never fished...?")
 
     @commands.command(aliases=["finstats", "fisystats", "foshystats", "fs"])
     async def fishystats(self, ctx, user=None):
-        """Show fishing statistics.
-
-        Usage:
-            >fishystats
-            >fishystats <user>
-        """
+        """See fishing statistics."""
         globaldata = user == "global"
         if not globaldata:
             user = await util.get_user(ctx, user, fallback=ctx.author)
-            fishdata = db.fishdata(user.id)
-            owner = user.name
+            owner = user
+            data = await self.bot.db.execute(
+                """
+                SELECT fishy_count, fishy_gifted_count, biggest_fish,
+                    trash, common, uncommon, rare, legendary
+                    FROM fishy JOIN fish_type
+                        ON fishy.user_id = fish_type.user_id
+                    WHERE fishy.user_id = %s
+                """,
+                user.id,
+                one_row=True,
+            )
 
         else:
-            owner = "global"
-            fishdata = None
-            users = db.query("select user_id from fishy")
-            for user_id in users:
-                user_fishdata = db.fishdata(user_id[0])
-                if fishdata is None:
-                    fishdata = user_fishdata
-                else:
-                    fishdata = fishdata._replace(
-                        fishy=fishdata.fishy + user_fishdata.fishy,
-                        fishy_gifted=fishdata.fishy_gifted + user_fishdata.fishy_gifted,
-                        trash=fishdata.trash + user_fishdata.trash,
-                        common=fishdata.common + user_fishdata.common,
-                        uncommon=fishdata.uncommon + user_fishdata.uncommon,
-                        rare=fishdata.rare + user_fishdata.rare,
-                        legendary=fishdata.legendary + user_fishdata.legendary,
-                    )
+            owner = "Global"
+            data = await self.bot.db.execute(
+                """
+                SELECT SUM(fishy_count), SUM(fishy_gifted_count), MAX(biggest_fish),
+                    SUM(trash), SUM(common), SUM(uncommon), SUM(rare), SUM(legendary)
+                    FROM fishy JOIN fish_type
+                        ON fishy.user_id = fish_type.user_id
+                """,
+                one_row=True,
+            )
 
+        total = sum(data[4:8])
         content = discord.Embed(
             title=f":fishing_pole_and_fish: {owner} fishy stats",
-            color=discord.Color.blue(),
+            color=int("55acee", 16),
+            description="\n".join(
+                [
+                    f"Fishy owned: **{data[0]}**",
+                    f"Fishy gifted: **{data[1]}**",
+                    f"Times fished: **{total}**",
+                    f"Biggest fish: **{data[2]}**",
+                    f"Average fish: **{data[0] / total:.2f}**",
+                ]
+            ),
         )
-        if fishdata is not None:
-            total = (
-                fishdata.trash
-                + fishdata.common
-                + fishdata.uncommon
-                + fishdata.rare
-                + fishdata.legendary
-            )
-            content.description = (
-                f"Total fishy: **{fishdata.fishy}**\n"
-                f"Fishy gifted: **{fishdata.fishy_gifted}**\n"
-                f"Total fish count: **{total}**\n"
-                f"Average fishy: **{fishdata.fishy / total:.2f}**\n\n"
-                f"Trash: **{fishdata.trash}** - {(fishdata.trash / total) * 100:.1f}%\n"
-                f"Common: **{fishdata.common}** - {(fishdata.common / total) * 100:.1f}%\n"
-                f"Uncommon: **{fishdata.uncommon}** - {(fishdata.uncommon / total) * 100:.1f}%\n"
-                f"Rare: **{fishdata.rare}** - {(fishdata.rare / total) * 100:.1f}%\n"
-                f"Legendary: **{fishdata.legendary}** - {(fishdata.legendary / total) * 100:.1f}%\n"
-            )
-
+        content.add_field(
+            name="Rarity breakdown",
+            value="\n".join(
+                [
+                    f"Trash: **{data[3]}** ({(data[3] / total) * 100:.1f}%)",
+                    f"Common: **{data[4]}** ({(data[4] / total) * 100:.1f}%)",
+                    f"Uncommon: **{data[5]}** ({(data[4] / total) * 100:.1f}%)",
+                    f"Rare: **{data[6]}** ({(data[6] / total) * 100:.1f}%)",
+                    f"Legendary: **{data[7]}** ({(data[7] / total) * 100:.1f}%)",
+                ]
+            ),
+        )
         await ctx.send(embed=content)
 
+    async def fish_common(self, ctx, user, gift):
+        amount = random.randint(1, 29)
+        if amount == 1:
+            await ctx.send(
+                f"Caught only **{amount}** fishy "
+                + (f"for **{user.name}**" if gift else "")
+                + "! :fishing_pole_and_fish:"
+            )
+        else:
+            await ctx.send(
+                f"Caught **{amount}** fishies "
+                + (f"for **{user.name}**" if gift else "")
+                + "! :fishing_pole_and_fish:"
+            )
+        return amount
 
-async def fish_common(ctx, user, gift):
-    amount = random.randint(1, 29)
-    if amount == 1:
+    async def fish_uncommon(self, ctx, user, gift):
+        amount = random.randint(30, 99)
         await ctx.send(
-            f"Caught only **{amount}** fishy "
-            + (f"for **{user.name}**" if gift else "")
-            + "! :fishing_pole_and_fish:"
+            "**Caught an uncommon fish"
+            + (f" for {user.name}" if gift else "")
+            + f"!** (**{amount}** fishies) :blowfish:"
         )
-    else:
+        return amount
+
+    async def fish_rare(self, ctx, user, gift):
+        amount = random.randint(100, 399)
         await ctx.send(
-            f"Caught **{amount}** fishies "
-            + (f"for **{user.name}**" if gift else "")
-            + "! :fishing_pole_and_fish:"
+            ":star: **Caught a super rare fish"
+            + (f" for {user.name}" if gift else "")
+            + f"! :star: ({amount} "
+            "fishies)** :tropical_fish:"
         )
-    return amount
+        return amount
 
+    async def fish_legendary(self, ctx, user, gift):
+        amount = random.randint(400, 750)
+        await ctx.send(
+            ":star2: **Caught a *legendary* fish"
+            + (f" for {user.name}" if gift else "")
+            + f"!! :star2: ({amount} "
+            "fishies)** :dolphin:"
+        )
+        return amount
 
-async def fish_uncommon(ctx, user, gift):
-    amount = random.randint(30, 99)
-    await ctx.send(
-        "**Caught an uncommon fish"
-        + (f" for {user.name}" if gift else "")
-        + f"!** (**{amount}** fishies) :blowfish:"
-    )
-    return amount
-
-
-async def fish_rare(ctx, user, gift):
-    amount = random.randint(100, 399)
-    await ctx.send(
-        ":star: **Caught a super rare fish"
-        + (f" for {user.name}" if gift else "")
-        + f"! :star: ({amount} "
-        "fishies)** :tropical_fish:"
-    )
-    return amount
-
-
-async def fish_legendary(ctx, user, gift):
-    amount = random.randint(400, 750)
-    await ctx.send(
-        ":star2: **Caught a *legendary* fish"
-        + (f" for {user.name}" if gift else "")
-        + f"!! :star2: ({amount} "
-        "fishies)** :dolphin:"
-    )
-    return amount
-
-
-async def trash(ctx, user, gift):
-    icon = random.choice(TRASH_ICONS)
-    await ctx.send(
-        f"Caught **trash{'!' if not gift else ''}** {icon}"
-        + (f" for {user.name}!" if gift else "")
-        + " Better luck next time."
-    )
-    return 0
+    async def trash(self, ctx, user, gift):
+        icon = random.choice(self.TRASH_ICONS)
+        await ctx.send(
+            f"Caught **trash{'!' if not gift else ''}** {icon}"
+            + (f" for {user.name}!" if gift else "")
+            + " Better luck next time."
+        )
+        return 0
 
 
 def setup(bot):
