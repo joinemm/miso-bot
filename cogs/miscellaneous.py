@@ -1,39 +1,79 @@
 import discord
 import random
-import os
 import arrow
 import aiohttp
-import asyncio
-from bs4 import BeautifulSoup
 from libraries import minestat
 from discord.ext import commands
-from google_images_search import GoogleImagesSearch
-from data import database as db
 from helpers import utilityfunctions as util
 from libraries import unicode_codes
-
-
-GCS_DEVELOPER_KEY = os.environ.get("GOOGLE_KEY")
-
-hs_colors = {
-    "aries": discord.Color.red(),
-    "taurus": discord.Color.dark_teal(),
-    "gemini": discord.Color.gold(),
-    "cancer": discord.Color.greyple(),
-    "leo": discord.Color.orange(),
-    "virgo": discord.Color.green(),
-    "libra": discord.Color.dark_teal(),
-    "scorpio": discord.Color.dark_red(),
-    "sagittarius": discord.Color.purple(),
-    "capricorn": discord.Color.dark_green(),
-    "aquarius": discord.Color.teal(),
-    "pisces": discord.Color.blurple(),
-}
+from helpers import exceptions
 
 
 class Miscellaneous(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.hs = {
+            "aquarius": {
+                "name": "Aquarius",
+                "emoji": ":aquarius:",
+                "date_range": "Jan 20 - Feb 18",
+            },
+            "pisces": {
+                "name": "Pisces",
+                "emoji": ":pisces:",
+                "date_range": "Feb 19 - Mar 20",
+            },
+            "aries": {
+                "name": "Aries",
+                "emoji": ":aries:",
+                "date_range": "Mar 21 - Apr 19",
+            },
+            "taurus": {
+                "name": "Taurus",
+                "emoji": ":taurus:",
+                "date_range": "Apr 20 - May 20",
+            },
+            "gemini": {
+                "name": "Gemini",
+                "emoji": ":gemini:",
+                "date_range": "May 21 - Jun 20",
+            },
+            "cancer": {
+                "name": "Cancer",
+                "emoji": ":cancer:",
+                "date_range": "Jun 21 - Jul 22",
+            },
+            "leo": {
+                "name": "Leo",
+                "emoji": ":leo:",
+                "date_range": "Jul 23 - Aug 22",
+            },
+            "virgo": {
+                "name": "Virgo",
+                "emoji": ":virgo:",
+                "date_range": "Aug 23 - Sep 22",
+            },
+            "libra": {
+                "name": "Libra",
+                "emoji": ":libra:",
+                "date_range": "Sep 23 - Oct 22",
+            },
+            "scorpio": {
+                "name": "Scorpio",
+                "emoji": ":scorpius:",
+                "date_range": "Oct 23 - Nov 21",
+            },
+            "sagittarius": {
+                "name": "Sagittarius",
+                "emoji": ":sagittarius:",
+                "date_range": "Nov 22 - Dec 21",
+            },
+            "capricorn": {
+                "name": "Capricorn",
+                "emoji": ":capricorn:",
+                "date_range": "Dec 22 - Jan 19",
+            },
+        }
 
     @commands.command(aliases=["random"])
     async def rng(self, ctx, *, number_range):
@@ -102,62 +142,6 @@ class Miscellaneous(commands.Cog):
             )
         choice = random.choice(choices).strip()
         await ctx.send(f"I choose **{choice}**")
-
-    @commands.group(invoke_without_command=True)
-    async def stan(self, ctx):
-        """Get a random kpop artist to stan.
-
-        Use >stan update to update the database.
-        """
-        artist_list = db.get_from_data_json(["artists"])
-        if artist_list:
-            await ctx.send(f"stan **{random.choice(artist_list)}**")
-        else:
-            await ctx.send(
-                ":warning: Artist list is empty :thinking: Update it with `>stan update`"
-            )
-
-    @stan.command()
-    async def update(self, ctx):
-        """Update the artist database."""
-        artist_list_old = db.get_from_data_json(["artists"])
-        artist_list_new = set()
-        urls_to_scrape = [
-            "https://kprofiles.com/k-pop-girl-groups/",
-            "https://kprofiles.com/disbanded-kpop-groups-list/",
-            "https://kprofiles.com/disbanded-kpop-boy-groups/",
-            "https://kprofiles.com/k-pop-boy-groups/",
-            "https://kprofiles.com/co-ed-groups-profiles/",
-            "https://kprofiles.com/kpop-duets-profiles/",
-            "https://kprofiles.com/kpop-solo-singers/",
-        ]
-
-        async def scrape(session, url):
-            artists = []
-            async with session.get(url) as response:
-                soup = BeautifulSoup(await response.text(), "html.parser")
-                content = soup.find("div", {"class": "entry-content herald-entry-content"})
-                outer = content.find_all("p")
-                for p in outer:
-                    for artist in p.find_all("a"):
-                        artist = artist.text.replace("Profile", "").replace("profile", "").strip()
-                        if not artist == "":
-                            artists.append(artist)
-            return artists
-
-        tasks = []
-        async with aiohttp.ClientSession() as session:
-            for url in urls_to_scrape:
-                tasks.append(scrape(session, url))
-
-            artist_list_new = set(sum(await asyncio.gather(*tasks), []))
-
-        db.save_into_data_json(["artists"], list(artist_list_new))
-        await ctx.send(
-            f"**Artist list updated**\n"
-            f"New entries: **{len(artist_list_new) - len(artist_list_old)}**\n"
-            f"Total: **{len(artist_list_new)}**"
-        )
 
     @commands.command()
     async def ship(self, ctx, *, names):
@@ -264,27 +248,38 @@ class Miscellaneous(commands.Cog):
             except IndexError:
                 port = 25565
 
-            db.execute(
-                """REPLACE INTO minecraft VALUES (?, ?, ?)""",
-                (ctx.guild.id, address, port),
+            await self.bot.db.execute(
+                """
+                INSERT INTO minecraft_server (guild_id, server_address, port)
+                    VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    server_address = VALUES(server_address),
+                    port = VALUES(port)
+                """,
+                ctx.guild.id,
+                address,
+                port,
             )
-            return await ctx.send(f"Minecraft server of this discord set to `{address}:{port}`")
+            return await util.send_success(
+                ctx, f"Default Minecraft server of this discord saved as `{address}:{port}`"
+            )
 
         if address is None:
-            serverdata = db.query(
-                """SELECT address, port FROM minecraft WHERE guild_id = ?""",
-                (ctx.guild.id,),
+            address, port = await self.bot.db.execute(
+                "SELECT server_address, port FROM minecraft_server WHERE guild_id = %s",
+                ctx.guild.id,
             )
-            if serverdata is None:
-                return await ctx.send("No minecraft server saved for this discord server!")
-            else:
-                address, port = serverdata[0]
+            if address is None or port is None:
+                raise exceptions.Info(
+                    "No default Minecraft server saved for this discord server!"
+                    f"Use `{ctx.prefix}minecraft set` to save one or"
+                    f"`{ctx.prefix}minecraft <address> <port>` to see any server"
+                )
 
         server = await self.bot.loop.run_in_executor(
             None, lambda: minestat.MineStat(address, int(port or "25565"))
         )
-        content = discord.Embed()
-        content.colour = discord.Color.green()
+        content = discord.Embed(color=discord.Color.green())
         if server.online:
             content.add_field(name="Server Address", value=f"`{server.address}`")
             content.add_field(name="Version", value=server.version)
@@ -295,10 +290,7 @@ class Miscellaneous(commands.Cog):
             content.set_footer(text=f"Message of the day: {server.motd}")
         else:
             content.description = ":warning: **Server is offline**"
-        content.set_thumbnail(
-            url="https://vignette.wikia.nocookie.net/potcoplayers/images/c/c2/"
-            "Minecraft-icon-file-gzpvzfll.png/revision/latest?cb=20140813205910"
-        )
+        content.set_thumbnail(url="https://i.imgur.com/P1IxD0Q.png")
         await ctx.send(embed=content)
 
     @commands.command()
@@ -323,23 +315,27 @@ class Miscellaneous(commands.Cog):
         await self.send_hs(ctx, "yesterday")
 
     async def send_hs(self, ctx, day):
-        userdata = db.userdata(ctx.author.id)
-        if userdata is None or userdata.sunsign is None:
-            return await ctx.send(
-                "Please save your sunsign using `>horoscope set <sign>`\n"
-                "use `>horoscope list` if you don't know which one you are."
+        sunsign = await self.bot.db.execute(
+            "SELECT sunsign FROM user_settings WHERE user_id = %s", ctx.author.id, one_value=True
+        )
+        if not sunsign or sunsign is None:
+            raise exceptions.Info(
+                "Please save your zodiac sign using `>horoscope set <sign>`\n"
+                "Use `>horoscope list` if you don't know which one you are."
             )
-        sign = userdata.sunsign
-        params = {"sign": sign, "day": day}
+        params = {"sign": sunsign, "day": day}
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 "https://aztro.sameerkumar.website/", params=params
             ) as response:
                 data = await response.json()
 
-        content = discord.Embed(color=hs_colors[sign])
-        content.title = f"{sign.capitalize()} - {data['current_date']}"
-        content.description = data["description"]
+        sign = self.hs.get(sunsign)
+        content = discord.Embed(
+            color=int("9266cc", 16),
+            title=f"{sign['emoji']} {sign['name']} - {data['current_date']}",
+            description=data["description"],
+        )
 
         content.add_field(name="Mood", value=data["mood"], inline=True)
         content.add_field(name="Compatibility", value=data["compatibility"], inline=True)
@@ -352,90 +348,37 @@ class Miscellaneous(commands.Cog):
 
     @horoscope.command()
     async def set(self, ctx, sign):
-        """Set your sunsign."""
-        hs = [
-            "aries",
-            "taurus",
-            "gemini",
-            "cancer",
-            "leo",
-            "virgo",
-            "libra",
-            "scorpio",
-            "sagittarius",
-            "capricorn",
-            "aquarius",
-            "pisces",
-        ]
+        """Save your zodiac sign."""
         sign = sign.lower()
-        if sign not in hs:
-            return await ctx.send(
-                f"`{sign}` is not a valid sunsign! Use `>horoscope list` for a list of sunsigns."
+        if self.hs.get(sign) is None:
+            raise exceptions.Info(
+                f"`{sign}` is not a valid zodiac! Use `>horoscope list` for a list of zodiacs."
             )
 
-        db.update_user(ctx.author.id, "sunsign", sign)
-        await ctx.send(f"Sunsign saved as `{sign}`")
+        await ctx.bot.db.execute(
+            """
+            INSERT INTO user_settings (user_id, sunsign)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                sunsign = VALUES(sunsign)
+            """,
+            ctx.author.id,
+            sign,
+        )
+        await ctx.send(f"Zodiac saved as **{sign.capitalize()}** {self.hs_emojis.get(sign)}")
 
     @horoscope.command()
     async def list(self, ctx):
-        """Get list of all sunsigns."""
-        sign_list = [
-            "`(Mar 21-Apr 19)` **Aries**",
-            "`(Apr 20-May 20)` **Taurus**",
-            "`(May 21-Jun 20)` **Gemini**",
-            "`(Jun 21-Jul 22)` **Cancer**",
-            "`(Jul 23-Aug 22)` **Leo**",
-            "`(Aug 23-Sep 22)` **Virgo**",
-            "`(Sep 23-Oct 22)` **Libra**",
-            "`(Oct 23-Nov 21)` **Scorpio**",
-            "`(Nov 22-Dec 21)` **Sagittarius**",
-            "`(Dec 22-Jan 19)` **Capricorn**",
-            "`(Jan 20-Feb 18)` **Aquarius**",
-            "`(Feb 19-Mar 20)` **Pisces**",
-        ]
-        content = discord.Embed(color=discord.Color.gold())
-        content.title = "Sunsign list"
-        content.description = "\n".join(sign_list)
+        """Get list of all zodiac signs."""
+        content = discord.Embed(
+            color=int("9266cc", 16),
+            title=":crystal_ball: Zodiac signs",
+            description="\n".join(
+                f"{sign['emoji']} **{sign['name']}**: {sign['date_range']}"
+                for sign in self.hs.values()
+            ),
+        )
         return await ctx.send(embed=content)
-
-    @commands.group(case_insensitive=True)
-    async def idol(self, ctx):
-        """Kpop idols database."""
-        await util.command_group_help(ctx)
-
-    @idol.command()
-    async def random(self, ctx, gender=None):
-        """Random kpop idol.
-
-        Usage:
-            >idol random
-            >idol random [girl | boy]
-        """
-        if gender is not None:
-            gender = gender.lower()
-            if gender in ["f", "girl", "girls"]:
-                gender = "F"
-            elif gender in ["m", "boy", "boys"]:
-                gender = "M"
-            else:
-                gender = None
-
-        data = db.random_kpop_idol(gender)
-        image = await self.bot.loop.run_in_executor(
-            None, lambda: image_search(data.stage_name + " " + (data.group or ""))
-        )
-        content = discord.Embed(color=discord.Color.blurple())
-        content.set_image(url=image)
-        content.title = (f"{data.group} " if data.group is not None else "") + data.stage_name
-        content.description = (
-            f"**Full name:** {data.full_name}\n"
-            f"**Korean name:** {data.k_stage_name} ({data.korean_name})\n"
-            f"**Birthday:** {data.date_of_birth}\n"
-            f"**Country:** {data.country}\n"
-            + (f"**Birthplace:** {data.birthplace}" if data.birthplace is not None else "")
-        )
-
-        await ctx.send(embed=content)
 
     @commands.command(name="emoji", aliases=["emote"])
     async def big_emoji(self, ctx, emoji):
@@ -450,15 +393,15 @@ class Miscellaneous(commands.Cog):
         if emoji[0] == "<":
             emoji = await util.get_emoji(ctx, emoji)
             if emoji is None:
-                return await ctx.send(":warning: I don't know this emoji!")
+                raise exceptions.Warning("I don't know this emoji!")
 
             emoji_url = emoji.url
             emoji_name = emoji.name
         else:
             # unicode emoji
-            emoji_name = unicode_codes.UNICODE_EMOJI_ALIAS.get(emoji)
+            emoji_name = unicode_codes.UNICODE_EMOJI.get(emoji)
             if emoji_name is None:
-                return await ctx.send(":warning: I don't know this emoji!")
+                raise exceptions.Warning("I don't know this emoji!")
 
             codepoint = "-".join(
                 f"{ord(e):x}" for e in unicode_codes.EMOJI_ALIAS_UNICODE.get(emoji_name)
@@ -496,18 +439,3 @@ class Miscellaneous(commands.Cog):
 
 def setup(bot):
     bot.add_cog(Miscellaneous(bot))
-
-
-def image_search(query):
-    gis = GoogleImagesSearch(GCS_DEVELOPER_KEY, "016720228003584159752:xwo6ysur40a")
-    _search_params = {
-        "q": query,
-        "safe": "off",
-    }
-
-    try:
-        gis.search(search_params=_search_params)
-        img = gis.results()[0].url
-        return img
-    except Exception:
-        return ""
