@@ -3,7 +3,7 @@ from time import time
 import discord
 from discord.ext import commands
 from helpers import log
-from data import database as db
+from modules import queries
 
 command_logger = log.get_command_logger()
 
@@ -60,7 +60,7 @@ class Bangs(commands.Cog):
             pass
 
         command_logger.info(log.log_command(ctx))
-        db.log_command_usage(ctx)
+        await queries.log_command_usage(ctx)
         try:
             bang, args = ctx.message.content[len(ctx.prefix) + 1 :].split(" ", 1)
             if len(bang) != 0:
