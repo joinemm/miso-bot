@@ -38,8 +38,11 @@ class ErrorHander(commands.Cog):
     async def send(self, ctx, level, message, help_footer=None):
         """Send error message to chat."""
         settings = self.message_levels.get(level)
+        if level == "error":
+            message = f"`{message}`"
+
         embed = discord.Embed(
-            color=settings["color"], description=f"{settings['description_prefix']} `{message}`"
+            color=settings["color"], description=f"{settings['description_prefix']} {message}"
         )
 
         help_footer = help_footer or settings["help_footer"]
@@ -75,17 +78,18 @@ class ErrorHander(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             return await util.send_command_help(ctx)
 
-        command_logger.error(
-            f'{type(error).__name__:25} > {ctx.guild} ? {ctx.author} "{ctx.message.content}" > {error}'
-        )
-
         if isinstance(error, exceptions.Info):
-            await self.send(ctx, "info", str(error))
-
+            command_logger.info(log.log_command(ctx, extra=error))
+            return await self.send(ctx, "info", str(error))
         elif isinstance(error, exceptions.Warning):
-            await self.send(ctx, "warning", str(error))
+            command_logger.warning(log.log_command(ctx, extra=error))
+            return await self.send(ctx, "warning", str(error))
+        else:
+            command_logger.error(
+                f'{type(error).__name__:25} > {ctx.guild} : {ctx.author} "{ctx.message.content}" > {error}'
+            )
 
-        elif isinstance(error, exceptions.Blacklist):
+        if isinstance(error, exceptions.Blacklist):
             await self.send(ctx, "error", error.message)
 
         elif isinstance(error, commands.NoPrivateMessage):
@@ -99,11 +103,11 @@ class ErrorHander(commands.Cog):
                 pass
 
         elif isinstance(error, commands.MissingPermissions):
-            perms = ", ".join(f"`{x}`" for x in error.missing_perms)
+            perms = ", ".join(f"**{x}**" for x in error.missing_perms)
             await self.send(ctx, "warning", f"You require {perms} permission to use this command!")
 
         elif isinstance(error, commands.BotMissingPermissions):
-            perms = ", ".join(f"`{x}`" for x in error.missing_perms)
+            perms = ", ".join(f"**{x}**" for x in error.missing_perms)
             await self.send(
                 ctx, "warning", f"Cannot execute command! Bot is missing permission {perms}"
             )
@@ -122,7 +126,7 @@ class ErrorHander(commands.Cog):
             await ctx.send("Stop spamming! >:(")
 
         elif isinstance(error, commands.NoPrivateMessage):
-            await self.send(ctx, "info", "You cannot use this command in private messages")
+            await self.send(ctx, "info", "You cannot use this command in private messages!")
 
         elif isinstance(error, util.PatronCheckFailure):
             await self.send(
@@ -167,7 +171,7 @@ class ErrorHander(commands.Cog):
             else:
                 message = error.display()
 
-            await self.send(ctx, "warning", message)
+            await self.send(ctx, "error", message)
 
         else:
             await self.log_and_traceback(ctx, error)
