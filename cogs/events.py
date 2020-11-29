@@ -7,6 +7,7 @@ import re
 import random
 from libraries import unicode_codes
 import asyncio
+from modules import queries
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
@@ -36,18 +37,7 @@ class Events(commands.Cog):
         if ctx.invoked_subcommand is None:
             command_logger.info(log.log_command(ctx))
             if ctx.guild is not None:
-                self.bot.db.execute(
-                    """
-                    INSERT INTO command_usage (guild_id, user_id, command_name, command_type)
-                        VALUES (%s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE
-                        uses = uses + 1
-                    """,
-                    ctx.guild.id,
-                    ctx.author.id,
-                    ctx.command.name,
-                    "internal",
-                )
+                await queries.save_command_usage(ctx)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -305,31 +295,42 @@ class Events(commands.Cog):
         # log emojis
         unicode_emojis = util.find_unicode_emojis(message.content)
         custom_emojis = util.find_custom_emojis(message.content)
+
+        unicode_values = []
         for emoji_name in unicode_emojis:
-            await self.bot.db.execute(
-                """
-                INSERT INTO unicode_emoji_usage (guild_id, user_id, emoji_name)
-                    VALUES (%s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    uses = uses + 1
-                """,
+            unicode_values += [
                 message.guild.id,
                 message.author.id,
                 emoji_name,
-            )
-
-        for emoji_name, emoji_id in custom_emojis:
+            ]
+        if unicode_values:
             await self.bot.db.execute(
-                """
-                INSERT INTO custom_emoji_usage (guild_id, user_id, emoji_name, emoji_id)
-                    VALUES (%s, %s, %s, %s)
+                f"""
+                INSERT INTO unicode_emoji_usage (guild_id, user_id, emoji_name)
+                    VALUES {', '.join("(%s, %s, %s)" for _ in unicode_emojis)}
                 ON DUPLICATE KEY UPDATE
                     uses = uses + 1
                 """,
+                *unicode_values,
+            )
+
+        custom_values = []
+        for emoji_name, emoji_id in custom_emojis:
+            custom_values += [
                 message.guild.id,
                 message.author.id,
                 emoji_name,
                 emoji_id,
+            ]
+        if custom_values:
+            await self.bot.db.execute(
+                f"""
+                INSERT INTO custom_emoji_usage (guild_id, user_id, emoji_name, emoji_id)
+                    VALUES {', '.join("(%s, %s, %s, %s)" for _ in custom_emojis)}
+                ON DUPLICATE KEY UPDATE
+                    uses = uses + 1
+                """,
+                *custom_values,
             )
 
         if autoresponses:
