@@ -4,10 +4,10 @@ import psutil
 import time
 import os
 import arrow
-import typing
 import copy
 import aiohttp
 from discord.ext import commands
+from libraries import unicode_codes
 from helpers import utilityfunctions as util, exceptions
 
 
@@ -227,23 +227,17 @@ class Info(commands.Cog):
         await util.page_switcher(ctx, pages)
 
     @commands.command()
-    async def emojistats(self, ctx, user: typing.Optional[discord.Member] = None):
-        """
-        See most used emojis on server, optionally filtered by user.
-
-        Usage:
-            >emojistats
-            >emojistats [mention]
-        """
-        opt = []
-        if user is not None:
-            opt.append(user.id)
+    async def emojistats(self, ctx, user: discord.Member = None):
+        """See most used emojis on the server, optionally filtered by user."""
+        opt = [] if user is None else [user.id]
 
         custom_emojis = await self.bot.db.execute(
             f"""
             SELECT sum(uses), emoji_id, emoji_name
-            FROM custom_emoji_usage WHERE guild_id = %s {'AND user_id = %s' if user is not None else ''}
-            GROUP BY emoji
+                FROM custom_emoji_usage
+                WHERE guild_id = %s
+                {'AND user_id = %s' if user is not None else ''}
+            GROUP BY emoji_id
             """,
             ctx.guild.id,
             *opt,
@@ -251,8 +245,10 @@ class Info(commands.Cog):
         default_emojis = await self.bot.db.execute(
             f"""
             SELECT sum(uses), emoji_name
-            FROM default_emoji_usage WHERE guild_id = %s {'AND user_id = %s' if user is not None else ''}
-            GROUP BY emoji
+                FROM unicode_emoji_usage
+                WHERE guild_id = %s
+                {'AND user_id = %s' if user is not None else ''}
+            GROUP BY emoji_name
             """,
             ctx.guild.id,
             *opt,
@@ -261,8 +257,12 @@ class Info(commands.Cog):
         if not custom_emojis and not default_emojis:
             return await ctx.send("No emojis have been used yet!")
 
-        all_emojis = default_emojis
-        for emoji_id, emoji_name, uses in custom_emojis:
+        all_emojis = []
+        for uses, emoji_name in default_emojis:
+            emoji_repr = unicode_codes.EMOJI_UNICODE.get(emoji_name)
+            all_emojis.append((uses, emoji_repr))
+
+        for uses, emoji_id, emoji_name in custom_emojis:
             emoji = self.bot.get_emoji(int(emoji_id))
             if emoji is not None and emoji.is_usable():
                 emoji_repr = str(emoji)
@@ -272,7 +272,7 @@ class Info(commands.Cog):
 
         rows = []
         for i, (uses, emoji_name) in enumerate(
-            sorted(all_emojis, key=lambda x: x[0], reverse=True)
+            sorted(all_emojis, key=lambda x: x[0], reverse=True), start=1
         ):
             rows.append(f"`#{i:2}` {emoji_name} — **{uses}** Use" + ("s" if uses > 1 else ""))
 
@@ -288,7 +288,7 @@ class Info(commands.Cog):
     async def commandstats(self, ctx):
         """
         See statistics of command usage.
-        use commandstats <command name> for stats of a specific command.
+        Use commandstats <command name> for stats of a specific command.
         """
         if ctx.invoked_subcommand is None:
             args = ctx.message.content.split()[1:]
@@ -395,7 +395,8 @@ class Info(commands.Cog):
             f"""
             SELECT SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
                 SELECT SUM(uses) as use_sum, user_id FROM command_usage
-                    WHERE command_type = 'internal' AND command_name {'IN %s' if group else '= %s'}
+                    WHERE command_type = 'internal'
+                      AND command_name {'IN %s' if group else '= %s'}
                 GROUP BY user_id
             ) as subq
             """,
@@ -407,7 +408,8 @@ class Info(commands.Cog):
             f"""
             SELECT guild_id, MAX(use_sum) FROM (
                 SELECT guild_id, SUM(uses) as use_sum FROM command_usage
-                    WHERE command_type = 'internal' AND command_name {'IN %s' if group else '= %s'}
+                    WHERE command_type = 'internal'
+                      AND command_name {'IN %s' if group else '= %s'}
                 GROUP BY guild_id
             ) as subq
             """,
@@ -420,8 +422,8 @@ class Info(commands.Cog):
                 f"""
                 SELECT SUM(uses) FROM command_usage
                     WHERE command_type = 'internal'
-                    AND command_name {'IN %s' if group else '= %s'}
-                    AND guild_id = %s
+                      AND command_name {'IN %s' if group else '= %s'}
+                      AND guild_id = %s
                 GROUP BY guild_id
                 """,
                 command_name,
