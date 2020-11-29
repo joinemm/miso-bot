@@ -229,14 +229,14 @@ class Fishy(commands.Cog):
         amount = random.randint(1, 29)
         if amount == 1:
             await ctx.send(
-                f"Caught only **{amount}** fishy "
-                + (f"for **{user.name}**" if gift else "")
+                f"Caught only **{amount}** fishy"
+                + (f" for **{user.name}**" if gift else "")
                 + "! :fishing_pole_and_fish:"
             )
         else:
             await ctx.send(
-                f"Caught **{amount}** fishies "
-                + (f"for **{user.name}**" if gift else "")
+                f"Caught **{amount}** fishies"
+                + (f" for **{user.name}**" if gift else "")
                 + "! :fishing_pole_and_fish:"
             )
         return amount
