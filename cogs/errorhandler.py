@@ -35,10 +35,10 @@ class ErrorHander(commands.Cog):
             },
         }
 
-    async def send(self, ctx, level, message, help_footer=None, **kwargs):
+    async def send(self, ctx, level, message, help_footer=None, codeblock=False, **kwargs):
         """Send error message to chat."""
         settings = self.message_levels.get(level)
-        if level == "error":
+        if codeblock:
             message = f"`{message}`"
 
         embed = discord.Embed(
@@ -58,7 +58,7 @@ class ErrorHander(commands.Cog):
         logger.error(f'Unhandled exception in command "{ctx.message.content}":')
         exc = "".join(traceback.format_exception(type(error), error, error.__traceback__))
         logger.error(exc)
-        await self.send(ctx, "error", f"{type(error).__name__}: {error}")
+        await self.send(ctx, "error", f"{type(error).__name__}: {error}", codeblock=True)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -91,9 +91,6 @@ class ErrorHander(commands.Cog):
 
         if isinstance(error, exceptions.Error):
             return await self.send(ctx, "error", str(error), error.kwargs)
-
-        if isinstance(error, exceptions.Blacklist):
-            return await self.send(ctx, "error", error.message)
 
         if isinstance(error, commands.NoPrivateMessage):
             try:
@@ -144,7 +141,7 @@ class ErrorHander(commands.Cog):
         elif isinstance(error, exceptions.Blacklist):
             delete = await self.bot.db.execute(
                 "SELECT delete_blacklisted_usage FROM guild_settings WHERE guild_id = %s",
-                ctx.guilds.id,
+                ctx.guild.id,
                 one_value=True,
             )
             await self.send(ctx, "error", error.message, delete_after=(5 if delete else None))
@@ -157,7 +154,7 @@ class ErrorHander(commands.Cog):
 
         elif isinstance(error, discord.errors.Forbidden):
             try:
-                await self.send(ctx, "error", str(error))
+                await self.send(ctx, "error", str(error), codeblock=True)
             except discord.errors.Forbidden:
                 try:
                     await ctx.message.add_reaction("🙊")

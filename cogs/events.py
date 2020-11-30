@@ -8,6 +8,7 @@ import random
 from libraries import unicode_codes
 import asyncio
 from modules import queries
+import arrow
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
@@ -156,7 +157,7 @@ class Events(commands.Cog):
     async def on_member_ban(self, guild, user):
         """Called when user gets banned from a server."""
         channel_id = await self.bot.db.execute(
-            "SELECT ban_log_channel FROM logging_settings WHERE guild_id = %s",
+            "SELECT ban_log_channel_id FROM logging_settings WHERE guild_id = %s",
             guild.id,
             one_value=True,
         )
@@ -168,8 +169,9 @@ class Events(commands.Cog):
             try:
                 await channel.send(
                     embed=discord.Embed(
-                        description=f":hammer: Banned **{user}** {user.mention}",
+                        description=f":hammer: User banned **{user}** {user.mention}",
                         color=int("f4900c", 16),
+                        timestamp=arrow.utcnow().datetime,
                     )
                 )
             except discord.errors.Forbidden:
@@ -221,7 +223,7 @@ class Events(commands.Cog):
             return
 
         channel_id = await self.bot.db.execute(
-            "SELECT message_log_channel FROM logging_settings WHERE guild_id = %s",
+            "SELECT message_log_channel_id FROM logging_settings WHERE guild_id = %s",
             message.guild.id,
             one_value=True,
         )
