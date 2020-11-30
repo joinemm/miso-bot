@@ -524,15 +524,9 @@ def find_unicode_emojis(text):
     """Finds and returns all unicode emojis from a string"""
     emoji_list = set()
     data = regex.findall(r"\X", text)
-    flags = regex.findall("[\U0001F1E6-\U0001F1FF]", text)
     for word in data:
         if any(char in unicode_codes.UNICODE_EMOJI for char in word):
-            if word in flags:
-                continue
             emoji_list.add(unicode_codes.UNICODE_EMOJI[word])
-
-    for i in range(math.floor(len(flags) / 2)):
-        emoji_list.add("".join(unicode_codes.UNICODE_EMOJI[x] for x in flags[i : i + 2]))
 
     return emoji_list
 
