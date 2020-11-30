@@ -54,7 +54,9 @@ class Notifications(commands.Cog):
             SELECT guild_id, user_id, keyword FROM notification
                 WHERE (guild_id = %s OR guild_id = 0)
                   AND user_id != %s
-            """
+            """,
+            message.guild.id,
+            message.author.id,
         )
 
         if not keywords:
@@ -70,6 +72,16 @@ class Notifications(commands.Cog):
             )
             if pattern.findall(message.content):
                 await self.send_notification(member, message, pattern)
+                await self.bot.db.execute(
+                    """
+                    UPDATE notification
+                        SET times_triggered = times_triggered + 1
+                    WHERE guild_id = %s AND user_id = %s AND keyword = %s
+                    """,
+                    guild_id,
+                    user_id,
+                    keyword,
+                )
 
     @commands.group(case_insensitive=True, aliases=["noti", "notif"])
     async def notification(self, ctx):
