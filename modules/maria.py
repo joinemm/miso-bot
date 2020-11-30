@@ -5,6 +5,7 @@ from helpers import log, exceptions
 
 
 logger = log.get_logger(__name__)
+log.get_logger("aiomysql")
 
 
 class MariaDB:
@@ -37,7 +38,7 @@ class MariaDB:
         logger.info(
             f"Connecting to database {cred['db']} on {cred['host']}:{cred['port']} as {cred['user']}"
         )
-        self.pool = await aiomysql.create_pool(**cred, echo=True)
+        self.pool = await aiomysql.create_pool(**cred, echo=False)
         logger.info("Initialized MariaDB connection pool")
 
     async def cleanup(self):
@@ -45,7 +46,7 @@ class MariaDB:
         await self.pool.wait_closed()
         logger.info("Closed MariaDB connection pool")
 
-    async def execute(self, statement, *params, one_row=False, one_value=False):
+    async def execute(self, statement, *params, one_row=False, one_value=False, as_list=False):
         if await self.wait_for_pool():
             async with self.pool.acquire() as conn:
                 async with conn.cursor() as cur:
@@ -60,6 +61,8 @@ class MariaDB:
                         return data[0][0]
                     elif one_row:
                         return data[0]
+                    elif as_list:
+                        return [row[0] for row in data]
                     else:
                         return data
                 else:
