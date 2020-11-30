@@ -3,7 +3,7 @@ import discord
 import asyncio
 from discord.ext import commands, flags
 from helpers import exceptions, log, utilityfunctions as util
-from data import database as db
+from modules import queries
 
 logger = log.get_logger(__name__)
 command_logger = log.get_logger("commands")
@@ -35,7 +35,7 @@ class ErrorHander(commands.Cog):
             },
         }
 
-    async def send(self, ctx, level, message, help_footer=None):
+    async def send(self, ctx, level, message, help_footer=None, **kwargs):
         """Send error message to chat."""
         settings = self.message_levels.get(level)
         if level == "error":
@@ -50,7 +50,7 @@ class ErrorHander(commands.Cog):
             embed.set_footer(text=f"Learn more: {ctx.prefix}help {ctx.command.qualified_name}")
 
         try:
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, **kwargs)
         except discord.errors.Forbidden:
             self.bot.logger.warning("Forbidden when trying to send error message embed")
 
@@ -80,24 +80,27 @@ class ErrorHander(commands.Cog):
 
         if isinstance(error, exceptions.Info):
             command_logger.info(log.log_command(ctx, extra=error))
-            return await self.send(ctx, "info", str(error))
+            return await self.send(ctx, "info", str(error), error.kwargs)
         elif isinstance(error, exceptions.Warning):
             command_logger.warning(log.log_command(ctx, extra=error))
-            return await self.send(ctx, "warning", str(error))
+            return await self.send(ctx, "warning", str(error), error.kwargs)
         else:
             command_logger.error(
                 f'{type(error).__name__:25} > {ctx.guild} : {ctx.author} "{ctx.message.content}" > {error}'
             )
 
-        if isinstance(error, exceptions.Blacklist):
-            await self.send(ctx, "error", error.message)
+        if isinstance(error, exceptions.Error):
+            return await self.send(ctx, "error", str(error), error.kwargs)
 
-        elif isinstance(error, commands.NoPrivateMessage):
+        if isinstance(error, exceptions.Blacklist):
+            return await self.send(ctx, "error", error.message)
+
+        if isinstance(error, commands.NoPrivateMessage):
             try:
                 await self.send(
                     ctx.author,
                     "info",
-                    "This command cannot be used in private messages",
+                    "This command cannot be used in DM",
                 )
             except (discord.HTTPException, discord.errors.Forbidden):
                 pass
@@ -113,7 +116,7 @@ class ErrorHander(commands.Cog):
             )
 
         elif isinstance(error, commands.CommandOnCooldown):
-            if db.is_patron(ctx.author.id, (2, 3, 4)):
+            if await queries.is_donator(ctx, ctx.author, 2):
                 return await ctx.reinvoke()
             else:
                 await self.send(
