@@ -144,7 +144,9 @@ class Config(commands.Cog):
     async def deleted_channel(self, ctx, *, channel: ChannelSetting):
         """Set channel where deleted messages are logged."""
         db.update_setting(
-            ctx.guild.id, "deleted_messages_channel", (None if channel is None else channel.id),
+            ctx.guild.id,
+            "deleted_messages_channel",
+            (None if channel is None else channel.id),
         )
         if channel is None:
             await ctx.send("Deleted messages logs disabled.")
@@ -241,7 +243,11 @@ class Config(commands.Cog):
         Available types: [ vote | rate ]
         Defaults to vote
         """
-        ctype = "rating" if channeltype.lower() == "rate" else None
+        if channeltype is None:
+            ctype = "vote"
+        elif channeltype.lower() == "rate":
+            ctype = "rating"
+
         db.execute(
             "INSERT OR REPLACE INTO votechannels values(?, ?, ?)",
             (ctx.guild.id, channel.id, ctype),
