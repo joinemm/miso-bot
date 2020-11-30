@@ -1,9 +1,8 @@
 import discord
 import arrow
-from data import database as db
 from discord.ext import commands, tasks
 from helpers import utilityfunctions as util
-from helpers import log
+from helpers import log, exceptions
 
 logger = log.get_logger(__name__)
 
@@ -18,7 +17,7 @@ class Reminders(commands.Cog):
     def cog_unload(self):
         self.reminder_loop.cancel()
 
-    @tasks.loop(seconds=1.0)
+    @tasks.loop(seconds=5.0)
     async def reminder_loop(self):
         try:
             await self.check_reminders()
@@ -31,50 +30,72 @@ class Reminders(commands.Cog):
         logger.info("Starting reminder loop")
 
     async def check_reminders(self):
-        """Checks all current reminders"""
+        """Check all current reminders"""
         if self.cache_needs_refreshing:
             self.cache_needs_refreshing = False
-            self.reminder_list = db.query("SELECT * FROM reminders")
+            self.reminder_list = await self.bot.db.execute(
+                """
+                SELECT user_id, guild_id, created_on, reminder_date, content, original_message_url
+                FROM reminder
+                """
+            )
 
         if not self.reminder_list:
             return
 
-        now = arrow.utcnow().timestamp
-        for reminder in self.reminder_list:
-            # check if timestamp is in future
-            # don't set variables yet to make runs as lightweight as possible
-            if reminder[3] > now:
+        now_ts = arrow.utcnow().timestamp
+        for (
+            user_id,
+            guild_id,
+            created_on,
+            reminder_date,
+            content,
+            original_message_url,
+        ) in self.reminder_list:
+            reminder_ts = reminder_date.timestamp()
+            if reminder_ts > now_ts:
                 continue
 
-            user_id, guild_id, created_on, timestamp, thing, message_link = reminder
             user = self.bot.get_user(user_id)
             if user is not None:
                 guild = self.bot.get_guild(guild_id)
                 if guild is None:
-                    guild = "Deleted guild"
+                    guild = "Unknown guild"
+
                 date = arrow.get(created_on)
-                if now - reminder[3] > 86400:
+                if now_ts - reminder_ts > 86400:
                     logger.info(
-                        f"deleting reminder set for {date.format('DD/MM/YYYY HH:mm:ss')} for being 24 hours late"
+                        f"Deleting reminder set for {date.format('DD/MM/YYYY HH:mm:ss')} for being 24 hours late"
                     )
                 else:
-
+                    embed = discord.Embed(
+                        color=int("d3a940", 16),
+                        title=":alarm_clock: Reminder!",
+                        description=content,
+                    )
+                    embed.add_field(
+                        name="context",
+                        value=f"[Jump to message]({original_message_url})",
+                        inline=True,
+                    )
+                    embed.set_footer(text=f"{guild}")
+                    embed.timestamp = created_on
                     try:
-                        await user.send(
-                            f":alarm_clock: The reminder you set {date.humanize()} "
-                            f"`[ {date.format('DD/MM/YYYY HH:mm:ss')} ]` "
-                            f"in **{guild}** has expired!\n> {thing}\nContext: {message_link}"
-                        )
-                        logger.info(f'reminded {user} to "{thing}"')
+                        await user.send(embed=embed)
+                        logger.info(f'Reminded {user} to "{content}"')
                     except discord.errors.Forbidden:
-                        logger.warning(f"Unable to remind {user}, missing permissions")
+                        logger.warning(f"Unable to remind {user}, missing DM permissions!")
             else:
-                logger.info(f"deleted expired reminder by unknown user {user_id}")
+                logger.info(f"Deleted expired reminder by unknown user {user_id}")
 
-            db.execute(
-                """DELETE FROM reminders
-                WHERE user_id = ? AND guild_id = ? AND message_link = ?""",
-                (user_id, guild_id, message_link),
+            await self.bot.db.execute(
+                """
+                DELETE FROM reminder
+                    WHERE user_id = %s AND guild_id = %s AND original_message_url = %s
+                """,
+                user_id,
+                guild_id,
+                original_message_url,
             )
             self.cache_needs_refreshing = True
 
@@ -88,11 +109,11 @@ class Reminders(commands.Cog):
             >remindme on <YYYY/MM/DD> [HH:mm:ss] to <something>
         """
         try:
-            time, thing = arguments.split(" to ")
+            time, content = arguments.split(" to ")
         except ValueError:
             return await util.send_command_help(ctx)
 
-        now = arrow.utcnow()
+        now = arrow.now()
 
         if pre == "on":
             # user inputs date
@@ -105,29 +126,35 @@ class Reminders(commands.Cog):
             date = now.shift(seconds=+seconds)
 
         else:
-            return await ctx.send(f"Invalid prefix `{pre}`\nUse `on` for date and `in` for time")
-
-        if seconds < 1:
             return await ctx.send(
-                ":warning: You must give a valid time at least 1 second in the future"
+                f"Invalid operation `{pre}`\nUse `on` for date and `in` for time delta"
             )
 
-        db.execute(
-            "INSERT INTO reminders VALUES(?, ?, ?, ?, ?, ?)",
-            (
-                ctx.author.id,
-                ctx.guild.id,
-                now.timestamp,
-                date.timestamp,
-                thing,
-                ctx.message.jump_url,
-            ),
+        if seconds < 1:
+            raise exceptions.Info("You must give a valid time at least 1 second in the future!")
+
+        await self.bot.db.execute(
+            """
+            INSERT INTO reminder (user_id, guild_id, created_on, reminder_date, content, original_message_url)
+                VALUES(%s, %s, %s, %s, %s, %s)
+            """,
+            ctx.author.id,
+            ctx.guild.id,
+            now.datetime,
+            date.datetime,
+            content,
+            ctx.message.jump_url,
         )
 
         self.cache_needs_refreshing = True
         await ctx.send(
-            f":pencil: Reminding you in **{util.stringfromtime(seconds)}** "
-            f"`[ {date.format('DD/MM/YYYY HH:mm:ss')} UTC ]` to \n> {thing}"
+            embed=discord.Embed(
+                color=int("ccd6dd", 16),
+                description=(
+                    f":pencil: I'll message you on **{date.to('utc').format('DD/MM/YYYY HH:mm:ss')}"
+                    f" UTC** to remind you of:\n```{content}```"
+                ),
+            )
         )
 
 
