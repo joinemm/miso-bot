@@ -1,8 +1,9 @@
 import discord
 import asyncio
 from discord.ext import commands
-from data import database as db
 from helpers import utilityfunctions as util
+from helpers import exceptions
+from modules import queries
 
 
 class Rolepicker(commands.Cog):
@@ -10,132 +11,185 @@ class Rolepicker(commands.Cog):
         self.bot = bot
 
     @commands.group(case_insensitive=True)
+    @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def rolepicker(self, ctx):
-        """Setup the role picker."""
+        """Set up the rolepicker."""
         await util.command_group_help(ctx)
 
     @rolepicker.command()
-    async def add(self, ctx, role, name):
-        """Add a role to the picker."""
-        role_to_add = await util.get_role(ctx, role)
-        if role_to_add is None:
-            return await ctx.send(":warning: Could not get this role")
-
-        db.execute("REPLACE INTO roles VALUES(?, ?, ?)", (ctx.guild.id, name, role_to_add.id))
-        await ctx.send(
-            embed=discord.Embed(description=f"{role_to_add.mention} added to picker as `{name}`")
+    async def add(self, ctx, role: discord.Role, *, name):
+        """Add a role to the rolepicker."""
+        await self.bot.db.execute(
+            """
+            INSERT INTO rolepicker_role (guild_id, role_name, role_id)
+                VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                role_id = VALUES(role_id)
+            """,
+            ctx.guild.id,
+            name.lower(),
+            role.id,
+        )
+        await util.send_success(
+            ctx,
+            f"{role.mention} can now be acquired by typing `+{name}` in the rolepicker channel.",
         )
 
     @rolepicker.command()
-    async def remove(self, ctx, name):
+    async def remove(self, ctx, *, name):
         """Remove a role from the picker."""
-        roles = db.query("select rolename from roles where guild_id = ?", (ctx.guild.id,))
-        if name in [x[0] for x in roles]:
-            db.execute(
-                "DELETE FROM roles WHERE guild_id = ? and rolename = ?", (ctx.guild.id, name)
-            )
-            await ctx.send(f"Removed `{name}` from the role picker.")
-        else:
-            return await ctx.send(":warning: Could not find this role in the picker")
+        role_id = await self.bot.db.execute(
+            """
+            SELECT role_id FROM rolepicker_role WHERE guild_id = %s AND role_name = %s
+            """,
+            ctx.guild.id,
+            name.lower(),
+            one_value=True,
+        )
+        if not role_id:
+            raise exceptions.Warning(f"Could not find role with the name `{name}` in the picker.")
+
+        await self.bot.db.execute(
+            """
+            DELETE FROM rolepicker_role WHERE guild_id = %s AND role_name = %s
+            """,
+            ctx.guild.id,
+            name.lower(),
+        )
+        await util.send_success(
+            ctx,
+            f"<@&{role_id}> can no longer be acquired from the rolepicker channel.",
+        )
 
     @rolepicker.command()
-    async def channel(self, ctx, channel):
+    async def channel(self, ctx, channel: discord.TextChannel):
         """Set the channel you can add roles in."""
-        this_channel = await util.get_textchannel(ctx, channel)
-        if this_channel is None:
-            return await ctx.send(":warning: Could not get this channel")
+        await queries.update_setting(ctx, "rolepicker_settings", "channel_id", channel.id)
 
-        db.update_setting(ctx.guild.id, "rolepicker_channel", this_channel.id)
-        db.update_setting(ctx.guild.id, "rolepicker_enabled", 0)
-
-        await ctx.send(
-            f"Rolepicker channel set to {this_channel.mention}\n"
-            f"Use `{ctx.prefix}rolepicker enable` once you've set everything up."
+        await util.send_success(
+            ctx,
+            f"Rolepicker channel set to {channel.mention}\n"
+            f"Use `{ctx.prefix}rolepicker enabled true` once you've set everything up.",
         )
 
     @rolepicker.command()
     async def list(self, ctx):
-        """List all the roles currently available to pick."""
-        data = db.query("select rolename, role_id from roles where guild_id = ?", (ctx.guild.id,))
-        content = discord.Embed(title=f"Available roles in {ctx.guild.name}")
+        """List all the roles currently available for picking."""
+        data = await self.bot.db.execute(
+            """
+            SELECT role_name, role_id FROM rolepicker_role
+            WHERE guild_id = %s
+            """,
+            ctx.guild.id,
+        )
+        content = discord.Embed(
+            title=f":scroll: Available roles in {ctx.guild.name}", color=int("ffd983", 16)
+        )
         rows = []
-        if data is not None:
-            roleslist = []
-            content.description = ""
-            for name, role_id in data:
-                role = ctx.guild.get_role(role_id)
-                if role is not None:
-                    roleslist.append((name, role))
+        for role_name, role_id in sorted(data):
+            rows.append(f"`{role_name}` : <@&{role_id}>")
 
-            for name, role in sorted(roleslist, key=lambda x: x[1].position, reverse=True):
-                rows.append(f"\n`{name}` : {role.mention if role is not None else 'None'}")
-
+        if rows:
             await util.send_as_pages(ctx, content, rows)
-
         else:
-            content.description = "No roles set on this server"
+            content.description = "Nothing yet!"
             await ctx.send(embed=content)
 
     @rolepicker.command()
-    async def enable(self, ctx):
+    async def enabled(self, ctx, value: bool):
         """Enable the rolepicker. (if disabled)"""
-        db.update_setting(ctx.guild.id, "rolepicker_enabled", 1)
-        await ctx.send("Rolepicker is now **enabled**")
-
-    @rolepicker.command()
-    async def disable(self, ctx):
-        """Disable the rolepicker."""
-        db.update_setting(ctx.guild.id, "rolepicker_enabled", 0)
-        await ctx.send("Rolepicker is now **disabled**")
+        await queries.update_setting(ctx, "rolepicker_settings", "is_enabled", value)
+        await util.send_success(ctx, f"Rolepicker is now **{'enabled' if value else 'disabled'}**")
 
     @commands.Cog.listener()
     async def on_message(self, message):
         """Rolechannel message handler."""
-        # make sure bot cache is ready
-        if not self.bot.is_ready:
-            return
-
         if message.guild is None:
             return
-        if db.get_setting(message.guild.id, "rolepicker_enabled") == 0:
-            return
-        if message.channel.id == db.get_setting(message.guild.id, "rolepicker_channel"):
-            if not message.author.bot:
-                command = message.content[0]
-                rolename = message.content[1:].strip()
-                if command in ["+", "-"]:
-                    role = message.guild.get_role(db.rolepicker_role(message.guild.id, rolename))
-                    try:
-                        if role is None:
-                            await message.channel.send(f":warning: Role `{rolename}` not found")
-                        else:
-                            if command == "+":
-                                await message.author.add_roles(role)
-                                await message.channel.send(
-                                    embed=discord.Embed(
-                                        description=f"Added {role.mention} to your roles"
-                                    )
-                                )
-                            elif command == "-":
-                                await message.author.remove_roles(role)
-                                await message.channel.send(
-                                    embed=discord.Embed(
-                                        description=f"Removed {role.mention} from your roles"
-                                    )
-                                )
-                    except discord.errors.Forbidden:
-                        pass
-                else:
-                    await message.channel.send(
-                        f":warning: Unknown action `{command}`\nUse `+` to add roles or `-` to remove them."
-                    )
 
+        is_enabled = await self.bot.db.execute(
+            """
+            SELECT is_enabled FROM rolepicker_settings WHERE guild_id = %s AND channel_id = %s
+            """,
+            message.guild.id,
+            message.channel.id,
+            one_value=True,
+        )
+        if not is_enabled:
+            return
+
+        # delete all bot messages in rolepicker channel
+        if message.author.bot:
             await asyncio.sleep(5)
             try:
                 await message.delete()
             except discord.errors.NotFound:
                 pass
+            return
+
+        command = message.content[0]
+        rolename = message.content[1:].strip()
+        errorhandler = self.bot.get_cog("ErrorHander")
+        if command in ["+", "-"]:
+            role_id = await self.bot.db.execute(
+                """
+                SELECT role_id FROM rolepicker_role WHERE guild_id = %s AND role_name = %s
+                """,
+                message.guild.id,
+                rolename.lower(),
+                one_value=True,
+            )
+            role = message.guild.get_role(role_id)
+            if role is None:
+                await errorhandler.send(
+                    message.channel, "warning", f'Role `"{rolename}"` not found!'
+                )
+
+            elif command == "+":
+                try:
+                    await message.author.add_roles(role)
+                except discord.errors.Forbidden:
+                    await errorhandler.send(
+                        message.channel,
+                        "error",
+                        "I don't have permission to give you this role!",
+                    )
+                else:
+                    await message.channel.send(
+                        embed=discord.Embed(
+                            description=f":white_check_mark: Added {role.mention} to your roles",
+                            color=role.color,
+                        ),
+                    )
+            elif command == "-":
+                try:
+                    await message.author.remove_roles(role)
+                except discord.errors.Forbidden:
+                    await errorhandler.send(
+                        message.channel,
+                        "error",
+                        "I don't have permission to remove this role from you!",
+                    )
+                else:
+                    await message.channel.send(
+                        embed=discord.Embed(
+                            description=f":x: Removed your role {role.mention}",
+                            color=role.color,
+                        ),
+                    )
+        else:
+            await errorhandler.send(
+                message.channel,
+                "warning",
+                f"Unknown action `{command}`. Use `+name` to add roles and `-name` to remove them.",
+            )
+
+        await asyncio.sleep(5)
+        try:
+            await message.delete()
+        except discord.errors.NotFound:
+            pass
 
 
 def setup(bot):
