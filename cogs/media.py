@@ -23,6 +23,7 @@ IG_COOKIE = os.environ.get("IG_COOKIE")
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
+ROTATING_PROXY_URL = os.environ.get("ROTATING_PROXY_URL")
 
 
 class Media(commands.Cog):
@@ -193,87 +194,89 @@ class Media(commands.Cog):
     @flags.command(aliases=["ig", "insta"])
     async def instagram(self, ctx, **flags):
         """Get all the images from one or more instagram posts."""
-        for url in flags["urls"]:
-            result = regex.findall("/p/(.*?)(/|\\Z)", url)
-            if result:
-                url = f"https://www.instagram.com/p/{result[0][0]}"
-            else:
-                url = f"https://www.instagram.com/p/{url.strip('/').split('/')[0]}"
+        async with aiohttp.ClientSession() as session:
+            for url in flags["urls"]:
+                result = regex.findall("/p/(.*?)(/|\\Z)", url)
+                if result:
+                    url = f"https://www.instagram.com/p/{result[0][0]}"
+                else:
+                    url = f"https://www.instagram.com/p/{url.strip('/').split('/')[0]}"
 
-            headers = {
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
-            }
-            post_id = url.split("/")[-1]
-            newurl = "https://www.instagram.com/graphql/query/"
-            params = {
-                "query_hash": "505f2f2dfcfce5b99cb7ac4155cbf299",
-                "variables": '{"shortcode":"'
-                + post_id
-                + '","include_reel":false,"include_logged_out":true}',
-            }
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
+                }
+                post_id = url.split("/")[-1]
+                newurl = "https://www.instagram.com/graphql/query/"
+                params = {
+                    "query_hash": "505f2f2dfcfce5b99cb7ac4155cbf299",
+                    "variables": '{"shortcode":"'
+                    + post_id
+                    + '","include_reel":false,"include_logged_out":true}',
+                }
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(newurl, params=params, headers=headers) as response:
+                async with session.get(
+                    newurl, params=params, headers=headers, proxy=ROTATING_PROXY_URL
+                ) as response:
                     data = await response.json()
                     data = data["data"]["shortcode_media"]
 
-            if data is None:
-                await ctx.send(f":warning: Invalid instagram URL `{url}`")
-                continue
+                if data is None:
+                    await ctx.send(f":warning: Invalid instagram URL `{url}`")
+                    continue
 
-            medias = []
-            try:
-                for x in data["edge_sidecar_to_children"]["edges"]:
-                    medias.append(x["node"])
-            except KeyError:
-                medias.append(data)
+                medias = []
+                try:
+                    for x in data["edge_sidecar_to_children"]["edges"]:
+                        medias.append(x["node"])
+                except KeyError:
+                    medias.append(data)
 
-            avatar_url = data["owner"]["profile_pic_url"]
-            username = data["owner"]["username"]
-            content = discord.Embed(color=random.choice(self.ig_colors))
-            content.set_author(name=f"@{username}", icon_url=avatar_url, url=url)
+                avatar_url = data["owner"]["profile_pic_url"]
+                username = data["owner"]["username"]
+                content = discord.Embed(color=random.choice(self.ig_colors))
+                content.set_author(name=f"@{username}", icon_url=avatar_url, url=url)
 
-            if not medias:
-                await ctx.send(f":warning: Could not find any media from `{url}`")
-                continue
+                if not medias:
+                    await ctx.send(f":warning: Could not find any media from `{url}`")
+                    continue
 
-            if flags["download"]:
-                # send as files
-                async with aiohttp.ClientSession() as session:
-                    await ctx.send(f"<{url}>")
-                    timestamp = arrow.get(data["taken_at_timestamp"]).format("YYMMDD")
-                    for n, file in enumerate(medias, start=1):
-                        if file.get("is_video"):
-                            media_url = file.get("video_url")
-                            extension = "mp4"
+                if flags["download"]:
+                    # send as files
+                    async with aiohttp.ClientSession() as session:
+                        await ctx.send(f"<{url}>")
+                        timestamp = arrow.get(data["taken_at_timestamp"]).format("YYMMDD")
+                        for n, file in enumerate(medias, start=1):
+                            if file.get("is_video"):
+                                media_url = file.get("video_url")
+                                extension = "mp4"
+                            else:
+                                media_url = file.get("display_url")
+                                extension = "jpg"
+
+                            filename = f"{timestamp}-@{username}-{post_id}-{n}.{extension}"
+                            async with session.get(media_url) as response:
+                                with open(filename, "wb") as f:
+                                    while True:
+                                        block = await response.content.read(1024)
+                                        if not block:
+                                            break
+                                        f.write(block)
+
+                            with open(filename, "rb") as f:
+                                await ctx.send(file=discord.File(f))
+
+                            os.remove(filename)
+                else:
+                    # send as embeds
+                    for medianode in medias:
+                        if medianode.get("is_video"):
+                            await ctx.send(embed=content)
+                            await ctx.send(medianode.get("video_url"))
                         else:
-                            media_url = file.get("display_url")
-                            extension = "jpg"
-
-                        filename = f"{timestamp}-@{username}-{post_id}-{n}.{extension}"
-                        async with session.get(media_url) as response:
-                            with open(filename, "wb") as f:
-                                while True:
-                                    block = await response.content.read(1024)
-                                    if not block:
-                                        break
-                                    f.write(block)
-
-                        with open(filename, "rb") as f:
-                            await ctx.send(file=discord.File(f))
-
-                        os.remove(filename)
-            else:
-                # send as embeds
-                for medianode in medias:
-                    if medianode.get("is_video"):
-                        await ctx.send(embed=content)
-                        await ctx.send(medianode.get("video_url"))
-                    else:
-                        content.set_image(url=medianode.get("display_url"))
-                        await ctx.send(embed=content)
-                    content.description = None
-                    content._author = None
+                            content.set_image(url=medianode.get("display_url"))
+                            await ctx.send(embed=content)
+                        content.description = None
+                        content._author = None
 
         try:
             # delete discord automatic embed
