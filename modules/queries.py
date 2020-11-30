@@ -3,6 +3,53 @@ from helpers import log, exceptions
 logger = log.get_logger(__name__)
 
 
+async def save_command_usage(ctx):
+    await ctx.bot.db.execute(
+        """
+        INSERT INTO command_usage (guild_id, user_id, command_name, command_type)
+            VALUES (%s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            uses = uses + 1
+        """,
+        ctx.guild.id,
+        ctx.author.id,
+        ctx.command.qualified_name,
+        "internal",
+    )
+
+
+async def update_setting(ctx, table, setting, new_value):
+    await ctx.bot.db.execute(
+        f"""
+        INSERT INTO {table} (guild_id, {setting})
+            VALUES (%s, %s)
+        ON DUPLICATE KEY UPDATE
+            {setting} = %s
+        """,
+        ctx.guild.id,
+        new_value,
+        new_value,
+    )
+
+
+async def is_donator(ctx, user, unlock_tier=1):
+    if user == ctx.bot.owner:
+        return True
+    tier = await ctx.bot.db.execute(
+        """
+        SELECT donation_tier FROM donator
+        WHERE user_id = %s
+          AND currently_active
+        """,
+        user.id,
+        one_value=True,
+    )
+    if tier and tier >= unlock_tier:
+        return True
+    else:
+        return False
+
+
 async def is_blacklisted(ctx):
     """Check command invocation context for blacklist triggers."""
     data = await ctx.bot.db.execute(
@@ -28,7 +75,7 @@ async def is_blacklisted(ctx):
         ctx.guild.id,
         ctx.author.id,
         ctx.guild.id,
-        ctx.command.name,
+        ctx.command.qualified_name,
         ctx.guild.id,
         ctx.channel.id,
         one_row=True,
