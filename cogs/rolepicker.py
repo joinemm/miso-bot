@@ -59,6 +59,7 @@ class Rolepicker(commands.Cog):
         """List all the roles currently available to pick."""
         data = db.query("select rolename, role_id from roles where guild_id = ?", (ctx.guild.id,))
         content = discord.Embed(title=f"Available roles in {ctx.guild.name}")
+        rows = []
         if data is not None:
             roleslist = []
             content.description = ""
@@ -68,13 +69,13 @@ class Rolepicker(commands.Cog):
                     roleslist.append((name, role))
 
             for name, role in sorted(roleslist, key=lambda x: x[1].position, reverse=True):
-                content.description += (
-                    f"\n`{name}` : {role.mention if role is not None else 'None'}"
-                )
+                rows.append(f"\n`{name}` : {role.mention if role is not None else 'None'}")
+
+            await util.send_as_pages(ctx, content, rows)
 
         else:
             content.description = "No roles set on this server"
-        await ctx.send(embed=content)
+            await ctx.send(embed=content)
 
     @rolepicker.command()
     async def enable(self, ctx):
