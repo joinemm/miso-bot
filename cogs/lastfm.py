@@ -1835,7 +1835,7 @@ async def get_playcount_track(artist, track, username, reference=None):
     )
     try:
         count = int(data["track"]["userplaycount"])
-    except KeyError:
+    except (KeyError, TypeError):
         count = 0
 
     artistname = data["track"]["artist"]["name"]
@@ -1864,7 +1864,7 @@ async def get_playcount_album(artist, album, username, reference=None):
     )
     try:
         count = int(data["album"]["userplaycount"])
-    except KeyError:
+    except (KeyError, TypeError):
         count = 0
 
     artistname = data["album"]["artist"]
@@ -1887,7 +1887,7 @@ async def get_playcount(artist, username, reference=None):
     )
     try:
         count = int(data["artist"]["stats"]["userplaycount"])
-    except KeyError:
+    except (KeyError, TypeError):
         count = 0
 
     name = data["artist"]["name"]
