@@ -15,7 +15,6 @@ from discord.ext import commands, flags
 from tweepy import OAuthHandler
 from bs4 import BeautifulSoup
 from helpers import utilityfunctions as util
-from data import database as db
 
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")
@@ -27,8 +26,11 @@ ROTATING_PROXY_URL = os.environ.get("ROTATING_PROXY_URL")
 
 
 class Media(commands.Cog):
+    """Fetch various media"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "🌐"
         self.twitter_api = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
         self.ig_colors = [
             int("405de6", 16),
@@ -41,101 +43,125 @@ class Media(commands.Cog):
             int("f77737", 16),
             int("fcaf45", 16),
         ]
+        self.regions = {
+            "kr": "www",
+            "korea": "www",
+            "eune": "eune",
+            "euw": "euw",
+            "jp": "jp",
+            "japan": "jp",
+            "na": "na",
+            "oceania": "oce",
+            "oce": "oce",
+            "brazil": "br",
+            "las": "las",
+            "russia": "ru",
+            "ru": "ru",
+            "turkey": "tr",
+            "tr": "tr",
+        }
 
-    @commands.command(aliases=["colour"])
-    async def color(self, ctx, *sources):
-        """
-        Get colors.
+    @commands.group(aliases=["league"], case_insensitive=True)
+    async def opgg(self, ctx):
+        await util.command_group_help(ctx)
 
-        Different color sources can be chained together to create patterns.
+    @opgg.command()
+    async def profile(self, ctx, region, *, summoner_name):
+        parsed_region = self.regions.get(region.lower())
+        if parsed_region is None:
+            return await ctx.send(f":warning: Unknown region `{region}`")
 
-        Usage:
-            >color <hex>
-            >color <@member>
-            >color <@role>
-            >color random [amount]
-            >color <image url>
-        """
-        if not sources:
-            return await util.send_command_help(ctx)
+        region = parsed_region
 
-        colors = []
-        i = 0
-        while i < len(sources):
-            source = sources[i]
-            i += 1
-            if source.lower() == "random":
-                try:
-                    amount = int(sources[i])
-                    i += 1
-                except (IndexError, ValueError):
-                    amount = 1
+        ggsoup = GGSoup()
+        await ggsoup.create(region, summoner_name)
 
-                if amount > 51:
-                    amount = 51
+        content = discord.Embed()
+        content.set_author(
+            name=f"{ggsoup.text('span', 'Name')} [{region.upper()}]",
+            icon_url=ggsoup.src("img", "ProfileImage"),
+        )
 
-                for x in range(amount):
-                    colors.append("{:06x}".format(random.randint(0, 0xFFFFFF)))
-                continue
-
-            role_or_user = await util.get_member(ctx, source) or await util.get_role(ctx, source)
-            if role_or_user is not None:
-                colors.append(str(role_or_user.color).strip("#"))
-                continue
-
-            if source.startswith("http") or source.startswith("https"):
-                url_color = await util.color_from_image_url(source)
-                if url_color is not None:
-                    colors.append(url_color)
-                    continue
-
-            color = await util.get_color(ctx, source)
-            if color is not None:
-                colors.append(str(color))
-                continue
-
-            await ctx.send(f"Error parsing `{source}`")
-
-        if not colors:
-            return await ctx.send("No valid colors to show")
-
-        content = discord.Embed(colour=await util.get_color(ctx, colors[0]))
-
-        if len(colors) > 50:
-            await ctx.send("Maximum amount of colors is 50, ignoring rest...")
-            colors = colors[:50]
-
-        colors = [x.strip("#") for x in colors]
-        url = "https://api.color.pizza/v1/" + ",".join(colors)
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                colordata = (await response.json()).get("colors")
-
-        if len(colors) == 1:
-            discord_color = await util.get_color(ctx, colors[0])
-            hexvalue = colordata[0]["requestedHex"]
-            rgbvalue = discord_color.to_rgb()
-            name = colordata[0]["name"]
-            luminance = colordata[0]["luminance"]
-            image_url = f"http://www.colourlovers.com/img/{colors[0]}/200/200/color.png"
-            content.title = name
-            content.description = (
-                f"**HEX:** `{hexvalue}`\n"
-                f"**RGB:** {rgbvalue}\n"
-                f"**Luminance:** {luminance:.4f}"
+        rank = ggsoup.text("div", "TierRank")
+        lp = ""
+        wins_losses = ""
+        if rank != "Unranked":
+            lp = ggsoup.text("span", "LeaguePoints")
+            wins_losses = (
+                f"{ggsoup.text('span', 'wins')} {ggsoup.text('span', 'losses')} "
+                f"({ggsoup.text('span', 'winratio').split()[-1]})"
             )
-        else:
-            content.description = ""
-            palette = ""
-            for i, color in enumerate(colors):
-                hexvalue = colordata[i]["requestedHex"]
-                name = colordata[i]["name"]
-                content.description += f"`{hexvalue}` **| {name}**\n"
-                palette += color.strip("#") + "/"
 
-            image_url = f"https://www.colourlovers.com/paletteImg/{palette}palette.png"
+        content.add_field(
+            name="Rank",
+            value=f"**{rank}**" + (f" {lp} **|** {wins_losses}" if rank != "Unranked" else ""),
+            inline=False,
+        )
 
-        content.set_image(url=image_url)
+        rank_image = "https:" + ggsoup.soup.find("div", {"class": "Medal"}).find("img").get("src")
+        content.set_thumbnail(url=rank_image)
+        content.colour = int("5383e8", 16)
+
+        champions = []
+        for championbox in ggsoup.soup.findAll("div", {"class": "ChampionBox"}):
+            name = championbox.find("div", {"class": "ChampionName"}).get("title")
+            played_div = championbox.find("div", {"class": "Played"})
+            played_count = played_div.find("div", {"class": "Title"}).text.strip()
+            winrate = played_div.find("div", {"class": "WinRatio"}).text.strip()
+            champions.append(
+                f"**{played_count.replace(' Played', '** Played')} **{name}** ({winrate})"
+            )
+
+        content.add_field(name="Champions", value="\n".join(champions) if champions else "None")
+
+        match_history = []
+        for match in ggsoup.soup.findAll("div", {"class": "GameItem"}):
+            gametype = ggsoup.text("div", "GameType", match)
+            champion = match.find("div", {"class": "ChampionName"}).find("a").text.strip()
+            win = match.get("data-game-result") == "win"
+            kda = "".join(ggsoup.text("div", "KDA", match.find("div", {"class": "KDA"})).split())
+            emoji = ":blue_square:" if win else ":red_square:"
+            match_history.append(f"{emoji} **{gametype}** as **{champion}** `{kda}`")
+
+        content.add_field(
+            name="Match History",
+            value="\n".join(match_history) if match_history else "No matches found",
+        )
+
+        await ctx.send(embed=content)
+
+    @opgg.command()
+    async def nowplaying(self, ctx, region, *, summoner_name):
+        parsed_region = self.regions.get(region.lower())
+        if parsed_region is None:
+            return await ctx.send(f":warning: Unknown region `{region}`")
+
+        region = parsed_region
+
+        content = discord.Embed(title=f"{summoner_name} current game")
+
+        ggsoup = GGSoup()
+        await ggsoup.create(region, summoner_name, sub_url="spectator/")
+
+        blue_team = ggsoup.soup.find("table", {"class": "Team-100"})
+        red_team = ggsoup.soup.find("table", {"class": "Team-200"})
+        for title, team in [("Blue Team", blue_team), ("Red Team", red_team)]:
+            rows = []
+            players = team.find("tbody").findAll("tr")
+            for player in players:
+                champion = (
+                    player.find("td", {"class": "ChampionImage"})
+                    .find("a")
+                    .get("href")
+                    .split("/")[2]
+                )
+                summoner = ggsoup.text("a", "SummonerName", player)
+                url = f"https://{region}.op.gg/summoner/userName={summoner.replace(' ', '%20')}"
+                rank = ggsoup.text("div", "TierRank", player)
+                rows.append(f"`{rank:20} |` [{summoner}]({url}) as **{champion}**")
+
+            content.add_field(name=title, value="\n".join(rows), inline=False)
+
         await ctx.send(embed=content)
 
     @commands.command(aliases=["yt"])
@@ -160,7 +186,6 @@ class Media(commands.Cog):
                     return await ctx.send("```Error: Daily quota reached.```")
                 else:
                     data = await response.json()
-                    db.update_rate_limit("youtube")
 
         urls = []
         for item in data.get("items"):
@@ -556,3 +581,26 @@ class Media(commands.Cog):
 
 def setup(bot):
     bot.add_cog(Media(bot))
+
+
+class GGSoup:
+    def __init__(self):
+        self.soup = None
+
+    async def create(self, region, summoner_name, sub_url=""):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"https://{region}.op.gg/summoner/{sub_url}userName={summoner_name}"
+            ) as response:
+                data = await response.text()
+                self.soup = BeautifulSoup(data, "html.parser")
+
+    def text(self, obj, classname, source=None):
+        if source is None:
+            source = self.soup
+        return source.find(obj, {"class": classname}).text.strip()
+
+    def src(self, obj, classname, source=None):
+        if source is None:
+            source = self.soup
+        return "https:" + source.find(obj, {"class": classname}).get("src")

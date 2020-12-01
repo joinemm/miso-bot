@@ -5,8 +5,11 @@ from helpers import utilityfunctions as util
 
 
 class Fishy(commands.Cog):
+    """Fishing commands"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "🐟"
         self.COOLDOWN = 7200
         self.FISHTYPES = {
             "trash": self.trash,

@@ -7,8 +7,11 @@ from helpers import exceptions
 
 
 class Notifications(commands.Cog):
+    """Set keyword notifications"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "📨"
 
     async def send_notification(self, user, message, pattern=None):
         content = discord.Embed(color=message.author.color)

@@ -7,11 +7,12 @@ from helpers import log, utilityfunctions as util
 logger = log.get_logger(__name__)
 
 
-class Owner(commands.Cog, command_attrs=dict(hidden=True)):
-    """Owner only commands."""
+class Owner(commands.Cog):
+    """Bot owner only"""
 
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "👑"
 
     async def cog_check(self, ctx):
         """Check if command author is Owner."""

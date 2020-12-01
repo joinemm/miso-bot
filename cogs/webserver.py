@@ -7,6 +7,8 @@ logger = log.get_logger(__name__)
 
 
 class WebServer(commands.Cog):
+    """Internal web server for getting ping and checking uptime"""
+
     def __init__(self, bot):
         self.bot = bot
         self.app = web.Application()

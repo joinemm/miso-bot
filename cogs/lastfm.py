@@ -46,8 +46,11 @@ class AlbumColorNode(object):
 
 
 class LastFm(commands.Cog):
+    """LastFM commands"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "🎵"
         self.cover_base_urls = [
             "https://lastfm.freetls.fastly.net/i/u/34s/{0}.png",
             "https://lastfm.freetls.fastly.net/i/u/64s/{0}.png",
@@ -1361,7 +1364,7 @@ class LastFm(commands.Cog):
             )
             return data["toptracks"]["track"] if data is not None else None
 
-    @commands.command(aliases=["wk"])
+    @commands.command(aliases=["wk", "whomstknows"])
     @commands.guild_only()
     @commands.cooldown(2, 30, type=commands.BucketType.user)
     async def whoknows(self, ctx, *, artistname=None):
@@ -1445,7 +1448,7 @@ class LastFm(commands.Cog):
             f"> **{util.displayname(new_king)}** just stole the **{artistname}** crown from **{util.displayname(old_king)}**"
         )
 
-    @commands.command(aliases=["wkt", "whoknowst"])
+    @commands.command(aliases=["wkt", "whomstknowstrack"])
     @commands.guild_only()
     @commands.cooldown(2, 30, type=commands.BucketType.user)
     async def whoknowstrack(self, ctx, *, track=None):
@@ -1527,7 +1530,7 @@ class LastFm(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.command(aliases=["wka", "whoknowsa"])
+    @commands.command(aliases=["wka", "whomstknowsalbum"])
     @commands.guild_only()
     @commands.cooldown(2, 30, type=commands.BucketType.user)
     async def whoknowsalbum(self, ctx, *, album):

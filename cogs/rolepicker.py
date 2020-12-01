@@ -7,8 +7,11 @@ from modules import queries
 
 
 class Rolepicker(commands.Cog):
+    """Set up a role picker"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "🧮"
 
     @commands.group(case_insensitive=True)
     @commands.guild_only()

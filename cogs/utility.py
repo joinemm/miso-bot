@@ -7,9 +7,10 @@ import arrow
 import asyncio
 from time import time
 from bs4 import BeautifulSoup
-from discord.ext import commands
+from discord.ext import commands, tasks
 from data import database as db
-from helpers import log, emojis, utilityfunctions as util
+from helpers import log, emojis, utilityfunctions as util, exceptions
+from modules import queries
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
 DARKSKY_API_KEY = os.environ.get("DARK_SKY_KEY")
@@ -26,6 +27,7 @@ STREAMABLE_PASSWORD = os.environ.get("STREAMABLE_PASSWORD")
 THESAURUS_KEY = os.environ.get("THESAURUS_KEY")
 FINNHUB_TOKEN = os.environ.get("FINNHUB_TOKEN")
 
+command_logger = log.get_command_logger()
 
 papago_pairs = [
     "ko/en",
@@ -79,8 +81,213 @@ logger = log.get_logger(__name__)
 
 
 class Utility(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    """Utility commands"""
+
+    def __init__(self, bot):
+        self.bot = bot
+        self.icon = "🔧"
+        self.reminder_list = []
+        self.cache_needs_refreshing = True
+        self.reminder_loop.start()
+
+    def cog_unload(self):
+        self.reminder_loop.cancel()
+
+    @tasks.loop(seconds=5.0)
+    async def reminder_loop(self):
+        try:
+            await self.check_reminders()
+        except Exception as e:
+            logger.error(f"reminder loop error: {e}")
+
+    @reminder_loop.before_loop
+    async def before_reminder_loop(self):
+        await self.bot.wait_until_ready()
+        logger.info("Starting reminder loop")
+
+    async def check_reminders(self):
+        """Check all current reminders"""
+        if self.cache_needs_refreshing:
+            self.cache_needs_refreshing = False
+            self.reminder_list = await self.bot.db.execute(
+                """
+                SELECT user_id, guild_id, created_on, reminder_date, content, original_message_url
+                FROM reminder
+                """
+            )
+
+        if not self.reminder_list:
+            return
+
+        now_ts = arrow.utcnow().timestamp
+        for (
+            user_id,
+            guild_id,
+            created_on,
+            reminder_date,
+            content,
+            original_message_url,
+        ) in self.reminder_list:
+            reminder_ts = reminder_date.timestamp()
+            if reminder_ts > now_ts:
+                continue
+
+            user = self.bot.get_user(user_id)
+            if user is not None:
+                guild = self.bot.get_guild(guild_id)
+                if guild is None:
+                    guild = "Unknown guild"
+
+                date = arrow.get(created_on)
+                if now_ts - reminder_ts > 86400:
+                    logger.info(
+                        f"Deleting reminder set for {date.format('DD/MM/YYYY HH:mm:ss')} for being 24 hours late"
+                    )
+                else:
+                    embed = discord.Embed(
+                        color=int("d3a940", 16),
+                        title=":alarm_clock: Reminder!",
+                        description=content,
+                    )
+                    embed.add_field(
+                        name="context",
+                        value=f"[Jump to message]({original_message_url})",
+                        inline=True,
+                    )
+                    embed.set_footer(text=f"{guild}")
+                    embed.timestamp = created_on
+                    try:
+                        await user.send(embed=embed)
+                        logger.info(f'Reminded {user} to "{content}"')
+                    except discord.errors.Forbidden:
+                        logger.warning(f"Unable to remind {user}, missing DM permissions!")
+            else:
+                logger.info(f"Deleted expired reminder by unknown user {user_id}")
+
+            await self.bot.db.execute(
+                """
+                DELETE FROM reminder
+                    WHERE user_id = %s AND guild_id = %s AND original_message_url = %s
+                """,
+                user_id,
+                guild_id,
+                original_message_url,
+            )
+            self.cache_needs_refreshing = True
+
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        """only for CommandNotFound."""
+        error = getattr(error, "original", error)
+        if isinstance(error, commands.CommandNotFound):
+            if ctx.message.content.startswith(f"{ctx.prefix}!"):
+                ctx.timer = time()
+                ctx.iscallback = True
+                ctx.command = self.bot.get_command("!")
+                await ctx.command.callback(self, ctx)
+
+    async def resolve_bang(self, ctx, bang, args):
+        async with aiohttp.ClientSession() as session:
+            params = {"q": "!" + bang + " " + args, "format": "json", "no_redirect": 1}
+            url = "https://api.duckduckgo.com"
+            async with session.get(url, params=params) as response:
+                data = await response.json(content_type=None)
+                location = data.get("Redirect")
+                if location == "":
+                    return await ctx.send(":warning: Unknown bang or found nothing!")
+
+                while location:
+                    response = await session.get(location)
+                    location = response.headers.get("location")
+
+                await ctx.send(response.url)
+
+    @commands.command(name="!")
+    async def bang(self, ctx):
+        """
+        DuckDuckGo bangs.
+        For list of all bangs please visit https://duckduckgo.com/bang
+
+        Usage:
+            >!<bang> <query...>
+
+        Example:
+            >!w horses
+        """
+        if not hasattr(ctx, "iscallback"):
+            return await ctx.send_help(ctx.command)
+
+        try:
+            await ctx.trigger_typing()
+        except discord.errors.Forbidden:
+            pass
+
+        command_logger.info(log.log_command(ctx))
+        await queries.log_command_usage(ctx)
+        try:
+            bang, args = ctx.message.content[len(ctx.prefix) + 1 :].split(" ", 1)
+            if len(bang) != 0:
+                await self.resolve_bang(ctx, bang, args)
+        except ValueError:
+            await ctx.send("Please provide a query to search")
+
+    @commands.command()
+    async def remindme(self, ctx, pre, *, arguments):
+        """
+        Set a reminder
+
+        Usage:
+            >remindme in <some time> to <something>
+            >remindme on <YYYY/MM/DD> [HH:mm:ss] to <something>
+        """
+        try:
+            time, content = arguments.split(" to ")
+        except ValueError:
+            return await util.send_command_help(ctx)
+
+        now = arrow.now()
+
+        if pre == "on":
+            # user inputs date
+            date = arrow.get(time)
+            seconds = date.timestamp - now.timestamp
+
+        elif pre == "in":
+            # user inputs time delta
+            seconds = util.timefromstring(time)
+            date = now.shift(seconds=+seconds)
+
+        else:
+            return await ctx.send(
+                f"Invalid operation `{pre}`\nUse `on` for date and `in` for time delta"
+            )
+
+        if seconds < 1:
+            raise exceptions.Info("You must give a valid time at least 1 second in the future!")
+
+        await self.bot.db.execute(
+            """
+            INSERT INTO reminder (user_id, guild_id, created_on, reminder_date, content, original_message_url)
+                VALUES(%s, %s, %s, %s, %s, %s)
+            """,
+            ctx.author.id,
+            ctx.guild.id,
+            now.datetime,
+            date.datetime,
+            content,
+            ctx.message.jump_url,
+        )
+
+        self.cache_needs_refreshing = True
+        await ctx.send(
+            embed=discord.Embed(
+                color=int("ccd6dd", 16),
+                description=(
+                    f":pencil: I'll message you on **{date.to('utc').format('DD/MM/YYYY HH:mm:ss')}"
+                    f" UTC** to remind you of:\n```{content}```"
+                ),
+            )
+        )
 
     @commands.command()
     async def weather(self, ctx, *address):
@@ -602,8 +809,8 @@ class Utility(commands.Cog):
         await ctx.send(embed=content)
 
 
-def setup(client):
-    client.add_cog(Utility(client))
+def setup(bot):
+    bot.add_cog(Utility(bot))
 
 
 def profile_ticker(ticker):

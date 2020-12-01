@@ -10,6 +10,8 @@ command_logger = log.get_logger("commands")
 
 
 class ErrorHander(commands.Cog):
+    """Any errors during command invocation will propagate here"""
+
     def __init__(self, bot):
         self.bot = bot
         self.message_levels = {

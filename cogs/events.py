@@ -15,6 +15,8 @@ command_logger = log.get_command_logger()
 
 
 class Events(commands.Cog):
+    """Event handlers for various discord events"""
+
     def __init__(self, bot):
         self.bot = bot
         self.stfu_regex = re.compile(r"(?:^|\W){0}(?:$|\W)".format("stfu"), flags=re.IGNORECASE)
@@ -78,7 +80,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
-        """Called when bot joins a new guild."""
+        """Called when the bot joins a new guild."""
         blacklisted = await self.bot.db.execute(
             "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
         )
@@ -94,12 +96,13 @@ class Events(commands.Cog):
         )
         content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")
+        content.timestamp = arrow.utcnow().datetime
         logchannel = self.bot.get_channel(self.guildlog)
         await logchannel.send(embed=content)
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
-        """Called when bot leaves a guild."""
+        """Called when the bot leaves a guild."""
         logger.info(f"Left guild {guild}")
         blacklisted = await self.bot.db.execute(
             "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
@@ -114,12 +117,26 @@ class Events(commands.Cog):
         )
         content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")
+        content.timestamp = arrow.utcnow().datetime
         logchannel = self.bot.get_channel(self.guildlog)
         await logchannel.send(embed=content)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
         """Called when a new member joins a guild."""
+        # log event
+        logging_channel_id = await self.bot.db.execute(
+            "SELECT member_log_channel_id FROM logging_settings WHERE guild_id = %s",
+            member.guild.id,
+            one_value=True,
+        )
+        if logging_channel_id:
+            logging_channel = member.guild.get_channel(logging_channel_id)
+            if logging_channel is not None:
+                embed = discord.Embed(color=discord.Color.green())
+                embed.set_author(name=str(member), icon_url=member.avatar_url)
+                await logging_channel.send(embed=embed)
+
         # welcome message
         greeter = await self.bot.db.execute(
             "SELECT channel_id, is_enabled, message_format FROM greeter_settings WHERE guild_id = %s",
@@ -128,13 +145,10 @@ class Events(commands.Cog):
         if greeter:
             channel_id, is_enabled, message_format = greeter
             if is_enabled:
-                channel = member.guild.get_channel(channel_id)
-                if channel is not None:
-                    if message_format is None:
-                        message_format = "Welcome **{username}** {mention} to **{server}**"
-
+                greeter_channel = member.guild.get_channel(channel_id)
+                if greeter_channel is not None:
                     try:
-                        await channel.send(
+                        await greeter_channel.send(
                             embed=util.create_welcome_embed(member, member.guild, message_format)
                         )
                     except discord.errors.Forbidden:
@@ -142,10 +156,10 @@ class Events(commands.Cog):
 
         # add autoroles
         roles = await self.bot.db.execute(
-            "SELECT role_id FROM autorole WHERE guild_id = %s", member.guild.id
+            "SELECT role_id FROM autorole WHERE guild_id = %s", member.guild.id, as_list=True
         )
         for role_id in roles:
-            role = member.guild.get_role(role_id[0])
+            role = member.guild.get_role(role_id)
             if role is None:
                 continue
             try:
@@ -180,6 +194,20 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         """Called when member leaves a guild."""
+        # log event
+        logging_channel_id = await self.bot.db.execute(
+            "SELECT member_log_channel_id FROM logging_settings WHERE guild_id = %s",
+            member.guild.id,
+            one_value=True,
+        )
+        if logging_channel_id:
+            logging_channel = member.guild.get_channel(logging_channel_id)
+            if logging_channel is not None:
+                embed = discord.Embed(color=discord.Color.red())
+                embed.set_author(name=str(member), icon_url=member.avatar_url)
+                await logging_channel.send(embed=embed)
+
+        # goodbye message
         goodbye = await self.bot.db.execute(
             "SELECT channel_id, is_enabled, message_format FROM goodbye_settings WHERE guild_id = %s",
             member.guild.id,
