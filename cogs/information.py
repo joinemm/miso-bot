@@ -11,9 +11,12 @@ from libraries import unicode_codes
 from helpers import utilityfunctions as util, exceptions
 
 
-class Info(commands.Cog):
+class Information(commands.Cog):
+    """See bot related information"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "ℹ️"
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -49,6 +52,7 @@ class Info(commands.Cog):
         )
         content.add_field(name="Patreon", value="https://www.patreon.com/joinemm", inline=False)
         content.add_field(name="Ko-Fi", value="https://ko-fi.com/joinemm", inline=False)
+        content.add_field(name="Bitcoin", value="`1HDwoc5ith4goXmh6CAQC3TP6i1GAqanB1`")
         content.set_footer(text="Donations will be used to pay for server and upkeep costs")
         await ctx.send(embed=content)
 
@@ -490,7 +494,7 @@ class Info(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Info(bot))
+    bot.add_cog(Information(bot))
 
 
 async def get_version():
