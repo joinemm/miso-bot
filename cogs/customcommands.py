@@ -10,8 +10,11 @@ command_logger = log.get_command_logger()
 
 
 class CustomCommands(commands.Cog):
+    """Custom server commands"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "📌"
 
     def bot_command_list(self, match=""):
         """Returns list of bot commands."""

@@ -11,8 +11,11 @@ from data import database as db
 
 
 class Typings(commands.Cog):
+    """Typing speed tests"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "⌨️"
         self.separators = [" ", " ", " ", "  ", "  ", " "]
         self.fancy_font = "𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣"
         self.fancy_font_2 = "𝘢𝘣𝘤𝘥𝘦𝘧𝘨𝘩𝘪𝘫𝘬𝘭𝘮𝘯𝘰𝘱𝘲𝘳𝘴𝘵𝘶𝘷𝘸𝘹𝘺𝘻"

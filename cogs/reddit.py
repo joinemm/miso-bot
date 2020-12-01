@@ -16,8 +16,11 @@ class RedditError(commands.CommandError):
 
 
 class Reddit(commands.Cog):
+    """Get reddit content"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "🪧"
         self.timespans = ["all", "day", "hour", "week", "month", "year"]
         self.human_ts = {
             "all": "all-time",

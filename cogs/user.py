@@ -17,8 +17,11 @@ ALLSUM = (
 
 
 class User(commands.Cog):
+    """User related commands"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "👤"
         with open("html/new_profile.html", "r", encoding="utf-8") as file:
             self.profile_html = file.read()
 

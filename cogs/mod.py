@@ -8,8 +8,11 @@ from modules import queries
 
 
 class Mod(commands.Cog):
+    """Moderation commands"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "🔨"
 
     @commands.command(aliases=["clean"])
     @commands.guild_only()
@@ -197,7 +200,7 @@ class Mod(commands.Cog):
         )
 
     @commands.group()
-    @commands.has_permissions(administrator=True)
+    @commands.has_permissions(manage_guild=True)
     async def blacklist(self, ctx):
         """Restrict command usage."""
         await util.command_group_help(ctx)

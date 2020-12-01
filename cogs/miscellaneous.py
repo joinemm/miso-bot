@@ -10,8 +10,11 @@ from helpers import exceptions
 
 
 class Miscellaneous(commands.Cog):
+    """Miscellaneous commands"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.icon = "🔮"
         self.hs = {
             "aquarius": {
                 "name": "Aquarius",
@@ -379,6 +382,102 @@ class Miscellaneous(commands.Cog):
             ),
         )
         return await ctx.send(embed=content)
+
+    @commands.command(aliases=["colour"])
+    async def color(self, ctx, *sources):
+        """
+        Get colors.
+
+        Different color sources can be chained together to create patterns.
+
+        Usage:
+            >color <hex>
+            >color <@member>
+            >color <@role>
+            >color random [amount]
+            >color <image url>
+        """
+        if not sources:
+            return await util.send_command_help(ctx)
+
+        colors = []
+        i = 0
+        while i < len(sources):
+            source = sources[i]
+            i += 1
+            if source.lower() == "random":
+                try:
+                    amount = int(sources[i])
+                    i += 1
+                except (IndexError, ValueError):
+                    amount = 1
+
+                if amount > 51:
+                    amount = 51
+
+                for x in range(amount):
+                    colors.append("{:06x}".format(random.randint(0, 0xFFFFFF)))
+                continue
+
+            role_or_user = await util.get_member(ctx, source) or await util.get_role(ctx, source)
+            if role_or_user is not None:
+                colors.append(str(role_or_user.color).strip("#"))
+                continue
+
+            if source.startswith("http") or source.startswith("https"):
+                url_color = await util.color_from_image_url(source)
+                if url_color is not None:
+                    colors.append(url_color)
+                    continue
+
+            color = await util.get_color(ctx, source)
+            if color is not None:
+                colors.append(str(color))
+                continue
+
+            await ctx.send(f"Error parsing `{source}`")
+
+        if not colors:
+            return await ctx.send("No valid colors to show")
+
+        content = discord.Embed(colour=await util.get_color(ctx, colors[0]))
+
+        if len(colors) > 50:
+            await ctx.send("Maximum amount of colors is 50, ignoring rest...")
+            colors = colors[:50]
+
+        colors = [x.strip("#") for x in colors]
+        url = "https://api.color.pizza/v1/" + ",".join(colors)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                colordata = (await response.json()).get("colors")
+
+        if len(colors) == 1:
+            discord_color = await util.get_color(ctx, colors[0])
+            hexvalue = colordata[0]["requestedHex"]
+            rgbvalue = discord_color.to_rgb()
+            name = colordata[0]["name"]
+            luminance = colordata[0]["luminance"]
+            image_url = f"http://www.colourlovers.com/img/{colors[0]}/200/200/color.png"
+            content.title = name
+            content.description = (
+                f"**HEX:** `{hexvalue}`\n"
+                f"**RGB:** {rgbvalue}\n"
+                f"**Luminance:** {luminance:.4f}"
+            )
+        else:
+            content.description = ""
+            palette = ""
+            for i, color in enumerate(colors):
+                hexvalue = colordata[i]["requestedHex"]
+                name = colordata[i]["name"]
+                content.description += f"`{hexvalue}` **| {name}**\n"
+                palette += color.strip("#") + "/"
+
+            image_url = f"https://www.colourlovers.com/paletteImg/{palette}palette.png"
+
+        content.set_image(url=image_url)
+        await ctx.send(embed=content)
 
     @commands.command(name="emoji", aliases=["emote"])
     async def big_emoji(self, ctx, emoji):
