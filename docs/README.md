@@ -223,8 +223,7 @@ Use any DuckDuckGo [bangs](https://duckduckgo.com/bang) to quickly search the in
 
 # LastFM
 
-Integration with the music tracking service, last.fm.    
-For anything requiring artist name, the name must be formatted **exactly** as is shows up in the lastfm website.
+Integration with the music tracking service Last.fm. For anything requiring artist name, the name must be formatted **exactly** as is shows up in the lastfm website. For most commands, artist or song names can be replaced with `np` and it will automatically use your currently playing song.
 
 You can mention anyone at the end of an command, making sure it doesn't conflict with other arguments, and you will see the mentioned user's stats instead, as long as they have connected their last.fm username.
 
@@ -250,19 +249,18 @@ Show your most recently listened to tracks, or the one currently playing in embe
 > \>fm nowplaying    
 > \>fm youtube
 
-Generate a visual chart of your data.    
+Generate a visual collage of your data.    
 You can optionally specify datatype `[ artist | album | recent ]`, timeframe or size of the chart.    
 Defaults to albums week 3x3.
 
 > \>fm chart [datatype] [timeframe] [size] [notitle]
 
-Chart that is based on a hex color instead of amount of plays
+Chart that is based on a hex color instead of amount of plays.
 
 > \>fm colorchart <color\> [size]    
 > \>fm colorchart [ rainbow | rainbowdiagonal ]
 
 Check who has listened to given artist most on this server. Top listener gains a crown.
-You can also give `np` as the sole argument to any of the commands and it will use your currently playing song / artist /album.
 
 > \>whoknows <artist\>
 
@@ -284,26 +282,25 @@ Show overview of given album's tracks.
 
 > \>fm album <album\> | <artist\>
 
-See what people are listening to on the server.
+See combined server stats.
 
-> \>fm servernp
-
-Including recent tracks.
-
-> \>fm serverrecent
+> \>fm server nowplaying    
+> \>fm server recent    
+> \>fm server toptracks    
+> \>fm server topartists    
+> \>fm server topalbums
 
 See your artist crowns on this server.
 
 > \>crowns
 
-Report someone who is botting plays for crowns.
+Report someone who is botting plays for crowns. (don't abuse)
 
 > \>report <lastfm_username\> <reason... \>
 
 Search for song lyrics.
 
 > \>lyrics <query\>    
-> \>lyrics np
 
 Unlink you last.fm account.
 
@@ -326,7 +323,7 @@ Shows your server activity graph per hour, along with your xp and level informat
 
 Shows your top servers with miso bot.
 
-> \>topservers [user]
+> \>topservers
 
 Show your daily/weekly/monthly/overall xp ranking
 
@@ -345,8 +342,7 @@ Show various leaderboards
 > \>leaderboard levels [global] <timeframe\>    
 > \>leaderboard fishy [global]    
 > \>leaderboard crowns    
-> \>leaderboard wpm [global]    
-> \>leaderboard fishysize
+> \>leaderboard wpm [global]
 
 Your personal profile.
 
@@ -537,12 +533,6 @@ Don't like `>`? Don't worry you can now change it to whatever you want.
 
 > \>prefix <something\>
 
-#### User formatting
-
-Change whether nicknames are displayed across commands to reference users, or only usernames.
-
-> \> nicknamedisplay <boolean\>
-
 #### Automatic messages
 
 Logger sends various automatic messages.
@@ -558,10 +548,12 @@ Welcome and goodbye messages.
 > \>logger goodbye message <message...\>    
 
 You can use these placeholders in message and they will be filled accordingly:
-- `{user}` = `username#1234`
-- `{username}` = `username`
-- `{mention}` = `@username`
-- `{guild}` = `servername`
+- `{user}` = full username with #1234 discriminator    
+- `{username}` = username    
+- `{mention}` = user mention    
+- `{guild}` = server name    
+- `{server}` = server name    
+- `{guild}` = user's ID
 
 Change whether welcome message is wrapped in an embed or not.
 
@@ -598,7 +590,7 @@ Set the starboard channel.
 
 Change the amount of required reactions.
 
-> \>starbard amount <number\>
+> \>starboard amount <number\>
 
 Enable or disable the starboard functionality
 
