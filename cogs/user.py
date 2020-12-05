@@ -1,19 +1,13 @@
 import discord
-import arrow
-import re
-import aiohttp
 import bleach
+import humanize
 import typing
+import arrow
 from discord.ext import commands
-from operator import itemgetter
 from libraries import plotter
-from data import database as db
 from helpers import utilityfunctions as util
-from helpers import emojis
-
-ALLSUM = (
-    "SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23)"
-)
+from helpers import emojis, exceptions
+from modules import queries
 
 
 class User(commands.Cog):
@@ -22,44 +16,62 @@ class User(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.icon = "👤"
-        with open("html/new_profile.html", "r", encoding="utf-8") as file:
+        with open("html/profile.min.html", "r", encoding="utf-8") as file:
             self.profile_html = file.read()
 
-    async def get_rank(self, ctx, user, table="activity", _global=False):
+    async def get_rank(self, user, table="user_activity", guild=None):
         """Get user's xp ranking from given table."""
-        if user.bot:
-            return "BOT"
-
-        if _global:
-            rows = db.query(
-                "SELECT user_id, %s FROM %s GROUP BY user_id ORDER BY %s DESC"
-                % (ALLSUM, table, ALLSUM)
+        if guild is None:
+            pos = await self.bot.db.execute(
+                f"""
+                SELECT pos
+                FROM (
+                    SELECT (@pos := @pos+1) pos, user_id, message_count,
+                        SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp
+                    FROM {table} S, (SELECT @pos := 0) p
+                    GROUP BY user_id
+                    ORDER BY xp
+                ) {table}
+                WHERE user_id = %s
+                ORDER BY pos
+                LIMIT 1
+                """,
+                user.id,
+                one_value=True,
+            )
+            total = await self.bot.db.execute(
+                f"SELECT COUNT(DISTINCT(user_id)) FROM {table}", one_value=True
             )
         else:
-            rows = db.query(
-                "SELECT user_id, %s FROM %s WHERE guild_id = ? GROUP BY user_id ORDER BY %s DESC"
-                % (ALLSUM, table, ALLSUM),
-                (ctx.guild.id,),
+            pos = await self.bot.db.execute(
+                f"""
+                SELECT pos
+                FROM (
+                    SELECT (@pos := @pos+1) pos, user_id, message_count,
+                        SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp
+                    FROM {table} S, (SELECT @pos := 0) p
+                    WHERE guild_id = %s
+                    GROUP BY user_id
+                    ORDER BY xp
+                ) {table}
+                WHERE user_id = %s
+                ORDER BY pos
+                LIMIT 1
+                """,
+                guild.id,
+                user.id,
+                one_value=True,
+            )
+            total = await self.bot.db.execute(
+                f"SELECT COUNT(DISTINCT(user_id)) FROM {table} WHERE guild_id = %s",
+                guild.id,
+                one_value=True,
             )
 
-        total = 0
-        i = 0
-        ranking = "N/A"
-        for user_id, total_x in rows:
-            if _global:
-                this_user = self.bot.get_user(user_id)
-            else:
-                this_user = ctx.guild.get_member(user_id)
-            if this_user is None or this_user.bot:
-                continue
-            else:
-                total += 1
-                i += 1
-
-            if user_id == user.id:
-                ranking = i
-
-        return f"#{ranking} / {total}"
+        if not pos:
+            return "N/A"
+        else:
+            return f"#{int(pos)} / {total}"
 
     @commands.command(aliases=["dp", "av", "pfp"])
     async def avatar(self, ctx, *, user: discord.User = None):
@@ -71,7 +83,7 @@ class User(commands.Cog):
         content.set_author(name=str(user), url=user.avatar_url)
         content.set_image(url=user.avatar_url_as(static_format="png"))
         stats = await util.image_info_from_url(user.avatar_url)
-        color = await util.color_from_image_url(str(user.avatar_url_as(size=128, format="png")))
+        color = await util.color_from_image_url(str(user.avatar_url_as(size=64, format="png")))
         content.colour = await util.get_color(ctx, color)
         if stats is not None:
             content.set_footer(
@@ -82,40 +94,54 @@ class User(commands.Cog):
 
     @commands.command(aliases=["uinfo"])
     @commands.cooldown(3, 30, type=commands.BucketType.user)
-    async def userinfo(self, ctx, *, user=None):
-        """Get information about user"""
-        user = await util.get_member(ctx, user, ctx.author, try_user=True)
+    async def userinfo(self, ctx, *, user: discord.User = None):
+        """Get information about discord user."""
         if user is None:
-            return await ctx.send(":warning: Could not find this user")
-
-        fishydata = db.fishdata(user.id)
-        if fishydata is None or fishydata.timestamp is None:
-            fishy_time = "Never"
+            user = ctx.author
         else:
-            fishy_time = arrow.get(fishydata.timestamp).humanize()
+            user = ctx.guild.get_member(user.id) or user
 
-        try:
-            state = str(user.status)
-            status = emojis.Status[state.upper()].value + state.capitalize()
-            if user.is_on_mobile():
-                status += " :iphone:"
-        except AttributeError:
-            status = "Unavailable"
-
-        content = discord.Embed()
-        content.title = f"{user.name}#{user.discriminator} | #{user.id}"
+        content = discord.Embed(
+            title=f"{user.name}#{user.discriminator}{' :robot:' if user.bot else ''} | #{user.id}"
+        )
         content.set_thumbnail(url=user.avatar_url)
-        content.add_field(name="Status", value=status)
 
         if isinstance(user, discord.Member):
-            activity = util.activities_string(user.activities)
-            content.add_field(name="Activity", value=activity)
+            content.color = user.color
+            activity_display = util.activities_string(user.activities)
+            if user.is_on_mobile() and user.status is discord.Status.online:
+                status_emoji = "mobile"
+            else:
+                status_emoji = user.status.name
+            status_display = f"{emojis.Status[status_emoji].value} {user.status.name.capitalize()}"
 
-        content.add_field(name="Fishy", value=f"{fishydata.fishy if fishydata is not None else 0}")
-        content.add_field(name="Last fishy", value=fishy_time)
+        else:
+            activity_display = "Unavailable"
+            status_display = "Unavailable"
+            content.color = int(
+                await util.color_from_image_url(str(user.avatar_url_as(size=64, format="png"))), 16
+            )
+
+        fishdata = await self.bot.db.execute(
+            """
+            SELECT fishy_count, last_fishy FROM fishy WHERE user_id = %s
+            """,
+            user.id,
+            one_row=True,
+        )
+        if fishdata:
+            fishy = fishdata[0]
+            last_fishy = humanize.naturaltime(fishdata[1])
+        else:
+            fishy = 0
+            last_fishy = "Never"
+
+        content.add_field(name="Status", value=status_display)
+        content.add_field(name="Activity", value=activity_display)
+        content.add_field(name="Fishy", value=fishy)
+        content.add_field(name="Last fishy", value=last_fishy)
         content.add_field(name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M"))
 
-        # Skip info only available from the guild
         if isinstance(user, discord.Member):
             content.colour = user.color
             content.add_field(
@@ -127,10 +153,10 @@ class User(commands.Cog):
                 if member.joined_at < user.joined_at:
                     member_number += 1
             content.add_field(name="Member", value=f"#{member_number} / {len(ctx.guild.members)}")
-            content.add_field(name="Server rank", value=await self.get_rank(ctx, user))
-            # content.add_field(
-            #    name="Global Rank", value=await self.get_rank(ctx, user, _global=True)
-            # )
+            content.add_field(
+                name="Server rank", value=await self.get_rank(user, "user_activity", user.guild)
+            )
+            content.add_field(name="Global Rank", value=await self.get_rank(user, "user_activity"))
 
             role_string = (
                 " ".join(role.mention for role in reversed(user.roles[1:]))
@@ -170,24 +196,39 @@ class User(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.command(aliases=["sinfo"])
-    async def serverinfo(self, ctx):
-        """Get information about this server."""
-        image_small = str(ctx.guild.icon_url_as(format="png", size=64))
-        content = discord.Embed(color=int(await util.color_from_image_url(image_small), 16))
-        content.title = f"**{ctx.guild.name}** | #{ctx.guild.id}"
-        content.add_field(name="Owner", value=str(ctx.guild.owner))
-        content.add_field(name="Region", value=str(ctx.guild.region))
-        content.add_field(name="Created At", value=ctx.guild.created_at.strftime("%d/%m/%Y %H:%M"))
-        content.add_field(name="Members", value=str(ctx.guild.member_count))
-        content.add_field(name="Roles", value=str(len(ctx.guild.roles)))
-        content.add_field(name="Emojis", value=str(len(ctx.guild.emojis)))
+    @commands.command(aliases=["sinfo", "guildinfo"])
+    async def serverinfo(self, ctx, guild_id: int = None):
+        """Get information about discord server."""
+        if guild_id is None:
+            guild = ctx.guild
+        else:
+            guild = self.bot.get_guild(guild_id)
+            if guild is None:
+                raise exceptions.Warning(f'Guild with id "{guild_id}" not found.')
+
+        image_small = str(guild.icon_url_as(format="png", size=64))
+        content = discord.Embed(
+            title=f"**{guild.name}** | #{guild.id}",
+            color=int(await util.color_from_image_url(image_small), 16),
+        )
+        content.set_thumbnail(url=guild.icon_url)
+        content.add_field(name="Owner", value=str(guild.owner))
+        content.add_field(name="Region", value=f"{util.region_flag(guild.region)} {guild.region}")
+        content.add_field(name="Created at", value=guild.created_at.strftime("%d/%m/%Y %H:%M"))
+        content.add_field(name="Members", value=str(guild.member_count))
+        content.add_field(name="Roles", value=str(len(guild.roles)))
+        content.add_field(name="Emojis", value=str(len(guild.emojis)))
+        content.add_field(name="Boost level", value=guild.premium_tier)
+        content.add_field(name="Boosts", value=guild.premium_subscription_count)
+        content.add_field(name="Filesize limit", value=humanize.naturalsize(guild.filesize_limit))
         content.add_field(
             name="Channels",
-            value=f"{len(ctx.guild.text_channels)} Text channels, "
-            f"{len(ctx.guild.voice_channels)} Voice channels",
+            value=(
+                f"{len(guild.text_channels)} Text channels, "
+                f"{len(guild.voice_channels)} Voice channels"
+            ),
+            inline=False,
         )
-        content.set_thumbnail(url=ctx.guild.icon_url)
 
         await ctx.send(embed=content)
 
@@ -213,15 +254,39 @@ class User(commands.Cog):
         is_global = scope.lower() == "global"
 
         if is_global:
-            activitydata = db.global_activitydata(user.id)
+            global_activity = await self.bot.db.execute(
+                """
+                SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,20,h21,h22,h23
+                    FROM user_activity
+                WHERE user_id = %s
+                GROUP BY guild_id
+                """,
+                user.id,
+            )
+            if global_activity:
+                activity_data = []
+                for i in range(24):
+                    activity_data.append(sum(r[i] for r in global_activity))
+                xp = sum(activity_data)
+            else:
+                activity_data = [0] * 24
+                xp = 0
         else:
-            activitydata = db.get_user_activity(ctx.guild.id, user.id)
+            activity_data = await self.bot.db.execute(
+                """
+                SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,20,h21,h22,h23
+                    FROM user_activity
+                WHERE user_id = %s AND guild_id = %s
+                """,
+                user.id,
+                ctx.guild.id,
+                one_row=True,
+            )
+            xp = sum(activity_data) if activity_data else 0
 
-        if activitydata is None:
-            return await ctx.send("No activity found!")
+        if xp == 0:
+            return ctx.send("No data!")
 
-        activities = list(activitydata)
-        xp = sum(activities)
         level = util.get_level(xp)
 
         title = (
@@ -230,7 +295,7 @@ class User(commands.Cog):
         )
 
         await self.bot.loop.run_in_executor(
-            None, lambda: plotter.create_graph(activities, str(user.color), title=title)
+            None, lambda: plotter.create_graph(activity_data, str(user.color), title=title)
         )
 
         with open("downloads/graph.png", "rb") as img:
@@ -242,54 +307,61 @@ class User(commands.Cog):
     @commands.command(aliases=["ranking"])
     @commands.cooldown(3, 30, type=commands.BucketType.user)
     async def rank(self, ctx, user: discord.Member = None):
-        """See your xp ranking."""
-        if user is None:
-            user = ctx.author
-
+        """See your XP ranking."""
         content = discord.Embed(color=user.color)
-        content.set_author(name=f"XP Rankings for {user.name}", icon_url=user.avatar_url)
+        content.set_author(
+            name=f"XP Rankings for {util.displayname(user, escape=False)}",
+            icon_url=user.avatar_url,
+        )
 
-        for globalrank in [False, True]:
+        for guild in [ctx.guild, None]:
             textbox = "```"
-            for table, label in zip(
-                ["activity_day", "activity_week", "activity_month", "activity"],
-                ["Daily  ", "Weekly ", "Monthly", "Overall"],
-            ):
-                ranking = await self.get_rank(ctx, user, table, globalrank)
+            for table, label in [
+                ("user_activity_day", "Daily  "),
+                ("user_activity_week", "Weekly "),
+                ("user_activity_month", "Monthly"),
+                # (user_activity_year","Yearly "),
+                ("user_activity", "Overall"),
+            ]:
+                ranking = await self.get_rank(user, table, guild)
                 textbox += f"\n{label} : {ranking}"
 
-            content.add_field(name="Global" if globalrank else "Server", value=textbox + "```")
+            content.add_field(name="Global" if guild is None else "Server", value=textbox + "```")
 
         await ctx.send(embed=content)
 
     @commands.command()
-    async def topservers(self, ctx, user: discord.User = None):
-        """See your top servers with miso bot."""
-        if user is None:
-            user = ctx.author
-
-        data = db.query(
-            """SELECT guild_id, %s FROM activity
-            WHERE user_id = ? GROUP BY guild_id ORDER BY %s DESC"""
-            % (ALLSUM, ALLSUM),
-            (user.id,),
+    async def topservers(self, ctx):
+        """See your top servers by XP."""
+        data = await self.bot.db.execute(
+            """
+            SELECT guild_id, SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23)
+                as xp FROM user_activity
+                WHERE user_id = %s
+            GROUP BY guild_id
+            ORDER BY xp DESC
+            """,
+            ctx.author.id,
         )
         rows = []
         total_xp = 0
         for i, (guild_id, xp) in enumerate(data, start=1):
             guild = self.bot.get_guild(guild_id)
             if guild is None:
-                guild = guild_id
+                guild_name = guild_id
             else:
-                guild = guild.name
+                guild_name = guild.name
 
             level = util.get_level(xp)
             total_xp += xp
-            rows.append(f"`#{i}` **{guild}** — Level **{level}**")
+            rows.append(f"`#{i}` **{guild_name}** — Level **{level}**")
 
         content = discord.Embed()
-        content.set_author(name=f"{user.name}'s top servers", icon_url=ctx.author.avatar_url)
-        content.set_footer(text=f"Global level {util.get_level(total_xp)}")
+        content.set_author(
+            name=f"Top servers by XP for {util.displayname(ctx.author, escape=False)}",
+            icon_url=ctx.author.avatar_url,
+        )
+        content.set_footer(text=f"Combined global level {util.get_level(total_xp)}")
         content.colour = ctx.author.color
         await util.send_as_pages(ctx, content, rows)
 
@@ -300,36 +372,35 @@ class User(commands.Cog):
 
     @leaderboard.command(name="fishy")
     async def leaderboard_fishy(self, ctx, scope=""):
-        _global_ = scope == "global"
-        users = db.query("select user_id, fishy from fishy order by fishy desc")
+        global_data = scope.lower() == "global"
+        data = await self.bot.db.execute(
+            "SELECT user_id, fishy_count FROM fishy ORDER BY fishy_count DESC"
+        )
+
         rows = []
-        rank_icon = [":first_place:", ":second_place:", ":third_place:"]
-        rank = 1
-        for user_id, fishy in users:
-            if _global_:
+        medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
+        for i, (user_id, fishy_count) in enumerate(data, start=1):
+            if global_data:
                 user = self.bot.get_user(user_id)
             else:
                 user = ctx.guild.get_member(user_id)
-            if user is None:
+
+            if user is None or fishy_count == 0:
                 continue
 
-            if fishy == 0:
-                continue
-
-            if rank <= len(rank_icon):
-                ranking = rank_icon[rank - 1]
+            if i <= len(medal_emoji):
+                ranking = medal_emoji[i - 1]
             else:
-                ranking = f"`{rank}.`"
+                ranking = f"`#{i:2}`"
 
-            rows.append(f"{ranking} {util.displayname(user)} - **{fishy}** fishy")
-            rank += 1
+            rows.append(f"{ranking} {util.displayname(user)} — **{fishy_count}** fishy")
 
         if not rows:
-            return await ctx.send("Nobody has been fishing yet on this server!")
+            raise exceptions.Info("Nobody has any fish yet!")
 
         content = discord.Embed(
-            title=f"{'global' if _global_ else ctx.guild.name} fishy leaderboard",
-            color=discord.Color.blue(),
+            title=f":fish: {'Global' if global_data else ctx.guild.name} fishy leaderboard",
+            color=int("55acee", 16),
         )
         await util.send_as_pages(ctx, content, rows)
 
@@ -338,123 +409,112 @@ class User(commands.Cog):
         _global_ = scope == "global"
         if timeframe == "":
             timeframe = scope
-        users = []
-        guild = ctx.guild
 
         time, table = get_activity_table(timeframe)
         if _global_:
-            user_rows = db.query(
-                "SELECT user_id, %s, SUM(messages) FROM %s GROUP BY user_id "
-                "ORDER BY %s DESC" % (ALLSUM, table, ALLSUM)
+            data = await self.bot.db.execute(
+                f"""
+                SELECT user_id, SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp,
+                    message_count FROM {table}
+                WHERE NOT is_bot
+                GROUP BY user_id ORDER BY xp DESC
+                """
             )
-            for user_id, xp, messages in user_rows:
-                if _global_:
-                    user = self.bot.get_user(user_id)
-                else:
-                    user = ctx.guild.get_member(user_id)
-
-                if user is None or user.bot:
-                    continue
-
-                users.append((user, messages, xp))
         else:
-            # guild selector for owner only
-            if ctx.author.id == self.bot.owner_id and scope != "":
-                try:
-                    guild = self.bot.get_guild(int(scope))
-                    if guild is None:
-                        guild = ctx.guild
-                except ValueError:
-                    pass
-
-            data = db.query("SELECT * FROM %s WHERE guild_id = ?" % table, (guild.id,))
-            for row in data:
-                user = guild.get_member(row[1])
-                if user is None or user.bot:
-                    continue
-
-                users.append((user, row[2], sum(row[3:])))
+            data = await self.bot.db.execute(
+                f"""
+                SELECT user_id, SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp,
+                    message_count FROM {table}
+                WHERE guild_id = %s AND NOT is_bot
+                GROUP BY user_id ORDER BY xp DESC
+                """,
+                ctx.guild.id,
+            )
 
         rows = []
-        for i, (user, messages, xp) in enumerate(
-            sorted(users, key=itemgetter(2), reverse=True), start=1
-        ):
-            rows.append(
-                f"`#{i:2}` "
-                + (f"LVL **{util.get_level(xp)}** - " if time is None else "")
-                + f"**{util.displayname(user)}** `[{xp} XP | {messages} messages]`"
-            )
+        for i, (user_id, xp, message_count) in enumerate(data, start=1):
+            if _global_:
+                user = self.bot.get_user(user_id)
+            else:
+                user = ctx.guild.get_member(user_id)
 
-        content = discord.Embed(color=discord.Color.teal())
-        content.title = f"{'Global' if _global_ else guild.name} levels leaderboard"
-        if time is not None:
-            content.title += f" - {time}"
+            if user is not None:
+                rows.append(
+                    f"`#{i:2}` **{util.displayname(user)}** — "
+                    + (f"LVL **{util.get_level(xp)}**, " if time == "" else "")
+                    + f"**{xp}** XP, **{message_count}** message{'' if message_count == 1 else 's'}"
+                )
+
+        content = discord.Embed(
+            color=int("5c913b", 16),
+            title=f":bar_chart: {'Global' if _global_ else ctx.guild.name} {time}levels leaderboard",
+        )
+
+        if not rows:
+            rows = ["No data."]
+
         await util.send_as_pages(ctx, content, rows)
 
     @leaderboard.command(name="wpm", aliases=["typing"])
     async def leaderboard_wpm(self, ctx, scope=""):
         _global_ = scope == "global"
 
-        data = db.query(
+        data = await self.bot.db.execute(
             """
-            SELECT user_id, MAX(wpm), timestamp FROM typingdata
-            GROUP BY user_id ORDER BY wpm desc
+            SELECT user_id, MAX(wpm) as wpm, test_date, word_count FROM typing_stats
+            GROUP BY user_id ORDER BY wpm DESC
             """
         )
 
-        rank_icon = [":first_place:", ":second_place:", ":third_place:"]
+        medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
         rows = []
-        i = 1
-        for userid, wpm, timestamp in data:
+        for i, (userid, wpm, test_date, word_count) in enumerate(data, start=1):
             if _global_:
                 user = self.bot.get_user(userid)
             else:
                 user = ctx.guild.get_member(userid)
 
-            if user is None:
-                continue
+            if user is not None:
+                if i <= len(medal_emoji):
+                    ranking = medal_emoji[i - 1]
+                else:
+                    ranking = f"`{i:2}`"
 
-            if i <= len(rank_icon):
-                ranking = rank_icon[i - 1]
-            else:
-                ranking = f"`{i}.`"
-
-            rows.append(
-                f"{ranking} **{int(wpm)}** WPM — **{util.displayname(user)}** ( {arrow.get(timestamp).humanize()} )"
-            )
-            i += 1
+                rows.append(
+                    f"{ranking} **{util.displayname(user)}** — **{int(wpm)}** WPM ({arrow.get(test_date).to('utc').humanize()})"
+                )
 
         if not rows:
-            return await ctx.send("No typing data exists yet on this server!")
+            rows = ["No data."]
 
-        content = discord.Embed(title=":keyboard: WPM Leaderboard", color=discord.Color.orange())
+        content = discord.Embed(
+            title=f":keyboard: {ctx.guild.name} WPM leaderboard", color=int("99aab5", 16)
+        )
         await util.send_as_pages(ctx, content, rows)
 
     @leaderboard.command(name="crowns")
     async def leaderboard_crowns(self, ctx):
-        data = db.query(
-            "SELECT user_id, COUNT(1) FROM crowns WHERE guild_id = ? GROUP BY user_id",
-            (ctx.guild.id,),
+        data = await self.bot.db.execute(
+            """
+            SELECT user_id, COUNT(1) as amount FROM artist_crown
+            WHERE guild_id = %s GROUP BY user_id ORDER BY amount DESC
+            """,
+            ctx.guild.id,
         )
-        if data is None:
-            return await ctx.send(
-                "No crown data for this server exists yet! "
-                "Use the `>whoknows` command to gain crowns"
-            )
         rows = []
-        rank = 1
-        for user_id, count in sorted(data, key=itemgetter(1), reverse=True):
+        for i, (user_id, amount) in enumerate(data, start=1):
             user = ctx.guild.get_member(user_id)
             if user is None:
                 continue
 
-            rows.append(
-                (f"`{rank}:`" if rank > 1 else ":crown:")
-                + f" **{count}** crowns - **{util.displayname(user)}**"
-            )
-            rank += 1
-        content = discord.Embed(color=discord.Color.gold())
-        content.title = f"{ctx.guild.name} artist crowns leaderboard"
+            rows.append(f"`#{i:2}` **{util.displayname(user)}** — **{amount}** crowns")
+
+        content = discord.Embed(
+            color=int("ffcc4d", 16), title=f":crown: {ctx.guild.name} artist crowns leaderboard"
+        )
+        if not rows:
+            rows = ["No data."]
+
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
@@ -487,102 +547,133 @@ class User(commands.Cog):
         def make_badge(classname):
             return f'<li class="badge-container"><i class="corner-logo {classname}"></i></li>'
 
-        # activity = db.get_user_activity(ctx.guild.id, user.id)
-        activity = db.global_activitydata(user.id)
-        fishydata = db.fishdata(user.id)
-
-        local_xp_rows = db.query(
-            "SELECT * FROM activity WHERE user_id = ? AND guild_id = ?",
-            (user.id, ctx.guild.id),
-        )
-        local_xp = 0
-        if local_xp_rows is not None:
-            local_xp = sum(list(local_xp_rows[0][3:]))
-
-        global_xp_rows = db.query("SELECT * FROM activity WHERE user_id = ?", (user.id,))
-        global_xp = 0
-        if global_xp_rows is not None:
-            global_xp = sum(sum(row[3:]) for row in global_xp_rows)
-
         if user.id == self.bot.owner_id:
             badges.append(make_badge(badge_classes["dev"]))
 
         if user.bot:
             badges.append(make_badge(badge_classes["bot"]))
 
-        patrons = db.query("select user_id from patrons where currently_active = 1")
-        if patrons is not None and user.id in [x[0] for x in patrons]:
+        if await queries.is_donator(ctx, user):
             badges.append(make_badge(badge_classes["patreon"]))
 
-        description = db.query("SELECT description FROM profiles WHERE user_id = ?", (user.id,))
-        if description is None or description[0][0] is None:
-            if user.bot:
-                description = "I am a bot<br>BEEP BOOP"
-            else:
-                description = "You should change this by using<br>>editprofile description"
-        else:
-            description = bleach.clean(
-                description[0][0].replace("\n", "<br>"),
-                tags=bleach.sanitizer.ALLOWED_TAGS + ["br"],
-            )
-
-        background_url = db.query(
-            "SELECT background_url FROM profiles WHERE user_id = ?", (user.id,)
+        user_settings = await self.bot.db.execute(
+            "SELECT lastfm_username, sunsign, location_string FROM user_settings WHERE user_id = %s",
+            user.id,
+            one_row=True,
         )
-        custom_bg = background_url is not None and str(background_url[0][0]).lower() != "none"
+        if user_settings:
+            if user_settings[0] is not None:
+                badges.append(make_badge(badge_classes["lastfm"]))
+            if user_settings[1] is not None:
+                badges.append(make_badge(badge_classes["sunsign"]))
+            if user_settings[2] is not None:
+                badges.append(make_badge(badge_classes["location"]))
 
-        command_count = 0
-        command_uses = db.query(
+        server_activity = await self.bot.db.execute(
             """
-            SELECT SUM(count) FROM command_usage WHERE user_id = ? GROUP BY user_id
+            SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,20,h21,h22,h23 as xp
+                FROM user_activity
+            WHERE user_id = %s AND guild_id = %s
             """,
-            (user.id,),
+            user.id,
+            ctx.guild.id,
+            one_row=True,
         )
-        if command_uses is not None:
-            command_count = command_uses[0][0]
+        server_xp = sum(server_activity) if server_activity else 0
+
+        global_activity = await self.bot.db.execute(
+            """
+            SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,20,h21,h22,h23 as xp
+                FROM user_activity
+            WHERE user_id = %s
+            GROUP BY guild_id
+            """,
+            user.id,
+        )
+        if global_activity:
+            new_global_activity = []
+            for i in range(24):
+                new_global_activity.append(sum(r[i] for r in global_activity))
+            global_xp = sum(new_global_activity)
+        else:
+            new_global_activity = [0] * 24
+            global_xp = 0
+
+        if user.bot:
+            description = "I am a bot<br>BEEP BOOP"
+        else:
+            description = "You should change this by using<br>>editprofile description"
+
+        profile_data = await self.bot.db.execute(
+            """
+            SELECT description, background_url, background_color, show_graph
+            FROM user_profile WHERE user_id = %s
+            """,
+            user.id,
+            one_row=True,
+        )
+
+        fishy = await self.bot.db.execute(
+            """
+            SELECT fishy_count FROM fishy WHERE user_id = %s
+            """,
+            user.id,
+            one_value=True,
+        )
+
+        if profile_data:
+            description, background_url, background_color, show_graph = profile_data
+            if description is not None:
+                description = bleach.clean(
+                    description.replace("\n", "<br>"),
+                    tags=bleach.sanitizer.ALLOWED_TAGS + ["br"],
+                )
+            background_url = background_url or ""
+            background_color = background_color or user.color
+        else:
+            background_color = user.color
+            background_url = ""
+            show_graph = True
+
+        command_uses = await self.bot.db.execute(
+            """
+            SELECT SUM(uses) FROM command_usage WHERE user_id = %s
+            GROUP BY user_id
+            """,
+            user.id,
+            one_value=True,
+        )
 
         replacements = {
-            "BACKGROUND_IMAGE": background_url[0][0] if custom_bg else "",
-            "WRAPPER_CLASS": "custom-bg" if custom_bg else "",
-            "SIDEBAR_CLASS": "blur" if custom_bg else "",
-            "OVERLAY_CLASS": "overlay" if custom_bg else "",
-            "USER_COLOR": user.color,
+            "BACKGROUND_IMAGE": background_url,
+            "WRAPPER_CLASS": "custom-bg" if background_url != "" else "",
+            "SIDEBAR_CLASS": "blur" if background_url != "" else "",
+            "OVERLAY_CLASS": "overlay" if background_url != "" else "",
+            "USER_COLOR": background_color,
             "AVATAR_URL": user.avatar_url_as(size=128, format="png"),
             "USERNAME": user.name,
             "DISCRIMINATOR": f"#{user.discriminator}",
             "DESCRIPTION": description,
-            "FISHY_AMOUNT": fishydata.fishy if fishydata is not None else 0,
-            "SERVER_LEVEL": util.get_level(local_xp),
+            "FISHY_AMOUNT": fishy or 0,
+            "SERVER_LEVEL": util.get_level(server_xp),
             "GLOBAL_LEVEL": util.get_level(global_xp),
-            "ACTIVITY_DATA": str(activity),
-            "CHART_MAX": max(activity),
-            "COMMANDS_USED": command_count,
+            "ACTIVITY_DATA": str(new_global_activity),
+            "CHART_MAX": max(new_global_activity),
+            "COMMANDS_USED": command_uses or 0,
             "BADGES": "\n".join(badges),
             "USERNAME_SIZE": get_font_size(user.name),
+            "SHOW_GRAPH": "true" if show_graph else "false",
+            "DESCRIPTION_HEIGHT": "250px" if show_graph else "350px",
         }
 
-        def dictsub(m):
-            return str(replacements[m.group().strip("%")])
-
-        formatted_html = re.sub(r"%%(\S*)%%", dictsub, self.profile_html)
-
-        async with aiohttp.ClientSession() as session:
-            data = {
-                "html": formatted_html,
-                "width": 600,
-                "height": 400,
-                "imageFormat": "png",
-            }
-            async with session.post("http://localhost:3000/html", data=data) as response:
-                with open("downloads/profile.png", "wb") as f:
-                    while True:
-                        block = await response.content.read(1024)
-                        if not block:
-                            break
-                        f.write(block)
-
-        with open("downloads/profile.png", "rb") as f:
-            await ctx.send(file=discord.File(f))
+        payload = {
+            "html": util.format_html(self.profile_html, replacements),
+            "width": 600,
+            "height": 400,
+            "imageFormat": "png",
+        }
+        buffer = await util.render_html(payload)
+        await ctx.send(file=discord.File(fp=buffer, filename=f"profile_{user.name}.png"))
 
     @commands.group()
     async def editprofile(self, ctx):
@@ -590,31 +681,90 @@ class User(commands.Cog):
 
     @editprofile.command(name="description", rest_is_raw=True)
     async def editprofile_description(self, ctx, *, text):
+        """Change the description on your profile."""
         if text.strip() == "":
             return await util.send_command_help(ctx)
 
-        db.execute(
-            "INSERT OR IGNORE INTO profiles VALUES (?, ?, ?, ?)",
-            (ctx.author.id, None, None, None),
+        if len(text) > 500:
+            raise exceptions.Warning(
+                f"Description cannot be more than 500 characters ({len(text)})"
+            )
+
+        await self.bot.db.execute(
+            """
+            INSERT INTO user_profile (user_id, description)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                description = VALUES(description)
+            """,
+            ctx.author.id,
+            text,
         )
-        db.execute(
-            "UPDATE profiles SET description = ? WHERE user_id = ?",
-            (text[1:], ctx.author.id),
-        )
-        await ctx.send(":white_check_mark: Profile description updated!")
+        await util.send_success(ctx, "Profile description updated!")
 
     @util.patrons_only()
     @editprofile.command(name="background")
     async def editprofile_background(self, ctx, url):
-        db.execute(
-            "INSERT OR IGNORE INTO profiles VALUES (?, ?, ?, ?)",
-            (ctx.author.id, None, None, None),
+        """Set a custom background image. Only works with direct link to image."""
+        await self.bot.db.execute(
+            """
+            INSERT INTO user_profile (user_id, background_url)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                background_url = VALUES(background_url)
+            """,
+            ctx.author.id,
+            url,
         )
-        db.execute(
-            "UPDATE profiles SET background_url = ? WHERE user_id = ?",
-            (url, ctx.author.id),
+        await util.send_success(ctx, "Profile background image updated!")
+
+    @util.patrons_only()
+    @editprofile.command(name="graph")
+    async def editprofile_graph(self, ctx, value: bool):
+        """Toggle whether to show activity graph on your profile or not."""
+        await self.bot.db.execute(
+            """
+            INSERT INTO user_profile (user_id, show_graph)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                show_graph = VALUES(show_graph)
+            """,
+            ctx.author.id,
+            value,
         )
-        await ctx.send(":white_check_mark: Background image updated!")
+        if value:
+            await util.send_success(ctx, "Now showing activity graph on your profile.")
+        else:
+            await util.send_success(ctx, "Activity graph on your profile is now hidden.")
+
+    @editprofile.command(name="color", aliases=["colour"])
+    async def editprofile_color(self, ctx, color):
+        """
+        Set a background color to be used instead of your role color.
+        Set as \"default\" to use role color again.
+        """
+        if color.lower() == "default":
+            color_value = None
+        else:
+            color_hex = await util.get_color(ctx, color)
+            if color_hex is None:
+                raise exceptions.Warning(f"Invalid color {color}")
+            else:
+                color_value = str(color_hex)
+
+        await self.bot.db.execute(
+            """
+            INSERT INTO user_profile (user_id, background_color)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                background_color = VALUES(background_color)
+            """,
+            ctx.author.id,
+            color_value,
+        )
+        await util.send_success(
+            ctx, f"Profile background color set to `{color_value or 'default'}`!"
+        )
 
 
 def setup(bot):
@@ -623,10 +773,12 @@ def setup(bot):
 
 def get_activity_table(timeframe):
     if timeframe in ["day", "daily"]:
-        return "Today", "activity_day"
+        return "daily ", "user_activity_day"
     if timeframe in ["week", "weekly"]:
-        return "This week", "activity_week"
+        return "weekly ", "user_activity_week"
     if timeframe in ["month", "monthly"]:
-        return "This month", "activity_month"
+        return "monthly ", "user_activity_month"
+    if timeframe in ["year", "yearly"]:
+        return "yearly ", "user_activity_year"
     else:
-        return None, "activity"
+        return "", "user_activity"
