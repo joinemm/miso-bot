@@ -8,7 +8,6 @@ import asyncio
 from time import time
 from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
-from data import database as db
 from helpers import log, emojis, utilityfunctions as util, exceptions
 from modules import queries
 
@@ -290,7 +289,7 @@ class Utility(commands.Cog):
         )
 
     @commands.command()
-    async def weather(self, ctx, *address):
+    async def weather(self, ctx, *, address=None):
         """
         Get weather of given location.
 
@@ -299,62 +298,87 @@ class Utility(commands.Cog):
             >weather <location>
             >weather save <location>
         """
-        if len(address) == 0:
-            userdata = db.userdata(ctx.author.id)
-            location = userdata.location if userdata is not None else None
-            if location is None:
+        if address is None:
+            # use saved location
+            location = await self.bot.db.execute(
+                "SELECT location_string FROM user_settings WHERE user_id = %s",
+                ctx.author.id,
+                one_value=True,
+            )
+            if not location:
                 return await util.send_command_help(ctx)
-
-        elif address[0] == "save":
-            db.update_user(ctx.author.id, "location", " ".join(address[1:]))
-            return await ctx.send(f"Saved your location as `{' '.join(address[1:])}`")
-
         else:
-            location = " ".join(address)
+            # check if user wants to save location
+            try:
+                cmd, saved_address = address.split(" ", 1)
+                cmd = cmd.lower()
+            except ValueError:
+                cmd = None
 
-        url = "https://maps.googleapis.com/maps/api/geocode/json"
-        params = {"address": location, "key": GOOGLE_API_KEY}
+            if cmd == "save":
+                await self.bot.db.execute(
+                    """
+                    INSERT INTO user_settings (user_id, location_string)
+                        VALUES (%s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        location_string = VALUES(location_string)
+                    """,
+                    ctx.author.id,
+                    saved_address,
+                )
+                return await util.send_success(ctx, f"Saved your location as `{saved_address}`")
+            else:
+                # use given string as temporary location
+                location = address
+
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                json_data = await response.json()
-                db.update_rate_limit("googlemaps")
-        try:
-            json_data = json_data["results"][0]
-        except IndexError:
-            return await ctx.send("Could not get that location.")
+            params = {"address": location, "key": GOOGLE_API_KEY}
+            async with session.get(
+                "https://maps.googleapis.com/maps/api/geocode/json", params=params
+            ) as response:
+                geocode_data = await response.json()
+            try:
+                geocode_data = geocode_data["results"][0]
+            except IndexError:
+                raise exceptions.Warning("Could not find that location!")
 
-        formatted_name = json_data["formatted_address"]
-        lat = json_data["geometry"]["location"]["lat"]
-        lon = json_data["geometry"]["location"]["lng"]
+            formatted_name = geocode_data["formatted_address"]
+            lat = geocode_data["geometry"]["location"]["lat"]
+            lon = geocode_data["geometry"]["location"]["lng"]
+
+            # we have lat and lon now, plug them into dark sky
+            async with session.get(
+                url=f"https://api.darksky.net/forecast/{DARKSKY_API_KEY}/{lat},{lon}?units=si"
+            ) as response:
+                weather_data = await response.json()
+            current = weather_data["currently"]
+            hourly = weather_data["hourly"]
+
+            localtime = await get_timezone(session, {"lat": lat, "lon": lon})
+
         country = "N/A"
-        for comp in json_data["address_components"]:
+        for comp in geocode_data["address_components"]:
             if "country" in comp["types"]:
                 country = comp["short_name"].lower()
 
-        # we have lat and lon now, plug them into dark sky
-        async with aiohttp.ClientSession() as session:
-            url = f"https://api.darksky.net/forecast/{DARKSKY_API_KEY}/{lat},{lon}?units=si"
-            async with session.get(url) as response:
-                json_data = await response.json()
-                db.update_rate_limit("darksky")
+        weather_icon = weather_icons.get(current["icon"], "")
+        try:
+            summary = hourly["summary"]
+        except KeyError:
+            summary = "No weather forecast found."
 
-        current = json_data["currently"]
-        hourly = json_data["hourly"]
-        localtime = await get_timezone({"lat": lat, "lon": lon})
-
-        content = discord.Embed(color=await util.get_color(ctx, "#e1e8ed"))
-        content.title = f":flag_{country}: {formatted_name}"
-        content.add_field(
-            name=f"{weather_icons.get(current['icon'], '')} {hourly['summary']}",
-            value=f":thermometer: Currently **{current['temperature']} °C** "
-            f"( {current['temperature'] * (9.0 / 5.0) + 32:.2f} °F )\n"
-            f":neutral_face: Feels like **{current['apparentTemperature']} °C** "
-            f"( {current['apparentTemperature'] * (9.0 / 5.0) + 32:.2f} °F )\n"
-            f":dash: Wind speed **{current['windSpeed']} m/s** with gusts of **{current['windGust']} m/s**\n"
-            f":sweat_drops: Humidity **{int(current['humidity'] * 100)}%**\n"
+        information_rows = [
+            f":thermometer: Currently **{current['temperature']} °C** ({to_f(current['temperature']):.2f} °F)",
+            f":neutral_face: Feels like **{current['apparentTemperature']} °C** ({to_f(current['apparentTemperature']):.2f} °F)",
+            f":dash: Wind speed **{current['windSpeed']} m/s** with gusts of **{current['windGust']} m/s**",
+            f":sweat_drops: Humidity **{int(current['humidity'] * 100)}%**",
             f":map: [See on map](https://www.google.com/maps/search/?api=1&query={lat},{lon})",
-        )
+        ]
 
+        content = discord.Embed(
+            color=int("e1e8ed", 16), title=f":flag_{country}: {formatted_name}"
+        )
+        content.add_field(name=f"{weather_icon} {summary}", value="\n".join(information_rows))
         content.set_footer(text=f"🕐 Local time {localtime}")
         await ctx.send(embed=content)
 
@@ -366,7 +390,6 @@ class Utility(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(url=url, params=params) as response:
                 data = await response.json()
-                db.update_rate_limit("dictionaryapi")
 
         if isinstance(data[0], dict):
             api_icon = "https://dictionaryapi.com/images/MWLogo_120x120_2x.png"
@@ -390,10 +413,8 @@ class Utility(commands.Cog):
         else:
             if len(data) > 5:
                 data = data[:5]
-
             suggestions = ", ".join(f"`{x}`" for x in data)
-
-            await ctx.send(f"Did you mean: {suggestions}?")
+            await ctx.send(f'No definitions found for "{word}". Did you mean: {suggestions}?')
 
     @commands.command()
     async def define(self, ctx, *, word):
@@ -409,74 +430,72 @@ class Utility(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{api_url}lemmas/en/{word}", headers=headers) as response:
                 data = await response.json()
-                db.update_rate_limit("oxforddictionaries")
 
-        # searched for word id, now use the word id to get definition
-        all_entries = []
+            # searched for word id, now use the word id to get definition
+            all_entries = []
 
-        if data.get("results"):
-            definitions_embed = discord.Embed(colour=discord.Colour.from_rgb(0, 189, 242))
-            definitions_embed.description = ""
+            if data.get("results"):
+                definitions_embed = discord.Embed(colour=discord.Colour.from_rgb(0, 189, 242))
+                definitions_embed.description = ""
 
-            found_word = data["results"][0]["id"]
-            async with aiohttp.ClientSession() as session:
+                found_word = data["results"][0]["id"]
                 url = f"{api_url}entries/en-gb/{found_word}"
                 params = {"strictMatch": "false"}
                 async with session.get(url, headers=headers, params=params) as response:
                     data = await response.json()
 
-            for entry in data["results"][0]["lexicalEntries"]:
-                definitions_value = ""
-                name = data["results"][0]["word"]
+                for entry in data["results"][0]["lexicalEntries"]:
+                    definitions_value = ""
+                    name = data["results"][0]["word"]
 
-                for i in range(len(entry["entries"][0]["senses"])):
-                    for definition in entry["entries"][0]["senses"][i].get("definitions", []):
-                        this_top_level_definition = f"\n**{i + 1}.** {definition}"
-                        if len(definitions_value + this_top_level_definition) > 1024:
-                            break
-                        definitions_value += this_top_level_definition
-                        try:
-                            for y in range(len(entry["entries"][0]["senses"][i]["subsenses"])):
-                                for subdef in entry["entries"][0]["senses"][i]["subsenses"][y][
-                                    "definitions"
-                                ]:
-                                    this_definition = f"\n**└ {i + 1}.{y + 1}.** {subdef}"
-                                    if len(definitions_value + this_definition) > 1024:
-                                        break
-                                    definitions_value += this_definition
+                    for i in range(len(entry["entries"][0]["senses"])):
+                        for definition in entry["entries"][0]["senses"][i].get("definitions", []):
+                            this_top_level_definition = f"\n**{i + 1}.** {definition}"
+                            if len(definitions_value + this_top_level_definition) > 1024:
+                                break
+                            definitions_value += this_top_level_definition
+                            try:
+                                for y in range(len(entry["entries"][0]["senses"][i]["subsenses"])):
+                                    for subdef in entry["entries"][0]["senses"][i]["subsenses"][y][
+                                        "definitions"
+                                    ]:
+                                        this_definition = f"\n**└ {i + 1}.{y + 1}.** {subdef}"
+                                        if len(definitions_value + this_definition) > 1024:
+                                            break
+                                        definitions_value += this_definition
 
-                            definitions_value += "\n"
-                        except KeyError:
-                            pass
+                                definitions_value += "\n"
+                            except KeyError:
+                                pass
 
-                    for reference in entry["entries"][0]["senses"][i].get(
-                        "crossReferenceMarkers", []
-                    ):
-                        definitions_value += reference
+                        for reference in entry["entries"][0]["senses"][i].get(
+                            "crossReferenceMarkers", []
+                        ):
+                            definitions_value += reference
 
-                word_type = entry["lexicalCategory"]["text"]
-                this_entry = {
-                    "id": name,
-                    "definitions": definitions_value,
-                    "type": word_type,
-                }
-                all_entries.append(this_entry)
+                    word_type = entry["lexicalCategory"]["text"]
+                    this_entry = {
+                        "id": name,
+                        "definitions": definitions_value,
+                        "type": word_type,
+                    }
+                    all_entries.append(this_entry)
 
-            if not all_entries:
-                return await ctx.send(f"No definitions found for `{word}`")
+                if not all_entries:
+                    return await ctx.send(f"No definitions found for `{word}`")
 
-            definitions_embed.set_author(
-                name=all_entries[0]["id"], icon_url="https://i.imgur.com/vDvSmF3.png"
-            )
-
-            for entry in all_entries:
-                definitions_embed.add_field(
-                    name=f"{entry['type']}", value=entry["definitions"], inline=False
+                definitions_embed.set_author(
+                    name=all_entries[0]["id"], icon_url="https://i.imgur.com/vDvSmF3.png"
                 )
 
-            await ctx.send(embed=definitions_embed)
-        else:
-            await ctx.send(f"```ERROR: {data['error']}```")
+                for entry in all_entries:
+                    definitions_embed.add_field(
+                        name=f"{entry['type']}", value=entry["definitions"], inline=False
+                    )
+
+                await ctx.send(embed=definitions_embed)
+            else:
+                await ctx.send(f"```ERROR: {data['error']}```")
 
     @commands.command()
     async def urban(self, ctx, *, word):
@@ -485,7 +504,6 @@ class Utility(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params={"term": word}) as response:
                 data = await response.json()
-                db.update_rate_limit("urbandictionary")
 
         pages = []
         if data["list"]:
@@ -516,7 +534,7 @@ class Utility(commands.Cog):
         else:
             await ctx.send(f"No definitions found for `{word}`")
 
-    @commands.command(aliases=["tr", "trans"], rest_is_raw=True)
+    @commands.command(aliases=["tr", "trans"])
     async def translate(self, ctx, *, text):
         """
         Naver/Google translator.
@@ -530,67 +548,63 @@ class Utility(commands.Cog):
             >translate /yy <sentence>
             >translate xx/ <sentence>
         """
-        text = text.strip(" ")
-        languages = text.partition(" ")[0]
-        if "/" in languages or "->" in languages:
-            if "/" in languages:
-                source, target = languages.split("/")
-            elif "->" in languages:
-                source, target = languages.split("->")
-            text = text.partition(" ")[2]
-            if source == "":
-                source = await detect_language(text)
-            if target == "":
-                target = "en"
-        else:
-            source = await detect_language(text)
-            if source == "en":
-                target = "ko"
+        if len(text) > 1000:
+            raise exceptions.Warning(
+                "Sorry, the maximum length of text i can translate is 1000 characters!"
+            )
+
+        async with aiohttp.ClientSession() as session:
+            languages = text.partition(" ")[0]
+            if "/" in languages or "->" in languages:
+                if "/" in languages:
+                    source, target = languages.split("/")
+                elif "->" in languages:
+                    source, target = languages.split("->")
+                text = text.partition(" ")[2]
+                if source == "":
+                    source = await detect_language(session, text)
+                if target == "":
+                    target = "en"
             else:
-                target = "en"
-        language_pair = f"{source}/{target}"
+                source = await detect_language(session, text)
+                if source == "en":
+                    target = "ko"
+                else:
+                    target = "en"
+            language_pair = f"{source}/{target}"
 
-        if text.strip() == "":
-            return await ctx.send("Give me something to translate!")
-        elif len(text) > 1000:
-            return await ctx.send("Sorry, the maximum length is 1000 characters!")
+            # we have language and query, now choose the appropriate translator
 
-        # we have language and query, now choose the appropriate translator
+            if language_pair in papago_pairs:
+                # use papago
+                url = "https://openapi.naver.com/v1/papago/n2mt"
+                params = {"source": source, "target": target, "text": text}
+                headers = {
+                    "X-Naver-Client-Id": NAVER_APPID,
+                    "X-Naver-Client-Secret": NAVER_TOKEN,
+                }
 
-        if language_pair in papago_pairs:
-            # use papago
-            url = "https://openapi.naver.com/v1/papago/n2mt"
-            params = {"source": source, "target": target, "text": text}
-            headers = {
-                "X-Naver-Client-Id": NAVER_APPID,
-                "X-Naver-Client-Secret": NAVER_TOKEN,
-            }
-
-            async with aiohttp.ClientSession() as session:
                 async with session.post(url, headers=headers, data=params) as response:
                     translation = (await response.json())["message"]["result"]["translatedText"]
-                    db.update_rate_limit("papago")
 
-        else:
-            # use google
-            url = "https://translation.googleapis.com/language/translate/v2"
-            params = {
-                "key": GOOGLE_API_KEY,
-                "model": "nmt",
-                "target": target,
-                "source": source,
-                "q": text,
-            }
+            else:
+                # use google
+                url = "https://translation.googleapis.com/language/translate/v2"
+                params = {
+                    "key": GOOGLE_API_KEY,
+                    "model": "nmt",
+                    "target": target,
+                    "source": source,
+                    "q": text,
+                }
 
-            async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params) as response:
                     data = await response.json()
-                    db.update_rate_limit("googletranslate")
 
-            try:
-                translation = html.unescape(data["data"]["translations"][0]["translatedText"])
-            except KeyError:
-                return await ctx.send("Sorry, I could not translate this :(")
+                try:
+                    translation = html.unescape(data["data"]["translations"][0]["translatedText"])
+                except KeyError:
+                    return await ctx.send("Sorry, I could not translate this :(")
 
         await ctx.send(f"`{source}->{target}` {translation}")
 
@@ -604,7 +618,6 @@ class Utility(commands.Cog):
             "output": "json",
             "units": "metric",
         }
-        db.update_rate_limit("wolframalpha")
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
@@ -618,29 +631,26 @@ class Utility(commands.Cog):
     async def creategif(self, ctx, media_url):
         """Create a gfycat gif from video url."""
         starttimer = time()
-        auth_headers = await gfycat_oauth()
-        url = "https://api.gfycat.com/v1/gfycats"
-        params = {"fetchUrl": media_url.strip("`")}
         async with aiohttp.ClientSession() as session:
+            auth_headers = await gfycat_oauth(session)
+            url = "https://api.gfycat.com/v1/gfycats"
+            params = {"fetchUrl": media_url.strip("`")}
             async with session.post(url, json=params, headers=auth_headers) as response:
                 data = await response.json()
-                db.update_rate_limit("gfycat")
 
-        try:
-            gfyname = data["gfyname"]
-        except KeyError:
-            return await ctx.send(":warning: Unable to create gif from this link!")
+            try:
+                gfyname = data["gfyname"]
+            except KeyError:
+                raise exceptions.Warning("Unable to create gif from this link!")
 
-        message = await ctx.send(f"Encoding {emojis.LOADING}")
+            message = await ctx.send(f"Encoding {emojis.LOADING}")
 
-        i = 1
-        url = f"https://api.gfycat.com/v1/gfycats/fetch/status/{gfyname}"
-        await asyncio.sleep(5)
-        async with aiohttp.ClientSession() as session:
+            i = 1
+            url = f"https://api.gfycat.com/v1/gfycats/fetch/status/{gfyname}"
+            await asyncio.sleep(5)
             while True:
                 async with session.get(url, headers=auth_headers) as response:
                     data = await response.json()
-                    db.update_rate_limit("gfycat")
                     task = data["task"]
 
                 if task == "encoding":
@@ -654,9 +664,7 @@ class Utility(commands.Cog):
                     break
 
                 else:
-                    await message.edit(
-                        content=":warning: There was an error while creating your gif :("
-                    )
+                    await message.edit(content="There was an error while creating your gif :(")
                     break
 
                 await asyncio.sleep(i)
@@ -670,11 +678,9 @@ class Utility(commands.Cog):
         url = "https://api.streamable.com/import"
         params = {"url": media_url.strip("`")}
         auth = aiohttp.BasicAuth(STREAMABLE_USER, STREAMABLE_PASSWORD)
-        headers = {"User-Agent": util.useragent()}
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params, auth=auth, headers=headers) as response:
-                db.update_rate_limit("streamable")
+            async with session.get(url, params=params, auth=auth) as response:
                 if response.status != 200:
                     try:
                         data = await response.json()
@@ -694,12 +700,10 @@ class Utility(commands.Cog):
                 link = "https://streamable.com/" + data.get("shortcode")
                 message = await ctx.send(f"Processing Video {emojis.LOADING}")
 
-        i = 1
-        await asyncio.sleep(5)
-        async with aiohttp.ClientSession() as session:
+            i = 1
+            await asyncio.sleep(5)
             while True:
-                async with session.get(link, headers=headers) as response:
-                    db.update_rate_limit("streamable")
+                async with session.get(link) as response:
                     soup = BeautifulSoup(await response.text(), "html.parser")
                     meta = soup.find("meta", {"property": "og:url"})
 
@@ -759,7 +763,6 @@ class Utility(commands.Cog):
             url = "https://finnhub.io/api/v1/quote"
             async with session.get(url, params=params) as response:
                 quote_data = await response.json()
-                db.update_rate_limit("finnhub")
 
             error = quote_data.get("error")
             if error is not None:
@@ -769,7 +772,6 @@ class Utility(commands.Cog):
             params["symbol"] = profile_ticker(params["symbol"])
             async with session.get(url, params=params) as response:
                 company_profile = await response.json()
-                db.update_rate_limit("finnhub")
 
         change = float(quote_data["c"]) - float(quote_data["pc"])
         gains = change > 0
@@ -818,7 +820,7 @@ def profile_ticker(ticker):
     return subs.get(ticker) or ticker
 
 
-async def get_timezone(coord, clocktype="12hour"):
+async def get_timezone(session, coord, clocktype="12hour"):
     url = "http://api.timezonedb.com/v2.1/get-time-zone"
     params = {
         "key": TIMEZONE_API_KEY,
@@ -827,48 +829,43 @@ async def get_timezone(coord, clocktype="12hour"):
         "lat": str(coord["lat"]),
         "lng": str(coord["lon"]),
     }
-    db.update_rate_limit("timezonedb")
+    async with session.get(url, params=params) as response:
+        if response.status == 200:
+            timestring = (await response.json()).get("formatted").split(" ")
+            try:
+                hours, minutes = [int(x) for x in timestring[1].split(":")[:2]]
+            except IndexError:
+                return "N/A"
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, params=params) as response:
-            if response.status == 200:
-                timestring = (await response.json()).get("formatted").split(" ")
-                try:
-                    hours, minutes = [int(x) for x in timestring[1].split(":")[:2]]
-                except IndexError:
-                    return "N/A"
-
-                if clocktype == "12hour":
-                    if hours > 12:
-                        suffix = "PM"
-                        hours -= 12
-                    else:
-                        suffix = "AM"
-                        if hours == 0:
-                            hours = 12
-                    return f"{hours}:{minutes:02d} {suffix}"
-
+            if clocktype == "12hour":
+                if hours > 12:
+                    suffix = "PM"
+                    hours -= 12
                 else:
-                    return f"{hours}:{minutes:02d}"
+                    suffix = "AM"
+                    if hours == 0:
+                        hours = 12
+                return f"{hours}:{minutes:02d} {suffix}"
 
             else:
-                return f"HTTP ERROR {response.status}"
+                return f"{hours}:{minutes:02d}"
+
+        else:
+            return f"HTTP ERROR {response.status}"
 
 
-async def detect_language(string):
+async def detect_language(session, string):
     url = "https://translation.googleapis.com/language/translate/v2/detect"
     params = {"key": GOOGLE_API_KEY, "q": string[:1000]}
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, params=params) as response:
-            data = await response.json()
-            db.update_rate_limit("googletranslate")
-            language = data["data"]["detections"][0][0]["language"]
+    async with session.get(url, params=params) as response:
+        data = await response.json()
+        language = data["data"]["detections"][0][0]["language"]
 
     return language
 
 
-async def gfycat_oauth():
+async def gfycat_oauth(session):
     url = "https://api.gfycat.com/v1/oauth/token"
     params = {
         "grant_type": "client_credentials",
@@ -876,12 +873,14 @@ async def gfycat_oauth():
         "client_secret": GFYCAT_SECRET,
     }
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=params) as response:
-            data = await response.json()
-            db.update_rate_limit("gfycat")
-            access_token = data["access_token"]
+    async with session.post(url, json=params) as response:
+        data = await response.json()
+        access_token = data["access_token"]
 
     auth_headers = {"Authorization": f"Bearer {access_token}"}
 
     return auth_headers
+
+
+def to_f(c):
+    return c * (9.0 / 5.0) + 32
