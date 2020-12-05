@@ -1,0 +1,1 @@
+SUSHII_IMG_BROWSER_ARGS="--enable-experimental-web-platform-features" yarn --cwd sushii-image-server start
