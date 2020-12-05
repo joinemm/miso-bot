@@ -1,7 +1,7 @@
 -- blacklists
 CREATE TABLE IF NOT EXISTS blacklisted_guild (
     guild_id BIGINT,
-    reason TEXT,
+    reason VARCHAR(1024),
     PRIMARY KEY (guild_id)
 );
 
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS blacklisted_member (
 
 CREATE TABLE IF NOT EXISTS blacklisted_user (
     user_id BIGINT,
-    reason TEXT,
+    reason VARCHAR(1024),
     PRIMARY KEY (user_id)
 );
 
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS blacklisted_command (
 
 CREATE TABLE IF NOT EXISTS shadowbanned_user (
     user_id BIGINT,
-    reason TEXT,
+    reason VARCHAR(1024),
     PRIMARY KEY (user_id)
 );
 
@@ -156,12 +156,13 @@ CREATE TABLE IF NOT EXISTS unicode_emoji_usage (
     guild_id BIGINT,
     user_id BIGINT,
     uses INT DEFAULT 1,
-    emoji_name VARCHAR(32),
+    emoji_name VARCHAR(64),
     PRIMARY KEY (guild_id, user_id, emoji_name)
 );
 
 CREATE TABLE IF NOT EXISTS typing_stats (
     user_id BIGINT,
+    guild_id BIGINT,
     test_date DATETIME,
     wpm INT,
     accuracy FLOAT,
@@ -180,9 +181,9 @@ CREATE TABLE IF NOT EXISTS typing_race (
 
 CREATE TABLE IF NOT EXISTS user_profile (
     user_id BIGINT,
-    description VARCHAR(255) DEFAULT 'You should change this by using >editprofile description',
+    description VARCHAR(500) DEFAULT NULL,
     background_url VARCHAR(255) DEFAULT NULL,
-    background_color VARCHAR(7) DEFAULT NULL,
+    background_color VARCHAR(6) DEFAULT NULL,
     show_graph BOOLEAN DEFAULT TRUE,
     PRIMARY KEY (user_id)
 );
@@ -199,7 +200,7 @@ CREATE TABLE IF NOT EXISTS reminder (
     created_on DATETIME,
     reminder_date DATETIME,
     content VARCHAR(255),
-    original_message_id BIGINT
+    original_message_url VARCHAR(128)
 );
 
 -- settings
@@ -258,9 +259,10 @@ CREATE TABLE IF NOT EXISTS goodbye_settings (
 
 CREATE TABLE IF NOT EXISTS logging_settings (
     guild_id BIGINT,
-    user_log_channel_id BIGINT DEFAULT NULL,
+    member_log_channel_id BIGINT DEFAULT NULL,
     ban_log_channel_id BIGINT DEFAULT NULL,
     message_log_channel_id BIGINT DEFAULT NULL,
+    error_log_channel_id BIGINT DEFAULT NULL,
     PRIMARY KEY (guild_id)
 );
 
@@ -283,21 +285,42 @@ CREATE TABLE IF NOT EXISTS voting_channel (
     PRIMARY KEY (channel_id)
 );
 
+CREATE TABLE IF NOT EXISTS muted_user (
+    guild_id BIGINT,
+    user_id BIGINT,
+    unmute_on DATETIME DEFAULT NULL,
+    PRIMARY KEY (guild_id, user_id)
+);
+
 -- caches
 CREATE TABLE IF NOT EXISTS image_color_cache (
-    image_id VARCHAR(32),
+    image_hash VARCHAR(32),
     r TINYINT UNSIGNED NOT NULL,
     g TINYINT UNSIGNED NOT NULL,
     b TINYINT UNSIGNED NOT NULL,
-    hex VARCHAR(7) NOT NULL,
-    PRIMARY KEY (image_id)
+    hex VARCHAR(6) NOT NULL,
+    PRIMARY KEY (image_hash)
+);
+
+CREATE TABLE IF NOT EXISTS artist_image_cache (
+    artist_name VARCHAR(255),
+    image_hash VARCHAR(32),
+    PRIMARY KEY (artist_name)
+);
+
+CREATE TABLE IF NOT EXISTS album_image_cache (
+    artist_name VARCHAR(255),
+    album_name VARCHAR(255),
+    image_hash VARCHAR(32),
+    PRIMARY KEY (artist_name, album_name)
 );
 
 -- activity
 CREATE TABLE IF NOT EXISTS user_activity (
     guild_id BIGINT,
     user_id BIGINT,
-    message_count INT DEFAULT 0,
+    is_bot BOOLEAN,
+    message_count INT DEFAULT 1,
     h0 INT NOT NULL DEFAULT 0,
     h1 INT NOT NULL DEFAULT 0,
     h2 INT NOT NULL DEFAULT 0,
@@ -328,7 +351,8 @@ CREATE TABLE IF NOT EXISTS user_activity (
 CREATE TABLE IF NOT EXISTS user_activity_day (
     guild_id BIGINT,
     user_id BIGINT,
-    message_count INT DEFAULT 0,
+    is_bot BOOLEAN NOT NULL,
+    message_count INT DEFAULT 1,
     h0 INT NOT NULL DEFAULT 0,
     h1 INT NOT NULL DEFAULT 0,
     h2 INT NOT NULL DEFAULT 0,
@@ -359,7 +383,8 @@ CREATE TABLE IF NOT EXISTS user_activity_day (
 CREATE TABLE IF NOT EXISTS user_activity_week (
     guild_id BIGINT,
     user_id BIGINT,
-    message_count INT DEFAULT 0,
+    is_bot BOOLEAN,
+    message_count INT DEFAULT 1,
     h0 INT NOT NULL DEFAULT 0,
     h1 INT NOT NULL DEFAULT 0,
     h2 INT NOT NULL DEFAULT 0,
@@ -390,7 +415,8 @@ CREATE TABLE IF NOT EXISTS user_activity_week (
 CREATE TABLE IF NOT EXISTS user_activity_month (
     guild_id BIGINT,
     user_id BIGINT,
-    message_count INT DEFAULT 0,
+    is_bot BOOLEAN,
+    message_count INT DEFAULT 1,
     h0 INT NOT NULL DEFAULT 0,
     h1 INT NOT NULL DEFAULT 0,
     h2 INT NOT NULL DEFAULT 0,
@@ -421,7 +447,8 @@ CREATE TABLE IF NOT EXISTS user_activity_month (
 CREATE TABLE IF NOT EXISTS user_activity_year (
     guild_id BIGINT,
     user_id BIGINT,
-    message_count INT DEFAULT 0,
+    is_bot BOOLEAN,
+    message_count INT DEFAULT 1,
     h0 INT NOT NULL DEFAULT 0,
     h1 INT NOT NULL DEFAULT 0,
     h2 INT NOT NULL DEFAULT 0,
