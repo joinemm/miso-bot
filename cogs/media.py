@@ -63,10 +63,12 @@ class Media(commands.Cog):
 
     @commands.group(aliases=["league"], case_insensitive=True)
     async def opgg(self, ctx):
+        """League of legends stats."""
         await util.command_group_help(ctx)
 
     @opgg.command()
     async def profile(self, ctx, region, *, summoner_name):
+        """See your op.gg profile."""
         parsed_region = self.regions.get(region.lower())
         if parsed_region is None:
             return await ctx.send(f":warning: Unknown region `{region}`")
@@ -132,6 +134,7 @@ class Media(commands.Cog):
 
     @opgg.command()
     async def nowplaying(self, ctx, region, *, summoner_name):
+        """Show your current game."""
         parsed_region = self.regions.get(region.lower())
         if parsed_region is None:
             return await ctx.send(f":warning: Unknown region `{region}`")

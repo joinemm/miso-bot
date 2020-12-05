@@ -1086,6 +1086,7 @@ class LastFm(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(6, 60, type=commands.BucketType.user)
     async def server(self, ctx):
+        """Server wide statistics."""
         await util.command_group_help(ctx)
 
     @server.command(name="nowplaying", aliases=["np"])
@@ -1193,6 +1194,7 @@ class LastFm(commands.Cog):
 
     @server.command(name="topartists", aliases=["ta"])
     async def server_topartists(self, ctx):
+        """Combined top artists of this server's members."""
         artist_map = {}
         tasks = []
         total_users = 0
@@ -1241,6 +1243,7 @@ class LastFm(commands.Cog):
 
     @server.command(name="topalbums", aliases=["talb"])
     async def server_topalbums(self, ctx):
+        """Combined top albums of this server's members."""
         album_map = {}
         tasks = []
         total_users = 0
@@ -1289,6 +1292,7 @@ class LastFm(commands.Cog):
 
     @server.command(name="toptracks", aliases=["tt"])
     async def server_toptracks(self, ctx):
+        """Combined top tracks of this server's members."""
         track_map = {}
         tasks = []
         total_users = 0

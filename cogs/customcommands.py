@@ -6,7 +6,7 @@ from modules import queries, exceptions, util, log
 command_logger = log.get_command_logger()
 
 
-class CustomCommands(commands.Cog):
+class CustomCommands(commands.Cog, name="Commands"):
     """Custom server commands"""
 
     def __init__(self, bot):

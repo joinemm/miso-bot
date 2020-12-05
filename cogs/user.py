@@ -306,6 +306,9 @@ class User(commands.Cog):
     @commands.cooldown(3, 30, type=commands.BucketType.user)
     async def rank(self, ctx, user: discord.Member = None):
         """See your XP ranking."""
+        if user is None:
+            user = ctx.author
+
         content = discord.Embed(color=user.color)
         content.set_author(
             name=f"XP Rankings for {util.displayname(user, escape=False)}",
@@ -370,6 +373,7 @@ class User(commands.Cog):
 
     @leaderboard.command(name="fishy")
     async def leaderboard_fishy(self, ctx, scope=""):
+        """Fishy leaderboard."""
         global_data = scope.lower() == "global"
         data = await self.bot.db.execute(
             "SELECT user_id, fishy_count FROM fishy ORDER BY fishy_count DESC"
@@ -404,6 +408,7 @@ class User(commands.Cog):
 
     @leaderboard.command(name="levels", aliases=["xp", "level"])
     async def leaderboard_levels(self, ctx, scope="", timeframe=""):
+        """Activity XP leaderboard."""
         _global_ = scope == "global"
         if timeframe == "":
             timeframe = scope
@@ -455,6 +460,7 @@ class User(commands.Cog):
 
     @leaderboard.command(name="wpm", aliases=["typing"])
     async def leaderboard_wpm(self, ctx, scope=""):
+        """Best typing speed high scores leaderboard."""
         _global_ = scope == "global"
 
         data = await self.bot.db.execute(
@@ -492,6 +498,7 @@ class User(commands.Cog):
 
     @leaderboard.command(name="crowns")
     async def leaderboard_crowns(self, ctx):
+        """Last.fm artist crowns leaderboard."""
         data = await self.bot.db.execute(
             """
             SELECT user_id, COUNT(1) as amount FROM artist_crown
@@ -675,6 +682,7 @@ class User(commands.Cog):
 
     @commands.group()
     async def editprofile(self, ctx):
+        """Edit your profile."""
         await util.command_group_help(ctx)
 
     @editprofile.command(name="description", rest_is_raw=True)
