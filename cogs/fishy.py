@@ -1,5 +1,6 @@
 import discord
 import random
+import humanize
 from discord.ext import commands
 from helpers import utilityfunctions as util
 
@@ -111,7 +112,7 @@ class Fishy(commands.Cog):
 
         TESTING = False
         if time_since_fishy < self.COOLDOWN and not TESTING:
-            wait_time = f"**{util.stringfromtime(self.COOLDOWN - time_since_fishy, 2)}**"
+            wait_time = f"**{humanize.precisedelta(self.COOLDOWN - time_since_fishy)}**"
             await ctx.send(random.choice(self.COOLDOWN_STRINGS).format(time=wait_time))
         else:
             catch = random.choices(list(self.FISHTYPES.keys()), self.WEIGHTS)[0]
@@ -161,7 +162,7 @@ class Fishy(commands.Cog):
             time_since_fishy = ctx.message.created_at.timestamp() - last_fishy.timestamp()
             if time_since_fishy < self.COOLDOWN:
                 remaining = self.COOLDOWN - time_since_fishy
-                wait_time = f"**{util.stringfromtime(remaining, 2)}**"
+                wait_time = humanize.precisedelta(remaining)
                 clock_face = f":clock{int(util.map_to_range(remaining, 7200, 0, 1, 12))}:"
                 await ctx.send(f"{clock_face} You need to wait **{wait_time}** to fish again.")
             else:
