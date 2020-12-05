@@ -214,6 +214,7 @@ class Kpop(commands.Cog):
     @commands.is_owner()
     @commands.command(name="rebuildkpopdb")
     async def parse_kpop_sheets(self, groups: bool = True, idols: bool = True):
+        """Rebuild the kpop idol database."""
         if groups:
             await self.bot.db.execute("DELETE FROM kpop_group")
             with open("data/kpopdb_girlgroups.tsv") as tsv_file:

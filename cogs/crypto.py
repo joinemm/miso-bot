@@ -6,7 +6,7 @@ from decimal import Decimal
 from modules import emojis, util, exceptions
 
 
-class Crypto(commands.Cog):
+class Cryptocurrency(commands.Cog):
     """Cryptocurrency commands"""
 
     def __init__(self, bot):
@@ -35,11 +35,12 @@ class Crypto(commands.Cog):
 
     @commands.group()
     async def crypto(self, ctx):
+        """Cryptocurrency price data."""
         await util.command_group_help(ctx)
 
     @crypto.command()
     async def chart(self, ctx, coin, pair="USDT", interval="1h", limit: int = 50):
-
+        """Generates candlestick chart for a given cryptocurrency pair."""
         if interval not in self.binance_intervals:
             raise exceptions.Error("Invalid interval.")
 
@@ -92,6 +93,7 @@ class Crypto(commands.Cog):
 
     @crypto.command()
     async def price(self, ctx, coin, pair="USDT"):
+        """See the current price and 25h statistics of cryptocurrency pair."""
         symbol = (coin + pair).upper()
         url = "https://api.binance.com/api/v3/ticker/24hr"
         params = {"symbol": symbol}
@@ -140,4 +142,4 @@ class Crypto(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Crypto(bot))
+    bot.add_cog(Cryptocurrency(bot))

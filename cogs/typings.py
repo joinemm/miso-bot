@@ -38,6 +38,7 @@ class Typings(commands.Cog):
 
     @typing.command(name="test")
     async def typing_test(self, ctx, language=None, wordcount: int = 25):
+        """Take a typing test and see your typing speed."""
         if language is None:
             language = wordcount
         try:
@@ -260,6 +261,7 @@ class Typings(commands.Cog):
 
     @typing.command(name="history")
     async def typing_history(self, ctx, user: discord.Member = None):
+        """See your typing test history."""
         if user is None:
             user = ctx.author
 
@@ -293,6 +295,7 @@ class Typings(commands.Cog):
 
     @typing.command(name="stats")
     async def typing_stats(self, ctx, user: discord.Member = None):
+        """See your typing test statistics."""
         if user is None:
             user = ctx.author
 
