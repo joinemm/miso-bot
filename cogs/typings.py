@@ -6,8 +6,7 @@ import itertools
 import json
 from discord.ext import commands
 from operator import itemgetter
-from helpers import utilityfunctions as util
-from data import database as db
+from helpers import utilityfunctions as util, exceptions
 
 
 class Typings(commands.Cog):
@@ -17,19 +16,19 @@ class Typings(commands.Cog):
         self.bot = bot
         self.icon = "⌨️"
         self.separators = [" ", " ", " ", "  ", "  ", " "]
-        self.fancy_font = "𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣"
-        self.fancy_font_2 = "𝘢𝘣𝘤𝘥𝘦𝘧𝘨𝘩𝘪𝘫𝘬𝘭𝘮𝘯𝘰𝘱𝘲𝘳𝘴𝘵𝘶𝘷𝘸𝘹𝘺𝘻"
+        self.fonts = [
+            "𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣",
+            "𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇",
+        ]
 
-    def obfuscate(self, text):
+    def obfuscate(self, text, font):
         while " " in text:
             text = text.replace(" ", random.choice(self.separators), 1)
-        letter_dict = dict(zip("abcdefghijklmnopqrstuvwxyz", self.fancy_font))
+        letter_dict = dict(zip("abcdefghijklmnopqrstuvwxyz", font))
         return "".join(letter_dict.get(letter, letter) for letter in text)
 
-    def anticheat(self, message):
-        remainder = "".join(
-            set(message.content).intersection(self.fancy_font + "".join(self.separators))
-        )
+    def anticheat(self, message, font):
+        remainder = "".join(set(message.content).intersection(font + "".join(self.separators)))
         return remainder != ""
 
     @commands.group()
@@ -60,7 +59,8 @@ class Typings(commands.Cog):
                 f"Currently supported languages are:\n>>> {langs}"
             )
 
-        og_msg = await ctx.send(f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
+        font = random.choice(self.fonts)
+        og_msg = await ctx.send(f"```\n{self.obfuscate(' '.join(wordlist), font)}\n```")
 
         def check(_message):
             return _message.author == ctx.author and _message.channel == ctx.channel
@@ -72,11 +72,11 @@ class Typings(commands.Cog):
 
         else:
             wpm, accuracy = calculate_entry(message, og_msg, wordlist)
-            if self.anticheat(message) or wpm > 216:
+            if self.anticheat(message, font) or wpm > 216:
                 return await ctx.send(f"{ctx.author.mention} Stop cheating >:(")
 
             await ctx.send(f"{ctx.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
-            save_wpm(ctx.author, wpm, accuracy, wordcount, language, 0)
+            await self.save_wpm(ctx.author, ctx.guild, wpm, accuracy, wordcount, language, False)
 
     @typing.command(name="race")
     async def typing_race(self, ctx, language=None, wordcount: int = 25):
@@ -187,7 +187,8 @@ class Typings(commands.Cog):
                 f"Currently supported languages are:\n>>> {langs}"
             )
 
-        await words_message.edit(content=f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
+        font = random.choice(self.fonts)
+        await words_message.edit(content=f"```\n{self.obfuscate(' '.join(wordlist), font)}\n```")
 
         results = {}
         for player in players:
@@ -211,7 +212,7 @@ class Typings(commands.Cog):
 
             else:
                 wpm, accuracy = calculate_entry(message, words_message, wordlist)
-                if self.anticheat(message) or wpm > 216:
+                if self.anticheat(message, font) or wpm > 216:
                     results[str(message.author.id)] = 0
                     completed_players.add(message.author)
                     await ctx.send(f"{message.author.mention} Stop cheating >:(")
@@ -220,8 +221,9 @@ class Typings(commands.Cog):
                 await ctx.send(
                     f"{message.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**"
                 )
-                # TODO: fix this shit
-                # save_wpm(ctx.author, wpm, accuracy, wordcount, language, 1)
+                await self.save_wpm(
+                    message.author, ctx.guild, wpm, accuracy, wordcount, language, True
+                )
 
                 results[str(message.author.id)] = wpm
                 completed_players.add(message.author)
@@ -233,57 +235,60 @@ class Typings(commands.Cog):
             title=":checkered_flag: Race complete!", color=discord.Color.green()
         )
         rows = []
+        values = []
         for i, player in enumerate(
             sorted(results.items(), key=itemgetter(1), reverse=True), start=1
         ):
             member = ctx.guild.get_member(int(player[0]))
-            if i == 1:
-                wins = db.query(
-                    "SELECT wins FROM typeracer WHERE guild_id = ? AND user_id = ?",
-                    (ctx.guild.id, member.id),
-                )
-                if wins is None:
-                    new_wins = 1
-                else:
-                    new_wins = wins[0][0] + 1
-                db.execute(
-                    "REPLACE INTO typeracer VALUES(?, ?, ?)",
-                    (ctx.guild.id, member.id, new_wins),
-                )
-
+            values.append((ctx.guild.id, member.id, 1, 1 if i == 1 else 0))
             rows.append(
-                f"{f'`{i}.`' if i > 1 else ':crown:'} **{int(player[1])} WPM ** — {member.name}"
+                f"{f'`#{i:2}`' if i > 1 else ':crown:'} **{int(player[1])} WPM** — {member.name}"
             )
 
-        content.description = "\n".join(rows)
-        await ctx.send(embed=content)
+        await self.bot.db.executemany(
+            """
+            INSERT INTO typing_race(guild_id, user_id, race_count, win_count)
+                VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                race_count = race_count + 1,
+                win_count = win_count + VALUES(win_count)
+            """,
+            tuple(values),
+        )
+
+        await util.send_as_pages(ctx, content, rows)
 
     @typing.command(name="history")
     async def typing_history(self, ctx, user: discord.Member = None):
         if user is None:
             user = ctx.author
 
-        data = db.query(
-            "SELECT * FROM typingdata WHERE user_id = ? ORDER BY `timestamp` DESC",
-            (user.id,),
+        data = await self.bot.db.execute(
+            """
+            SELECT test_date, wpm, accuracy, word_count, test_language FROM typing_stats
+            WHERE user_id = %s ORDER BY test_date DESC
+            """,
+            user.id,
         )
-        if data is None:
-            return await ctx.send(
+        if not data:
+            raise exceptions.Info(
+                ctx,
                 ("You haven't" if user is ctx.author else f"**{user.name}** hasn't")
-                + " taken any typing tests yet!"
+                + " taken any typing tests yet!",
             )
 
         content = discord.Embed(
-            title=f":stopwatch: Typing test history for {user.name}",
-            color=discord.Color.orange(),
+            title=f":stopwatch: Typing history for {user.name}",
+            color=int("dd2e44", 16),
         )
         content.set_footer(text=f"Total {len(data)} typing tests taken")
         rows = []
-        for row in data:
+        for test_date, wpm, accuracy, word_count, test_language in data:
             rows.append(
-                f"`{int(row[2])}` WPM **/** `{int(row[3])}%` ACC **/** "
-                f"{row[4]} words ( {arrow.get(row[0]).humanize()} )"
+                f"**{wpm}** WPM, **{int(accuracy)}%** ACC, "
+                f"**{word_count}** words, *{test_language}* ({arrow.get(test_date).to('utc').humanize()})"
             )
+
         await util.send_as_pages(ctx, content, rows)
 
     @typing.command(name="stats")
@@ -291,41 +296,61 @@ class Typings(commands.Cog):
         if user is None:
             user = ctx.author
 
-        data = db.query(
-            "SELECT * FROM typingdata WHERE user_id = ? ORDER BY `timestamp` DESC",
-            (user.id,),
+        data = await self.bot.db.execute(
+            """
+            SELECT COUNT(test_date), MAX(wpm), AVG(wpm), AVG(accuracy), race_count, win_count
+            FROM typing_stats LEFT JOIN typing_race ON typing_stats.user_id = typing_race.user_id
+            WHERE typing_stats.user_id = %s GROUP BY typing_stats.user_id
+            """,
+            user.id,
+            one_row=True,
         )
-        if data is None:
-            return await ctx.send(
+        if not data:
+            raise exceptions.Info(
                 ("You haven't" if user is ctx.author else f"**{user.name}** hasn't")
-                + " taken any typing tests yet!"
+                + " taken any typing tests yet!",
             )
 
-        # racedata = db.query(
-        #    "SELECT SUM(wins) FROM typeracer WHERE user_id = ?", (user.id,)
-        # )
-        wpm_list = [x[2] for x in data]
-        wpm_avg = sum(wpm_list) / len(wpm_list)
-        acc_list = [x[3] for x in data]
-        acc_avg = sum(acc_list) / len(acc_list)
-        wpm_list_re = [x[2] for x in data[:10]]
-        wpm_avg_re = sum(wpm_list_re) / len(wpm_list_re)
-        acc_list_re = [x[3] for x in data[:10]]
-        acc_avg_re = sum(acc_list_re) / len(acc_list_re)
-        # wins = racedata[0][0] if racedata is not None else "N/A"
+        test_count, max_wpm, avg_wpm, avg_acc, race_count, win_count = data
         content = discord.Embed(
-            title=f":keyboard: {user.name} typing stats", color=discord.Color.gold()
+            title=f":bar_chart: Typing stats for {user.name}", color=int("3b94d9", 16)
         )
         content.description = (
-            f"Tests taken: **{len(data)}**\n"
-            # f"Races won: **{wins}**\n"
-            f"Average WPM: **{int(wpm_avg)}**\n"
-            f"Average Accuracy: **{acc_avg:.1f}%**\n"
-            f"Recent average WPM: **{int(wpm_avg_re)}**\n"
-            f"Recent average Accuracy: **{acc_avg_re:.1f}%**\n"
+            f"Best WPM: **{max_wpm}**\n"
+            f"Average WPM: **{int(avg_wpm)}**\n"
+            f"Average Accuracy: **{avg_acc:.2f}%**\n"
+            f"Tests taken: **{test_count}** of which **{race_count}** were races\n"
+            f"Races won: **{win_count or 0}** "
+            + (
+                f"(**{(win_count/race_count)*100:.1f}%** win rate)"
+                if race_count is not None
+                else ""
+            )
         )
 
         await ctx.send(embed=content)
+
+    async def save_wpm(self, user, guild, wpm, accuracy, wordcount, language, was_race):
+        if wpm == 0:
+            return
+
+        await self.bot.db.execute(
+            """
+            INSERT INTO typing_stats (
+                user_id, guild_id, test_date, wpm,
+                accuracy, word_count, test_language, was_race
+            )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            user.id,
+            guild.id if guild is not None else None,
+            arrow.utcnow().datetime,
+            int(wpm),
+            accuracy,
+            wordcount,
+            language,
+            was_race,
+        )
 
 
 def setup(bot):
@@ -365,12 +390,3 @@ def calculate_entry(message, words_message, wordlist):
     wpm = (corrent_keys / 5) / (time.total_seconds() / 60)
     accuracy = (corrent_keys / total_keys) * 100
     return wpm, accuracy
-
-
-def save_wpm(user, wpm, accuracy, wordcount, language, race):
-    if wpm == 0:
-        return
-    db.execute(
-        "INSERT INTO typingdata VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (arrow.utcnow().timestamp, user.id, wpm, accuracy, wordcount, race, language),
-    )
