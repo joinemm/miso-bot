@@ -2,8 +2,7 @@ import traceback
 import discord
 import asyncio
 from discord.ext import commands, flags
-from helpers import exceptions, log, utilityfunctions as util
-from modules import queries
+from modules import queries, exceptions, log, util
 
 logger = log.get_logger(__name__)
 command_logger = log.get_logger("commands")

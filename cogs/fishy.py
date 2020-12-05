@@ -2,7 +2,7 @@ import discord
 import random
 import humanize
 from discord.ext import commands
-from helpers import utilityfunctions as util
+from modules import util
 
 
 class Fishy(commands.Cog):

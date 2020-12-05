@@ -7,12 +7,11 @@ import asyncio
 import datetime
 import humanize
 import csv
-from bs4 import BeautifulSoup
-from helpers import utilityfunctions as util
-from discord.ext import commands
 import json
-from helpers import exceptions
 import async_cse
+from bs4 import BeautifulSoup
+from discord.ext import commands
+from modules import exceptions, util
 
 GCS_DEVELOPER_KEY = os.environ.get("GOOGLE_KEY")
 

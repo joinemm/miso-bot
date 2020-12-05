@@ -1,10 +1,7 @@
 import discord
 import arrow
 from discord.ext import commands
-import helpers.utilityfunctions as util
-import helpers.log as log
-from helpers import exceptions
-from modules import queries
+from modules import queries, exceptions, util, log
 
 command_logger = log.get_command_logger()
 

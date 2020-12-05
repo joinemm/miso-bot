@@ -14,7 +14,7 @@ import arrow
 from discord.ext import commands, flags
 from tweepy import OAuthHandler
 from bs4 import BeautifulSoup
-from helpers import utilityfunctions as util
+from modules import util
 
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")

@@ -5,11 +5,9 @@ import discord
 import traceback
 from discord.ext import commands
 from time import time
-from helpers import log
-from helpers import help
-from helpers import utilityfunctions as util
+from modules import log, util, maria, queries
+from modules.help import EmbedHelpCommand
 from dotenv import load_dotenv
-from modules import maria, queries
 
 load_dotenv(verbose=True)
 uvloop.install()
@@ -24,12 +22,13 @@ else:
 logger.info(f"Developer mode is {'ON' if DEV else 'OFF'}")
 
 TOKEN = os.environ["MISO_BOT_TOKEN_BETA" if DEV else "MISO_BOT_TOKEN"]
+prefix = "<" if DEV else ">"
 
 
 class MisoBot(commands.AutoShardedBot):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.default_prefix = ("<" if DEV else ">",)
+        self.default_prefix = prefix
         self.logger = logger
         self.start_time = time()
         self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
@@ -48,20 +47,34 @@ class MisoBot(commands.AutoShardedBot):
 
 bot = MisoBot(
     owner_id=133311691852218378,
-    help_command=help.EmbedHelpCommand(),
+    help_command=EmbedHelpCommand(),
     command_prefix=util.determine_prefix,
     case_insensitive=True,
     allowed_mentions=discord.AllowedMentions(everyone=False),
-    intents=discord.Intents.all(),
+    max_messages=10000,
+    intents=discord.Intents(
+        guilds=True,
+        members=True,  # requires verification
+        bans=True,
+        emojis=True,
+        integrations=False,
+        webhooks=False,
+        invites=False,
+        voice_states=False,
+        presences=True,  # requires verification
+        guild_messages=True,
+        guild_reactions=True,
+        typing=False,
+    ),
 )
 
 extensions = [
     "events",
-    "config",
+    "configuration",
     "errorhandler",
     "customcommands",
     "fishy",
-    "info",
+    "information",
     "rolepicker",
     "mod",
     "owner",
@@ -73,11 +86,10 @@ extensions = [
     "images",
     "utility",
     "typings",
-    "reminders",
-    "bangs",
-    "opgg",
     "webserver",
     "reddit",
+    "crypto",
+    "kpop",
 ]
 
 
