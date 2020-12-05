@@ -6,7 +6,7 @@ import itertools
 import json
 from discord.ext import commands
 from operator import itemgetter
-from helpers import utilityfunctions as util, exceptions
+from modules import util, exceptions
 
 
 class Typings(commands.Cog):

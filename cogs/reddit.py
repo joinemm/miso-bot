@@ -2,9 +2,9 @@ import discord
 import arrow
 import asyncpraw
 import os
-from discord.ext import commands, flags
 import asyncprawcore
-from helpers import emojis, utilityfunctions as util
+from discord.ext import commands, flags
+from modules import emojis, util
 
 
 CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID")

@@ -8,8 +8,7 @@ import asyncio
 from time import time
 from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
-from helpers import log, emojis, utilityfunctions as util, exceptions
-from modules import queries
+from modules import queries, log, emojis, util, exceptions
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
 DARKSKY_API_KEY = os.environ.get("DARK_SKY_KEY")

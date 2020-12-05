@@ -5,9 +5,7 @@ import typing
 import arrow
 from discord.ext import commands
 from libraries import plotter
-from helpers import utilityfunctions as util
-from helpers import emojis, exceptions
-from modules import queries
+from modules import queries, emojis, exceptions, util
 
 
 class User(commands.Cog):

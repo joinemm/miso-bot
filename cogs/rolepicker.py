@@ -1,9 +1,7 @@
 import discord
 import asyncio
 from discord.ext import commands
-from helpers import utilityfunctions as util
-from helpers import exceptions
-from modules import queries
+from modules import util, exceptions, queries
 
 
 class Rolepicker(commands.Cog):

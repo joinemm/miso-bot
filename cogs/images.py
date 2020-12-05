@@ -2,7 +2,7 @@ import discord
 import os
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
-from helpers import utilityfunctions as util
+from modules import util
 
 
 class ImageObject:

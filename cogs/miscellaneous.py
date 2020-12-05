@@ -4,9 +4,8 @@ import arrow
 import aiohttp
 from libraries import minestat
 from discord.ext import commands
-from helpers import utilityfunctions as util
 from libraries import unicode_codes
-from helpers import exceptions
+from modules import exceptions, util
 
 
 class Miscellaneous(commands.Cog):

@@ -8,16 +8,13 @@ import aiohttp
 import re
 import html
 import math
+import io
+import colorgram
 import urllib.parse
 from bs4 import BeautifulSoup
 from discord.ext import commands
-from helpers import utilityfunctions as util
-from helpers.exceptions import LastFMError
-from helpers import emojis
 from PIL import Image
-import io
-from helpers import exceptions
-import colorgram
+from modules import exceptions, emojis, util
 
 
 LASTFM_APPID = os.environ.get("LASTFM_APIKEY")
@@ -566,7 +563,7 @@ class LastFm(commands.Cog):
             )
             data = await fetch(session, url, handling="text")
             if data is None:
-                raise LastFMError(404, "Album page not found")
+                raise exceptions.LastFMError(404, "Album page not found")
 
             soup = BeautifulSoup(data, "html.parser")
             data = []
@@ -609,7 +606,7 @@ class LastFm(commands.Cog):
             )
             data = await fetch(session, url, handling="text")
             if data is None:
-                raise LastFMError(404, "Artist page not found")
+                raise exceptions.LastFMError(404, "Artist page not found")
 
             soup = BeautifulSoup(data, "html.parser")
             data = []
@@ -653,7 +650,7 @@ class LastFm(commands.Cog):
             )
             data = await fetch(session, url, handling="text")
             if data is None:
-                raise LastFMError(404, "Artist page not found")
+                raise exceptions.LastFMError(404, "Artist page not found")
 
             soup = BeautifulSoup(data, "html.parser")
             try:
@@ -2102,7 +2099,7 @@ async def api_request(params, ignore_errors=False):
                 try:
                     content = await response.json()
                     if content is None:
-                        raise LastFMError(
+                        raise exceptions.LastFMError(
                             error_code=408,
                             message="Could not connect to LastFM",
                         )
@@ -2117,7 +2114,7 @@ async def api_request(params, ignore_errors=False):
                         if ignore_errors:
                             return None
                         else:
-                            raise LastFMError(
+                            raise exceptions.LastFMError(
                                 error_code=content.get("error"),
                                 message=content.get("message"),
                             )
@@ -2352,7 +2349,7 @@ async def listening_overview(ctx, timeframe):
         url = f"https://last.fm/user/{ctx.username}/listening-report/{timeframe}"
         data = await fetch(session, url, handling="text")
         if data is None:
-            raise LastFMError(404, "Artist page not found")
+            raise exceptions.LastFMError(404, "Artist page not found")
 
         soup = BeautifulSoup(data, "html.parser")
 

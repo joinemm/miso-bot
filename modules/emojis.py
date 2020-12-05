@@ -15,10 +15,26 @@ TYPING = "<a:typing:749966793480732694>"
 
 
 class Status(Enum):
-    ONLINE = "<:online:749966779840856094>"
-    IDLE = "<:away:749966876284813363>"
-    DND = "<:dnd:749966861549961277>"
-    OFFLINE = "<:offline:749966834031394886>"
+    online = "<:online:783745533457203212>"
+    idle = "<:idle:783745644559859783>"
+    dnd = "<:dnd:783745671811039333>"
+    offline = "<:offline:783745574138675221>"
+    streaming = "<:streaming:783745506102476830>"
+    mobile = "<:mobile:783745605423988786>"
+
+
+class Badge(Enum):
+    staff = "<:staff:783744718185693214>"
+    partner = "<:partner:783744609138114560>"
+    nitro = "<:nitro:783744676996841532>"
+    hypesquad = "<:hypesquad:783744695074684946>"
+    hypesquad_brilliance = "<:hypesquad_brilliance:783744824444190740>"
+    hypesquad_bravery = "<:hypesquad_bravery:783744840928198736>"
+    hypesquad_balance = "<:hypesquad_balance:783745461499592734>"
+    early_verified_bot_developer = "<:early_verified_bot_developer:783744740301996042>"
+    early_supporter = "<:early_supporter:783744759101390888>"
+    bug_hunter = "<:bug_hunter:783744806815268914>"
+    bug_hunter_level_2 = "<:bug_hunter_level_2:783744783670968331>"
 
 
 HUGS = [

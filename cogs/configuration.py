@@ -1,9 +1,7 @@
 import discord
 from discord.ext import commands
-import helpers.utilityfunctions as util
 from libraries import unicode_codes
-from helpers import exceptions
-from modules import queries
+from modules import queries, exceptions, util
 
 
 class ChannelSetting(commands.TextChannelConverter):

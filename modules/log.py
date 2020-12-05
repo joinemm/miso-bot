@@ -22,19 +22,17 @@ def get_command_logger():
         return logger
 
     # logger not created yet, assign options
-    coloredlogs.install(
-        fmt="{asctime} | {message}", style="{", level="DEBUG", logger=logger
-    )
+    coloredlogs.install(fmt="{asctime} | {message}", style="{", level="DEBUG", logger=logger)
 
     return logger
 
 
-def log_command(ctx):
+def log_command(ctx, extra=""):
     took = time() - ctx.timer
     command = str(ctx.command)
     guild = ctx.guild.name if ctx.guild is not None else "DM"
     user = str(ctx.author)
-    return f'{command:19} {took:.2f}s > {guild} : {user} "{ctx.message.content}"'
+    return f'{command:19} {took:.2f}s > {guild} : {user} "{ctx.message.content}" {extra}'
 
 
 def custom_command_format(ctx, keyword):

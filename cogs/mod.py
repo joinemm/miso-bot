@@ -1,10 +1,8 @@
 import discord
 import arrow
-from discord.ext import commands
-from helpers import utilityfunctions as util
-from helpers import exceptions
 import asyncio
-from modules import queries
+from discord.ext import commands
+from modules import queries, exceptions, util
 
 
 class Mod(commands.Cog):

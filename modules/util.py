@@ -4,13 +4,13 @@ import discord
 import copy
 import regex
 import colorgram
-import random
-import datetime
+import arrow
+import re
 import io
+from modules import queries, exceptions
 import aiohttp
 from discord.ext import commands
 from PIL import Image, UnidentifiedImageError
-from data import database as db
 from durations_nlp import Duration
 from libraries import unicode_codes
 
@@ -42,14 +42,63 @@ async def send_success(ctx, message):
 
 async def determine_prefix(bot, message):
     """Get the prefix used in the invocation context."""
-    guild = message.guild
-    prefix = bot.default_prefix
-    if guild:
-        data = db.query("SELECT prefix FROM prefixes WHERE guild_id = ?", (guild.id,))
-        if data is not None:
-            prefix = data[0][0]
+    if message.guild:
+        prefix = await bot.db.execute(
+            "SELECT prefix FROm guild_prefix WHERE guild_id = %s", message.guild.id, one_value=True
+        )
+        return prefix or bot.default_prefix
+    else:
+        return bot.default_prefix
 
-    return prefix
+
+def region_flag(region: discord.VoiceRegion):
+    """Get the flag emoji representing a discord voice region."""
+    if region in [
+        discord.VoiceRegion.eu_central,
+        discord.VoiceRegion.eu_west,
+        discord.VoiceRegion.europe,
+    ]:
+        return ":flag_eu:"
+    elif region in [
+        discord.VoiceRegion.us_central,
+        discord.VoiceRegion.us_east,
+        discord.VoiceRegion.us_south,
+        discord.VoiceRegion.us_west,
+        discord.VoiceRegion.vip_us_east,
+        discord.VoiceRegion.vip_us_west,
+    ]:
+        return ":flag_us:"
+    elif region in [
+        discord.VoiceRegion.amsterdam,
+        discord.VoiceRegion.vip_amsterdam,
+    ]:
+        return ":flag_nl:"
+    elif region is discord.VoiceRegion.dubai:
+        return "flag_ae"
+    elif region is discord.VoiceRegion.frankfurt:
+        return ":flag_de:"
+    elif region is discord.VoiceRegion.hongkong:
+        return ":flag_hk:"
+    elif region is discord.VoiceRegion.india:
+        return ":flag_in:"
+    elif region is discord.VoiceRegion.japan:
+        return ":flag_jp:"
+    elif region is discord.VoiceRegion.london:
+        return ":flag_gb:"
+    elif region is discord.VoiceRegion.russia:
+        return ":flag_ru:"
+    elif region is discord.VoiceRegion.singapore:
+        return ":flag_sg:"
+    elif region is discord.VoiceRegion.south_korea:
+        return ":flag_kr:"
+    elif region is discord.VoiceRegion.southafrica:
+        return ":flag_za:"
+    elif region is discord.VoiceRegion.sydney:
+        return ":flag_au:"
+    elif region is discord.VoiceRegion.brazil:
+        return ":flag_br:"
+    else:
+        return ":woman_shrugging:"
 
 
 async def send_as_pages(ctx, content, rows, maxrows=15, maxpages=10):
@@ -239,7 +288,8 @@ async def reaction_buttons(
 
 
 def message_embed(message):
-    """Creates a nice embed from message
+    """
+    Creates a nice embed from message
     :param: message : discord.Message you want to embed
     :returns        : discord.Embed
     """
@@ -256,7 +306,7 @@ def message_embed(message):
 
 
 def timefromstring(s):
-    """q
+    """
     :param s : String to parse time from
     :returns : Time in seconds
     """
@@ -290,7 +340,6 @@ def get_xp(level):
     :param level : Level
     :return      : Amount of xp needed to reach the level
     """
-
     return math.ceil(math.pow((level - 1) / (0.05 * (1 + math.sqrt(5))), 2))
 
 
@@ -299,7 +348,6 @@ def get_level(xp):
     :param xp : Amount of xp
     :returns  : Current level based on the amount of xp
     """
-
     return math.floor(0.05 * (1 + math.sqrt(5)) * math.sqrt(xp)) + 1
 
 
@@ -498,12 +546,6 @@ async def color_from_image_url(url, fallback="E74C3C"):
         return fallback
 
 
-def useragent():
-    """Returns random user agent to use in web scraping."""
-    agents = db.get_from_data_json(["useragents"])
-    return random.choice(agents)
-
-
 def bool_to_int(value: bool):
     """Turn boolean into 1 or 0."""
     if value is True:
@@ -572,9 +614,12 @@ class OptionalSubstitute(dict):
 
 def create_welcome_embed(user, guild, messageformat):
     """Creates and returns embed for welcome message."""
-    content = discord.Embed(title="New member! :wave:", color=discord.Color.green())
+    if messageformat is None:
+        messageformat = "Welcome **{username}** {mention} to **{server}**"
+
+    content = discord.Embed(title="New member! :wave:", color=int("5dadec", 16))
     content.set_thumbnail(url=user.avatar_url)
-    content.timestamp = datetime.datetime.utcnow()
+    content.timestamp = arrow.utcnow().datetime
     content.set_footer(text=f"👤#{len(guild.members)}")
     substitutes = OptionalSubstitute(
         {
@@ -590,23 +635,11 @@ def create_welcome_embed(user, guild, messageformat):
     return content
 
 
-def create_welcome_without_embed(user, guild, messageformat):
-    """Creates a welcome message from the given format without wrapping it in embed"""
-    substitutes = OptionalSubstitute(
-        {
-            "mention": user.mention,
-            "user": user,
-            "id": user.id,
-            "server": guild.name,
-            "guild": guild.name,
-            "username": user.name,
-        }
-    )
-    return messageformat.format_map(substitutes)
-
-
 def create_goodbye_message(user, guild, messageformat):
     """Formats a goodbye message."""
+    if messageformat is None:
+        messageformat = "Goodbye **{username}** {mention}"
+
     substitutes = OptionalSubstitute(
         {
             "mention": user.mention,
@@ -667,6 +700,8 @@ def activities_string(activities, markdown=True, show_emoji=True):
             prefix = "Listening"
         elif base_activity.type == discord.ActivityType.watching:
             prefix = "Watching"
+        elif base_activity.type == discord.ActivityType.streaming:
+            prefix = "Streaming"
 
         message = prefix + " " + (f"**{base_activity.name}**" if markdown else base_activity.name)
 
@@ -681,17 +716,34 @@ def activities_string(activities, markdown=True, show_emoji=True):
 
 
 def patrons_only():
-    def predicate(ctx):
+    async def predicate(ctx):
         if ctx.author.id == ctx.bot.owner_id:
             return True
         else:
-            patrons = db.query("select user_id from patrons where currently_active = 1")
-            if ctx.author.id in [x[0] for x in patrons]:
+            if await queries.is_donator(ctx, ctx.author):
                 return True
             else:
                 raise PatronCheckFailure
 
     return commands.check(predicate)
+
+
+def format_html(template, replacements):
+    def dictsub(m):
+        return str(replacements[m.group().strip("$")])
+
+    return re.sub(r"\$(\S*?)\$", dictsub, template)
+
+
+async def render_html(payload):
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post("http://localhost:3000/html", data=payload) as response:
+                buffer = io.BytesIO(await response.read())
+        except aiohttp.client_exceptions.ClientConnectorError:
+            raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
+
+    return buffer
 
 
 class TwoWayIterator:

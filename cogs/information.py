@@ -8,7 +8,7 @@ import copy
 import aiohttp
 from discord.ext import commands
 from libraries import unicode_codes
-from helpers import utilityfunctions as util, exceptions
+from modules import util, exceptions
 
 
 class Information(commands.Cog):
