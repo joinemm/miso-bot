@@ -69,3 +69,13 @@ class MariaDB:
                     return ()
         else:
             raise exceptions.Error("Could not connect to the local MariaDB instance!")
+
+    async def executemany(self, statement, params):
+        if await self.wait_for_pool():
+            async with self.pool.acquire() as conn:
+                async with conn.cursor() as cur:
+                    await cur.executemany(statement, params)
+                    await conn.commit()
+            return ()
+        else:
+            raise exceptions.Error("Could not connect to the local MariaDB instance!")
