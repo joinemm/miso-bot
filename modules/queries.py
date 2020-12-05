@@ -33,8 +33,9 @@ async def update_setting(ctx, table, setting, new_value):
 
 
 async def is_donator(ctx, user, unlock_tier=1):
-    if user == ctx.bot.owner:
+    if user.id == ctx.bot.owner_id:
         return True
+
     tier = await ctx.bot.db.execute(
         """
         SELECT donation_tier FROM donator
