@@ -10,14 +10,13 @@ import html
 import math
 import urllib.parse
 from bs4 import BeautifulSoup
-from operator import itemgetter
 from discord.ext import commands
 from helpers import utilityfunctions as util
-from data import database as db
-from helpers.exceptions import LastFMError, RendererError
+from helpers.exceptions import LastFMError
 from helpers import emojis
 from PIL import Image
 import io
+from helpers import exceptions
 import colorgram
 
 
@@ -25,6 +24,8 @@ LASTFM_APPID = os.environ.get("LASTFM_APIKEY")
 LASTFM_TOKEN = os.environ.get("LASTFM_SECRET")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
 AUDDIO_TOKEN = os.environ.get("AUDDIO_TOKEN")
+
+MISSING_IMAGE_HASH = "2a96cbd8b46e442fc41c2b86b821562f"
 
 
 class AlbumColorNode(object):
@@ -57,8 +58,8 @@ class LastFm(commands.Cog):
             "https://lastfm.freetls.fastly.net/i/u/174s/{0}.png",
             "https://lastfm.freetls.fastly.net/i/u/300x300/{0}.png",
         ]
-        with open("html/fm_chart_flex.html", "r", encoding="utf-8") as file:
-            self.chart_html_flex = file.read().replace("\n", "")
+        with open("html/fm_chart.min.html", "r", encoding="utf-8") as file:
+            self.chart_html = file.read().replace("\n", "")
 
     @commands.group(case_insensitive=True)
     async def fm(self, ctx):
@@ -70,25 +71,45 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def set(self, ctx, username):
-        """Save your last.fm username."""
+        """Save your LastFm username."""
         if ctx.foreign_target:
-            return await ctx.send(":warning: You cannot set lastfm username for someone else!")
+            return await ctx.send(":warning: You cannot set Last.fm username for someone else!")
 
         content = await get_userinfo_embed(username)
         if content is None:
-            return await ctx.send(f":warning: Invalid Last.fm username `{username}`")
+            raise exceptions.Warning(f"Last.fm profile `{username}` was not found")
 
-        db.update_user(ctx.author.id, "lastfm_username", username)
-        await ctx.send(f"{ctx.author.mention} Username saved as `{username}`", embed=content)
+        await self.bot.db.execute(
+            """
+            INSERT INTO user_settings (user_id, lastfm_username)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                lastfm_username = VALUES(lastfm_username)
+            """,
+            ctx.author.id,
+            username,
+        )
+        await ctx.send(
+            f"{ctx.author.mention} Last.fm username saved as `{username}`", embed=content
+        )
 
     @fm.command()
     async def unset(self, ctx):
-        """Unlink your last.fm."""
+        """Unlink your LastFm."""
         if ctx.foreign_target:
-            return await ctx.send(":warning: You cannot unset someone else's lastfm username!")
+            raise exceptions.Warning("You cannot unset someone else's LastFm username!")
 
-        db.update_user(ctx.author.id, "lastfm_username", None)
-        await ctx.send(":broken_heart: Removed your last.fm username from the database")
+        await self.bot.db.execute(
+            """
+            INSERT INTO user_settings (user_id, lastfm_username)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                lastfm_username = VALUES(lastfm_username)
+            """,
+            ctx.author.id,
+            None,
+        )
+        await ctx.send(":broken_heart: Removed your LastFm username from the database")
 
     @fm.command()
     async def profile(self, ctx):
@@ -124,7 +145,6 @@ class LastFm(commands.Cog):
             "q": f"{artist} {track}",
             "key": GOOGLE_API_KEY,
         }
-        db.update_rate_limit("youtube")
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
@@ -699,17 +719,19 @@ class LastFm(commands.Cog):
             text=f"{listeners} Listeners | {globalplaycount} Scrobbles | {', '.join(tags)}"
         )
 
-        crown_holder = db.query(
+        crown_holder = await self.bot.db.execute(
             """
-            SELECT user_id FROM crowns WHERE guild_id = ? AND artist = ?
+            SELECT user_id FROM artist_crown WHERE guild_id = %s AND artist_name = %s
             """,
-            (ctx.guild.id, artist["formatted_name"]),
+            ctx.guild.id,
+            artist["formatted_name"],
+            one_value=True,
         )
 
-        if crown_holder is None or crown_holder[0][0] != ctx.usertarget.id:
-            crownstate = ""
-        else:
+        if crown_holder == ctx.usertarget.id:
             crownstate = ":crown: "
+        else:
+            crownstate = ""
 
         content.add_field(
             name="Scrobbles | Albums | Tracks",
@@ -757,10 +779,15 @@ class LastFm(commands.Cog):
             return None
 
         colors = colorgram.extract(image, 1)
-        dominant_color = colors[0]
+        dominant_color = colors[0].rgb
 
-        colorspace = dominant_color.rgb
-        return (colorspace.r, colorspace.g, colorspace.b)
+        return (
+            album_art_id,
+            dominant_color.r,
+            dominant_color.g,
+            dominant_color.b,
+            util.rgb_to_hex(dominant_color),
+        )
 
     async def get_all_albums(self, username):
         params = {
@@ -771,15 +798,15 @@ class LastFm(commands.Cog):
         }
         data = await api_request(dict(params, **{"page": 1}))
         topalbums = data["topalbums"]["album"]
-        total_pages = int(data["topalbums"]["@attr"]["totalPages"])
-        if total_pages > 1:
-            tasks = []
-            for i in range(2, total_pages + 1):
-                tasks.append(api_request(dict(params, **{"page": i})))
+        # total_pages = int(data["topalbums"]["@attr"]["totalPages"])
+        # if total_pages > 1:
+        #     tasks = []
+        #     for i in range(2, total_pages + 1):
+        #         tasks.append(api_request(dict(params, **{"page": i})))
 
-            data = await asyncio.gather(*tasks)
-            for page in data:
-                topalbums += page["topalbums"]["album"]
+        #     data = await asyncio.gather(*tasks)
+        #     for page in data:
+        #         topalbums += page["topalbums"]["album"]
 
         return topalbums
 
@@ -820,10 +847,6 @@ class LastFm(commands.Cog):
 
         topalbums = await self.get_all_albums(ctx.username)
 
-        def string_to_rgb(rgbstring):
-            values = [int(x) for x in rgbstring.strip("()").split(", ")]
-            return tuple(values)
-
         albums = set()
         album_color_nodes = []
         for album in topalbums:
@@ -834,15 +857,23 @@ class LastFm(commands.Cog):
             albums.add(album_art_id)
 
         to_fetch = []
-        albumcolors = db.album_colors_from_cache(list(albums))
+        albumcolors = await self.bot.db.execute(
+            """
+            SELECT image_hash, r, g, b FROM image_color_cache WHERE image_hash IN %s
+            """,
+            tuple(albums),
+        )
+        albumcolors_dict = {}
+        for image_hash, r, g, b in albumcolors:
+            albumcolors_dict[image_hash] = (r, g, b)
         warn = None
 
         async with aiohttp.ClientSession() as session:
-            for image_id, color in albumcolors:
+            for image_id in albums:
+                color = albumcolors_dict.get(image_id)
                 if color is None:
                     to_fetch.append(image_id)
                 else:
-                    color = string_to_rgb(color)
                     album_color_nodes.append(AlbumColorNode(color, image_id))
 
             if to_fetch:
@@ -858,12 +889,14 @@ class LastFm(commands.Cog):
                     )
 
                 colordata = await asyncio.gather(*tasks)
-                for i, color in enumerate(colordata):
-                    if color is not None:
-                        to_cache.append((to_fetch[i], str(color)))
-                        album_color_nodes.append(AlbumColorNode(color, to_fetch[i]))
+                for image_hash, r, g, b, hexcolor in colordata:
+                    to_cache.append((image_hash, r, g, b, hexcolor))
+                    album_color_nodes.append(AlbumColorNode((r, g, b), image_hash))
 
-                db.executemany("INSERT OR IGNORE INTO album_color_cache VALUES(?, ?)", to_cache)
+                await self.bot.db.executemany(
+                    "INSERT INTO image_color_cache (image_hash, r, g, b, hex) VALUES (%s, %s, %s, %s, %s)",
+                    to_cache,
+                )
 
             if rainbow:
                 if diagonal:
@@ -934,12 +967,8 @@ class LastFm(commands.Cog):
             colour = f"{'diagonal ' if diagonal else ''}rainbow"
 
         await ctx.send(
-            f"`{util.displayname(ctx.usertarget)} {colour} album chart`"
-            + (
-                f"\n`{len(to_fetch)} fetched, {len(albumcolors)-len(to_fetch)} from cache`"
-                if to_fetch
-                else ""
-            ),
+            f"`{util.displayname(ctx.usertarget)} {colour} album chart"
+            + (f" | {len(to_fetch)} new`" if to_fetch else "`"),
             file=discord.File(
                 fp=buffer,
                 filename=f"fmcolorchart_{ctx.username}_{str(colour).strip('#').replace(' ', '_')}.jpeg",
@@ -1029,34 +1058,32 @@ class LastFm(commands.Cog):
 
         img_divs = "\n".join(img_div_template.format(*chart_item) for chart_item in chart_items)
 
-        dimensions = (300 * width, 300 * height)
         replacements = {
-            "WIDTH": dimensions[0],
-            "HEIGHT": dimensions[1],
-            "ARTS": img_divs,
+            "WIDTH": 300 * width,
+            "HEIGHT": 300 * height,
+            "CHART_ITEMS": img_divs,
         }
-
-        def dictsub(m):
-            return str(replacements[m.group().strip("%")])
-
-        formatted_html = re.sub(r"%%(\S*)%%", dictsub, self.chart_html_flex)
 
         payload = {
-            "html": formatted_html,
-            "width": dimensions[0],
-            "height": dimensions[1],
-            "imageFormat": "jpeg",
-            "quality": 70,
+            "html": util.format_html(self.chart_html, replacements),
+            "width": 300 * width,
+            "height": 300 * height,
+            "imageFormat": "png",
         }
 
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post("http://localhost:3000/html", data=payload) as response:
-                    buffer = io.BytesIO(await response.read())
-            except aiohttp.client_exceptions.ClientConnectorError:
-                raise RendererError("Unable to connect to the HTML Rendering server")
+        return await util.render_html(payload)
 
-        return buffer
+    async def server_lastfm_usernames(self, ctx, filter_cheaters=False):
+        guild_user_ids = [user.id for user in ctx.guild.members]
+        data = await self.bot.db.execute(
+            """
+            SELECT user_id, lastfm_username FROM user_settings WHERE user_id IN %s
+            AND lastfm_username IS NOT NULL
+            """
+            + " AND lastfm_username not in (SELECT lastfm_username FROM lastfm_cheater)",
+            guild_user_ids,
+        )
+        return data
 
     @fm.group(aliases=["s", "guild"])
     @commands.guild_only()
@@ -1069,12 +1096,8 @@ class LastFm(commands.Cog):
         """What people on this server are listening to at the moment."""
         listeners = []
         tasks = []
-        userslist = db.query(
-            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
-        )
-        for user in userslist if userslist is not None else []:
-            lastfm_username = user[1]
-            member = ctx.guild.get_member(user[0])
+        for user_id, lastfm_username in await self.server_lastfm_usernames(ctx):
+            member = ctx.guild.get_member(user_id)
             if member is None:
                 continue
 
@@ -1094,9 +1117,15 @@ class LastFm(commands.Cog):
 
         total_listening = len(listeners)
         rows = []
+        maxlen = 0
+        for song, member in listeners:
+            dn = util.displayname(member)
+            if len(dn) > maxlen:
+                maxlen = len(dn)
+
         for song, member in listeners:
             rows.append(
-                f"**{util.displayname(member)}** - {util.escape_md(song.get('artist'))} — *{util.escape_md(song.get('name'))}*"
+                f"{util.displayname(member)} | **{util.escape_md(song.get('artist'))}** — ***{util.escape_md(song.get('name'))}***"
             )
 
         content = discord.Embed()
@@ -1117,12 +1146,8 @@ class LastFm(commands.Cog):
         """What people on this server are and were last listening to."""
         listeners = []
         tasks = []
-        userslist = db.query(
-            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
-        )
-        for user in userslist if userslist is not None else []:
-            lastfm_username = user[1]
-            member = ctx.guild.get_member(user[0])
+        for user_id, lastfm_username in await self.server_lastfm_usernames(ctx):
+            member = ctx.guild.get_member(user_id)
             if member is None:
                 continue
 
@@ -1146,22 +1171,19 @@ class LastFm(commands.Cog):
         listeners = sorted(listeners, key=lambda l: l[0].get("date"), reverse=True)
         rows = []
         for song, member in listeners:
-            prefix = ""
             suffix = ""
             if song.get("nowplaying"):
-                prefix = ":notes: "
+                suffix = ":musical_note: "
             else:
-                suffix = f" | {arrow.get(song.get('date')).humanize()}"
+                suffix = f"({arrow.get(song.get('date')).humanize()})"
 
-            row = (
-                f"{prefix}**{util.displayname(member)}** - {util.escape_md(song.get('artist'))} —"
-                f" *{util.escape_md(song.get('name'))}*{suffix}"
+            rows.append(
+                f"{util.displayname(member)} | **{util.escape_md(song.get('artist'))}** — ***{util.escape_md(song.get('name'))}*** {suffix}"
             )
-            rows.append(row)
 
         content = discord.Embed()
         content.set_author(
-            name=f"What is {ctx.guild.name} listening to?",
+            name=f"What has {ctx.guild.name} been listening to?",
             icon_url=ctx.guild.icon_url_as(size=64),
         )
         content.colour = int(
@@ -1178,13 +1200,8 @@ class LastFm(commands.Cog):
         tasks = []
         total_users = 0
         total_plays = 0
-        userslist = db.query(
-            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
-            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
-        )
-        for member in userslist if userslist is not None else []:
-            lastfm_username = member[1]
-            member = ctx.guild.get_member(member[0])
+        for user_id, lastfm_username in await self.server_lastfm_usernames(ctx):
+            member = ctx.guild.get_member(user_id)
             if member is None:
                 continue
 
@@ -1231,13 +1248,8 @@ class LastFm(commands.Cog):
         tasks = []
         total_users = 0
         total_plays = 0
-        userslist = db.query(
-            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
-            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
-        )
-        for member in userslist if userslist is not None else []:
-            lastfm_username = member[1]
-            member = ctx.guild.get_member(member[0])
+        for user_id, lastfm_username in await self.server_lastfm_usernames(ctx):
+            member = ctx.guild.get_member(user_id)
             if member is None:
                 continue
 
@@ -1284,13 +1296,10 @@ class LastFm(commands.Cog):
         tasks = []
         total_users = 0
         total_plays = 0
-        userslist = db.query(
-            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
-            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
-        )
-        for member in userslist if userslist is not None else []:
-            lastfm_username = member[1]
-            member = ctx.guild.get_member(member[0])
+        for user_id, lastfm_username in await self.server_lastfm_usernames(
+            ctx, filter_cheaters=True
+        ):
+            member = ctx.guild.get_member(user_id)
             if member is None:
                 continue
 
@@ -1386,13 +1395,10 @@ class LastFm(commands.Cog):
 
         listeners = []
         tasks = []
-        userslist = db.query(
-            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
-            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
-        )
-        for member in userslist if userslist is not None else []:
-            lastfm_username = member[1]
-            member = ctx.guild.get_member(member[0])
+        for user_id, lastfm_username in await self.server_lastfm_usernames(
+            ctx, filter_cheaters=True
+        ):
+            member = ctx.guild.get_member(user_id)
             if member is None:
                 continue
 
@@ -1418,8 +1424,25 @@ class LastFm(commands.Cog):
         ):
             if i == 1:
                 rank = ":crown:"
-                old_king = db.add_crown(artistname, ctx.guild.id, member.id, playcount)
-                if old_king is not None:
+                old_king = await self.bot.db.execute(
+                    "SELECT user_id FROM artist_crown WHERE artist_name = %s AND guild_id = %s",
+                    artistname,
+                    ctx.guild.id,
+                    one_value=True,
+                )
+                await self.bot.db.execute(
+                    """
+                    INSERT INTO artist_crown (guild_id, user_id, artist_name, cached_playcount)
+                        VALUES (%s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        cached_playcount = VALUES(cached_playcount)
+                    """,
+                    ctx.guild.id,
+                    member.id,
+                    artistname,
+                    playcount,
+                )
+                if old_king:
                     old_king = ctx.guild.get_member(old_king)
                 new_king = member
             else:
@@ -1441,7 +1464,7 @@ class LastFm(commands.Cog):
         content.colour = int(image_colour, 16)
 
         await util.send_as_pages(ctx, content, rows)
-        if old_king is None or old_king.id == new_king.id:
+        if not old_king or old_king is None or old_king.id == new_king.id:
             return
 
         await ctx.send(
@@ -1479,13 +1502,10 @@ class LastFm(commands.Cog):
 
         listeners = []
         tasks = []
-        userslist = db.query(
-            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
-            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
-        )
-        for user in userslist if userslist is not None else []:
-            lastfm_username = user[1]
-            member = ctx.guild.get_member(user[0])
+        for user_id, lastfm_username in await self.server_lastfm_usernames(
+            ctx, filter_cheaters=True
+        ):
+            member = ctx.guild.get_member(user_id)
             if member is None:
                 continue
 
@@ -1561,13 +1581,10 @@ class LastFm(commands.Cog):
 
         listeners = []
         tasks = []
-        userslist = db.query(
-            "SELECT user_id, lastfm_username FROM users where lastfm_username is not null"
-            " AND LOWER(lastfm_username) not in (select username from lastfm_blacklist)"
-        )
-        for user in userslist if userslist is not None else []:
-            lastfm_username = user[1]
-            member = ctx.guild.get_member(user[0])
+        for user_id, lastfm_username in await self.server_lastfm_usernames(
+            ctx, filter_cheaters=True
+        ):
+            member = ctx.guild.get_member(user_id)
             if member is None:
                 continue
 
@@ -1619,26 +1636,29 @@ class LastFm(commands.Cog):
         if user is None:
             user = ctx.author
 
-        crownartists = db.query(
-            """SELECT artist, playcount FROM crowns
-            WHERE guild_id = ? AND user_id = ?""",
-            (ctx.guild.id, user.id),
+        crownartists = await self.bot.db.execute(
+            """
+            SELECT artist_name, cached_playcount FROM artist_crown
+            WHERE guild_id = %s AND user_id = %s ORDER BY cached_playcount DESC
+            """,
+            ctx.guild.id,
+            user.id,
         )
-        if crownartists is None:
+        if not crownartists:
             return await ctx.send(
                 "You haven't acquired any crowns yet! "
                 "Use the `>whoknows` command to claim crowns of your favourite artists :crown:"
             )
 
         rows = []
-        for artist, playcount in sorted(crownartists, key=itemgetter(1), reverse=True):
+        for artist, playcount in crownartists:
             rows.append(
                 f"**{util.escape_md(str(artist))}** with **{playcount}** {format_plays(playcount)}"
             )
 
         content = discord.Embed(color=discord.Color.gold())
         content.set_author(
-            name=f"👑 Artist crowns of {util.displayname(user)}",
+            name=f"👑 {util.displayname(user)} artist crowns",
             icon_url=user.avatar_url,
         )
         content.set_footer(text=f"Total {len(crownartists)} crowns")
@@ -1647,13 +1667,13 @@ class LastFm(commands.Cog):
     @commands.command()
     async def report(self, ctx, lastfm_username, *, reason):
         """Report someone who is botting plays."""
-        lastfm_username = lastfm_username.strip("/").split("/")[-1]
+        lastfm_username = lastfm_username.strip("/").split("/")[-1].lower()
         url = f"https://www.last.fm/user/{lastfm_username}"
         data = await api_request(
             {"user": lastfm_username, "method": "user.getinfo"}, ignore_errors=True
         )
         if data is None:
-            return await ctx.send(f":warning: `{url}` is not a valid last.fm profile.")
+            raise exceptions.Warning(f"`{url}` is not a valid Last.fm profile.")
 
         content = discord.Embed(title="New Last.fm user report")
         content.add_field(name="Profile", value=url)
@@ -1661,7 +1681,7 @@ class LastFm(commands.Cog):
 
         content.description = (
             "Are you sure you want to report this lastfm account?"
-            " Please note sending false reports **will get you blacklisted**."
+            " Please note sending false reports or spamming **will get you blacklisted**."
         )
 
         # send confirmation message
@@ -1673,13 +1693,12 @@ class LastFm(commands.Cog):
                 value=f"{ctx.author} (`{ctx.author.id}`)",
                 inline=False,
             )
-            data = db.query(
-                "select user_id from users where LOWER(lastfm_username) = ?",
-                (lastfm_username.lower(),),
+            user_ids = await self.bot.db.execute(
+                "SELECT user_id FROM user_settings WHERE lastfm_username = %s", lastfm_username
             )
-            if data is not None:
+            if user_ids:
                 connected_accounts = []
-                for x in data:
+                for x in user_ids:
                     user = self.bot.get_user(x[0])
                     connected_accounts.append(f"{user} (`{user.id}`)")
 
@@ -1691,7 +1710,7 @@ class LastFm(commands.Cog):
             content.set_footer(text=f">fmban {lastfm_username}")
             content.description = ""
 
-            await self.send_report(ctx, content, lastfm_username)
+            await self.send_report(ctx, content, lastfm_username, reason)
             await msg.edit(content="📨 Report sent!", embed=None)
 
         async def cancel_ban():
@@ -1703,15 +1722,22 @@ class LastFm(commands.Cog):
             util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
         )
 
-    async def send_report(self, ctx, content, lastfm_username):
+    async def send_report(self, ctx, content, lastfm_username, reason=None):
         reports_channel = self.bot.get_channel(729736304677486723)
         if reports_channel is None:
-            return await ctx.send(":warning: Something went wrong.")
+            raise exceptions.Warning("Something went wrong.")
 
         msg = await reports_channel.send(embed=content)
 
         async def confirm_ban():
-            db.execute("INSERT INTO lastfm_blacklist VALUES(?)", (lastfm_username.lower(),))
+            await self.bot.db.execute(
+                """
+                INSERT IGNORE lastfm_cheater (lastfm_username, flagged_on, reason)
+                """,
+                lastfm_username.lower(),
+                arrow.now().datetime,
+                reason,
+            )
             content.description = "Account flagged"
             content.color = discord.Color.green()
             await msg.edit(embed=content)
@@ -1731,9 +1757,6 @@ class LastFm(commands.Cog):
     @commands.command()
     async def lyrics(self, ctx, *, query):
         """Search for song lyrics."""
-        if not db.check_rate_limit("auddio"):
-            return await ctx.send(":warning: Monthly API usage limit reached")
-
         if query.lower() == "np":
             npd = await getnowplaying(ctx)
             trackname = npd["track"]
@@ -1750,8 +1773,6 @@ class LastFm(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.post(url=url, data=request_data) as response:
                 data = await response.json()
-
-        db.update_rate_limit("auddio")
 
         if data["status"] != "success":
             return await ctx.send(
@@ -2086,7 +2107,6 @@ async def api_request(params, ignore_errors=False):
                             message="Could not connect to LastFM",
                         )
                     if response.status == 200 and content.get("error") is None:
-                        db.update_rate_limit("lastfm")
                         return content
                     else:
                         if int(content.get("error")) == 8:
@@ -2212,9 +2232,7 @@ async def get_userinfo_embed(username):
         return None
 
     username = data["user"]["name"]
-    blacklisted = db.query(
-        "select * from lastfm_blacklist where username = ?", (username.lower(),)
-    )
+    blacklisted = None
     playcount = data["user"]["playcount"]
     profile_url = data["user"]["url"]
     profile_pic_url = data["user"]["image"][3]["#text"]
@@ -2312,17 +2330,19 @@ async def username_to_ctx(ctx):
         ctx.foreign_target = False
         ctx.usertarget = ctx.author
 
-    userdata = db.userdata(ctx.usertarget.id)
-    ctx.username = userdata.lastfm_username if userdata is not None else None
-    if ctx.username is None and str(ctx.invoked_subcommand) not in ["fm set"]:
+    ctx.username = await ctx.bot.db.execute(
+        "SELECT lastfm_username FROM user_settings WHERE user_id = %s",
+        ctx.usertarget.id,
+        one_value=True,
+    )
+    if not ctx.username and str(ctx.invoked_subcommand) not in ["fm set"]:
         if not ctx.foreign_target:
-            raise util.ErrorMessage(
-                f":warning: No last.fm username saved. "
-                f"Please use `{ctx.prefix}fm set <lastfm username>`"
+            raise exceptions.Warning(
+                f"No last.fm username saved! Please use `{ctx.prefix}fm set <lastfm username>`"
             )
         else:
-            raise util.ErrorMessage(
-                f":warning: {ctx.usertarget.mention} has not saved their lastfm username."
+            raise exceptions.Warning(
+                f"{ctx.usertarget.mention} has not saved their lastfm username!"
             )
 
 
