@@ -33,6 +33,7 @@ class MisoBot(commands.AutoShardedBot):
         self.start_time = time()
         self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
         self.db = maria.MariaDB(self)
+        self.version = "4.0"
 
     async def close(self):
         await self.db.cleanup()
