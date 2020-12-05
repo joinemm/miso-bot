@@ -1,6 +1,0 @@
-#!/bin/sh
-sqlite3 $1 <<EOF
-PRAGMA busy_timeout=20000;
-DELETE FROM activity_week;
-VACUUM;
-EOF
