@@ -18,10 +18,6 @@ class Information(commands.Cog):
         self.bot = bot
         self.icon = "ℹ️"
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        self.bot.version = f"{await get_version():.2f}"
-
     @commands.command()
     async def invite(self, ctx):
         """Invite Miso to your server!"""
@@ -495,15 +491,6 @@ class Information(commands.Cog):
 
 def setup(bot):
     bot.add_cog(Information(bot))
-
-
-async def get_version():
-    url = "https://api.github.com/repos/joinemm/miso-bot/contributors"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            data = await response.json()
-
-    return (data[0].get("contributions") + 1) * 0.01
 
 
 async def get_commits(author, repository):
