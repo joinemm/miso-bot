@@ -1,0 +1,36 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+aiomysql = "*"
+humanize = "*"
+"discord.py" = "*"
+aiohttp = "*"
+asyncpraw = "*"
+beautifulsoup4 = "*"
+bleach = "*"
+"colorgram.py" = "*"
+discord-flags = "*"
+durations-nlp = "*"
+psutil = "*"
+pillow = "*"
+regex = "*"
+uvloop = "*"
+jishaku = "*"
+async-cse = "*"
+coloredlogs = "*"
+arrow = "*"
+python-dotenv = "*"
+kdtree = "*"
+pyyaml = "*"
+numpy = "*"
+googlesearch-python = "*"
+wikipedia = "*"
+matplotlib = "*"
+scipy = "*"
+tweepy = "*"
+
+[requires]
+python_version = "3.8"
