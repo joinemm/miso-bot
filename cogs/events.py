@@ -295,15 +295,15 @@ class Events(commands.Cog):
         ]:
             await self.bot.db.execute(
                 f"""
-                INSERT INTO {activity_table} (guild_id, user_id, h{currenthour})
-                    VALUES (%s, %s, %s)
+                INSERT INTO {activity_table} (guild_id, user_id, is_bot, h{currenthour})
+                    VALUES (%s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE
-                    h{currenthour} = h{currenthour} + %s,
+                    h{currenthour} = h{currenthour} + VALUES(h{currenthour}),
                     message_count = message_count + 1
                 """,
                 message.guild.id,
                 message.author.id,
-                message_xp,
+                message.author.bot,
                 message_xp,
             )
 
@@ -489,8 +489,11 @@ class Events(commands.Cog):
             # trying to star a starboard message
             if message_channel.id == board_channel_id:
                 return
+            try:
+                message = await message_channel.fetch_message(payload.message_id)
+            except (discord.errors.Forbidden, discord.errors.NotFound):
+                return
 
-            message = await message_channel.fetch_message(payload.message_id)
             for react in message.reactions:
                 if emoji_type == "custom":
                     if (
