@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.22.2/apexcharts.min.js"></script>
+
+<body style="margin: 0; padding: 0">
+    <div id="chart"></div>
+</body>
+<script type="text/javascript">
+    const options = {
+        series: [{
+            data: [$DATA$]
+        }],
+        chart: {
+            type: "candlestick",
+            height: $HEIGHT$,
+            background: "#191b20",
+            animations: {
+                enabled: false
+            },
+            toolbar: {
+                show: false
+            }
+        },
+        theme: {
+            mode: 'dark',
+        },
+        grid: {
+            borderColor: '#2b2f36'
+        },
+        plotOptions: {
+            candlestick: {
+                colors: {
+                    upward: '#01c076',
+                    downward: '#d9304e'
+                },
+                wick: {
+                    useFillColor: true
+                }
+            }
+        },
+        title: {
+            text: "$TITLE$",
+            offsetY: 10,
+            align: "left"
+        },
+        subtitle: {
+            text: "Created with Miso Bot",
+            align: 'right',
+            offsetY: 7,
+        },
+        xaxis: {
+            type: "datetime"
+        },
+        yaxis: {
+            tooltip: {
+                enabled: true
+            }
+        }
+    };
+    const chart = new ApexCharts(document.querySelector("#chart"), options);
+    chart.render();
+</script>
