@@ -2,6 +2,7 @@ import discord
 import arrow
 from discord.ext import commands
 from helpers import log, utilityfunctions as util
+import asyncio
 
 
 logger = log.get_logger(__name__)
@@ -145,7 +146,42 @@ class Owner(commands.Cog):
     async def database_query(self, ctx, *, statement):
         """Execute something against the local MariaDB instance."""
         data = await self.bot.db.execute(statement)
-        await ctx.send(f"```py\n{data}\n```")
+        try:
+            if data:
+                content = "\n".join(str(r) for r in data)
+                await ctx.send(f"```py\n{content}\n```")
+            else:
+                await ctx.send(":white_check_mark:")
+        except discord.errors.HTTPException:
+            # too long, page it
+            pages = []
+            this_page = "```py\n"
+            for row in data:
+                if len(this_page + str(row)) < 1993:
+                    this_page += "\n" + str(row)
+                else:
+                    this_page += "\n```"
+                    pages.append(this_page)
+                    this_page = "```py\n"
+
+            pages = util.TwoWayIterator(pages)
+            msg = await ctx.send(pages.current())
+
+            async def switch_page(new_page):
+                await msg.edit(content=new_page)
+
+            async def previous_page():
+                content = pages.previous()
+                if content is not None:
+                    await switch_page(content)
+
+            async def next_page():
+                content = pages.next()
+                if content is not None:
+                    await switch_page(content)
+
+            functions = {"⬅": previous_page, "➡": next_page}
+            asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions))
 
     @commands.command()
     async def fmflag(self, ctx, lastfm_username, *, reason):
