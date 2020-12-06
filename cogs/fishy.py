@@ -201,7 +201,10 @@ class Fishy(commands.Cog):
                 one_row=True,
             )
 
-        total = sum(data[4:8])
+        if not data:
+            return await ctx.send("No data! Go fishing first.")
+
+        total = sum(data[3:])
         content = discord.Embed(
             title=f":fishing_pole_and_fish: {owner} fishy stats",
             color=int("55acee", 16),
@@ -221,7 +224,7 @@ class Fishy(commands.Cog):
                 [
                     f"Trash: **{data[3]}** ({(data[3] / total) * 100:.1f}%)",
                     f"Common: **{data[4]}** ({(data[4] / total) * 100:.1f}%)",
-                    f"Uncommon: **{data[5]}** ({(data[4] / total) * 100:.1f}%)",
+                    f"Uncommon: **{data[5]}** ({(data[5] / total) * 100:.1f}%)",
                     f"Rare: **{data[6]}** ({(data[6] / total) * 100:.1f}%)",
                     f"Legendary: **{data[7]}** ({(data[7] / total) * 100:.1f}%)",
                 ]
