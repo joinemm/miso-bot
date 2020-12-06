@@ -15,8 +15,8 @@ A discord bot with almost 100 commands and features, including but not limited t
 -   Youtube search
 -   Twitter image extractor
 -   Instagram image extractor
--   Moderation (ban, kick, mute, etc)
--   Log bans, leaves, joins, messages
+-   Moderation (ban, mute, etc)
+-   Logs bans, leaves, joins, messages
 -   Server and user information
 -   Levels and XP leaderboards
 -   Customizable profiles
@@ -44,6 +44,7 @@ A discord bot with almost 100 commands and features, including but not limited t
 -   Custom commands
 -   Changeable prefix
 -   OPGG
+-   Cryptocurrency data
 
 ...and much more. Visit <https://misobot.xyz> for more detailed overview of the features.
 
@@ -52,3 +53,37 @@ A discord bot with almost 100 commands and features, including but not limited t
 Invite to you server using this link!
 
 <https://discordapp.com/oauth2/authorize?client_id=500385855072894982&scope=bot&permissions=1074654407>
+
+---
+
+#### Deployment
+
+```
+sudo apt-get install python3 python3-pip mariadb-server
+sudo mysql_secure_installation
+sudo python3 -m pip install pipenv
+git clone --recurse-submodules https://github.com/joinemm/miso-bot.git
+cd miso-bot
+pipenv install
+cp polls.yaml.example polls.yaml
+cp .env.example .env
+```
+> fill `polls.yaml` and `.env` with your values.
+```
+sudo mysql
+```
+> mysql commands (replace user and password with your own preferred values)
+```
+CREATE DATABASE misobot;
+GRANT ALL ON misobot.* TO 'miso'@'localhost' IDENTIFIED BY 'password' WITH GRANT OPTION;
+connect misobot;
+source sql/schema.sql
+source sql/kpop_schema.sql
+source sql/staticdata.sql
+exit
+```
+> use any process manager of your choice to run the two launch scripts in parallel (or use tmux)
+```
+./launch-image-server
+./launch
+```
