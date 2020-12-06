@@ -1065,7 +1065,7 @@ class LastFm(commands.Cog):
             "html": util.format_html(self.chart_html, replacements),
             "width": 300 * width,
             "height": 300 * height,
-            "imageFormat": "png",
+            "imageFormat": "jpeg",
         }
 
         return await util.render_html(payload)
