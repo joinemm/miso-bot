@@ -231,10 +231,37 @@ def create_pages(content, rows, maxrows=15, maxpages=10):
     return pages
 
 
+async def paginate_list(ctx, items, use_locking=False, only_author=False):
+    pages = TwoWayIterator(items)
+    msg = await ctx.send(pages.current())
+
+    async def next_result():
+        new_content = pages.next()
+        if new_content is None:
+            return
+        await msg.edit(content=new_content, embed=None)
+
+    async def previous_result():
+        new_content = pages.previous()
+        if new_content is None:
+            return
+        await msg.edit(content=new_content, embed=None)
+
+    async def done():
+        return True
+
+    functions = {"⬅": previous_result, "➡": next_result}
+    if use_locking:
+        functions["🔒"] = done
+
+    asyncio.ensure_future(reaction_buttons(ctx, msg, functions, only_author=only_author))
+
+
 async def reaction_buttons(
     ctx, message, functions, timeout=300.0, only_author=False, single_use=False, only_owner=False
 ):
-    """Handler for reaction buttons
+    """
+    Handler for reaction buttons
     :param message     : message to add reactions to
     :param functions   : dictionary of {emoji : function} pairs. functions must be async.
                          return True to exit
@@ -282,7 +309,7 @@ async def reaction_buttons(
 
     for emojiname in functions:
         try:
-            await message.clear_reaction(emojiname)
+            await message.clear_reactions()
         except (discord.errors.NotFound, discord.errors.Forbidden):
             pass
 
