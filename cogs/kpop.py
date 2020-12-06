@@ -21,10 +21,7 @@ class Kpop(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.google_client = async_cse.Search(
-            GCS_DEVELOPER_KEY,
-            # engine_id="016720228003584159752:xwo6ysur40a"
-        )
+        self.google_client = async_cse.Search(GCS_DEVELOPER_KEY)
         self.icon = "💃"
         self.gender_icon = {
             "F": ":female_sign: ",
@@ -44,9 +41,11 @@ class Kpop(commands.Cog):
         await self.google_client.close()
 
     async def google_image_search(self, keyword):
-        results = await self.google_client.search(keyword, safesearch=False)
-        first_result = results[0]
-        return first_result.image_url
+        results = await self.google_client.search(keyword, safesearch=False, image_search=True)
+        if results:
+            return results[0].image_url
+        else:
+            return ""
 
     @commands.group(case_insensitive=True)
     async def idol(self, ctx):
