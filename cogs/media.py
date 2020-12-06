@@ -1,20 +1,18 @@
 import discord
 import asyncio
-import googlesearch
 import json
 import random
 import re
-import wikipedia
 import tweepy
 import os
-import copy
 import aiohttp
 import regex
 import arrow
+import async_cse
 from discord.ext import commands, flags
 from tweepy import OAuthHandler
 from bs4 import BeautifulSoup
-from modules import util
+from modules import util, exceptions
 
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")
@@ -23,6 +21,7 @@ SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
 ROTATING_PROXY_URL = os.environ.get("ROTATING_PROXY_URL")
+GCS_DEVELOPER_KEY = os.environ.get("GOOGLE_KEY")
 
 
 class Media(commands.Cog):
@@ -32,6 +31,7 @@ class Media(commands.Cog):
         self.bot = bot
         self.icon = "🌐"
         self.twitter_api = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
+        self.google_client = async_cse.Search(GCS_DEVELOPER_KEY)
         self.ig_colors = [
             int("405de6", 16),
             int("5851db", 16),
@@ -169,12 +169,7 @@ class Media(commands.Cog):
 
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx, *, query):
-        """
-        Search videos from youtube.
-
-        Usage:
-            >youtube <search term>
-        """
+        """Search videos from youtube."""
         url = "https://www.googleapis.com/youtube/v3/search"
         params = {
             "key": GOOGLE_API_KEY,
@@ -186,36 +181,18 @@ class Media(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
                 if response.status == 403:
-                    return await ctx.send("```Error: Daily quota reached.```")
+                    raise exceptions.Error("Daily youtube api quota reached.")
                 else:
                     data = await response.json()
 
-        urls = []
-        for item in data.get("items"):
-            urls.append(f"https://youtube.com/watch?v={item['id']['videoId']}")
-
-        if not urls:
+        if not data.get("items"):
             return await ctx.send("No results found!")
 
-        videos = util.TwoWayIterator(urls)
-        msg = await ctx.send(f"`#1` {videos.current()}")
+        items = []
+        for i, item in enumerate(data.get("items"), start=1):
+            items.append(f"`{i}.` https://youtube.com/watch?v={item['id']['videoId']}")
 
-        async def next_link():
-            link = videos.next()
-            if link is not None:
-                await msg.edit(content=f"`#{videos.index+1}` {link}", embed=None)
-
-        async def prev_link():
-            link = videos.previous()
-            if link is not None:
-                await msg.edit(content=f"`#{videos.index+1}` {link}", embed=None)
-
-        async def done():
-            return True
-
-        functions = {"⬅": prev_link, "➡": next_link, "✅": done}
-
-        asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions, only_author=True))
+        await util.paginate_list(ctx, items, use_locking=True, only_author=True)
 
     @flags.add_flag("urls", nargs="+")
     @flags.add_flag("-d", "--download", action="store_true")
@@ -245,7 +222,12 @@ class Media(commands.Cog):
                 async with session.get(
                     newurl, params=params, headers=headers, proxy=ROTATING_PROXY_URL
                 ) as response:
-                    data = await response.json()
+                    try:
+                        data = await response.json()
+                    except aiohttp.ContentTypeError:
+                        raise exceptions.Error(
+                            "This proxy IP address has been banned by Instagram. Try again later."
+                        )
                     data = data["data"]["shortcode_media"]
 
                 if data is None:
@@ -417,13 +399,7 @@ class Media(commands.Cog):
 
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx, *, query):
-        """Search for a random gif"""
-
-        async def extract_scripts(session, url):
-            async with session.get(url) as response:
-                data = await response.text()
-                soup = BeautifulSoup(data, "html.parser")
-                return soup.find_all("script", {"type": "application/ld+json"})
+        """Search for a random gif."""
 
         scripts = []
         async with aiohttp.ClientSession() as session:
@@ -452,24 +428,24 @@ class Media(commands.Cog):
         async def randomize():
             await msg.edit(content=f"**{query}** {random.choice(urls)}")
 
-        buttons = {"❌": msg.delete, "🔁": randomize}
+        async def done():
+            return True
+
+        buttons = {"❌": msg.delete, "🔁": randomize, "🔒": done}
         asyncio.ensure_future(util.reaction_buttons(ctx, msg, buttons, only_author=True))
 
     @commands.command()
-    async def melon(self, ctx, timeframe=None):
-        """
-        Melon music charts.
-
-        Usage:
-            >melon [realtime | day | month | rising]
-        """
+    async def melon(self, ctx, timeframe):
+        """Melon music charts."""
         if timeframe not in ["day", "month"]:
             if timeframe == "realtime":
                 timeframe = ""
             elif timeframe == "rising":
                 timeframe = "rise"
             else:
-                return await util.send_command_help(ctx)
+                raise exceptions.Info(
+                    "Available timeframes: `[ day | month | realtime | rising ]`"
+                )
 
         url = f"https://www.melon.com/chart/{timeframe}/index.htm"
         async with aiohttp.ClientSession() as session:
@@ -488,10 +464,10 @@ class Media(commands.Cog):
             util.escape_md(x.find("a").text)
             for x in soup.find_all("div", {"class": "ellipsis rank02"})
         ]
-        albums = [
-            util.escape_md(x.find("a").text)
-            for x in soup.find_all("div", {"class": "ellipsis rank03"})
-        ]
+        # albums = [
+        #     util.escape_md(x.find("a").text)
+        #     for x in soup.find_all("div", {"class": "ellipsis rank03"})
+        # ]
         image = soup.find("img", {"onerror": "WEBPOCIMG.defaultAlbumImg(this);"}).get("src")
 
         content = discord.Embed(color=discord.Color.from_rgb(0, 205, 60))
@@ -499,27 +475,16 @@ class Media(commands.Cog):
             name=f"Melon top {len(song_titles)}"
             + ("" if timeframe == "" else f" - {timeframe.capitalize()}"),
             url=url,
+            icon_url="https://i.imgur.com/hm9xzPz.png",
         )
         content.set_thumbnail(url=image)
         content.timestamp = ctx.message.created_at
 
-        pages = []
-        for i, (song, album, artist) in enumerate(zip(song_titles, albums, artists)):
-            if i != 0 and i % 10 == 0:
-                pages.append(content)
-                content = copy.deepcopy(content)
-                content.clear_fields()
+        rows = []
+        for i, (song, artist) in enumerate(zip(song_titles, artists), start=1):
+            rows.append(f"`#{i:2}` **{artist}** — ***{song}***")
 
-            content.add_field(
-                name=f"`#{i+1}` {song}",
-                value=f"*by* **{artist}** *on* **{album}**",
-                inline=False,
-            )
-
-        if content._fields:
-            pages.append(content)
-
-        await util.page_switcher(ctx, pages)
+        await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
     async def xkcd(self, ctx, comic_id=None):
@@ -540,50 +505,35 @@ class Media(commands.Cog):
         await ctx.send(location)
 
     @commands.command()
-    async def wikipedia(self, ctx, *, query):
-        """
-        Search from wikipedia, or get random page.
-
-        Usage:
-            >wikipedia <query>
-            >wikipedia random
-        """
-        if query == "random":
-            query = await self.bot.loop.run_in_executor(None, wikipedia.random)
-
-        try:
-            page = await self.bot.loop.run_in_executor(None, lambda: wikipedia.page(query))
-            await ctx.send(page.url)
-        except wikipedia.exceptions.DisambiguationError as disabiguation_page:
-            await ctx.send(f"```{str(disabiguation_page)}```")
-
-    @commands.command()
     async def google(self, ctx, *, query):
         """Search from google."""
-        results = await self.bot.loop.run_in_executor(
-            None, lambda: googlesearch.search(query, stop=10, pause=1.0)
-        )
-        pages = util.TwoWayIterator([f"`#{i+1}` {x}" for i, x in enumerate(list(results))])
-        msg = await ctx.send(pages.current())
+        results = await self.google_client.search(query, safesearch=False)
+        formatted_results = []
+        for i, result in enumerate(results, start=1):
+            formatted_results.append(f"`{i}.` **{result.title}**\n{result.url}")
 
-        async def next_result():
-            new_content = pages.next()
-            if new_content is None:
-                return
-            await msg.edit(content=new_content, embed=None)
+        await util.paginate_list(ctx, formatted_results)
 
-        async def previous_result():
-            new_content = pages.previous()
-            if new_content is None:
-                return
-            await msg.edit(content=new_content, embed=None)
+    @commands.command()
+    async def googleimages(self, ctx, *, query):
+        """Search from google images."""
+        results = await self.google_client.search(query, safesearch=False, image_search=True)
+        formatted_results = []
+        for i, result in enumerate(results, start=1):
+            formatted_results.append(result.image_url)
 
-        functions = {"⬅": previous_result, "➡": next_result}
-        asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions, only_author=True))
+        await util.paginate_list(ctx, formatted_results, use_locking=True, only_author=True)
 
 
 def setup(bot):
     bot.add_cog(Media(bot))
+
+
+async def extract_scripts(session, url):
+    async with session.get(url) as response:
+        data = await response.text()
+        soup = BeautifulSoup(data, "html.parser")
+        return soup.find_all("script", {"type": "application/ld+json"})
 
 
 class GGSoup:
