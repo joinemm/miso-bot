@@ -2,7 +2,7 @@ import traceback
 import discord
 import asyncio
 from discord.ext import commands, flags
-from modules import queries, exceptions, log, util
+from modules import queries, exceptions, log, util, emojis
 
 logger = log.get_logger(__name__)
 command_logger = log.get_logger("commands")
@@ -32,6 +32,11 @@ class ErrorHander(commands.Cog):
             "cooldown": {
                 "description_prefix": ":hourglass_flowing_sand:",
                 "color": int("ffe8b6", 16),
+                "help_footer": False,
+            },
+            "lastfm": {
+                "description_prefix": emojis.LASTFM,
+                "color": int("b90000", 16),
                 "help_footer": False,
             },
         }
@@ -172,7 +177,7 @@ class ErrorHander(commands.Cog):
             else:
                 message = error.display()
 
-            await self.send(ctx, "error", message)
+            await self.send(ctx, "lastfm", message)
 
         else:
             await self.log_and_traceback(ctx, error)

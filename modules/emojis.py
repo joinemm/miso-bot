@@ -13,6 +13,8 @@ RED_DOWN = "<:red_triangle_down:749966805908455526>"
 LOADING = "<a:loading:749966819514777690>"
 TYPING = "<a:typing:749966793480732694>"
 
+LASTFM = "<:lastfm:785230336014811139>"
+
 
 class Status(Enum):
     online = "<:online:783745533457203212>"
