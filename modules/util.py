@@ -552,7 +552,7 @@ def rgb_to_hex(rgb):
     return "{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
 
 
-async def color_from_image_url(url, fallback="E74C3C"):
+async def color_from_image_url(url, fallback="E74C3C", return_color_object=False):
     """
     :param url      : image url
     :param fallback : the color to return in case the operation fails
@@ -567,7 +567,10 @@ async def color_from_image_url(url, fallback="E74C3C"):
                 colors = colorgram.extract(image, 1)
                 dominant_color = colors[0].rgb
 
-        return rgb_to_hex(dominant_color)
+        if return_color_object:
+            return dominant_color
+        else:
+            return rgb_to_hex(dominant_color)
     except Exception as e:
         print(e)
         return fallback
