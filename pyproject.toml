@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "miso-bot"
+version = "4.0.0"
+description = "Discord bot with too many features"
+authors = ["Joinemm <joonas@rautiola.co>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+aiomysql = "^0.0.21"
+humanize = "^3.1.0"
+"discord.py" = "^1.5.1"
+asyncpraw = "^7.1.0"
+bleach = "^3.2.1"
+"colorgram.py" = "^1.2.0"
+discord-flags = "^2.1.1"
+durations-nlp = "^1.0.1"
+psutil = "^5.7.3"
+Pillow = "^8.0.1"
+uvloop = "^0.14.0"
+jishaku = "^1.20.0"
+async-cse = "^0.3.0"
+coloredlogs = "^14.0"
+arrow = "^0.17.0"
+python-dotenv = "^0.15.0"
+kdtree = "^0.16"
+PyYAML = "^5.3.1"
+numpy = "^1.19.4"
+scipy = "^1.5.4"
+wikipedia = "^1.4.0"
+matplotlib = "^3.3.3"
+tweepy = "^3.9.0"
+beautifulsoup4 = "^4.9.3"
+
+[tool.poetry.dev-dependencies]
+black = "^20.8b1"
+flake8 = "^3.8.4"
+rope = "^0.18.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

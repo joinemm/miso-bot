@@ -58,13 +58,14 @@ Invite to you server using this link!
 
 #### Deployment
 
+The python dependencies are managed using [poetry](https://python-poetry.org/).
+
 ```
 sudo apt-get install python3 python3-pip mariadb-server
 sudo mysql_secure_installation
-sudo python3 -m pip install pipenv
 git clone --recurse-submodules https://github.com/joinemm/miso-bot.git
 cd miso-bot
-pipenv install
+poetry install
 cp polls.yaml.example polls.yaml
 cp .env.example .env
 ```
@@ -82,8 +83,11 @@ source sql/kpop_schema.sql
 source sql/staticdata.sql
 exit
 ```
-> use any process manager of your choice to run the two launch scripts in parallel (or use tmux)
+> Start the image server (optional, but image generation will not work without it). Keep it running in the background.
 ```
 ./launch-image-server
-./launch
+```
+> Finally, run the bot
+```
+poetry run python main.py
 ```

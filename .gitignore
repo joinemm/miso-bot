@@ -8,3 +8,4 @@ data/data.json
 .vscode/
 polls.yaml
 .env
+poetry.lock
