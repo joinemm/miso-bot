@@ -9,20 +9,29 @@ from modules import log, util, maria, queries
 from modules.help import EmbedHelpCommand
 from dotenv import load_dotenv
 
-load_dotenv(verbose=True)
 uvloop.install()
-
+load_dotenv(verbose=True)
 logger = log.get_logger(__name__)
 
-if len(sys.argv) > 1:
-    DEV = sys.argv[1] == "dev"
+DEV = "dev" in sys.argv
+maintainance_mode = "maintainance" in sys.argv
+
+if DEV:
+    logger.info("Developer mode is ON")
+    TOKEN = os.environ["MISO_BOT_TOKEN_BETA"]
+    prefix = "<"
 else:
-    DEV = False
+    TOKEN = os.environ["MISO_BOT_TOKEN"]
+    prefix = ">"
 
-logger.info(f"Developer mode is {'ON' if DEV else 'OFF'}")
-
-TOKEN = os.environ["MISO_BOT_TOKEN_BETA" if DEV else "MISO_BOT_TOKEN"]
-prefix = "<" if DEV else ">"
+if maintainance_mode:
+    logger.info("Maintainance mode is ON")
+    prefix = prefix * 2
+    starting_activity = discord.Activity(
+        type=discord.ActivityType.playing, name="Maintainance mode"
+    )
+else:
+    starting_activity = discord.Activity(type=discord.ActivityType.playing, name="Booting up...")
 
 
 class MisoBot(commands.AutoShardedBot):
@@ -63,16 +72,23 @@ bot = MisoBot(
         invites=False,
         voice_states=False,
         presences=True,  # requires verification
-        guild_messages=True,
-        guild_reactions=True,
+        messages=True,
+        reactions=True,
         typing=False,
     ),
+    activity=starting_activity,
 )
 
+maintainance_extensions = [
+    "errorhandler",
+    "migratedb",
+    "owner",
+]
+
 extensions = [
+    "errorhandler",
     "events",
     "configuration",
-    "errorhandler",
     "customcommands",
     "fishy",
     "information",
@@ -92,6 +108,9 @@ extensions = [
     "crypto",
     "kpop",
 ]
+
+if maintainance_mode:
+    extensions = maintainance_extensions
 
 
 @bot.before_invoke
@@ -134,5 +153,6 @@ if __name__ == "__main__":
             traceback.print_exception(type(error), error, error.__traceback__)
 
     bot.load_extension("jishaku")
+    logger.info(f'Using default prefix "{prefix}"')
     bot.start_time = time()
     bot.run(TOKEN)
