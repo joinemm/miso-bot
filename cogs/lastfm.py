@@ -1877,11 +1877,14 @@ async def getnowplaying(ctx):
 
     data = await api_request({"user": ctx.username, "method": "user.getrecenttracks", "limit": 1})
 
-    tracks = data["recenttracks"]["track"]
-    if tracks:
-        playing["artist"] = tracks[0]["artist"]["#text"]
-        playing["album"] = tracks[0]["album"]["#text"]
-        playing["track"] = tracks[0]["name"]
+    try:
+        tracks = data["recenttracks"]["track"]
+        if tracks:
+            playing["artist"] = tracks[0]["artist"]["#text"]
+            playing["album"] = tracks[0]["album"]["#text"]
+            playing["track"] = tracks[0]["name"]
+    except KeyError:
+        pass
 
     return playing
 
