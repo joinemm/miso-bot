@@ -288,6 +288,7 @@ CREATE TABLE IF NOT EXISTS voting_channel (
 CREATE TABLE IF NOT EXISTS muted_user (
     guild_id BIGINT,
     user_id BIGINT,
+    channel_id BIGINT,
     unmute_on DATETIME DEFAULT NULL,
     PRIMARY KEY (guild_id, user_id)
 );

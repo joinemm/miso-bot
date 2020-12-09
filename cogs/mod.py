@@ -1,8 +1,11 @@
 import discord
 import arrow
 import asyncio
-from discord.ext import commands
-from modules import queries, exceptions, util
+from discord.ext import commands, tasks
+from modules import queries, exceptions, util, log
+
+
+logger = log.get_logger(__name__)
 
 
 class Mod(commands.Cog):
@@ -11,6 +14,75 @@ class Mod(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.icon = "🔨"
+        self.unmute_list = []
+        self.cache_needs_refreshing = True
+        self.unmute_loop.start()
+
+    def cog_unload(self):
+        self.unmute_loop.cancel()
+
+    @tasks.loop(seconds=10.0)
+    async def unmute_loop(self):
+        try:
+            await self.check_mutes()
+        except Exception as e:
+            logger.error(f"unmute loop error: {e}")
+
+    @unmute_loop.before_loop
+    async def before_unmute_loop(self):
+        await self.bot.wait_until_ready()
+        logger.info("Starting unmuting loop")
+
+    async def check_mutes(self):
+        """Check all current mutes"""
+        if self.cache_needs_refreshing:
+            self.cache_needs_refreshing = False
+            self.unmute_list = await self.bot.db.execute(
+                "SELECT user_id, guild_id, channel_id, unmute_on FROM muted_user"
+            )
+
+        if not self.unmute_list:
+            return
+
+        now_ts = arrow.utcnow().timestamp
+        for (user_id, guild_id, channel_id, unmute_on) in self.unmute_list:
+            unmute_ts = unmute_on.timestamp()
+            if unmute_ts > now_ts:
+                continue
+
+            guild = self.bot.get_guild(guild_id)
+            if guild is not None:
+                user = guild.get_member(user_id)
+            else:
+                user = None
+            if user is not None:
+                channel = guild.get_channel(channel_id)
+                if channel is not None:
+                    try:
+                        await channel.send(
+                            embed=discord.Embed(
+                                description=f":stopwatch: Unmuted {user.mention} (mute duration passed)",
+                                color=int("66757f", 16),
+                            )
+                        )
+                    except discord.errors.Forbidden:
+                        logger.warning(
+                            "Unable to send unmuting message due to missing permissions!"
+                        )
+            else:
+                logger.info(
+                    f"Deleted expired mute of unknown user {user_id} or unknown guild {guild_id}"
+                )
+
+            await self.bot.db.execute(
+                """
+                DELETE FROM muted_user
+                    WHERE user_id = %s AND guild_id = %s
+                """,
+                user_id,
+                guild_id,
+            )
+            self.cache_needs_refreshing = True
 
     @commands.command(aliases=["clean"])
     @commands.guild_only()
@@ -30,13 +102,15 @@ class Mod(commands.Cog):
 
         if ctx.message.mentions:
             deleted = []
-            async for message in ctx.channel.history(limit=500):
+            async for message in ctx.channel.history(limit=100, oldest_first=False):
                 if message.author in ctx.message.mentions:
                     deleted.append(message)
                     if len(deleted) >= amount:
                         break
-
-            await ctx.channel.delete_messages(deleted)
+            try:
+                await ctx.channel.delete_messages(deleted)
+            except discord.errors.HTTPException:
+                raise exceptions.Error("You can only delete messages that are under 14 days old.")
         else:
             deleted = await ctx.channel.purge(limit=amount)
 
@@ -71,6 +145,8 @@ class Mod(commands.Cog):
             duration = util.timefromstring(duration)
             if duration < 60:
                 raise exceptions.Info("The minimum duration of a mute is **1 minute**")
+            elif duration > 604800:
+                raise exceptions.Info("The maximum duration of a mute is **1 week**")
 
         try:
             await member.add_roles(mute_role)
@@ -84,22 +160,23 @@ class Mod(commands.Cog):
         )
 
         if duration is not None:
-            unmute_on = arrow.now().shift(seconds=+duration)
+            unmute_on = arrow.now().shift(seconds=+duration).datetime
         else:
             unmute_on = None
 
-        print(unmute_on)
         await self.bot.db.execute(
             """
-            INSERT INTO muted_user (guild_id, user_id, unmute_on)
-                VALUES (%s, %s, %s)
+            INSERT INTO muted_user (guild_id, user_id, channel_id, unmute_on)
+                VALUES (%s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 unmute_on = VALUES(unmute_on)
             """,
             ctx.guild.id,
             member.id,
+            ctx.channel.id,
             unmute_on,
         )
+        self.cache_needs_refreshing = True
 
     @commands.command()
     @commands.guild_only()
