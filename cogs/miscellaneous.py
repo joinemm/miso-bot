@@ -4,7 +4,7 @@ import arrow
 import aiohttp
 from libraries import minestat
 from discord.ext import commands
-from libraries import unicode_codes
+from libraries import emoji_literals
 from modules import exceptions, util
 
 
@@ -267,16 +267,19 @@ class Miscellaneous(commands.Cog):
             )
 
         if address is None:
-            address, port = await self.bot.db.execute(
+            data = await self.bot.db.execute(
                 "SELECT server_address, port FROM minecraft_server WHERE guild_id = %s",
                 ctx.guild.id,
+                one_row=True,
             )
-            if address is None or port is None:
+            if not data:
                 raise exceptions.Info(
                     "No default Minecraft server saved for this discord server!"
                     f"Use `{ctx.prefix}minecraft set` to save one or"
                     f"`{ctx.prefix}minecraft <address> <port>` to see any server"
                 )
+            else:
+                address, port = data
 
         server = await self.bot.loop.run_in_executor(
             None, lambda: minestat.MineStat(address, int(port or "25565"))
@@ -291,6 +294,7 @@ class Miscellaneous(commands.Cog):
             content.add_field(name="Latency", value=f"{server.latency}ms")
             content.set_footer(text=f"Message of the day: {server.motd}")
         else:
+            content.title = f"{address}:{port}"
             content.description = ":warning: **Server is offline**"
         content.set_thumbnail(url="https://i.imgur.com/P1IxD0Q.png")
         await ctx.send(embed=content)
@@ -497,36 +501,24 @@ class Miscellaneous(commands.Cog):
             emoji_name = emoji.name
         else:
             # unicode emoji
-            emoji_name = unicode_codes.UNICODE_EMOJI.get(emoji)
+            emoji_name = emoji_literals.UNICODE_TO_NAME.get(emoji)
             if emoji_name is None:
                 raise exceptions.Warning("I don't know this emoji!")
 
             codepoint = "-".join(
-                f"{ord(e):x}" for e in unicode_codes.EMOJI_ALIAS_UNICODE.get(emoji_name)
+                f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE.get(emoji_name)
             )
             emoji_name = emoji_name.strip(":")
             emoji_url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
 
-        color_hex = await util.color_from_image_url(str(emoji_url))
-        content = discord.Embed(
-            title=f"`:{emoji_name}:`", color=await util.get_color(ctx, color_hex)
-        )
+        content = discord.Embed(title=f"`:{emoji_name}:`")
         content.set_image(url=emoji_url)
         stats = await util.image_info_from_url(emoji_url)
         content.set_footer(text=f"Type: {stats['filetype']}")
 
         if isinstance(emoji, discord.Emoji):
-            # is full emoji
-            content.description = ""
-            fuller_emoji = await emoji.guild.fetch_emoji(emoji.id)
-            if fuller_emoji is not None and fuller_emoji.user is not None:
-                content.description += f"Added by {fuller_emoji.user.mention}"
-            else:
-                content.description += "Added"
-
-            content.description += (
-                f" on {arrow.get(emoji.created_at).format('D/M/YYYY')}\n"
-                f"Located in **{emoji.guild}**"
+            content.description = (
+                f"Added {arrow.get(emoji.created_at).format('D/M/YYYY')}\n" f"**{emoji.guild}**"
             )
 
         content.set_footer(

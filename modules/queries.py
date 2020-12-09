@@ -73,11 +73,11 @@ async def is_blacklisted(ctx):
         ) AS channel
         """,
         ctx.author.id,
-        ctx.guild.id,
+        ctx.guild.id if ctx.guild is not None else None,
         ctx.author.id,
-        ctx.guild.id,
+        ctx.guild.id if ctx.guild is not None else None,
         ctx.command.qualified_name,
-        ctx.guild.id,
+        ctx.guild.id if ctx.guild is not None else None,
         ctx.channel.id,
         one_row=True,
     )
