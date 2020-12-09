@@ -5,7 +5,7 @@ import asyncio
 import random
 from discord.ext import commands, tasks
 from modules import queries, util, log, emojis
-from libraries import unicode_codes
+from libraries import emoji_literals
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
@@ -138,6 +138,7 @@ class Events(commands.Cog):
         greeter = await self.bot.db.execute(
             "SELECT channel_id, is_enabled, message_format FROM greeter_settings WHERE guild_id = %s",
             member.guild.id,
+            one_row=True,
         )
         if greeter:
             channel_id, is_enabled, message_format = greeter
@@ -208,6 +209,7 @@ class Events(commands.Cog):
         goodbye = await self.bot.db.execute(
             "SELECT channel_id, is_enabled, message_format FROM goodbye_settings WHERE guild_id = %s",
             member.guild.id,
+            one_row=True,
         )
         if goodbye:
             channel_id, is_enabled, message_format = goodbye
@@ -217,12 +219,12 @@ class Events(commands.Cog):
                     if message_format is None:
                         message_format = "Goodbye **{user}** {mention}"
 
-            try:
-                await channel.send(
-                    util.create_goodbye_message(member, member.guild, message_format)
-                )
-            except discord.errors.Forbidden:
-                pass
+                    try:
+                        await channel.send(
+                            util.create_goodbye_message(member, member.guild, message_format)
+                        )
+                    except discord.errors.Forbidden:
+                        pass
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
@@ -240,11 +242,12 @@ class Events(commands.Cog):
             return
 
         # ignored channels
-        if await self.bot.db.execute(
-            "SELECT channel_id FROM message_log_ignore WHERE channel_id = %s",
-            message.channel.id,
-            one_value=True,
-        ):
+        ignored_channels = await self.bot.db.execute(
+            "SELECT channel_id FROM message_log_ignore WHERE guild_id = %s",
+            message.guild.id,
+            as_list=True,
+        )
+        if message.channel.id in ignored_channels:
             return
 
         channel_id = await self.bot.db.execute(
@@ -453,6 +456,10 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         """Starboard event handler."""
+        user = self.bot.get_user(payload.user_id)
+        if user.bot:
+            return
+
         starboard_settings = await self.bot.db.execute(
             """
             SELECT is_enabled, channel_id, reaction_count, emoji_name, emoji_id, emoji_type
@@ -473,13 +480,19 @@ class Events(commands.Cog):
             emoji_id,
             emoji_type,
         ) = starboard_settings
-        board_channel = self.bot.get_channel.get_channel(board_channel_id)
+        board_channel = self.bot.get_channel(board_channel_id)
         if not is_enabled or board_channel is None:
             return
 
-        if (emoji_type == "custom" and payload.emoji.id == emoji_id) or (
+        if (
+            emoji_type == "custom"
+            and emoji_id is not None
+            and payload.emoji.id is not None
+            and payload.emoji.id == emoji_id
+        ) or (
             emoji_type == "unicode"
-            and unicode_codes.UNICODE_EMOJI.get(payload.emoji.name) == emoji_name
+            and emoji_name is not None
+            and emoji_literals.UNICODE_TO_NAME.get(payload.emoji.name) == emoji_name
         ):
             message_channel = self.bot.get_channel(payload.channel_id)
 
@@ -507,13 +520,13 @@ class Events(commands.Cog):
             if reaction_count < required_reaction_count:
                 return
 
-            board_message_id = self.bot.db.execute(
+            board_message_id = await self.bot.db.execute(
                 "SELECT starboard_message_id FROM starboard_message WHERE original_message_id = %s",
-                payload.message.id,
+                payload.message_id,
                 one_value=True,
             )
             emoji_display = (
-                "⭐" if emoji_type == "custom" else unicode_codes.EMOJI_UNICODE(emoji_name)
+                "⭐" if emoji_type == "custom" else emoji_literals.NAME_TO_UNICODE[emoji_name]
             )
 
             board_message = None
@@ -537,17 +550,16 @@ class Events(commands.Cog):
                     content.set_image(url=message.attachments[0].url)
 
                 try:
-                    board_message = await message_channel.send(embed=content)
+                    board_message = await board_channel.send(embed=content)
                     await self.bot.db.execute(
                         """
-                        INSERT INTO starboard_message
+                        INSERT INTO starboard_message (original_message_id, starboard_message_id)
                             VALUES(%s, %s)
                         ON DUPLICATE KEY UPDATE
-                            starboard_message_id = %s
+                            starboard_message_id = VALUES(starboard_message_id)
                         """,
                         payload.message_id,
                         board_message.id,
-                        board_message_id,
                     )
                 except discord.errors.Forbidden:
                     pass

@@ -14,6 +14,7 @@ class User(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.icon = "👤"
+        self.medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
         with open("html/profile.min.html", "r", encoding="utf-8") as file:
             self.profile_html = file.read()
 
@@ -381,7 +382,8 @@ class User(commands.Cog):
 
         rows = []
         medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
-        for i, (user_id, fishy_count) in enumerate(data, start=1):
+        i = 1
+        for user_id, fishy_count in data:
             if global_data:
                 user = self.bot.get_user(user_id)
             else:
@@ -395,7 +397,8 @@ class User(commands.Cog):
             else:
                 ranking = f"`#{i:2}`"
 
-            rows.append(f"{ranking} {util.displayname(user)} — **{fishy_count}** fishy")
+            rows.append(f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy")
+            i += 1
 
         if not rows:
             raise exceptions.Info("Nobody has any fish yet!")
@@ -441,12 +444,19 @@ class User(commands.Cog):
             else:
                 user = ctx.guild.get_member(user_id)
 
-            if user is not None:
-                rows.append(
-                    f"`#{i:2}` **{util.displayname(user)}** — "
-                    + (f"LVL **{util.get_level(xp)}**, " if time == "" else "")
-                    + f"**{xp}** XP, **{message_count}** message{'' if message_count == 1 else 's'}"
-                )
+            if user is None:
+                continue
+
+            if i <= len(self.medal_emoji):
+                ranking = self.medal_emoji[i - 1]
+            else:
+                ranking = f"`{i:2}`"
+
+            rows.append(
+                f"{ranking} **{util.displayname(user)}** — "
+                + (f"LVL **{util.get_level(xp)}**, " if time == "" else "")
+                + f"**{xp}** XP, **{message_count}** message{'' if message_count == 1 else 's'}"
+            )
 
         content = discord.Embed(
             color=int("5c913b", 16),
@@ -470,23 +480,26 @@ class User(commands.Cog):
             """
         )
 
-        medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
         rows = []
-        for i, (userid, wpm, test_date, word_count) in enumerate(data, start=1):
+        i = 1
+        for userid, wpm, test_date, word_count in data:
             if _global_:
                 user = self.bot.get_user(userid)
             else:
                 user = ctx.guild.get_member(userid)
 
-            if user is not None:
-                if i <= len(medal_emoji):
-                    ranking = medal_emoji[i - 1]
-                else:
-                    ranking = f"`{i:2}`"
+            if user is None:
+                continue
 
-                rows.append(
-                    f"{ranking} **{util.displayname(user)}** — **{int(wpm)}** WPM ({arrow.get(test_date).to('utc').humanize()})"
-                )
+            if i <= len(self.medal_emoji):
+                ranking = self.medal_emoji[i - 1]
+            else:
+                ranking = f"`{i:2}`"
+
+            rows.append(
+                f"{ranking} **{util.displayname(user)}** — **{int(wpm)}** WPM ({arrow.get(test_date).to('utc').humanize()})"
+            )
+            i += 1
 
         if not rows:
             rows = ["No data."]
@@ -512,7 +525,12 @@ class User(commands.Cog):
             if user is None:
                 continue
 
-            rows.append(f"`#{i:2}` **{util.displayname(user)}** — **{amount}** crowns")
+            if i <= len(self.medal_emoji):
+                ranking = self.medal_emoji[i - 1]
+            else:
+                ranking = f"`{i:2}`"
+
+            rows.append(f"{ranking} **{util.displayname(user)}** — **{amount}** crowns")
 
         content = discord.Embed(
             color=int("ffcc4d", 16), title=f":crown: {ctx.guild.name} artist crowns leaderboard"

@@ -114,7 +114,7 @@ class Utility(commands.Cog):
                 """
             )
 
-        if not self.reminder_list:
+        if self.reminder_list:
             return
 
         now_ts = arrow.utcnow().timestamp
@@ -195,10 +195,12 @@ class Utility(commands.Cog):
                     return await ctx.send(":warning: Unknown bang or found nothing!")
 
                 while location:
-                    response = await session.get(location)
-                    location = response.headers.get("location")
+                    async with session.get(url, params=params) as deeper_response:
+                        response = deeper_response
+                        location = response.headers.get("location")
 
-                await ctx.send(response.url)
+                content = response.url
+        await ctx.send(content)
 
     @commands.command(name="!")
     async def bang(self, ctx):
@@ -221,7 +223,7 @@ class Utility(commands.Cog):
             pass
 
         command_logger.info(log.log_command(ctx))
-        await queries.log_command_usage(ctx)
+        await queries.save_command_usage(ctx)
         try:
             bang, args = ctx.message.content[len(ctx.prefix) + 1 :].split(" ", 1)
             if len(bang) != 0:
