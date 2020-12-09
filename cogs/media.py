@@ -413,7 +413,7 @@ class Media(commands.Cog):
         urls = []
         for script in scripts:
             try:
-                data = json.loads(script.contents[0], encoding="utf-8")
+                data = json.loads(script.contents[0])
                 for x in data["itemListElement"]:
                     if "url" in x:
                         urls.append(x["url"])
