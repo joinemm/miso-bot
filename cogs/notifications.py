@@ -203,8 +203,12 @@ class Notifications(commands.Cog):
 
         rows = []
         for guild_id, keyword, times_triggered in words:
-            guild = self.bot.get_guild(guild_id)
-            rows.append(f'`"{keyword}"` in *{guild}* - triggered **{times_triggered}** times')
+            if guild_id == 0:
+                guild = "globally"
+            else:
+                guild = f"in {self.bot.get_guild(guild_id)}"
+
+            rows.append(f'`"{keyword}"` *{guild}* - triggered **{times_triggered}** times')
 
         try:
             await util.send_as_pages(ctx.author, content, rows)

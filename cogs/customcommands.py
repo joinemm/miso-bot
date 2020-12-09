@@ -49,7 +49,6 @@ class CustomCommands(commands.Cog, name="Commands"):
         data = await self.bot.db.execute(
             "SELECT command_trigger FROM custom_command WHERE guild_id = %s", guild_id
         )
-        print(data)
         for command_name in data:
             command_name = command_name[0]
             if match == "" or match in command_name:
@@ -141,7 +140,10 @@ class CustomCommands(commands.Cog, name="Commands"):
     async def remove(self, ctx, name):
         """Remove a custom command."""
         owner_id = await self.bot.db.execute(
-            "SELECT added_by FROM custom_command WHERE command_trigger = %s", name, one_value=True
+            "SELECT added_by FROM custom_command WHERE command_trigger = %s AND guild_id = %s",
+            name,
+            ctx.guild.id,
+            one_value=True,
         )
         if not owner_id:
             raise exceptions.Warning(f"Custom command `{ctx.prefix}{name}` does not exist")

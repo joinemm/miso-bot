@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from libraries import unicode_codes
+from libraries import emoji_literals
 from modules import queries, exceptions, util
 
 
@@ -63,8 +63,8 @@ class Configuration(commands.Cog):
         """Configure the greeter/welcome message."""
         await util.command_group_help(ctx)
 
-    @greeter.command(name="enabled")
-    async def greeter_enabled(self, ctx, value: bool):
+    @greeter.command(name="toggle", aliases=["enabled"])
+    async def greeter_toggle(self, ctx, value: bool):
         """Enable or disable the greeter."""
         await queries.update_setting(ctx, "greeter_settings", "is_enabled", value)
         if value:
@@ -95,15 +95,15 @@ class Configuration(commands.Cog):
             embed=preview,
         )
 
-    @commands.group(name="goodbyemessage")
+    @commands.group(name="goodbyemessage", aliases=["goodbyemessages"])
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def goodbyemessage(self, ctx):
         """Configure the goodbye message."""
         await util.command_group_help(ctx)
 
-    @goodbyemessage.command(name="enabled")
-    async def goodbye_enabled(self, ctx, value: bool):
+    @goodbyemessage.command(name="toggle", aliases=["enabled"])
+    async def goodbye_toggle(self, ctx, value: bool):
         """Enable or disable the goodbye messages."""
         await queries.update_setting(ctx, "goodbye_settings", "is_enabled", value)
         if value:
@@ -142,7 +142,11 @@ class Configuration(commands.Cog):
 
     @logger.command(name="members")
     async def logger_members(self, ctx, *, channel: ChannelSetting):
-        """Set channel for member leaves and joins logging."""
+        """
+        Set channel for member leaves and joins logging.
+
+        Set to \"none\" to disable.
+        """
         await queries.update_setting(
             ctx,
             "logging_settings",
@@ -156,7 +160,11 @@ class Configuration(commands.Cog):
 
     @logger.command(name="bans")
     async def logger_bans(self, ctx, *, channel: ChannelSetting):
-        """Set channel where bans are announced."""
+        """
+        Set channel where bans are announced.
+
+        Set to \"none\" to disable.
+        """
         await queries.update_setting(
             ctx,
             "logging_settings",
@@ -175,7 +183,11 @@ class Configuration(commands.Cog):
 
     @logger_deleted.command(name="channel")
     async def deleted_channel(self, ctx, *, channel: ChannelSetting):
-        """Set channel where deleted messages are logged."""
+        """
+        Set channel where deleted messages are logged.
+
+        Set to \"none\" to disable.
+        """
         await queries.update_setting(
             ctx,
             "logging_settings",
@@ -210,7 +222,7 @@ class Configuration(commands.Cog):
             channel.id,
         )
         await util.send_success(
-            f"{channel.mention} is no longer being ignored from deleted message logging."
+            ctx, f"{channel.mention} is no longer being ignored from deleted message logging."
         )
 
     @commands.command(aliases=["levelups"])
@@ -246,7 +258,7 @@ class Configuration(commands.Cog):
             SELECT emoji_name, emoji_id, emoji_type
             FROM starboard_settings WHERE guild_id = %s
             """,
-            ctx.guild_id,
+            ctx.guild.id,
             one_row=True,
         )
         if emoji_type == "unicode":
@@ -258,8 +270,8 @@ class Configuration(commands.Cog):
             ctx, f"Messages now need **{amount}** {emoji} reactions to get into the starboard."
         )
 
-    @starboard.command(name="enabled")
-    async def starboard_enabled(self, ctx, value):
+    @starboard.command(name="toggle", aliases=["enabled"])
+    async def starboard_toggle(self, ctx, value: bool):
         """Enable or disable the starboard."""
         await queries.update_setting(ctx, "starboard_settings", "is_enabled", value)
         if value:
@@ -295,7 +307,7 @@ class Configuration(commands.Cog):
             )
         else:
             # unicode emoji
-            emoji_name = unicode_codes.UNICODE_EMOJI.get(emoji)
+            emoji_name = emoji_literals.UNICODE_TO_NAME.get(emoji)
             if emoji_name is None:
                 raise exceptions.Warning("I don't know this emoji!")
 
@@ -331,7 +343,7 @@ class Configuration(commands.Cog):
         Defaults to vote.
         """
         if reaction_type is None:
-            channel_type = "vote"
+            channel_type = "voting"
         elif reaction_type.lower() in ["rate", "rating"]:
             channel_type = "rating"
         elif reaction_type.lower() in ["vote", "voting"]:
@@ -342,7 +354,7 @@ class Configuration(commands.Cog):
         await self.bot.db.execute(
             """
             INSERT INTO voting_channel (guild_id, channel_id, voting_type)
-                VALUES (%s, %s %s)
+                VALUES (%s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 voting_type = VALUES(voting_type)
             """,
@@ -397,11 +409,11 @@ class Configuration(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def autorole(self, ctx):
-        """Configure roles to be given automatically to any new members that join."""
+        """Configure roles to be given automatically to any new members."""
         await util.command_group_help(ctx)
 
     @autorole.command(name="add")
-    async def autorole_add(self, ctx, *, role):
+    async def autorole_add(self, ctx, *, role: discord.Role):
         """Add an autorole."""
         await self.bot.db.execute(
             "INSERT IGNORE autorole (guild_id, role_id) VALUES (%s, %s)", ctx.guild.id, role.id
@@ -411,10 +423,15 @@ class Configuration(commands.Cog):
     @autorole.command(name="remove")
     async def autorole_remove(self, ctx, *, role):
         """Remove an autorole."""
+        existing_role = await util.get_role(ctx, role)
+        if existing_role is None:
+            role_id = int(role)
+        else:
+            role_id = existing_role.id
         await self.bot.db.execute(
-            "DELETE FROM autorole WHERE guild_id = %s AND role_id = %s", ctx.guild.id, role.id
+            "DELETE FROM autorole WHERE guild_id = %s AND role_id = %s", ctx.guild.id, role_id
         )
-        await util.send_success(ctx, f"No longer giving new members {role.mention}")
+        await util.send_success(ctx, f"No longer giving new members <@&{role_id}>")
 
     @autorole.command(name="list")
     async def autorole_list(self, ctx):
@@ -430,6 +447,9 @@ class Configuration(commands.Cog):
         rows = []
         for role_id in roles:
             rows.append(f"<@&{role_id}> [`{role_id}`]")
+
+        if not rows:
+            rows = ["No roles have been set up yet!"]
 
         await util.send_as_pages(ctx, content, rows)
 

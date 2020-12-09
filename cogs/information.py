@@ -7,7 +7,7 @@ import arrow
 import copy
 import aiohttp
 from discord.ext import commands
-from libraries import unicode_codes
+from libraries import emoji_literals
 from modules import util, exceptions
 
 
@@ -259,7 +259,7 @@ class Information(commands.Cog):
 
         all_emojis = []
         for uses, emoji_name in default_emojis:
-            emoji_repr = unicode_codes.EMOJI_UNICODE.get(emoji_name)
+            emoji_repr = emoji_literals.NAME_TO_UNICODE.get(emoji_name)
             all_emojis.append((uses, emoji_repr))
 
         for uses, emoji_id, emoji_name in custom_emojis:
