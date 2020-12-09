@@ -28,7 +28,10 @@ def get_command_logger():
 
 
 def log_command(ctx, extra=""):
-    took = time() - ctx.timer
+    try:
+        took = time() - ctx.timer
+    except AttributeError:
+        took = 0
     command = str(ctx.command)
     guild = ctx.guild.name if ctx.guild is not None else "DM"
     user = str(ctx.author)
