@@ -100,7 +100,7 @@ class Images(commands.Cog):
         self.bot = bot
         self.icon = "🖼️"
 
-    @commands.group(case_insensitive=True)
+    @commands.group(case_insensitive=True, enabled=False)
     async def meme(self, ctx):
         """Input text into images."""
         await util.command_group_help(ctx)

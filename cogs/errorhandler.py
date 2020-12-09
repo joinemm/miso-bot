@@ -78,8 +78,16 @@ class ErrorHander(commands.Cog):
         error = getattr(error, "original", error)
 
         # silently ignored expections
-        if isinstance(error, (commands.CommandNotFound, commands.DisabledCommand)):
+        if isinstance(error, (commands.CommandNotFound)):
             return
+
+        if isinstance(error, commands.DisabledCommand):
+            command_logger.warning(log.log_command(ctx, extra=error))
+            return await self.send(
+                ctx,
+                "info",
+                "This command is temporarily disabled, sorry for the inconvenience!",
+            )
 
         if isinstance(error, commands.MissingRequiredArgument):
             return await util.send_command_help(ctx)
