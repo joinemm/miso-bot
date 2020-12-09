@@ -155,8 +155,8 @@ CREATE TABLE IF NOT EXISTS custom_emoji_usage (
 CREATE TABLE IF NOT EXISTS unicode_emoji_usage (
     guild_id BIGINT,
     user_id BIGINT,
+    emoji_name VARCHAR(128),
     uses INT DEFAULT 1,
-    emoji_name VARCHAR(64),
     PRIMARY KEY (guild_id, user_id, emoji_name)
 );
 
@@ -227,7 +227,7 @@ CREATE TABLE IF NOT EXISTS starboard_settings (
     channel_id BIGINT DEFAULT NULL,
     is_enabled BOOLEAN DEFAULT TRUE,
     reaction_count INT DEFAULT 3,
-    emoji_name VARCHAR(32) DEFAULT ':star:',
+    emoji_name VARCHAR(64) DEFAULT ':star:',
     emoji_id BIGINT DEFAULT NULL,
     emoji_type ENUM('unicode', 'custom'),
     PRIMARY KEY (guild_id)
