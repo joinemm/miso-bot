@@ -23,12 +23,43 @@ class Events(commands.Cog):
             ("playing", lambda: "misobot.xyz"),
         ]
         self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
+        self.xp_cache = {}
         self.current_status = None
         self.status_loop.start()
+        self.xp_loop.start()
         self.guildlog = 652916681299066900
 
     def cog_unload(self):
         self.status_loop.cancel()
+
+    async def write_usage_data(self):
+        values = []
+        for guild_id in self.xp_cache.keys():
+            for user_id, value in self.xp_cache[guild_id].items():
+                values.append(
+                    (int(guild_id), int(user_id), value["bot"], value["xp"], value["messages"])
+                )
+
+        print(values)
+        if values:
+            currenthour = arrow.utcnow().hour
+            for activity_table in [
+                "user_activity",
+                "user_activity_day",
+                "user_activity_week",
+                "user_activity_month",
+                "user_activity_year",
+            ]:
+                await self.bot.db.executemany(
+                    f"""
+                    INSERT INTO {activity_table} (guild_id, user_id, is_bot, h{currenthour}, message_count)
+                        VALUES (%s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        h{currenthour} = h{currenthour} + VALUES(h{currenthour}),
+                        message_count = message_count + VALUES(message_count)
+                    """,
+                    values,
+                )
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx):
@@ -46,6 +77,13 @@ class Events(commands.Cog):
         logger.info(f"Loading complete | running {len(latencies)} shards")
         for shard_id, latency in latencies:
             logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
+
+    @tasks.loop(minutes=1.0)
+    async def xp_loop(self):
+        try:
+            await self.write_usage_data()
+        except Exception as e:
+            logger.error(e)
 
     @tasks.loop(minutes=3.0)
     async def status_loop(self):
@@ -270,57 +308,40 @@ class Events(commands.Cog):
         if message.guild is None:
             return
 
-        # votechannels
-        votechannel_type = await self.bot.db.execute(
-            "SELECT voting_type FROM voting_channel WHERE channel_id = %s",
-            message.channel.id,
-            one_value=True,
-        )
-        if votechannel_type == "rating":
-            for e in ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]:
-                await message.add_reaction(e)
-        elif votechannel_type == "voting":
-            await message.add_reaction(emojis.UPVOTE)
-            await message.add_reaction(emojis.DOWNVOTE)
+        if message.channel.id in self.bot.cache.votechannels:
+            # votechannels
+            votechannel_type = await self.bot.db.execute(
+                "SELECT voting_type FROM voting_channel WHERE channel_id = %s",
+                message.channel.id,
+                one_value=True,
+            )
+            if votechannel_type == "rating":
+                for e in ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]:
+                    await message.add_reaction(e)
+            elif votechannel_type == "voting":
+                await message.add_reaction(emojis.UPVOTE)
+                await message.add_reaction(emojis.DOWNVOTE)
 
         # xp gain
         message_xp = util.xp_from_message(message)
-        currenthour = message.created_at.hour
-        for activity_table in [
-            "user_activity",
-            "user_activity_day",
-            "user_activity_week",
-            "user_activity_month",
-            "user_activity_year",
-        ]:
-            await self.bot.db.execute(
-                f"""
-                INSERT INTO {activity_table} (guild_id, user_id, is_bot, h{currenthour})
-                    VALUES (%s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    h{currenthour} = h{currenthour} + VALUES(h{currenthour}),
-                    message_count = message_count + 1
-                """,
-                message.guild.id,
-                message.author.id,
-                message.author.bot,
-                message_xp,
-            )
+        if self.xp_cache.get(str(message.guild.id)) is None:
+            self.xp_cache[str(message.guild.id)] = {}
+        try:
+            self.xp_cache[str(message.guild.id)][str(message.author.id)]["xp"] += message_xp
+            self.xp_cache[str(message.guild.id)][str(message.author.id)]["messages"] += 1
+        except KeyError:
+            self.xp_cache[str(message.guild.id)][str(message.author.id)] = {
+                "xp": message_xp,
+                "messages": 1,
+                "bot": message.author.bot,
+            }
 
         # if bot account, ignore everything after this
         if message.author.bot:
             return
 
-        guild_settings = await self.bot.db.execute(
-            "SELECT levelup_messages, autoresponses FROM guild_settings WHERE guild_id = %s",
-            message.guild.id,
-            one_row=True,
-        )
-        if guild_settings:
-            announce_levelup, autoresponses = guild_settings
-        else:
-            announce_levelup = False
-            autoresponses = True
+        announce_levelup = self.bot.cache.levelupmessage.get(str(message.guild.id), False)
+        autoresponses = self.bot.cache.autoresponse.get(str(message.guild.id), True)
 
         # log emojis
         unicode_emojis = util.find_unicode_emojis(message.content)

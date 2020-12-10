@@ -5,7 +5,7 @@ import discord
 import traceback
 from discord.ext import commands
 from time import time
-from modules import log, util, maria, queries
+from modules import log, util, maria, queries, cache
 from modules.help import EmbedHelpCommand
 from dotenv import load_dotenv
 
@@ -42,6 +42,7 @@ class MisoBot(commands.AutoShardedBot):
         self.start_time = time()
         self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
         self.db = maria.MariaDB(self)
+        self.cache = cache.Cache(self)
         self.version = "4.0"
 
     async def close(self):

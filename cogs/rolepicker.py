@@ -67,7 +67,7 @@ class Rolepicker(commands.Cog):
     async def channel(self, ctx, channel: discord.TextChannel):
         """Set the channel you can add roles in."""
         await queries.update_setting(ctx, "rolepicker_settings", "channel_id", channel.id)
-
+        self.bot.cache.rolepickers.add(channel.id)
         await util.send_success(
             ctx,
             f"Rolepicker channel set to {channel.mention}\n"
@@ -107,6 +107,9 @@ class Rolepicker(commands.Cog):
     async def on_message(self, message):
         """Rolechannel message handler."""
         if message.guild is None:
+            return
+
+        if message.channel.id not in self.bot.cache.rolepickers:
             return
 
         is_enabled = await self.bot.db.execute(

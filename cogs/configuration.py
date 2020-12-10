@@ -50,6 +50,7 @@ class Configuration(commands.Cog):
             ctx.guild.id,
             prefix,
         )
+        self.bot.cache.prefixes[str(ctx.guild.id)] = prefix
         await util.send_success(
             ctx,
             f"Command prefix for this server is now `{prefix}`. "
@@ -231,6 +232,7 @@ class Configuration(commands.Cog):
     async def levelup(self, ctx, value: bool):
         """Enable or disable levelup messages."""
         await queries.update_setting(ctx, "guild_settings", "levelup_messages", value)
+        self.bot.cache.levelupmessage[str(ctx.guild.id)] = value
         if value:
             await util.send_success(ctx, "Level up messages are now **enabled**")
         else:
@@ -362,6 +364,7 @@ class Configuration(commands.Cog):
             channel.id,
             channel_type,
         )
+        self.bot.cache.votechannels.add(channel.id)
         await util.send_success(
             ctx, f"{channel.mention} is now a voting channel of type `{channel_type}`"
         )
@@ -374,6 +377,7 @@ class Configuration(commands.Cog):
             ctx.guild.id,
             channel.id,
         )
+        self.bot.cache.votechannels.discard(channel.id)
         await util.send_success(ctx, f"{channel.mention} is no longer a voting channel.")
 
     @votechannel.command(name="list")
@@ -459,6 +463,7 @@ class Configuration(commands.Cog):
     async def autoresponses(self, ctx, value: bool):
         """Disable or enable automatic responses to certain message content."""
         await queries.update_setting(ctx, "guild_settings", "autoresponses", value)
+        self.bot.cache.autoresponse[str(ctx.guild.id)] = value
         if value:
             await util.send_success(ctx, "Automatic responses are now **enabled**")
         else:
