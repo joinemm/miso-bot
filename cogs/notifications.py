@@ -10,6 +10,29 @@ class Notifications(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.icon = "📨"
+        self.notifications_cache = {}
+        self.global_notifications_cache = {}
+        bot.loop.create_task(self.create_cache())
+
+    async def create_cache(self):
+        self.notifications_cache = {}
+        self.global_notifications_cache = {}
+        keywords = await self.bot.db.execute(
+            "SELECT guild_id, user_id, keyword FROM notification",
+        )
+        for guild_id, user_id, keyword in keywords:
+            if guild_id == 0:
+                try:
+                    self.global_notifications_cache[keyword].append(user_id)
+                except KeyError:
+                    self.global_notifications_cache[keyword] = [user_id]
+            else:
+                if self.notifications_cache.get(str(guild_id)) is None:
+                    self.notifications_cache[str(guild_id)] = {}
+                try:
+                    self.notifications_cache[str(guild_id)][keyword].append(user_id)
+                except KeyError:
+                    self.notifications_cache[str(guild_id)][keyword] = [user_id]
 
     async def send_notification(self, user, message, pattern=None):
         content = discord.Embed(color=message.author.color)
@@ -50,20 +73,23 @@ class Notifications(commands.Cog):
             return
 
         # select all keywords applicable to this server, and also global keywords (guild_id=0)
-        keywords = await self.bot.db.execute(
-            """
-            SELECT guild_id, user_id, keyword FROM notification
-                WHERE (guild_id = %s OR guild_id = 0)
-                  AND user_id != %s
-            """,
-            message.guild.id,
-            message.author.id,
-        )
+        # keywords = [(0, k, v) for k, v in self.global_notifications_cache.items()]
+        keywords = []
+        for kw in self.global_notifications_cache.keys():
+            for v in self.global_notifications_cache[kw]:
+                keywords.append((0, kw, v))
+        guild_keywords = self.notifications_cache.get(str(message.guild.id))
+        if guild_keywords is not None:
+            for kw in guild_keywords.keys():
+                for v in guild_keywords[kw]:
+                    keywords.append((message.guild.id, kw, v))
 
         if not keywords:
             return
 
-        for guild_id, user_id, keyword in keywords:
+        for guild_id, keyword, user_id in keywords:
+            if user_id == message.author.id:
+                return
             member = message.guild.get_member(user_id)
             if member is None or member not in message.channel.members:
                 continue
@@ -131,6 +157,18 @@ class Notifications(commands.Cog):
             ctx.author.id,
             keyword,
         )
+        if guild_id == 0:
+            try:
+                self.global_notifications_cache[keyword].append(ctx.author.id)
+            except KeyError:
+                self.global_notifications_cache[keyword] = [ctx.author.id]
+        else:
+            if self.notifications_cache.get(str(guild_id)) is None:
+                self.notifications_cache[str(guild_id)] = {}
+            try:
+                self.notifications_cache[str(guild_id)][keyword].append(ctx.author.id)
+            except KeyError:
+                self.notifications_cache[str(guild_id)][keyword] = [ctx.author.id]
 
         if not dm:
             await util.send_success(
@@ -178,6 +216,7 @@ class Notifications(commands.Cog):
             ctx.author.id,
             keyword,
         )
+        await self.create_cache()
 
         if not dm:
             await util.send_success(

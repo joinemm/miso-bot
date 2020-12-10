@@ -12,6 +12,7 @@ import aiohttp
 from discord.ext import commands
 from PIL import Image, UnidentifiedImageError
 from durations_nlp import Duration
+from durations_nlp.exceptions import InvalidTokenError
 from libraries import emoji_literals
 
 
@@ -43,10 +44,8 @@ async def send_success(ctx, message):
 async def determine_prefix(bot, message):
     """Get the prefix used in the invocation context."""
     if message.guild:
-        prefix = await bot.db.execute(
-            "SELECT prefix FROm guild_prefix WHERE guild_id = %s", message.guild.id, one_value=True
-        )
-        return commands.when_mentioned_or(prefix or bot.default_prefix)(bot, message)
+        prefix = bot.cache.prefixes.get(str(message.guild.id), bot.default_prefix)
+        return commands.when_mentioned_or(prefix)(bot, message)
     else:
         return commands.when_mentioned_or(bot.default_prefix)(bot, message)
 
@@ -338,7 +337,10 @@ def timefromstring(s):
     :returns : Time in seconds
     """
     s = s.removeprefix("for")
-    return int(Duration(s).to_seconds())
+    try:
+        return int(Duration(s).to_seconds())
+    except InvalidTokenError:
+        return None
 
 
 def stringfromtime(t, accuracy=4):
