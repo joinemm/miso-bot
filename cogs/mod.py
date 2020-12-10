@@ -56,8 +56,22 @@ class Mod(commands.Cog):
             else:
                 user = None
             if user is not None:
+                mute_role_id = await self.bot.db.execute(
+                    """
+                    SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
+                    """,
+                    guild.id,
+                    one_value=True,
+                )
+                mute_role = guild.get_role(mute_role_id)
+                if not mute_role:
+                    return logger.warning("Mute role not set in unmuting loop")
                 channel = guild.get_channel(channel_id)
                 if channel is not None:
+                    try:
+                        await user.remove_roles(mute_role)
+                    except discord.errors.Forbidden:
+                        pass
                     try:
                         await channel.send(
                             embed=discord.Embed(
@@ -142,10 +156,12 @@ class Mod(commands.Cog):
             return await ctx.send("no.")
 
         if duration is not None:
-            duration = util.timefromstring(duration)
-            if duration < 60:
+            seconds = util.timefromstring(duration)
+            if seconds is None:
+                raise exceptions.Warning(f'Invalid duration representation "{duration}"')
+            elif seconds < 60:
                 raise exceptions.Info("The minimum duration of a mute is **1 minute**")
-            elif duration > 604800:
+            elif seconds > 604800:
                 raise exceptions.Info("The maximum duration of a mute is **1 week**")
 
         try:
@@ -156,11 +172,11 @@ class Mod(commands.Cog):
         await util.send_success(
             ctx,
             f"Muted {member.mention}"
-            + (f" for **{util.stringfromtime(duration)}**" if duration is not None else ""),
+            + (f" for **{util.stringfromtime(seconds)}**" if seconds is not None else ""),
         )
 
-        if duration is not None:
-            unmute_on = arrow.now().shift(seconds=+duration).datetime
+        if seconds is not None:
+            unmute_on = arrow.now().shift(seconds=+seconds).datetime
         else:
             unmute_on = None
 
