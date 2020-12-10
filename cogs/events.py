@@ -24,6 +24,7 @@ class Events(commands.Cog):
         ]
         self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
         self.xp_cache = {}
+        self.emoji_usage_cache = {"unicode": {}, "custom": {}}
         self.current_status = None
         self.status_loop.start()
         self.xp_loop.start()
@@ -40,7 +41,6 @@ class Events(commands.Cog):
                     (int(guild_id), int(user_id), value["bot"], value["xp"], value["messages"])
                 )
 
-        print(values)
         if values:
             currenthour = arrow.utcnow().hour
             for activity_table in [
@@ -60,6 +60,47 @@ class Events(commands.Cog):
                     """,
                     values,
                 )
+        self.xp_cache = {}
+
+        unicode_emoji_values = []
+        for guild_id in self.emoji_usage_cache["unicode"].keys():
+            for user_id in self.emoji_usage_cache["unicode"][guild_id].keys():
+                for emoji_name, value in self.emoji_usage_cache["unicode"][guild_id][
+                    user_id
+                ].items():
+                    unicode_emoji_values.append((int(guild_id), int(user_id), emoji_name, value))
+
+        if unicode_emoji_values:
+            await self.bot.db.executemany(
+                """
+                INSERT INTO unicode_emoji_usage (guild_id, user_id, emoji_name, uses)
+                    VALUES (%s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    uses = uses + VALUES(uses)
+                """,
+                unicode_emoji_values,
+            )
+        self.emoji_usage_cache["unicode"] = {}
+
+        custom_emoji_values = []
+        for guild_id in self.emoji_usage_cache["custom"].keys():
+            for user_id in self.emoji_usage_cache["custom"][guild_id].keys():
+                for emoji_id, value in self.emoji_usage_cache["custom"][guild_id][user_id].items():
+                    custom_emoji_values.append(
+                        (int(guild_id), int(user_id), value["name"], emoji_id, value["uses"])
+                    )
+
+        if custom_emoji_values:
+            await self.bot.db.executemany(
+                """
+                INSERT INTO custom_emoji_usage (guild_id, user_id, emoji_name, emoji_id, uses)
+                    VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    uses = uses + VALUES(uses)
+                """,
+                custom_emoji_values,
+            )
+        self.emoji_usage_cache["custom"] = {}
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx):
@@ -340,49 +381,54 @@ class Events(commands.Cog):
         if message.author.bot:
             return
 
-        announce_levelup = self.bot.cache.levelupmessage.get(str(message.guild.id), False)
+        # announce_levelup = self.bot.cache.levelupmessage.get(str(message.guild.id), False)
+        # disabled for now
+        announce_levelup = False
         autoresponses = self.bot.cache.autoresponse.get(str(message.guild.id), True)
 
         # log emojis
         unicode_emojis = util.find_unicode_emojis(message.content)
         custom_emojis = util.find_custom_emojis(message.content)
 
-        unicode_values = []
         for emoji_name in unicode_emojis:
-            unicode_values += [
-                message.guild.id,
-                message.author.id,
-                emoji_name,
-            ]
-        if unicode_values:
-            await self.bot.db.execute(
-                f"""
-                INSERT INTO unicode_emoji_usage (guild_id, user_id, emoji_name)
-                    VALUES {', '.join("(%s, %s, %s)" for _ in unicode_emojis)}
-                ON DUPLICATE KEY UPDATE
-                    uses = uses + 1
-                """,
-                *unicode_values,
-            )
+            if self.emoji_usage_cache["unicode"].get(str(message.guild.id)) is None:
+                self.emoji_usage_cache["unicode"][str(message.guild.id)] = {}
+            if (
+                self.emoji_usage_cache["unicode"][str(message.guild.id)].get(
+                    str(message.author.id)
+                )
+                is None
+            ):
+                self.emoji_usage_cache["unicode"][str(message.guild.id)][
+                    str(message.author.id)
+                ] = {}
+            try:
+                self.emoji_usage_cache["unicode"][str(message.guild.id)][str(message.author.id)][
+                    emoji_name
+                ] += 1
+            except KeyError:
+                self.emoji_usage_cache["unicode"][str(message.guild.id)][str(message.author.id)][
+                    emoji_name
+                ] = 1
 
-        custom_values = []
         for emoji_name, emoji_id in custom_emojis:
-            custom_values += [
-                message.guild.id,
-                message.author.id,
-                emoji_name,
-                emoji_id,
-            ]
-        if custom_values:
-            await self.bot.db.execute(
-                f"""
-                INSERT INTO custom_emoji_usage (guild_id, user_id, emoji_name, emoji_id)
-                    VALUES {', '.join("(%s, %s, %s, %s)" for _ in custom_emojis)}
-                ON DUPLICATE KEY UPDATE
-                    uses = uses + 1
-                """,
-                *custom_values,
-            )
+            if self.emoji_usage_cache["custom"].get(str(message.guild.id)) is None:
+                self.emoji_usage_cache["custom"][str(message.guild.id)] = {}
+            if (
+                self.emoji_usage_cache["custom"][str(message.guild.id)].get(str(message.author.id))
+                is None
+            ):
+                self.emoji_usage_cache["custom"][str(message.guild.id)][
+                    str(message.author.id)
+                ] = {}
+            try:
+                self.emoji_usage_cache["custom"][str(message.guild.id)][str(message.author.id)][
+                    str(emoji_id)
+                ]["uses"] += 1
+            except KeyError:
+                self.emoji_usage_cache["custom"][str(message.guild.id)][str(message.author.id)][
+                    str(emoji_id)
+                ] = {"uses": 1, "name": emoji_name}
 
         if autoresponses:
             await self.easter_eggs(message)
