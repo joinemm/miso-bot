@@ -558,7 +558,6 @@ class Events(commands.Cog):
             and payload.emoji.id == emoji_id
         ) or (
             emoji_type == "unicode"
-            and emoji_name is not None
             and emoji_literals.UNICODE_TO_NAME.get(payload.emoji.name) == emoji_name
         ):
             message_channel = self.bot.get_channel(payload.channel_id)

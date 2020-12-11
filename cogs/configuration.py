@@ -263,10 +263,10 @@ class Configuration(commands.Cog):
             ctx.guild.id,
             one_row=True,
         )
-        if emoji_type == "unicode":
-            emoji = emoji_name
-        else:
+        if emoji_type == "custom":
             emoji = self.bot.get_emoji(emoji_id)
+        else:
+            emoji = emoji_name
 
         await util.send_success(
             ctx, f"Messages now need **{amount}** {emoji} reactions to get into the starboard."
