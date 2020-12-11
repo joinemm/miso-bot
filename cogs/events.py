@@ -3,6 +3,7 @@ import re
 import arrow
 import asyncio
 import random
+from time import time
 from discord.ext import commands, tasks
 from modules import queries, util, log, emojis
 from libraries import emoji_literals
@@ -28,19 +29,28 @@ class Events(commands.Cog):
         self.current_status = None
         self.status_loop.start()
         self.xp_loop.start()
+        self.average_mps = []
         self.guildlog = 652916681299066900
 
     def cog_unload(self):
         self.status_loop.cancel()
 
     async def write_usage_data(self):
+        start = time()
         values = []
+        total_messages = 0
         for guild_id in self.xp_cache.keys():
             for user_id, value in self.xp_cache[guild_id].items():
                 values.append(
                     (int(guild_id), int(user_id), value["bot"], value["xp"], value["messages"])
                 )
+                total_messages += value["messages"]
 
+        self.average_mps.append(total_messages)
+        if len(self.average_mps) > 10:
+            self.average_mps = self.average_mps[1:]
+
+        tasks = []
         if values:
             currenthour = arrow.utcnow().hour
             for activity_table in [
@@ -48,17 +58,18 @@ class Events(commands.Cog):
                 "user_activity_day",
                 "user_activity_week",
                 "user_activity_month",
-                "user_activity_year",
             ]:
-                await self.bot.db.executemany(
-                    f"""
+                tasks.append(
+                    self.bot.db.executemany(
+                        f"""
                     INSERT INTO {activity_table} (guild_id, user_id, is_bot, h{currenthour}, message_count)
                         VALUES (%s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
                         h{currenthour} = h{currenthour} + VALUES(h{currenthour}),
                         message_count = message_count + VALUES(message_count)
                     """,
-                    values,
+                        values,
+                    )
                 )
         self.xp_cache = {}
 
@@ -71,14 +82,16 @@ class Events(commands.Cog):
                     unicode_emoji_values.append((int(guild_id), int(user_id), emoji_name, value))
 
         if unicode_emoji_values:
-            await self.bot.db.executemany(
-                """
+            tasks.append(
+                self.bot.db.executemany(
+                    """
                 INSERT INTO unicode_emoji_usage (guild_id, user_id, emoji_name, uses)
                     VALUES (%s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE
                     uses = uses + VALUES(uses)
                 """,
-                unicode_emoji_values,
+                    unicode_emoji_values,
+                )
             )
         self.emoji_usage_cache["unicode"] = {}
 
@@ -91,16 +104,23 @@ class Events(commands.Cog):
                     )
 
         if custom_emoji_values:
-            await self.bot.db.executemany(
-                """
+            tasks.append(
+                self.bot.db.executemany(
+                    """
                 INSERT INTO custom_emoji_usage (guild_id, user_id, emoji_name, emoji_id, uses)
                     VALUES (%s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE
                     uses = uses + VALUES(uses)
                 """,
-                custom_emoji_values,
+                    custom_emoji_values,
+                )
             )
         self.emoji_usage_cache["custom"] = {}
+        await asyncio.gather(*tasks)
+        logger.info(
+            f"Inserted {total_messages} messages in {time()-start:.3f}s, "
+            f"{len(self.average_mps)*2} min average: {sum(self.average_mps) / len(self.average_mps):.2f} msg/s"
+        )
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx):
@@ -119,7 +139,7 @@ class Events(commands.Cog):
         for shard_id, latency in latencies:
             logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
 
-    @tasks.loop(minutes=1.0)
+    @tasks.loop(minutes=2.0)
     async def xp_loop(self):
         try:
             await self.write_usage_data()

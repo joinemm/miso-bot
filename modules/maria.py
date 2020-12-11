@@ -38,7 +38,7 @@ class MariaDB:
         logger.info(
             f"Connecting to database {cred['db']} on {cred['host']}:{cred['port']} as {cred['user']}"
         )
-        maxsize = os.environ.get("DB_POOL_SIZE", 10)
+        maxsize = int(os.environ.get("DB_POOL_SIZE", 10))
         self.pool = await aiomysql.create_pool(
             **cred, maxsize=maxsize, autocommit=True, echo=False
         )

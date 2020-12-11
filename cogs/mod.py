@@ -374,6 +374,7 @@ class Mod(commands.Cog):
         await self.bot.db.execute(
             "INSERT IGNORE blacklisted_channel VALUES (%s, %s)", channel.id, ctx.guild.id
         )
+        self.bot.cache.blacklist["global"]["channel"].add(channel.id)
         await util.send_success(ctx, f"{channel.mention} is now blacklisted from command usage.")
 
     @blacklist.command(name="member")
@@ -382,6 +383,13 @@ class Mod(commands.Cog):
         await self.bot.db.execute(
             "INSERT IGNORE blacklisted_member VALUES (%s, %s)", member.id, ctx.guild.id
         )
+        try:
+            self.bot.cache.blacklist[str(ctx.guild.id)]["member"].add(member.id)
+        except KeyError:
+            self.bot.cache.blacklist[str(ctx.guild.id)] = {
+                "member": set([member.id]),
+                "command": set(),
+            }
         await util.send_success(
             ctx, f"**{member}** is now blacklisted from using commands on this server."
         )
@@ -396,6 +404,13 @@ class Mod(commands.Cog):
         await self.bot.db.execute(
             "INSERT IGNORE blacklisted_command VALUES (%s, %s)", cmd.qualified_name, ctx.guild.id
         )
+        try:
+            self.bot.cache.blacklist[str(ctx.guild.id)]["command"].add(cmd.qualified_name.lower())
+        except KeyError:
+            self.bot.cache.blacklist[str(ctx.guild.id)] = {
+                "member": set(),
+                "command": set([cmd.qualified_name.lower()]),
+            }
         await util.send_success(
             ctx, f"`{ctx.prefix}{cmd}` is now a blacklisted command on this server."
         )
@@ -407,6 +422,7 @@ class Mod(commands.Cog):
         await self.bot.db.execute(
             "INSERT IGNORE blacklisted_user VALUES (%s, %s, %s)", user.id, reason
         )
+        self.bot.cache.blacklist["global"]["user"].add(user.id)
         await util.send_success(ctx, f"**{user}** can no longer use Miso Bot!")
 
     @blacklist.command(name="guild")
@@ -420,6 +436,7 @@ class Mod(commands.Cog):
         await self.bot.db.execute(
             "INSERT IGNORE blacklisted_guild VALUES (%s, %s)", guild.id, reason
         )
+        self.bot.cache.blacklist["global"]["guild"].add(guild_id)
         await guild.leave()
         await util.send_success(ctx, f"**{guild}** can no longer use Miso Bot!")
 
@@ -437,6 +454,7 @@ class Mod(commands.Cog):
             ctx.guild.id,
             channel.id,
         )
+        self.bot.cache.blacklist["global"]["channel"].discard(channel.id)
         await util.send_success(ctx, f"{channel.mention} is no longer blacklisted.")
 
     @whitelist.command(name="user")
@@ -447,6 +465,7 @@ class Mod(commands.Cog):
             ctx.guild.id,
             member.id,
         )
+        self.bot.cache.blacklist[str(ctx.guild.id)]["member"].discard(member.id)
         await util.send_success(ctx, f"**{member}** is no longer blacklisted.")
 
     @whitelist.command(name="command")
@@ -461,6 +480,7 @@ class Mod(commands.Cog):
             ctx.guild.id,
             cmd.qualified_name,
         )
+        self.bot.cache.blacklist[str(ctx.guild.id)]["command"].discard(cmd.qualified_name.lower())
         await util.send_success(ctx, f"`{ctx.prefix}{cmd}` is no longer blacklisted.")
 
     @whitelist.command(name="global")
@@ -468,6 +488,7 @@ class Mod(commands.Cog):
     async def whitelist_global(self, ctx, *, user: discord.User):
         """Whitelist someone globally."""
         await self.bot.db.execute("DELETE FROM blacklisted_user WHERE user_id = %s", user.id)
+        self.bot.cache.blacklist["global"]["user"].discard(user.id)
         await util.send_success(ctx, f"**{user}** can now use Miso Bot again!")
 
     @whitelist.command(name="guild")
@@ -475,6 +496,7 @@ class Mod(commands.Cog):
     async def whitelist_guild(self, ctx, guild_id: int):
         """Whitelist a guild."""
         await self.bot.db.execute("DELETE FROM blacklisted_guild WHERE guild_id = %s", guild_id)
+        self.bot.cache.blacklist["global"]["guild"].discard(guild_id)
         await util.send_success(ctx, f"Guild with id `{guild_id}` can use Miso Bot again!")
 
 
