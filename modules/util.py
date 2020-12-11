@@ -50,6 +50,25 @@ async def determine_prefix(bot, message):
         return commands.when_mentioned_or(bot.default_prefix)(bot, message)
 
 
+async def is_blacklisted(ctx):
+    """Check command invocation context for blacklist triggers."""
+    if ctx.guild is not None and ctx.guild.id in ctx.bot.cache.blacklist["global"]["guild"]:
+        raise exceptions.BlacklistedGuild()
+    elif ctx.channel.id in ctx.bot.cache.blacklist["global"]["channel"]:
+        raise exceptions.BlacklistedChannel()
+    elif ctx.author.id in ctx.bot.cache.blacklist["global"]["user"]:
+        raise exceptions.BlacklistedUser()
+    elif ctx.guild is not None and ctx.bot.cache.blacklist.get(str(ctx.guild.id)) is not None:
+        if ctx.author.id in ctx.bot.cache.blacklist[str(ctx.guild.id)]["member"]:
+            raise exceptions.BlacklistedMember()
+        elif (
+            ctx.command.qualified_name.lower()
+            in ctx.bot.cache.blacklist[str(ctx.guild.id)]["command"]
+        ):
+            raise exceptions.BlacklistedCommand()
+    return True
+
+
 def region_flag(region: discord.VoiceRegion):
     """Get the flag emoji representing a discord voice region."""
     if region in [

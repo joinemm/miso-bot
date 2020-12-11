@@ -50,7 +50,7 @@ class MisoBot(commands.AutoShardedBot):
         await super().close()
 
     async def on_message(self, message):
-        if not bot.is_ready:
+        if not bot.is_ready():
             return
 
         await super().on_message(message)
@@ -127,7 +127,7 @@ async def before_any_command(ctx):
 @bot.check
 async def check_for_blacklist(ctx):
     """Check command invocation context for blacklist triggers"""
-    return await queries.is_blacklisted(ctx)
+    return await util.is_blacklisted(ctx)
 
 
 @bot.check
