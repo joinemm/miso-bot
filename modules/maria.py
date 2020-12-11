@@ -38,8 +38,11 @@ class MariaDB:
         logger.info(
             f"Connecting to database {cred['db']} on {cred['host']}:{cred['port']} as {cred['user']}"
         )
-        self.pool = await aiomysql.create_pool(**cred, echo=False)
-        logger.info("Initialized MariaDB connection pool")
+        maxsize = os.environ.get("DB_POOL_SIZE", 10)
+        self.pool = await aiomysql.create_pool(
+            **cred, maxsize=maxsize, autocommit=True, echo=False
+        )
+        logger.info(f"Initialized MariaDB connection pool with {maxsize} connections")
 
     async def cleanup(self):
         self.pool.close()
@@ -51,7 +54,6 @@ class MariaDB:
             async with self.pool.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(statement, params)
-                    await conn.commit()
                     data = await cur.fetchall()
             if data is None:
                 return ()
