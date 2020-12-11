@@ -5,7 +5,7 @@ import discord
 import traceback
 from discord.ext import commands
 from time import time
-from modules import log, util, maria, queries, cache
+from modules import log, util, maria, cache
 from modules.help import EmbedHelpCommand
 from dotenv import load_dotenv
 

@@ -590,6 +590,7 @@ class Events(commands.Cog):
             except (discord.errors.Forbidden, discord.errors.NotFound):
                 return
 
+            reaction_count = 0
             for react in message.reactions:
                 if emoji_type == "custom":
                     if (

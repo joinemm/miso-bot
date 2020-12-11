@@ -1815,7 +1815,7 @@ class LastFm(commands.Cog):
 
             hex_color = util.rgb_to_hex(color)
             await self.bot.db.execute(
-                "INSERT INTO image_color_cache (image_hash, r, g, b, hex) VALUES (%s, %s, %s, %s, %s)",
+                "INSERT IGNORE image_color_cache (image_hash, r, g, b, hex) VALUES (%s, %s, %s, %s, %s)",
                 image_hash,
                 color.r,
                 color.g,
