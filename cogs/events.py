@@ -119,7 +119,7 @@ class Events(commands.Cog):
         await asyncio.gather(*tasks)
         logger.info(
             f"Inserted {total_messages} messages in {time()-start:.3f}s, "
-            f"{len(self.average_mps)*2} min average: {sum(self.average_mps) / len(self.average_mps):.2f} msg/s"
+            f"{len(self.average_mps)*2} min average: {(sum(self.average_mps) / len(self.average_mps))/(60*2):.2f} msg/s"
         )
 
     @commands.Cog.listener()
@@ -619,7 +619,7 @@ class Events(commands.Cog):
             board_message = None
             if board_message_id:
                 try:
-                    board_message = await message_channel.fetch_message(board_message_id)
+                    board_message = await board_channel.fetch_message(board_message_id)
                 except discord.errors.NotFound:
                     pass
 
