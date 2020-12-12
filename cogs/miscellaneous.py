@@ -371,7 +371,7 @@ class Miscellaneous(commands.Cog):
             ctx.author.id,
             sign,
         )
-        await ctx.send(f"Zodiac saved as **{sign.capitalize()}** {self.hs_emojis.get(sign)}")
+        await ctx.send(f"Zodiac saved as **{sign.capitalize()}** {self.hs.get(sign)['emoji']}")
 
     @horoscope.command()
     async def list(self, ctx):
