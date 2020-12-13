@@ -24,8 +24,8 @@ class EmbedHelpCommand(commands.HelpCommand):
         this_cmd = ""
         if hasattr(c, "commands"):
             for subc in c.commands:
-                this_cmd += (
-                    f"\n{' '*depth}└ **{subc.name}**\n{' '*(depth+1)}{subc.short_doc or '...'}"
+                this_cmd += f"\n{' '*depth}└ **{subc.name}**" + (
+                    f"\n{' '*(depth+1)}{subc.short_doc}" if subc.short_doc is not None else ""
                 )
                 this_cmd += self.get_subcommands(subc, depth + 1)
 
@@ -64,8 +64,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         for command in filtered:
             embed.add_field(
                 name=f"{self.get_command_signature(command)}",
-                value="<:blank:749966895293268048>"
-                + (command.short_doc or "...")
+                value=(f"{command.short_doc}\n" if command.short_doc is not None else "")
                 + self.get_subcommands(command),
                 inline=False,
             )

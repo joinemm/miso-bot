@@ -61,7 +61,6 @@ class LastFm(commands.Cog):
 
     @commands.group(case_insensitive=True)
     async def fm(self, ctx):
-        """Last.fm commands."""
         await username_to_ctx(ctx)
 
         if ctx.invoked_subcommand is None:
@@ -116,7 +115,7 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=["yt"])
     async def youtube(self, ctx):
-        """Search for your currently playing song on youtube."""
+        """See your current song on youtube."""
         data = await api_request(
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
         )
@@ -408,7 +407,7 @@ class LastFm(commands.Cog):
     @fm.command()
     async def artist(self, ctx, timeframe, datatype, *, artistname=""):
         """
-        Artist specific playcounts and info.
+        Artist specific data.
 
         Usage:
             >fm artist [timeframe] toptracks <artist name>
@@ -1073,7 +1072,7 @@ class LastFm(commands.Cog):
 
     @server.command(name="nowplaying", aliases=["np"])
     async def server_nowplaying(self, ctx):
-        """What people on this server are listening to at the moment."""
+        """What people on this server are listening to."""
         listeners = []
         tasks = []
         for user_id, lastfm_username in await self.server_lastfm_usernames(ctx):
@@ -1123,7 +1122,7 @@ class LastFm(commands.Cog):
 
     @server.command(name="recent", aliases=["re"])
     async def server_recent(self, ctx):
-        """What people on this server are and were last listening to."""
+        """What people on this server have recently listened."""
         listeners = []
         tasks = []
         for user_id, lastfm_username in await self.server_lastfm_usernames(ctx):
@@ -1358,7 +1357,7 @@ class LastFm(commands.Cog):
     @commands.cooldown(2, 30, type=commands.BucketType.user)
     async def whoknows(self, ctx, *, artistname=None):
         """
-        Check who has listened to a given artist the most.
+        Who has listened to a given artist the most.
 
         Usage:
             >whoknows <artist name>
@@ -1456,7 +1455,7 @@ class LastFm(commands.Cog):
     @commands.cooldown(2, 30, type=commands.BucketType.user)
     async def whoknowstrack(self, ctx, *, track=None):
         """
-        Check who has listened to a given song the most.
+        Who has listened to a given song the most.
 
         Usage:
             >whoknowstrack <track name> | <artist name>
@@ -1534,7 +1533,7 @@ class LastFm(commands.Cog):
     @commands.cooldown(2, 30, type=commands.BucketType.user)
     async def whoknowsalbum(self, ctx, *, album):
         """
-        Check who has listened to a given album the most.
+        Who has listened to a given album the most.
 
         Usage:
             >whoknowsalbum <album name> | <artist name>
@@ -1644,7 +1643,7 @@ class LastFm(commands.Cog):
 
     @commands.command()
     async def report(self, ctx, lastfm_username, *, reason):
-        """Report someone who is botting plays."""
+        """Report lastfm account."""
         lastfm_username = lastfm_username.strip("/").split("/")[-1].lower()
         url = f"https://www.last.fm/user/{lastfm_username}"
         data = await api_request(

@@ -128,7 +128,11 @@ class ErrorHander(commands.Cog):
 
         elif isinstance(error, commands.CommandOnCooldown):
             if await queries.is_donator(ctx, ctx.author, 2):
-                return await ctx.reinvoke()
+                try:
+                    await ctx.reinvoke()
+                    return
+                except Exception as e:
+                    await self.on_command_error(ctx, e)
             else:
                 await self.send(
                     ctx,
