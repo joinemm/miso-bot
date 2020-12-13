@@ -1415,7 +1415,8 @@ class LastFm(commands.Cog):
                     INSERT INTO artist_crown (guild_id, user_id, artist_name, cached_playcount)
                         VALUES (%s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
-                        cached_playcount = VALUES(cached_playcount)
+                        cached_playcount = VALUES(cached_playcount),
+                        user_id = VALUES(user_id)
                     """,
                     ctx.guild.id,
                     member.id,
