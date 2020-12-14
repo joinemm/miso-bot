@@ -774,7 +774,7 @@ class User(commands.Cog):
             if color_hex is None:
                 raise exceptions.Warning(f"Invalid color {color}")
             else:
-                color_value = str(color_hex)
+                color_value = str(color_hex).strip("#")
 
         await self.bot.db.execute(
             """
