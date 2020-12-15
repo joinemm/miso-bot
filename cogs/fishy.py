@@ -12,6 +12,7 @@ class Fishy(commands.Cog):
         self.bot = bot
         self.icon = "🐟"
         self.COOLDOWN = 7200
+        self.ts_lock = {}
         self.FISHTYPES = {
             "trash": self.trash,
             "common": self.fish_common,
@@ -92,8 +93,8 @@ class Fishy(commands.Cog):
             ":newspaper2:",
         ]
 
-    @commands.max_concurrency(1, per=commands.BucketType.user)
-    @commands.cooldown(1, 5, type=commands.BucketType.user)
+    # idk why this doesnt work but it gets stuck all the time
+    # @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
     async def fishy(self, ctx, user=None):
         """Go fishing."""
@@ -103,9 +104,13 @@ class Fishy(commands.Cog):
         else:
             gift = False
 
-        last_fishy = await self.bot.db.execute(
-            "SELECT last_fishy FROM fishy WHERE user_id = %s", ctx.author.id, one_value=True
-        )
+        cached_last_fishy = self.ts_lock.get(str(ctx.author.id))
+        if cached_last_fishy is None:
+            last_fishy = await self.bot.db.execute(
+                "SELECT last_fishy FROM fishy WHERE user_id = %s", ctx.author.id, one_value=True
+            )
+        else:
+            last_fishy = cached_last_fishy
         if last_fishy:
             time_since_fishy = ctx.message.created_at.timestamp() - last_fishy.timestamp()
         else:
@@ -118,6 +123,7 @@ class Fishy(commands.Cog):
         else:
             catch = random.choices(list(self.FISHTYPES.keys()), self.WEIGHTS)[0]
             amount = await self.FISHTYPES[catch](ctx, receiver, gift)
+            self.ts_lock[str(ctx.author.id)] = ctx.message.created_at
             await self.bot.db.execute(
                 """
                 INSERT INTO fishy (user_id, fishy_count, biggest_fish)
