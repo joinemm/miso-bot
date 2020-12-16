@@ -21,53 +21,49 @@ class User(commands.Cog):
     async def get_rank(self, user, table="user_activity", guild=None):
         """Get user's xp ranking from given table."""
         if guild is None:
-            pos = await self.bot.db.execute(
-                f"""
-                SELECT pos
-                FROM (
-                    SELECT (@pos := @pos+1) pos, user_id, message_count,
-                        SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp
-                    FROM {table} S, (SELECT @pos := 0) p
-                    GROUP BY user_id
-                    ORDER BY xp
-                ) {table}
-                WHERE user_id = %s
-                ORDER BY pos
-                LIMIT 1
-                """,
-                user.id,
-                one_value=True,
-            )
-            total = await self.bot.db.execute(
-                f"SELECT COUNT(DISTINCT(user_id)) FROM {table}", one_value=True
-            )
-        else:
-            pos = await self.bot.db.execute(
-                f"""
-                SELECT pos
-                FROM (
-                    SELECT (@pos := @pos+1) pos, user_id, message_count,
-                        SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp
-                    FROM {table} S, (SELECT @pos := 0) p
-                    WHERE guild_id = %s
-                    GROUP BY user_id
-                    ORDER BY xp
-                ) {table}
-                WHERE user_id = %s
-                ORDER BY pos
-                LIMIT 1
-                """,
-                guild.id,
-                user.id,
-                one_value=True,
-            )
-            total = await self.bot.db.execute(
-                f"SELECT COUNT(DISTINCT(user_id)) FROM {table} WHERE guild_id = %s",
-                guild.id,
-                one_value=True,
+            total, pos = (
+                await self.bot.db.execute(
+                    f"""
+                    SELECT (SELECT COUNT(DISTINCT(user_id)) FROM {table} WHERE not is_bot),
+                    ranking FROM (
+                        SELECT RANK() OVER(ORDER BY xp DESC) AS ranking, user_id,
+                            SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp
+                        FROM {table}
+                        WHERE not is_bot
+                        GROUP BY user_id
+                    ) as sub
+                    WHERE user_id = %s
+                    """,
+                    user.id,
+                    one_row=True,
+                )
+                or (None, None)
             )
 
-        if not pos:
+        else:
+            total, pos = (
+                await self.bot.db.execute(
+                    f"""
+                    SELECT (SELECT COUNT(user_id) FROM {table} WHERE not is_bot AND guild_id = %s),
+                    ranking FROM (
+                        SELECT RANK() OVER(ORDER BY xp DESC) AS ranking, user_id,
+                            SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp
+                        FROM {table}
+                        WHERE not is_bot
+                        AND guild_id = %s
+                        GROUP BY user_id
+                    ) as sub
+                    WHERE user_id = %s
+                    """,
+                    guild.id,
+                    guild.id,
+                    user.id,
+                    one_row=True,
+                )
+                or (None, None)
+            )
+
+        if pos is None or total is None:
             return "N/A"
         else:
             return f"#{int(pos)} / {total}"
