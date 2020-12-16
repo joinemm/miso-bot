@@ -417,7 +417,7 @@ class User(commands.Cog):
             data = await self.bot.db.execute(
                 f"""
                 SELECT user_id, SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp,
-                    message_count FROM {table}
+                    SUM(message_count) FROM {table}
                 WHERE NOT is_bot
                 GROUP BY user_id ORDER BY xp DESC
                 """
@@ -446,7 +446,7 @@ class User(commands.Cog):
             if i <= len(self.medal_emoji):
                 ranking = self.medal_emoji[i - 1]
             else:
-                ranking = f"`{i:2}`"
+                ranking = f"`#{i:2}`"
 
             rows.append(
                 f"{ranking} **{util.displayname(user)}** — "
@@ -490,7 +490,7 @@ class User(commands.Cog):
             if i <= len(self.medal_emoji):
                 ranking = self.medal_emoji[i - 1]
             else:
-                ranking = f"`{i:2}`"
+                ranking = f"`#{i:2}`"
 
             rows.append(
                 f"{ranking} **{util.displayname(user)}** — **{int(wpm)}** WPM ({arrow.get(test_date).to('utc').humanize()})"
@@ -524,7 +524,7 @@ class User(commands.Cog):
             if i <= len(self.medal_emoji):
                 ranking = self.medal_emoji[i - 1]
             else:
-                ranking = f"`{i:2}`"
+                ranking = f"`#{i:2}`"
 
             rows.append(f"{ranking} **{util.displayname(user)}** — **{amount}** crowns")
 
