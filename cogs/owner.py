@@ -137,7 +137,7 @@ class Owner(commands.Cog):
     async def donator_tier(self, ctx, user: discord.User, new_tier: int):
         """Change user's donation tier."""
         await self.bot.db.execute(
-            "UPDATE donator SET tier = %s WHERE user_id = %s", new_tier, user.id
+            "UPDATE donator SET donation_tier = %s WHERE user_id = %s", new_tier, user.id
         )
         await util.send_success(ctx, f"**{user}** donation changed to **Tier {new_tier}**")
 
