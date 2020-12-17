@@ -41,7 +41,10 @@ class Kpop(commands.Cog):
         await self.google_client.close()
 
     async def google_image_search(self, keyword):
-        results = await self.google_client.search(keyword, safesearch=False, image_search=True)
+        try:
+            results = await self.google_client.search(keyword, safesearch=False, image_search=True)
+        except async_cse.search.APIError:
+            return ""
         if results:
             return results[0].image_url
         else:
