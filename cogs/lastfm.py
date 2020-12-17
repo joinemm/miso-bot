@@ -872,7 +872,7 @@ class LastFm(commands.Cog):
                     album_color_nodes.append(AlbumColorNode((r, g, b), image_hash))
 
                 await self.bot.db.executemany(
-                    "INSERT INTO image_color_cache (image_hash, r, g, b, hex) VALUES (%s, %s, %s, %s, %s)",
+                    "INSERT IGNORE image_color_cache (image_hash, r, g, b, hex) VALUES (%s, %s, %s, %s, %s)",
                     to_cache,
                 )
 
