@@ -420,7 +420,7 @@ class Mod(commands.Cog):
     async def blacklist_global(self, ctx, user: discord.User, *, reason):
         """Blacklist someone globally from Miso Bot."""
         await self.bot.db.execute(
-            "INSERT IGNORE blacklisted_user VALUES (%s, %s, %s)", user.id, reason
+            "INSERT IGNORE blacklisted_user VALUES (%s, %s)", user.id, reason
         )
         self.bot.cache.blacklist["global"]["user"].add(user.id)
         await util.send_success(ctx, f"**{user}** can no longer use Miso Bot!")

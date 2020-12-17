@@ -183,7 +183,7 @@ class Owner(commands.Cog):
             functions = {"⬅": previous_page, "➡": next_page}
             asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions))
 
-    @commands.command()
+    @commands.command(aliases=["fmban"])
     async def fmflag(self, ctx, lastfm_username, *, reason):
         """Flag LastFM account as a cheater."""
         await self.bot.db.execute(
