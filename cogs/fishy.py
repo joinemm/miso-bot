@@ -95,6 +95,7 @@ class Fishy(commands.Cog):
 
     # idk why this doesnt work but it gets stuck all the time
     # @commands.max_concurrency(1, per=commands.BucketType.user)
+    @commands.cooldown(1, 60, type=commands.BucketType.user)
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
     async def fishy(self, ctx, user=None):
         """Go fishing."""
@@ -109,6 +110,12 @@ class Fishy(commands.Cog):
             last_fishy = await self.bot.db.execute(
                 "SELECT last_fishy FROM fishy WHERE user_id = %s", ctx.author.id, one_value=True
             )
+            # try again to fix race condition maybe
+            cached_last_fishy = self.ts_lock.get(str(ctx.author.id))
+            if cached_last_fishy is not None:
+                last_fishy = cached_last_fishy
+            if last_fishy:
+                self.ts_lock[str(ctx.author.id)] = last_fishy
         else:
             last_fishy = cached_last_fishy
         if last_fishy:
