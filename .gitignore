@@ -9,3 +9,4 @@ data/data.json
 polls.yaml
 .env
 poetry.lock
+*.log

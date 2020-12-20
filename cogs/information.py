@@ -5,7 +5,9 @@ import time
 import os
 import arrow
 import copy
+import json
 import aiohttp
+import asyncio
 from discord.ext import commands
 from libraries import emoji_literals
 from modules import util, exceptions
@@ -17,6 +19,22 @@ class Information(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.icon = "ℹ️"
+
+    @commands.command()
+    async def pings(self, ctx):
+        self.bot.eval_wait = True
+        try:
+            await self.bot.websocket.send(json.dumps({"command": "ping"}).encode("utf-8"))
+            msgs = []
+            while True:
+                try:
+                    msg = await asyncio.wait_for(self.bot.responses.get(), timeout=3)
+                except asyncio.TimeoutError:
+                    break
+                msgs.append(f'{msg["author"]}: {msg["response"]}')
+            await ctx.send(" ".join(f"```py\n{m}\n```" for m in msgs))
+        finally:
+            self.bot.eval_wait = False
 
     @commands.command()
     async def invite(self, ctx):
