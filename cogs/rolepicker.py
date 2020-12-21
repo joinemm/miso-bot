@@ -106,6 +106,9 @@ class Rolepicker(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Rolechannel message handler."""
+        if not self.bot.is_ready():
+            return
+            
         if message.guild is None:
             return
 
