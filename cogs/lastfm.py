@@ -16,7 +16,9 @@ from bs4 import BeautifulSoup
 from discord.ext import commands
 from PIL import Image
 
-from modules import emojis, exceptions, util
+from modules import emojis
+from modules import exceptions
+from modules import util
 
 LASTFM_APPID = os.environ.get("LASTFM_APIKEY")
 LASTFM_TOKEN = os.environ.get("LASTFM_SECRET")
