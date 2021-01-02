@@ -1436,6 +1436,10 @@ class LastFm(commands.Cog):
             return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
 
         content = discord.Embed(title=f"Who knows **{artistname}**?")
+
+        if old_king or old_king is None or old_king.id == new_king.id:
+            content.description = f"> **{util.displayname(new_king)}** just stole the **{artistname}** crown from **{util.displayname(old_king)}**"
+
         image_url = await scrape_artist_image(artistname)
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Collective plays: {total}")
@@ -1443,12 +1447,6 @@ class LastFm(commands.Cog):
         content.colour = await self.cached_image_color(image_url)
 
         await util.send_as_pages(ctx, content, rows)
-        if not old_king or old_king is None or old_king.id == new_king.id:
-            return
-
-        await ctx.send(
-            f"> **{util.displayname(new_king)}** just stole the **{artistname}** crown from **{util.displayname(old_king)}**"
-        )
 
     @commands.command(aliases=["wkt", "whomstknowstrack"])
     @commands.guild_only()
