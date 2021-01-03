@@ -61,7 +61,7 @@ class Notifications(commands.Cog):
     async def on_message(self, message):
         """Notification message handler."""
         # make sure bot cache is ready
-        if not self.bot.is_ready:
+        if not self.bot.is_ready():
             return
 
         # ignore DMs
