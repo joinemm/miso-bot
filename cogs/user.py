@@ -648,7 +648,9 @@ class User(commands.Cog):
                     tags=bleach.sanitizer.ALLOWED_TAGS + ["br"],
                 )
             background_url = background_url or ""
-            background_color = "#" + background_color or user.color
+            background_color = (
+                ("#" + background_color) if background_color is not None else user.color
+            )
         else:
             background_color = user.color
             background_url = ""
