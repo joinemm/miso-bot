@@ -155,10 +155,11 @@ class Mod(commands.Cog):
         if member.id == 133311691852218378:
             return await ctx.send("no.")
 
+        seconds = None
         if duration is not None:
             seconds = util.timefromstring(duration)
-            if seconds is None:
-                raise exceptions.Warning(f'Invalid duration representation "{duration}"')
+            if seconds is None or seconds == 0:
+                raise exceptions.Warning(f'Invalid mute duration "{duration}"')
             elif seconds < 60:
                 raise exceptions.Info("The minimum duration of a mute is **1 minute**")
             elif seconds > 604800:
@@ -225,6 +226,7 @@ class Mod(commands.Cog):
             ctx.guild.id,
             member.id,
         )
+        self.cache_needs_refreshing = True
 
     @commands.command()
     @commands.has_permissions(ban_members=True)
