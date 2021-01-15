@@ -1070,7 +1070,7 @@ class LastFm(commands.Cog):
 
     @fm.group(aliases=["s", "guild"])
     @commands.guild_only()
-    @commands.cooldown(6, 60, type=commands.BucketType.user)
+    @commands.cooldown(2, 60, type=commands.BucketType.user)
     async def server(self, ctx):
         """Server wide statistics."""
         await util.command_group_help(ctx)
@@ -1359,7 +1359,7 @@ class LastFm(commands.Cog):
 
     @commands.command(aliases=["wk", "whomstknows"])
     @commands.guild_only()
-    @commands.cooldown(2, 30, type=commands.BucketType.user)
+    @commands.cooldown(2, 60, type=commands.BucketType.user)
     async def whoknows(self, ctx, *, artistname=None):
         """
         Who has listened to a given artist the most.
@@ -1457,7 +1457,7 @@ class LastFm(commands.Cog):
 
     @commands.command(aliases=["wkt", "whomstknowstrack"])
     @commands.guild_only()
-    @commands.cooldown(2, 30, type=commands.BucketType.user)
+    @commands.cooldown(2, 60, type=commands.BucketType.user)
     async def whoknowstrack(self, ctx, *, track=None):
         """
         Who has listened to a given song the most.
@@ -1535,7 +1535,7 @@ class LastFm(commands.Cog):
 
     @commands.command(aliases=["wka", "whomstknowsalbum"])
     @commands.guild_only()
-    @commands.cooldown(2, 30, type=commands.BucketType.user)
+    @commands.cooldown(2, 60, type=commands.BucketType.user)
     async def whoknowsalbum(self, ctx, *, album):
         """
         Who has listened to a given album the most.
