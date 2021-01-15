@@ -63,7 +63,7 @@ bot = MisoBot(
     case_insensitive=True,
     allowed_mentions=discord.AllowedMentions(everyone=False),
     max_messages=10000,
-    guild_ready_timeout=10,
+    heartbeat_timeout=180,
     intents=discord.Intents(
         guilds=True,
         members=True,  # requires verification
