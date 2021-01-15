@@ -1879,7 +1879,7 @@ class LastFm(commands.Cog):
 
         params = {
             "method": "user.getrecenttracks",
-            "user": "joinemm",
+            "user": ctx.username,
             "from": week[-1]["ts"],
             "to": current_day_floor.shift(minutes=-1).timestamp,
             "limit": 1000,
