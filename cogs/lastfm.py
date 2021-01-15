@@ -402,7 +402,12 @@ class LastFm(commands.Cog):
         if timeframe not in ["week", "month", "year"]:
             raise exceptions.Info("Available timeframes: `[ week | month | year ]`")
 
-        await listening_overview(ctx, timeframe)
+        if timeframe != "week":
+            raise exceptions.Warning(
+                "Only the weekly listening report is currently available due to a Last.fm change, sorry for the inconvenience!"
+            )
+
+        await self.listening_report(ctx, timeframe)
 
     @fm.command()
     async def artist(self, ctx, timeframe, datatype, *, artistname=""):
@@ -1856,6 +1861,67 @@ class LastFm(commands.Cog):
 
         return content
 
+    async def listening_report(self, ctx, timeframe):
+        current_day_floor = arrow.utcnow().floor("day")
+        week = []
+        # for i in range(7, 0, -1):
+        for i in range(1, 8):
+            dt = current_day_floor.shift(days=-i)
+            week.append(
+                {
+                    "dt": dt,
+                    "ts": dt.timestamp,
+                    "ts_to": dt.shift(days=+1, minutes=-1).timestamp,
+                    "day": dt.format("ddd, MMM Do"),
+                    "scrobbles": 0,
+                }
+            )
+
+        params = {
+            "method": "user.getrecenttracks",
+            "user": "joinemm",
+            "from": week[-1]["ts"],
+            "to": current_day_floor.shift(minutes=-1).timestamp,
+            "limit": 1000,
+        }
+        content = await api_request(params)
+        tracks = content["recenttracks"]["track"]
+
+        # get rid of nowplaying track if user is currently scrobbling.
+        # for some reason even with from and to parameters it appears
+        if tracks[0].get("@attr") is not None:
+            tracks = tracks[1:]
+
+        day_counter = 1
+        for trackdata in reversed(tracks):
+            scrobble_ts = int(trackdata["date"]["uts"])
+            if scrobble_ts > week[-day_counter]["ts_to"]:
+                day_counter += 1
+
+            week[day_counter - 1]["scrobbles"] += 1
+
+        scrobbles_total = sum(day["scrobbles"] for day in week)
+        scrobbles_average = round(scrobbles_total / len(week))
+
+        rows = []
+        for day in week:
+            rows.append(f"`{day['day']}`: **{day['scrobbles']}** Scrobbles")
+
+        content = discord.Embed(color=int(self.lastfm_red, 16))
+        content.set_author(
+            name=f"{ctx.username} | LAST.{timeframe.upper()}",
+            icon_url=ctx.usertarget.avatar_url,
+        )
+        content.description = "\n".join(rows)
+        content.add_field(
+            name="Total scrobbles", value=f"{scrobbles_total} Scrobbles", inline=False
+        )
+        content.add_field(
+            name="Avg. daily scrobbles", value=f"{scrobbles_average} Scrobbles", inline=False
+        )
+        # content.add_field(name="Listening time", value=listening_time)
+        await ctx.send(embed=content)
+
 
 # class ends here
 
@@ -2361,99 +2427,6 @@ async def username_to_ctx(ctx):
             raise exceptions.Warning(
                 f"{ctx.usertarget.mention} has not saved their lastfm username!"
             )
-
-
-async def listening_overview(ctx, timeframe):
-    rows = []
-    async with aiohttp.ClientSession() as session:
-        url = f"https://last.fm/user/{ctx.username}/listening-report/{timeframe}"
-        data = await fetch(session, url, handling="text")
-        if data is None:
-            raise exceptions.LastFMError(404, "Artist page not found")
-
-        soup = BeautifulSoup(data, "html.parser")
-
-        if soup.find("a", {"class": "btn-subscribe"}) is not None:
-            return await ctx.send(
-                f":warning: Sorry, you can‘t see this because `{ctx.username}` doesn't have Last.fm Pro!"
-            )
-
-        if soup.find("section", {"class": "user-dashboard-nodata"}) is not None:
-            return await ctx.send(f"`{ctx.username}` didn't listen to any music :(")
-
-        # profile quick numbers
-        scrobbles = (
-            soup.find("div", {"class": "user-dashboard-data-point-scrobbles"})
-            .find("a")
-            .find("span", {"class": "js-ticker"})
-            .get("data-value")
-        )
-        per_day = (
-            soup.find("div", {"class": "user-dashboard-data-point-scrobbles-per-day"})
-            .find("span", {"class": "js-ticker"})
-            .get("data-value")
-        )
-        timetotal = (
-            soup.find("div", {"class": "user-dashboard-data-point-total-listening"})
-            .find("span", {"class": "duration-data"})
-            .text.strip()
-            .split()
-        )
-        if len(timetotal) > 3:
-            timetotal = " ".join([timetotal[0], timetotal[2], timetotal[3], timetotal[5]])
-        else:
-            timetotal = " ".join([timetotal[0], timetotal[2]])
-
-        # day/month chart
-        barchart_tbody = soup.find("table", {"class": "js-scrobble-stats-history-data"}).find(
-            "tbody"
-        )
-        if timeframe == "week":
-            datefmt = "ddd, MMM Do"
-        elif timeframe == "month":
-            datefmt = "MMM Do"
-        elif timeframe == "year":
-            datefmt = "MMM YYYY"
-
-        for tr in barchart_tbody.findAll("tr"):
-            scrobble_td = tr.find("td", {"data-scrobble-count-tooltip": True})
-            timestamp = int(scrobble_td.get("data-library-url").split("?from=")[1].split("&")[0])
-            date = arrow.get(timestamp).shift(hours=12).format(fmt=datefmt)
-            scrobble_count = scrobble_td.text.strip()
-            rows.append(f"`{date}`: **{scrobble_count}** Scrobbles")
-
-        # top tags for the week
-        top_tags = []
-        piechart = False
-        tags = soup.find("table", {"class": "js-tube-tags-table"})
-        if tags is None:
-            tags = soup.find("table", {"class": "js-top-tags-table"})
-            piechart = True
-
-        for tr in tags.find("tbody").findAll("tr"):
-            td = tr.find("td", {"data-value": False}) if piechart else tr.findAll("td")[-1]
-            tag = td.find("a").text.strip()
-            top_tags.append(tag)
-
-    content = discord.Embed(color=discord.Color.red())
-    content.set_author(
-        name=f"{ctx.username} | LAST.{timeframe.upper()}",
-        icon_url=ctx.usertarget.avatar_url,
-        url=url,
-    )
-    content.description = "\n".join(rows)
-    content.add_field(name="Top tags", value=", ".join(top_tags), inline=False)
-    content.add_field(name="Scrobbles", value=scrobbles)
-    content.add_field(name="Per day", value=per_day)
-    content.add_field(name="Listening time", value=timetotal)
-    if timeframe == "year":
-        streak = (
-            soup.find("section", {"class": "user-dashboard-longest-streak"})
-            .find("span", {"class": "js-ticker"})
-            .get("data-value")
-        )
-        content.add_field(name="Longest streak", value=f"{streak} days")
-    await ctx.send(embed=content)
 
 
 def remove_mentions(text):
