@@ -872,7 +872,10 @@ class LastFm(commands.Cog):
                     )
 
                 colordata = await asyncio.gather(*tasks)
-                for image_hash, r, g, b, hexcolor in colordata:
+                for colortuple in colordata:
+                    if colortuple is None:
+                        continue
+                    image_hash, r, g, b, hexcolor = colortuple
                     to_cache.append((image_hash, r, g, b, hexcolor))
                     album_color_nodes.append(AlbumColorNode((r, g, b), image_hash))
 
