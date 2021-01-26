@@ -38,7 +38,7 @@ class Mod(commands.Cog):
         if self.cache_needs_refreshing:
             self.cache_needs_refreshing = False
             self.unmute_list = await self.bot.db.execute(
-                "SELECT user_id, guild_id, channel_id, unmute_on FROM muted_user"
+                "SELECT user_id, guild_id, channel_id, unmute_on FROM muted_user WHERE unmute_on IS NOT NULL"
             )
 
         if not self.unmute_list:
