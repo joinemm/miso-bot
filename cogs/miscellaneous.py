@@ -278,8 +278,8 @@ class Miscellaneous(commands.Cog):
                     f"Use `{ctx.prefix}minecraft set` to save one or"
                     f"`{ctx.prefix}minecraft <address> <port>` to see any server"
                 )
-            else:
-                address, port = data
+
+            address, port = data
 
         server = await self.bot.loop.run_in_executor(
             None, lambda: minestat.MineStat(address, int(port or "25565"))
@@ -418,7 +418,7 @@ class Miscellaneous(commands.Cog):
                 if amount > 51:
                     amount = 51
 
-                for x in range(amount):
+                for _ in range(amount):
                     colors.append("{:06x}".format(random.randint(0, 0xFFFFFF)))
                 continue
 

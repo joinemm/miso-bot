@@ -132,9 +132,9 @@ class Kpop(commands.Cog):
         image = await self.google_image_search(search_term)
         content = discord.Embed()
         if gender == "F":
-            content.color = int("e7586d", 16)
+            content.colour = int("e7586d", 16)
         elif gender == "M":
-            content.color = int("226699", 16)
+            content.colour = int("226699", 16)
 
         content.title = (
             self.gender_icon.get(gender, "")

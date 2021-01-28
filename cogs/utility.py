@@ -241,7 +241,7 @@ class Utility(commands.Cog):
             >remindme on <YYYY/MM/DD> [HH:mm:ss] to <something>
         """
         try:
-            time, content = arguments.split(" to ")
+            reminder_time, content = arguments.split(" to ")
         except ValueError:
             return await util.send_command_help(ctx)
 
@@ -249,12 +249,12 @@ class Utility(commands.Cog):
 
         if pre == "on":
             # user inputs date
-            date = arrow.get(time)
+            date = arrow.get(reminder_time)
             seconds = date.timestamp - now.timestamp
 
         elif pre == "in":
             # user inputs time delta
-            seconds = util.timefromstring(time)
+            seconds = util.timefromstring(reminder_time)
             date = now.shift(seconds=+seconds)
 
         else:

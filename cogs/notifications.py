@@ -75,7 +75,7 @@ class Notifications(commands.Cog):
         # select all keywords applicable to this server, and also global keywords (guild_id=0)
         # keywords = [(0, k, v) for k, v in self.global_notifications_cache.items()]
         keywords = []
-        for kw in self.global_notifications_cache.keys():
+        for kw in self.global_notifications_cache:
             for v in self.global_notifications_cache[kw]:
                 keywords.append((0, kw, v))
         guild_keywords = self.notifications_cache.get(str(message.guild.id))

@@ -45,10 +45,7 @@ async def is_donator(ctx, user, unlock_tier=1):
         user.id,
         one_value=True,
     )
-    if tier and tier >= unlock_tier:
-        return True
-    else:
-        return False
+    return tier and tier >= unlock_tier
 
 
 async def is_blacklisted(ctx):
@@ -84,13 +81,13 @@ async def is_blacklisted(ctx):
 
     if data[0]:
         raise exceptions.BlacklistedUser()
-    elif data[1]:
+    if data[1]:
         raise exceptions.BlacklistedGuild()
-    elif data[2]:
+    if data[2]:
         raise exceptions.BlacklistedMember()
-    elif data[3]:
+    if data[3]:
         raise exceptions.BlacklistedCommand()
-    elif data[4]:
+    if data[4]:
         raise exceptions.BlacklistedChannel()
-    else:
-        return True
+
+    return True

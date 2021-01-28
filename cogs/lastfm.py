@@ -1066,7 +1066,11 @@ class LastFm(commands.Cog):
             SELECT user_id, lastfm_username FROM user_settings WHERE user_id IN %s
             AND lastfm_username IS NOT NULL
             """
-            + " AND lastfm_username not in (SELECT lastfm_username FROM lastfm_cheater)",
+            + (
+                " AND lastfm_username not in (SELECT lastfm_username FROM lastfm_cheater)"
+                if filter_cheaters
+                else ""
+            ),
             guild_user_ids,
         )
         return data
@@ -1188,7 +1192,9 @@ class LastFm(commands.Cog):
         tasks = []
         total_users = 0
         total_plays = 0
-        for user_id, lastfm_username in await self.server_lastfm_usernames(ctx):
+        for user_id, lastfm_username in await self.server_lastfm_usernames(
+            ctx, filter_cheaters=True
+        ):
             member = ctx.guild.get_member(user_id)
             if member is None:
                 continue
@@ -1236,7 +1242,9 @@ class LastFm(commands.Cog):
         tasks = []
         total_users = 0
         total_plays = 0
-        for user_id, lastfm_username in await self.server_lastfm_usernames(ctx):
+        for user_id, lastfm_username in await self.server_lastfm_usernames(
+            ctx, filter_cheaters=True
+        ):
             member = ctx.guild.get_member(user_id)
             if member is None:
                 continue
@@ -2174,10 +2182,12 @@ def parse_chart_arguments(args):
             if a in ["talb", "topalbums", "albums", "album"]:
                 parsed["method"] = "user.gettopalbums"
                 continue
-            elif a in ["ta", "topartists", "artists", "artist"]:
+
+            if a in ["ta", "topartists", "artists", "artist"]:
                 parsed["method"] = "user.gettopartists"
                 continue
-            elif a in ["re", "recent", "recents"]:
+
+            if a in ["re", "recent", "recents"]:
                 parsed["method"] = "user.getrecenttracks"
                 continue
 
@@ -2398,12 +2408,10 @@ async def scrape_artists_for_chart(username, period, amount):
     for data in responses:
         if len(images) >= amount:
             break
-        else:
-            soup = BeautifulSoup(data, "html.parser")
-            imagedivs = soup.findAll("td", {"class": "chartlist-image"})
-            images += [
-                div.find("img")["src"].replace("/avatar70s/", "/300x300/") for div in imagedivs
-            ]
+
+        soup = BeautifulSoup(data, "html.parser")
+        imagedivs = soup.findAll("td", {"class": "chartlist-image"})
+        images += [div.find("img")["src"].replace("/avatar70s/", "/300x300/") for div in imagedivs]
 
     return images
 
@@ -2423,13 +2431,11 @@ async def username_to_ctx(ctx):
     )
     if not ctx.username and str(ctx.invoked_subcommand) not in ["fm set"]:
         if not ctx.foreign_target:
-            raise exceptions.Warning(
-                f"No last.fm username saved! Please use `{ctx.prefix}fm set <lastfm username>`"
-            )
+            msg = f"No last.fm username saved! Please use `{ctx.prefix}fm set <lastfm username>`"
         else:
-            raise exceptions.Warning(
-                f"{ctx.usertarget.mention} has not saved their lastfm username!"
-            )
+            msg = f"{ctx.usertarget.mention} has not saved their lastfm username!"
+
+        raise exceptions.Warning(msg)
 
 
 def remove_mentions(text):

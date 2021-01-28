@@ -182,8 +182,8 @@ class Media(commands.Cog):
             async with session.get(url, params=params) as response:
                 if response.status == 403:
                     raise exceptions.Error("Daily youtube api quota reached.")
-                else:
-                    data = await response.json()
+
+                data = await response.json()
 
         if not data.get("items"):
             return await ctx.send("No results found!")
@@ -197,10 +197,10 @@ class Media(commands.Cog):
     @flags.add_flag("urls", nargs="+")
     @flags.add_flag("-d", "--download", action="store_true")
     @flags.command(aliases=["ig", "insta"])
-    async def instagram(self, ctx, **flags):
+    async def instagram(self, ctx, **options):
         """Get all the images from one or more instagram posts."""
         async with aiohttp.ClientSession() as session:
-            for url in flags["urls"]:
+            for url in options["urls"]:
                 result = regex.findall("/p/(.*?)(/|\\Z)", url)
                 if result:
                     url = f"https://www.instagram.com/p/{result[0][0]}"
@@ -250,7 +250,7 @@ class Media(commands.Cog):
                     await ctx.send(f":warning: Could not find any media from `{url}`")
                     continue
 
-                if flags["download"]:
+                if options["download"]:
                     # send as files
                     async with aiohttp.ClientSession() as session:
                         await ctx.send(f"<{url}>")
@@ -297,9 +297,9 @@ class Media(commands.Cog):
     @flags.add_flag("urls", nargs="+")
     @flags.add_flag("-d", "--download", action="store_true")
     @flags.command(aliases=["twt"])
-    async def twitter(self, ctx, **flags):
+    async def twitter(self, ctx, **options):
         """Get all the images from one or more tweets."""
-        for tweet_url in flags["urls"]:
+        for tweet_url in options["urls"]:
             if "status" in tweet_url:
                 tweet_id = re.search(r"status/(\d+)", tweet_url).group(1)
             else:
@@ -349,7 +349,7 @@ class Media(commands.Cog):
                 url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}",
             )
 
-            if flags["download"]:
+            if options["download"]:
                 # download file and rename, upload to discord
                 async with aiohttp.ClientSession() as session:
                     await ctx.send(f"<{tweet.full_text.split(' ')[-1]}>")
@@ -519,7 +519,7 @@ class Media(commands.Cog):
         """Search from google images."""
         results = await self.google_client.search(query, safesearch=False, image_search=True)
         formatted_results = []
-        for i, result in enumerate(results, start=1):
+        for result in results:
             formatted_results.append(result.image_url)
 
         await util.paginate_list(ctx, formatted_results, use_locking=True, only_author=True)

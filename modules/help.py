@@ -40,8 +40,8 @@ class EmbedHelpCommand(commands.HelpCommand):
         ) in sorted(mapping.items(), key=lambda x: len(x[1]), reverse=True):
             if cog is None or cog.qualified_name in ["Jishaku"]:
                 continue
-            else:
-                name = (f"{cog.icon} " if hasattr(cog, "icon") else "") + cog.qualified_name
+
+            name = (f"{cog.icon} " if hasattr(cog, "icon") else "") + cog.qualified_name
 
             filtered = await self.filter_commands(bot_commands, sort=True)
             if filtered:

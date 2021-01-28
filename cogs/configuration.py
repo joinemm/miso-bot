@@ -34,9 +34,11 @@ class Configuration(commands.Cog):
         """
         if prefix.strip() == "":
             raise exceptions.Warning("Prefix cannot be empty.")
-        elif prefix.startswith(" "):
+
+        if prefix.startswith(" "):
             raise exceptions.Warning("Prefix cannot start with a space.")
-        elif len(prefix) > 32:
+
+        if len(prefix) > 32:
             raise exceptions.Warning("Prefix cannot be over 32 characters.")
 
         prefix = prefix.lstrip()
