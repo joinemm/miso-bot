@@ -299,32 +299,55 @@ class User(commands.Cog):
             )
 
     @commands.command(aliases=["ranking"])
-    @commands.cooldown(3, 30, type=commands.BucketType.user)
+    @commands.cooldown(1, 30, type=commands.BucketType.member)
     async def rank(self, ctx, user: discord.Member = None):
-        """See your XP ranking."""
+        """See your server activity ranking."""
         if user is None:
             user = ctx.author
 
         content = discord.Embed(color=user.color)
         content.set_author(
-            name=f"XP Rankings for {util.displayname(user, escape=False)}",
+            name=f"Server activity ranks for {util.displayname(user, escape=False)}",
             icon_url=user.avatar_url,
         )
 
-        for guild in [ctx.guild, None]:
-            textbox = "```"
-            for table, label in [
-                ("user_activity_day", "Daily  "),
-                ("user_activity_week", "Weekly "),
-                ("user_activity_month", "Monthly"),
-                # (user_activity_year","Yearly "),
-                ("user_activity", "Overall"),
-            ]:
-                ranking = await self.get_rank(user, table, guild)
-                textbox += f"\n{label} : {ranking}"
+        textbox = ""
+        for table, label in [
+            ("user_activity_day", "Daily  "),
+            ("user_activity_week", "Weekly "),
+            ("user_activity_month", "Monthly"),
+            ("user_activity", "Overall"),
+        ]:
+            ranking = await self.get_rank(user, table, ctx.guild)
+            textbox += f"\n{label} : {ranking}"
 
-            content.add_field(name="Global" if guild is None else "Server", value=textbox + "```")
+        content.description = f"```\n{textbox}\n```"
+        await ctx.send(embed=content)
 
+    @commands.command(aliases=["globalranking", "grank"])
+    @commands.cooldown(1, 30, type=commands.BucketType.member)
+    async def globalrank(self, ctx, user: discord.Member = None):
+        """See your global activity ranking."""
+        if user is None:
+            user = ctx.author
+
+        content = discord.Embed(color=user.color)
+        content.set_author(
+            name=f"Global activity ranks for {util.displayname(user, escape=False)}",
+            icon_url=user.avatar_url,
+        )
+
+        textbox = ""
+        for table, label in [
+            ("user_activity_day", "Daily  "),
+            ("user_activity_week", "Weekly "),
+            ("user_activity_month", "Monthly"),
+            ("user_activity", "Overall"),
+        ]:
+            ranking = await self.get_rank(user, table)
+            textbox += f"\n{label} : {ranking}"
+
+        content.description = f"```\n{textbox}\n```"
         await ctx.send(embed=content)
 
     @commands.command()
