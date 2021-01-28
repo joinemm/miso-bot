@@ -2,7 +2,6 @@ import discord
 import random
 import asyncio
 import arrow
-import itertools
 import json
 from discord.ext import commands
 from operator import itemgetter
@@ -16,19 +15,18 @@ class Typings(commands.Cog):
         self.bot = bot
         self.icon = "⌨️"
         self.separators = [" ", " ", " ", "  ", "  ", " "]
-        self.fonts = [
-            "𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣",
-            "𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇",
-        ]
+        self.font = "𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣"
 
-    def obfuscate(self, text, font):
+    def obfuscate(self, text):
         while " " in text:
             text = text.replace(" ", random.choice(self.separators), 1)
-        letter_dict = dict(zip("abcdefghijklmnopqrstuvwxyz", font))
+        letter_dict = dict(zip("abcdefghijklmnopqrstuvwxyz", self.font))
         return "".join(letter_dict.get(letter, letter) for letter in text)
 
-    def anticheat(self, message, font):
-        remainder = "".join(set(message.content).intersection(font + "".join(self.separators)))
+    def anticheat(self, message):
+        remainder = "".join(
+            set(message.content).intersection(self.font + "".join(self.separators))
+        )
         return remainder != ""
 
     @commands.group()
@@ -60,8 +58,7 @@ class Typings(commands.Cog):
                 f"Currently supported languages are:\n>>> {langs}"
             )
 
-        font = random.choice(self.fonts)
-        og_msg = await ctx.send(f"```\n{self.obfuscate(' '.join(wordlist), font)}\n```")
+        og_msg = await ctx.send(f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
 
         def check(_message):
             return _message.author == ctx.author and _message.channel == ctx.channel
@@ -72,12 +69,19 @@ class Typings(commands.Cog):
             return await ctx.send("Too slow.")
 
         else:
-            wpm, accuracy = calculate_entry(message, og_msg, wordlist)
-            if self.anticheat(message, font) or wpm > 216:
+            wpm, accuracy, not_long_enough = calculate_entry(message, og_msg, wordlist)
+            if self.anticheat(message) or wpm > 216:
                 return await ctx.send(f"{ctx.author.mention} Stop cheating >:(")
 
-            await ctx.send(f"{ctx.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
-            await self.save_wpm(ctx.author, ctx.guild, wpm, accuracy, wordcount, language, False)
+            if not_long_enough:
+                await ctx.send(
+                    ":warning: `score not valid, you must type at least 90% of the words`"
+                )
+            else:
+                await ctx.send(f"{ctx.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
+                await self.save_wpm(
+                    ctx.author, ctx.guild, wpm, accuracy, wordcount, language, False
+                )
 
     @typing.command(name="race")
     async def typing_race(self, ctx, language=None, wordcount: int = 25):
@@ -146,7 +150,7 @@ class Typings(commands.Cog):
                     content.remove_field(0)
                     content.add_field(
                         name="Participants",
-                        value="\n".join(f"**{x}**" for x in players),
+                        value="\n".join(f"**{util.displayname(x)}**" for x in players),
                     )
                     await enter_message.edit(embed=content)
                 elif reaction.emoji == check_emoji:
@@ -188,62 +192,30 @@ class Typings(commands.Cog):
                 f"Currently supported languages are:\n>>> {langs}"
             )
 
-        font = random.choice(self.fonts)
-        await words_message.edit(content=f"```\n{self.obfuscate(' '.join(wordlist), font)}\n```")
+        await words_message.edit(content=f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
 
-        results = {}
+        tasks = []
         for player in players:
-            results[str(player.id)] = 0
-
-        completed_players = set()
-
-        while race_in_progress:
-
-            def progress_check(_message):
-                return (
-                    _message.author in players
-                    and _message.channel == ctx.channel
-                    and _message.author not in completed_players
+            tasks.append(
+                self.race_user_results_waiter(
+                    ctx, player, words_message, wordlist, wordcount, language
                 )
+            )
 
-            try:
-                message = await self.bot.wait_for("message", timeout=300.0, check=progress_check)
-            except asyncio.TimeoutError:
-                race_in_progress = False
-
-            else:
-                wpm, accuracy = calculate_entry(message, words_message, wordlist)
-                if self.anticheat(message, font) or wpm > 216:
-                    results[str(message.author.id)] = 0
-                    completed_players.add(message.author)
-                    await ctx.send(f"{message.author.mention} Stop cheating >:(")
-                    continue
-
-                await ctx.send(
-                    f"{message.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**"
-                )
-                await self.save_wpm(
-                    message.author, ctx.guild, wpm, accuracy, wordcount, language, True
-                )
-
-                results[str(message.author.id)] = wpm
-                completed_players.add(message.author)
-
-                if completed_players == players:
-                    race_in_progress = False
+        results = await asyncio.gather(*tasks)
 
         content = discord.Embed(
             title=":checkered_flag: Race complete!", color=discord.Color.green()
         )
         rows = []
         values = []
-        for i, player in enumerate(
-            sorted(results.items(), key=itemgetter(1), reverse=True), start=1
+        for i, (player, score) in enumerate(
+            sorted(results, key=itemgetter(1), reverse=True), start=1
         ):
-            member = ctx.guild.get_member(int(player[0]))
-            values.append((ctx.guild.id, member.id, 1, 1 if i == 1 else 0))
+            values.append((ctx.guild.id, player.id, 1, 1 if i == 1 else 0))
             rows.append(
-                f"{f'`#{i:2}`' if i > 1 else ':crown:'} **{int(player[1])} WPM** — {member.name}"
+                f"{f'`#{i:2}`' if i > 1 else ':crown:'} {util.displayname(player)} — "
+                + (f"**{int(score)} WPM**" if score != 0 else ":o:")
             )
 
         await self.bot.db.executemany(
@@ -258,6 +230,37 @@ class Typings(commands.Cog):
         )
 
         await util.send_as_pages(ctx, content, rows)
+
+    async def race_user_results_waiter(
+        self, ctx, player, words_message, wordlist, wordcount, language
+    ):
+        def progress_check(_message):
+            return _message.author == player and _message.channel == ctx.channel
+
+        try:
+            message = await self.bot.wait_for("message", timeout=300.0, check=progress_check)
+        except asyncio.TimeoutError:
+            ctx.send(f"{player.mention} too slow!")
+            return player, 0
+        else:
+            wpm, accuracy, not_long_enough = calculate_entry(message, words_message, wordlist)
+            if self.anticheat(message) or wpm > 216:
+                await ctx.send(f"{message.author.mention} Stop cheating >:(")
+                return player, 0
+
+            if not_long_enough:
+                await ctx.send(
+                    f"{message.author.mention} :warning: `score not valid, you must type at least 90% of the words`"
+                )
+                return player, 0
+            else:
+                await ctx.send(
+                    f"{message.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**"
+                )
+                await self.save_wpm(
+                    message.author, ctx.guild, wpm, accuracy, wordcount, language, True
+                )
+                return player, wpm
 
     @typing.command(name="history")
     async def typing_history(self, ctx, user: discord.Member = None):
@@ -274,7 +277,6 @@ class Typings(commands.Cog):
         )
         if not data:
             raise exceptions.Info(
-                ctx,
                 ("You haven't" if user is ctx.author else f"**{user.name}** hasn't")
                 + " taken any typing tests yet!",
             )
@@ -292,6 +294,32 @@ class Typings(commands.Cog):
             )
 
         await util.send_as_pages(ctx, content, rows)
+
+    @typing.command(name="cleardata")
+    async def typing_clear(self, ctx):
+        """Clear your typing data."""
+        content = discord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
+        content.description = (
+            "This action will delete *all* of your saved typing data and is **irreversible**."
+        )
+        msg = await ctx.send(embed=content)
+
+        async def confirm():
+            await self.bot.db.execute("DELETE FROM typing_stats WHERE user_id = %s", ctx.author.id)
+            await self.bot.db.execute("DELETE FROM typing_race WHERE user_id = %s", ctx.author.id)
+            content.title = ":white_check_mark: Cleared your data"
+            content.description = ""
+            await msg.edit(embed=content)
+
+        async def cancel():
+            content.title = ":x: Action cancelled"
+            content.description = ""
+            await msg.edit(embed=content)
+
+        functions = {"✅": confirm, "❌": cancel}
+        asyncio.ensure_future(
+            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+        )
 
     @typing.command(name="stats")
     async def typing_stats(self, ctx, user: discord.Member = None):
@@ -376,20 +404,32 @@ def get_wordlist(wordcount, language):
 
 def calculate_entry(message, words_message, wordlist):
     time = message.created_at - words_message.created_at
-    user_words = message.content.split()
+    user_words = message.content.lower().split()
     total_keys = 0
     corrent_keys = 0
-    for user_word, correct_word in itertools.zip_longest(user_words, wordlist):
-        if correct_word is None:
-            continue
-        if correct_word == "I" and user_word is not None:
-            correct_word = correct_word.lower()
-            user_word = user_word.lower()
-
+    for i, correct_word in enumerate(wordlist):
+        correct_word = correct_word.lower()
         total_keys += len(correct_word) + 1
-        if user_word == correct_word:
-            corrent_keys += len(correct_word) + 1
+        offset = 0 if i == len(user_words) - 1 else -1
+
+        try:
+            user_word = user_words[i]
+        except IndexError:
+            # user message out of words, but still keep looping correct words for total key count
+            continue
+        else:
+            while user_word != correct_word and offset < 3:
+                k = i - offset
+                print(k)
+                if k < 0:
+                    k = 0
+                user_word = user_words[k]
+                offset += 1
+
+            if user_word == correct_word:
+                corrent_keys += len(correct_word) + 1
 
     wpm = (corrent_keys / 5) / (time.total_seconds() / 60)
     accuracy = (corrent_keys / total_keys) * 100
-    return wpm, accuracy
+    not_long_enough = len(user_words) / len(wordlist) < 0.9
+    return wpm, accuracy, not_long_enough
