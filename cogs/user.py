@@ -168,13 +168,12 @@ class User(commands.Cog):
         emoji = emojis.random_hug()
 
         if huggable is not None:
-            parsed_words = []
-            for word in huggable.split(" "):
-                user = await util.get_user(ctx, word)
-                parsed_words.append(user.mention if user is not None else word)
+            for word in huggable.split():
+                user = await util.get_member(ctx, word)
+                if user is not None:
+                    huggable = huggable.replace(word, user.mention)
 
-            text = " ".join(parsed_words)
-            await ctx.send(f"{text} {emoji}")
+            await ctx.send(f"{huggable} {emoji}")
         else:
             await ctx.send(f"{emoji}")
 
