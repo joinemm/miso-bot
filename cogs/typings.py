@@ -75,7 +75,7 @@ class Typings(commands.Cog):
 
             if not_long_enough:
                 await ctx.send(
-                    ":warning: `score not valid, you must type at least 90% of the words`"
+                    f"{ctx.author.mention} :warning: `score not valid, you must type at least 90% of the words`"
                 )
             else:
                 await ctx.send(f"{ctx.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
