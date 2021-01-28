@@ -100,10 +100,7 @@ class Fishy(commands.Cog):
     async def fishy(self, ctx, user=None):
         """Go fishing."""
         receiver = await util.get_member(ctx, user, fallback=ctx.author)
-        if receiver is not None and receiver is not ctx.author:
-            gift = True
-        else:
-            gift = False
+        gift = receiver is not None and receiver is not ctx.author
 
         cached_last_fishy = self.ts_lock.get(str(ctx.author.id))
         if cached_last_fishy is None:

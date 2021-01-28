@@ -158,11 +158,14 @@ class Mod(commands.Cog):
         seconds = None
         if duration is not None:
             seconds = util.timefromstring(duration)
+
             if seconds is None or seconds == 0:
                 raise exceptions.Warning(f'Invalid mute duration "{duration}"')
-            elif seconds < 60:
+
+            if seconds < 60:
                 raise exceptions.Info("The minimum duration of a mute is **1 minute**")
-            elif seconds > 604800:
+
+            if seconds > 604800:
                 raise exceptions.Info("The maximum duration of a mute is **1 week**")
 
         try:
@@ -280,7 +283,7 @@ class Mod(commands.Cog):
             except discord.errors.Forbidden:
                 content.title = discord.Embed.Empty
                 content.description = f":no_entry: It seems I don't have the permission to ban **{user}** {user.mention}"
-                content.color = int("be1931", 16)
+                content.colour = int("be1931", 16)
             await msg.edit(embed=content)
 
         async def cancel_ban():
@@ -342,8 +345,9 @@ class Mod(commands.Cog):
                 if len(value + "\n" + row) > 1019:
                     value += "\n..."
                     break
-                else:
-                    value += ("\n" if value != "" else "") + row
+
+                value += ("\n" if value != "" else "") + row
+
             return value
 
         if blacklisted_channels:

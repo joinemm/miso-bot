@@ -39,7 +39,7 @@ class Events(commands.Cog):
         start = time()
         values = []
         total_messages = 0
-        for guild_id in self.xp_cache.keys():
+        for guild_id in self.xp_cache:
             for user_id, value in self.xp_cache[guild_id].items():
                 values.append(
                     (int(guild_id), int(user_id), value["bot"], value["xp"], value["messages"])
@@ -50,7 +50,7 @@ class Events(commands.Cog):
         if len(self.average_mps) > 10:
             self.average_mps = self.average_mps[1:]
 
-        tasks = []
+        sql_tasks = []
         if values:
             currenthour = arrow.utcnow().hour
             for activity_table in [
@@ -59,7 +59,7 @@ class Events(commands.Cog):
                 "user_activity_week",
                 "user_activity_month",
             ]:
-                tasks.append(
+                sql_tasks.append(
                     self.bot.db.executemany(
                         f"""
                     INSERT INTO {activity_table} (guild_id, user_id, is_bot, h{currenthour}, message_count)
@@ -74,15 +74,15 @@ class Events(commands.Cog):
         self.xp_cache = {}
 
         unicode_emoji_values = []
-        for guild_id in self.emoji_usage_cache["unicode"].keys():
-            for user_id in self.emoji_usage_cache["unicode"][guild_id].keys():
+        for guild_id in self.emoji_usage_cache["unicode"]:
+            for user_id in self.emoji_usage_cache["unicode"][guild_id]:
                 for emoji_name, value in self.emoji_usage_cache["unicode"][guild_id][
                     user_id
                 ].items():
                     unicode_emoji_values.append((int(guild_id), int(user_id), emoji_name, value))
 
         if unicode_emoji_values:
-            tasks.append(
+            sql_tasks.append(
                 self.bot.db.executemany(
                     """
                 INSERT INTO unicode_emoji_usage (guild_id, user_id, emoji_name, uses)
@@ -96,15 +96,15 @@ class Events(commands.Cog):
         self.emoji_usage_cache["unicode"] = {}
 
         custom_emoji_values = []
-        for guild_id in self.emoji_usage_cache["custom"].keys():
-            for user_id in self.emoji_usage_cache["custom"][guild_id].keys():
+        for guild_id in self.emoji_usage_cache["custom"]:
+            for user_id in self.emoji_usage_cache["custom"][guild_id]:
                 for emoji_id, value in self.emoji_usage_cache["custom"][guild_id][user_id].items():
                     custom_emoji_values.append(
                         (int(guild_id), int(user_id), value["name"], emoji_id, value["uses"])
                     )
 
         if custom_emoji_values:
-            tasks.append(
+            sql_tasks.append(
                 self.bot.db.executemany(
                     """
                 INSERT INTO custom_emoji_usage (guild_id, user_id, emoji_name, emoji_id, uses)
@@ -116,7 +116,7 @@ class Events(commands.Cog):
                 )
             )
         self.emoji_usage_cache["custom"] = {}
-        await asyncio.gather(*tasks)
+        await asyncio.gather(*sql_tasks)
         logger.info(
             f"Inserted {total_messages} messages in {time()-start:.3f}s, "
             f"{len(self.average_mps)*2} min average: {(sum(self.average_mps) / len(self.average_mps))/(60*2):.2f} msg/s"

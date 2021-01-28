@@ -57,7 +57,7 @@ class Information(commands.Cog):
         """List of people who have donated."""
         patrons = await self.bot.db.execute(
             """
-            SELECT user_id, platform, donation_tier, currently_active, emoji
+            SELECT user_id, platform, currently_active, emoji
             FROM donator LEFT OUTER JOIN donation_tier ON donation_tier=id
             """
         )
@@ -76,7 +76,7 @@ class Information(commands.Cog):
         )
         current = {"patreon": [], "kofi": [], "github": [], "paypal": []}
         former = []
-        for user_id, platform, tier, is_active, emoji in sorted(
+        for user_id, platform, is_active, emoji in sorted(
             patrons, key=lambda x: x[2], reverse=True
         ):
             user = self.bot.get_user(user_id)
@@ -310,7 +310,7 @@ class Information(commands.Cog):
 
         data = await self.bot.db.execute(
             f"""
-            SELECT command_name, SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
+            SELECT command_name, SUM(use_sum) as total FROM (
                 SELECT command_name, SUM(uses) as use_sum, user_id FROM command_usage
                     WHERE command_type = 'internal'
                       AND guild_id = %s
@@ -325,9 +325,11 @@ class Information(commands.Cog):
         )
         rows = []
         total = 0
-        for i, (command_name, count, most_used_by_user_id, user_count) in enumerate(data, start=1):
+        for i, (command_name, count) in enumerate(data, start=1):
             total += count
-            rows.append(f"**{count}** x `{ctx.prefix}{command_name}`")
+            rows.append(
+                f"`#{i:2}` **{count}** use{'' if count == 1 else 's'} : `{ctx.prefix}{command_name}`"
+            )
 
         if rows:
             content.set_footer(text=f"Total {total} commands")
@@ -348,7 +350,7 @@ class Information(commands.Cog):
 
         data = await self.bot.db.execute(
             f"""
-            SELECT command_name, SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
+            SELECT command_name, SUM(use_sum) as total FROM (
                 SELECT command_name, SUM(uses) as use_sum, user_id FROM command_usage
                     WHERE command_type = 'internal'
                     {'AND user_id = %s' if user is not None else ''}
@@ -361,7 +363,7 @@ class Information(commands.Cog):
         )
         rows = []
         total = 0
-        for i, (command_name, count, most_used_by_user_id, user_count) in enumerate(data, start=1):
+        for i, (command_name, count) in enumerate(data, start=1):
             total += count
             rows.append(
                 f"`#{i:2}` **{count}** use{'' if count == 1 else 's'} : `{ctx.prefix}{command_name}`"

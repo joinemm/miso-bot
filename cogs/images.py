@@ -31,7 +31,7 @@ class ImageObject:
             line = []
             line_height = 0
             words = text.split(" ")
-            for w, word in enumerate(words):
+            for word in words:
                 if "\n" in word:
                     newline_words = word.split("\n")
                     new_line = " ".join(line + [newline_words[0]])
@@ -70,8 +70,8 @@ class ImageObject:
             text_height = len(lines) * line_height
             if text_height <= height and size[0] <= width:
                 break
-            else:
-                font_size -= 1
+
+            font_size -= 1
 
         lines = [" ".join(line) for line in lines]
         font = ImageFont.truetype(self.font, font_size)

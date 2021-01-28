@@ -102,7 +102,7 @@ class User(commands.Cog):
         content.set_thumbnail(url=user.avatar_url)
 
         if isinstance(user, discord.Member):
-            content.color = user.color
+            content.colour = user.color
             activity_display = util.activities_string(user.activities)
             if user.is_on_mobile() and user.status is discord.Status.online:
                 status_emoji = "mobile"
@@ -113,7 +113,7 @@ class User(commands.Cog):
         else:
             activity_display = "Unavailable"
             status_display = "Unavailable"
-            content.color = int(
+            content.colour = int(
                 await util.color_from_image_url(str(user.avatar_url_as(size=64, format="png"))), 16
             )
 
@@ -164,7 +164,7 @@ class User(commands.Cog):
 
     @commands.command()
     async def hug(self, ctx, *, huggable=None):
-        """hug someone or something."""
+        """Hug your friend."""
         emoji = emojis.random_hug()
 
         if huggable is not None:
@@ -515,7 +515,7 @@ class User(commands.Cog):
                 ranking = f"`#{i:2}`"
 
             rows.append(
-                f"{ranking} **{util.displayname(user)}** — **{int(wpm)}** WPM ({arrow.get(test_date).to('utc').humanize()})"
+                f"{ranking} **{util.displayname(user)}** — **{int(wpm)}** WPM ({word_count} words, {arrow.get(test_date).to('utc').humanize()})"
             )
             i += 1
 
@@ -785,7 +785,7 @@ class User(commands.Cog):
     async def editprofile_color(self, ctx, color):
         """
         Set a background color to be used instead of your role color.
-        Set as \"default\" to use role color again.
+        Set as default to use role color again.
         """
         if color.lower() == "default":
             color_value = None
@@ -793,8 +793,8 @@ class User(commands.Cog):
             color_hex = await util.get_color(ctx, color)
             if color_hex is None:
                 raise exceptions.Warning(f"Invalid color {color}")
-            else:
-                color_value = str(color_hex).strip("#")
+
+            color_value = str(color_hex).strip("#")
 
         await self.bot.db.execute(
             """
