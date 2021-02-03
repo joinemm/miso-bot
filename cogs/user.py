@@ -250,7 +250,7 @@ class User(commands.Cog):
         if is_global:
             global_activity = await self.bot.db.execute(
                 """
-                SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,20,h21,h22,h23
+                SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,h20,h21,h22,h23
                     FROM user_activity
                 WHERE user_id = %s
                 GROUP BY guild_id
@@ -268,7 +268,7 @@ class User(commands.Cog):
         else:
             activity_data = await self.bot.db.execute(
                 """
-                SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,20,h21,h22,h23
+                SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,h20,h21,h22,h23
                     FROM user_activity
                 WHERE user_id = %s AND guild_id = %s
                 """,
@@ -612,7 +612,7 @@ class User(commands.Cog):
 
         server_activity = await self.bot.db.execute(
             """
-            SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,20,h21,h22,h23 as xp
+            SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,h20,h21,h22,h23 as xp
                 FROM user_activity
             WHERE user_id = %s AND guild_id = %s
             """,
@@ -624,7 +624,7 @@ class User(commands.Cog):
 
         global_activity = await self.bot.db.execute(
             """
-            SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,20,h21,h22,h23 as xp
+            SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,h20,h21,h22,h23 as xp
                 FROM user_activity
             WHERE user_id = %s
             GROUP BY guild_id
