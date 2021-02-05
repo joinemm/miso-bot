@@ -233,6 +233,34 @@ class Mod(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(ban_members=True)
+    async def fastban(self, ctx, *discord_users):
+        """Ban user(s) without confirmation box."""
+        if not discord_users:
+            return await util.send_command_help(ctx)
+
+        for discord_user in discord_users:
+            user = await util.get_user(ctx, discord_user)
+            try:
+                user = await self.bot.fetch_user(int(discord_user))
+            except (ValueError, discord.NotFound):
+                raise exceptions.Warning(f"Invalid user or id `{discord_user}`")
+
+            if user.id == 133311691852218378:
+                return await ctx.send("no.")
+
+            try:
+                await ctx.guild.ban(user, delete_message_days=0)
+            except discord.errors.Forbidden:
+                raise exceptions.Error(f"It seems I don't have the permission to ban **{user}**")
+            else:
+                await ctx.send(
+                    embed=discord.Embed(
+                        description=f":hammer: Banned `{user}`", color=int("f4900c", 16)
+                    )
+                )
+
+    @commands.command()
+    @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, *discord_users):
         """Ban user(s)."""
         if not discord_users:
@@ -255,7 +283,7 @@ class Mod(commands.Cog):
 
             elif isinstance(user, discord.User):
                 try:
-                    await ctx.guild.ban(user)
+                    await ctx.guild.ban(user, delete_message_days=0)
                 except discord.errors.Forbidden:
                     raise exceptions.Error(
                         f"It seems I don't have the permission to ban **{user}**"
@@ -278,7 +306,7 @@ class Mod(commands.Cog):
 
         async def confirm_ban():
             try:
-                await ctx.guild.ban(user)
+                await ctx.guild.ban(user, delete_message_days=0)
                 content.title = ":white_check_mark: Banned user"
             except discord.errors.Forbidden:
                 content.title = discord.Embed.Empty
