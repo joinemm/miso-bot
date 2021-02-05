@@ -96,7 +96,7 @@ class Utility(commands.Cog):
         try:
             await self.check_reminders()
         except Exception as e:
-            logger.error(f"reminder loop error: {e}")
+            logger.error(f"Reminder loop error: {e}")
 
     @reminder_loop.before_loop
     async def before_reminder_loop(self):
@@ -114,7 +114,7 @@ class Utility(commands.Cog):
                 """
             )
 
-        if self.reminder_list:
+        if not self.reminder_list:
             return
 
         now_ts = arrow.utcnow().timestamp
@@ -137,9 +137,9 @@ class Utility(commands.Cog):
                     guild = "Unknown guild"
 
                 date = arrow.get(created_on)
-                if now_ts - reminder_ts > 86400:
+                if now_ts - reminder_ts > 21600:
                     logger.info(
-                        f"Deleting reminder set for {date.format('DD/MM/YYYY HH:mm:ss')} for being 24 hours late"
+                        f"Deleting reminder set for {date.format('DD/MM/YYYY HH:mm:ss')} for being over 6 hours late"
                     )
                 else:
                     embed = discord.Embed(
