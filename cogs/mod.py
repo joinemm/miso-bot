@@ -240,10 +240,11 @@ class Mod(commands.Cog):
 
         for discord_user in discord_users:
             user = await util.get_user(ctx, discord_user)
-            try:
-                user = await self.bot.fetch_user(int(discord_user))
-            except (ValueError, discord.NotFound):
-                raise exceptions.Warning(f"Invalid user or id `{discord_user}`")
+            if user is None:
+                try:
+                    user = await self.bot.fetch_user(int(discord_user))
+                except (ValueError, discord.NotFound):
+                    raise exceptions.Warning(f"Invalid user or id `{discord_user}`")
 
             if user.id == 133311691852218378:
                 return await ctx.send("no.")
