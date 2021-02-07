@@ -281,8 +281,11 @@ class Miscellaneous(commands.Cog):
 
             address, port = data
 
+        if port is None:
+            port = 25565
+
         server = await self.bot.loop.run_in_executor(
-            None, lambda: minestat.MineStat(address, int(port or "25565"))
+            None, lambda: minestat.MineStat(address, int(port))
         )
         content = discord.Embed(color=discord.Color.green())
         if server.online:
@@ -525,6 +528,24 @@ class Miscellaneous(commands.Cog):
             text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
         )
         await ctx.send(embed=content)
+
+    @commands.command()
+    async def emojify(self, ctx, *, text):
+        """Emojify your message."""
+        request_data = {"density": 100, "input": text, "shouldFilterEmojis": False}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://api.emojify.net/convert",
+                json=request_data,
+                headers={"Content-Type": "application/json"},
+            ) as response:
+                data = await response.json()
+                result = data.get("result")
+
+                try:
+                    await ctx.send(result)
+                except discord.errors.HTTPException:
+                    raise exceptions.Warning("Your text when emojified is too long to send!")
 
 
 def setup(bot):
