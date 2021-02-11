@@ -1,5 +1,6 @@
 import discord
-import re
+import asyncio
+import regex
 from discord.ext import commands
 from modules import exceptions, util, emojis
 
@@ -34,13 +35,13 @@ class Notifications(commands.Cog):
                 except KeyError:
                     self.notifications_cache[str(guild_id)][keyword] = [user_id]
 
-    async def send_notification(self, user, message, pattern=None):
+    async def send_notification(self, user, message, keyword, test=False):
         content = discord.Embed(color=message.author.color)
         content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
-        if pattern is None:
-            highlighted_text = message.content
-        else:
-            highlighted_text = re.sub(pattern, lambda x: f"**{x.group(0)}**", message.content)
+        pattern = regex.compile(
+            r"(?:^|\s|[~*`_\/])({0})(?:$|\W)".format(regex.escape(keyword)), flags=regex.IGNORECASE
+        )
+        highlighted_text = regex.sub(pattern, lambda x: f"**{x.group(0)}**", message.content)
 
         content.description = highlighted_text
         content.add_field(
@@ -54,6 +55,17 @@ class Notifications(commands.Cog):
 
         try:
             await user.send(embed=content)
+            if not test:
+                await self.bot.db.execute(
+                    """
+                    UPDATE notification
+                        SET times_triggered = times_triggered + 1
+                    WHERE guild_id = %s AND user_id = %s AND keyword = %s
+                    """,
+                    message.guild.id,
+                    user.id,
+                    keyword,
+                )
         except discord.errors.Forbidden:
             pass
 
@@ -73,42 +85,44 @@ class Notifications(commands.Cog):
             return
 
         # select all keywords applicable to this server, and also global keywords (guild_id=0)
-        # keywords = [(0, k, v) for k, v in self.global_notifications_cache.items()]
-        keywords = []
+
+        keywords = {}
         for kw in self.global_notifications_cache:
             for v in self.global_notifications_cache[kw]:
-                keywords.append((0, kw, v))
+                try:
+                    keywords[kw].append(v)
+                except KeyError:
+                    keywords[kw] = [v]
+
         guild_keywords = self.notifications_cache.get(str(message.guild.id))
         if guild_keywords is not None:
             for kw in guild_keywords.keys():
                 for v in guild_keywords[kw]:
-                    keywords.append((message.guild.id, kw, v))
+                    try:
+                        keywords[kw].append(v)
+                    except KeyError:
+                        keywords[kw] = [v]
 
         if not keywords:
             return
 
-        for guild_id, keyword, user_id in keywords:
-            if user_id == message.author.id:
-                return
-            member = message.guild.get_member(user_id)
-            if member is None or member not in message.channel.members:
-                continue
+        pattern = regex.compile(
+            r"(?:^|\s|[~*`_\/])(\L<words>)(?:$|\W)",
+            words=list(keywords),
+            flags=regex.IGNORECASE,
+        )
 
-            pattern = re.compile(
-                r"(?:^|\s|[~*`_\/]){0}(?:$|\W)".format(re.escape(keyword)), flags=re.IGNORECASE
-            )
-            if pattern.findall(message.content):
-                await self.send_notification(member, message, pattern)
-                await self.bot.db.execute(
-                    """
-                    UPDATE notification
-                        SET times_triggered = times_triggered + 1
-                    WHERE guild_id = %s AND user_id = %s AND keyword = %s
-                    """,
-                    guild_id,
-                    user_id,
-                    keyword,
-                )
+        finds = pattern.findall(message.content)
+        for keyword in finds:
+            users_to_notify = keywords[keyword]
+            for user_id in users_to_notify:
+                if user_id == message.author.id:
+                    return
+                member = message.guild.get_member(user_id)
+                if member is None or member not in message.channel.members:
+                    continue
+
+                asyncio.ensure_future(self.send_notification(member, message, keyword))
 
     @commands.group(case_insensitive=True, aliases=["noti", "notif"])
     async def notification(self, ctx):
@@ -243,11 +257,15 @@ class Notifications(commands.Cog):
         rows = []
         for guild_id, keyword, times_triggered in words:
             if guild_id == 0:
-                guild = "globally"
+                guildname = "globally"
             else:
-                guild = f"in {self.bot.get_guild(guild_id)}"
+                guild = self.bot.get_guild(guild_id)
+                if guild is None:
+                    continue
 
-            rows.append(f'`"{keyword}"` *{guild}* - triggered **{times_triggered}** times')
+                guildname = f"in {guild}"
+
+            rows.append(f'`"{keyword}"` *{guildname}* - triggered **{times_triggered}** times')
 
         try:
             await util.send_as_pages(ctx.author, content, rows)
@@ -261,7 +279,7 @@ class Notifications(commands.Cog):
     async def test(self, ctx):
         """Test if Miso can send you a notification."""
         try:
-            await self.send_notification(ctx.author, ctx.message)
+            await self.send_notification(ctx.author, ctx.message, "test", test=True)
             await ctx.send(":ok_hand:")
         except discord.errors.Forbidden:
             raise exceptions.Warning("I was unable to send you a DM. Please change your settings.")
