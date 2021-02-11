@@ -839,6 +839,9 @@ class LastFm(commands.Cog):
 
             albums.add(album_art_id)
 
+        if not albums:
+            raise exceptions.Error("There was an unknown error while getting your albums!")
+
         to_fetch = []
         albumcolors = await self.bot.db.execute(
             """

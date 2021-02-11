@@ -43,7 +43,7 @@ class Notifications(commands.Cog):
         )
         highlighted_text = regex.sub(pattern, lambda x: f"**{x.group(0)}**", message.content)
 
-        content.description = highlighted_text
+        content.description = highlighted_text[:2047]
         content.add_field(
             name="context", value=f"[Jump to message]({message.jump_url})", inline=True
         )
@@ -114,7 +114,7 @@ class Notifications(commands.Cog):
 
         finds = pattern.findall(message.content)
         for keyword in finds:
-            users_to_notify = keywords[keyword]
+            users_to_notify = keywords.get(keyword, [])
             for user_id in users_to_notify:
                 if user_id == message.author.id:
                     return
