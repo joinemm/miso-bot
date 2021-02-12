@@ -20,9 +20,9 @@ class Owner(commands.Cog):
         return await self.bot.is_owner(ctx.author)
 
     @commands.command(rest_is_raw=True)
-    async def say(self, ctx, channel: int, *, message):
+    async def say(self, ctx, channel_id: int, *, message):
         """Make the bot say something in a given channel."""
-        channel = self.bot.get_channel(channel)
+        channel = self.bot.get_channel(channel_id)
         guild = channel.guild
 
         await ctx.send(f"Sending message to **{guild}** <#{channel.id}>\n> {message}")
@@ -164,19 +164,19 @@ class Owner(commands.Cog):
                     pages.append(this_page)
                     this_page = "```py\n"
 
-            pages = util.TwoWayIterator(pages)
-            msg = await ctx.send(pages.current())
+            page_iterator = util.TwoWayIterator(pages)
+            msg = await ctx.send(page_iterator.current())
 
             async def switch_page(new_page):
                 await msg.edit(content=new_page)
 
             async def previous_page():
-                content = pages.previous()
+                content = page_iterator.previous()
                 if content is not None:
                     await switch_page(content)
 
             async def next_page():
-                content = pages.next()
+                content = page_iterator.next()
                 if content is not None:
                     await switch_page(content)
 
