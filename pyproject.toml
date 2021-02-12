@@ -31,6 +31,7 @@ wikipedia = "^1.4.0"
 matplotlib = "^3.3.3"
 tweepy = "^3.9.0"
 beautifulsoup4 = "^4.9.3"
+aiohttp_cors = "^0.7.0"
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"
