@@ -2,6 +2,7 @@ import yaml
 from modules import log
 from discord.ext import commands
 from aiohttp import web
+import aiohttp_cors
 import ssl
 
 logger = log.get_logger(__name__)
@@ -13,11 +14,27 @@ class WebServer(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.app = web.Application()
-        self.app.router.add_get("/", self.index)
-        self.app.router.add_get("/guilds", self.guild_count)
-        self.app.router.add_get("/users", self.user_count)
-        self.app.router.add_get("/ping", self.ping_handler)
-        self.app.router.add_get("/commands", self.command_count)
+        self.app.router.add_route("GET", "/", self.index)
+        self.app.router.add_route("GET", "/guilds", self.guild_count)
+        self.app.router.add_route("GET", "/users", self.user_count)
+        self.app.router.add_route("GET", "/ping", self.ping_handler)
+        self.app.router.add_route("GET", "/commands", self.command_count)
+        # Configure default CORS settings.
+        self.cors = aiohttp_cors.setup(
+            self.app,
+            defaults={
+                "*": aiohttp_cors.ResourceOptions(
+                    allow_credentials=True,
+                    expose_headers="*",
+                    allow_headers="*",
+                )
+            },
+        )
+
+        # Configure CORS on all routes.
+        for route in list(self.app.router.routes()):
+            self.cors.add(route)
+
         self.bot.loop.create_task(self.run())
 
     async def run(self):
@@ -31,7 +48,6 @@ class WebServer(commands.Cog):
         else:
             ssl_context = None
 
-        self.allowed_domains = config.get("allowed_domains", "*")
         try:
             logger.info(f"Starting webserver on {config['host']}:{config['port']}")
             await web._run_app(
