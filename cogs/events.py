@@ -19,8 +19,8 @@ class Events(commands.Cog):
         self.bot = bot
         self.stfu_regex = re.compile(r"(?:^|\W){0}(?:$|\W)".format("stfu"), flags=re.IGNORECASE)
         self.statuses = [
-            ("watching", lambda: f"{len(self.bot.guilds)} servers"),
-            ("listening", lambda: f"{len(set(self.bot.get_all_members()))} users"),
+            ("watching", lambda: f"{len(self.bot.guilds):,} servers"),
+            ("listening", lambda: f"{len(set(self.bot.get_all_members())):,} users"),
             ("playing", lambda: "misobot.xyz"),
         ]
         self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
