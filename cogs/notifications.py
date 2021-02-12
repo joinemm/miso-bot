@@ -90,18 +90,18 @@ class Notifications(commands.Cog):
         for kw in self.global_notifications_cache:
             for v in self.global_notifications_cache[kw]:
                 try:
-                    keywords[kw].append(v)
+                    keywords[kw.lower()].append(v)
                 except KeyError:
-                    keywords[kw] = [v]
+                    keywords[kw.lower()] = [v]
 
         guild_keywords = self.notifications_cache.get(str(message.guild.id))
         if guild_keywords is not None:
             for kw in guild_keywords.keys():
                 for v in guild_keywords[kw]:
                     try:
-                        keywords[kw].append(v)
+                        keywords[kw.lower()].append(v)
                     except KeyError:
-                        keywords[kw] = [v]
+                        keywords[kw.lower()] = [v]
 
         if not keywords:
             return
@@ -114,7 +114,8 @@ class Notifications(commands.Cog):
 
         finds = pattern.findall(message.content)
         for keyword in finds:
-            users_to_notify = keywords.get(keyword, [])
+            keyword = keyword.lower()
+            users_to_notify = keywords.get(keyword)
             for user_id in users_to_notify:
                 if user_id == message.author.id:
                     return
