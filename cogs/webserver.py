@@ -2,6 +2,7 @@ import yaml
 from modules import log
 from discord.ext import commands
 from aiohttp import web
+import ssl
 
 logger = log.get_logger(__name__)
 
@@ -16,17 +17,30 @@ class WebServer(commands.Cog):
         self.app.router.add_get("/guilds", self.guild_count)
         self.app.router.add_get("/users", self.user_count)
         self.app.router.add_get("/ping", self.ping_handler)
+        self.app.router.add_get("/commands", self.command_count)
         self.bot.loop.create_task(self.run())
 
     async def run(self):
         with open("polls.yaml") as f:
             config = yaml.safe_load(f)
 
+        # https
+        if config.get("https"):
+            ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            ssl_context.load_cert_chain(config.get("ssl_cert"), config.get("ssl_key"))
+        else:
+            ssl_context = None
+
         self.allowed_domains = config.get("allowed_domains", "*")
         try:
             logger.info(f"Starting webserver on {config['host']}:{config['port']}")
             await web._run_app(
-                self.app, host=config["host"], port=config["port"], access_log=logger, print=None
+                self.app,
+                host=config["host"],
+                port=config["port"],
+                access_log=logger,
+                print=None,
+                ssl_context=ssl_context,
             )
         except OSError as e:
             logger.warning(e)
@@ -42,6 +56,10 @@ class WebServer(commands.Cog):
 
     async def user_count(self, request):
         return web.Response(text=f"{len(set(self.bot.get_all_members()))}")
+
+    async def command_count(self, request):
+        count = await self.bot.db.execute("SELECT SUM(uses) FROM command_usage", one_value=True)
+        return web.Response(text=f"{count}")
 
     def cog_unload(self):
         self.bot.loop.create_task(self.shutdown())
