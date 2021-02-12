@@ -165,7 +165,7 @@ class Reddit(commands.Cog):
             if hasattr(submission, "link_flair_text") and submission.link_flair_text is not None
             else ""
         )
-        content.title += submission.title
+        content.title += submission.title[:256]
         content.timestamp = arrow.get(submission.created_utc).datetime
 
         redditor = submission.author
