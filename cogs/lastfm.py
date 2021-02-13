@@ -9,6 +9,7 @@ import re
 import html
 import math
 import io
+from time import time
 import colorgram
 import urllib.parse
 from bs4 import BeautifulSoup
@@ -238,7 +239,7 @@ class LastFm(commands.Cog):
             plays = artist["playcount"]
             rows.append(f"`#{i:2}` **{plays}** {format_plays(plays)} : **{name}**")
 
-        image_url = await scrape_artist_image(artists[0]["name"])
+        image_url = await self.get_artist_image(artists[0]["name"])
         formatted_timeframe = humanized_period(arguments["period"]).capitalize()
 
         content = discord.Embed()
@@ -330,7 +331,7 @@ class LastFm(commands.Cog):
         rows = []
         for i, track in enumerate(tracks, start=1):
             if i == 1:
-                image_url = await scrape_artist_image(tracks[0]["artist"]["name"])
+                image_url = await self.get_artist_image(tracks[0]["artist"]["name"])
 
             name = util.escape_md(track["name"])
             artist_name = util.escape_md(track["artist"]["name"])
@@ -1228,7 +1229,7 @@ class LastFm(commands.Cog):
             sorted(artist_map.items(), key=lambda x: x[1], reverse=True), start=1
         ):
             if i == 1:
-                image_url = await scrape_artist_image(artistname)
+                image_url = await self.get_artist_image(artistname)
                 content.colour = await self.cached_image_color(image_url)
                 content.set_thumbnail(url=image_url)
 
@@ -1329,7 +1330,7 @@ class LastFm(commands.Cog):
             sorted(track_map.items(), key=lambda x: x[1]["plays"], reverse=True), start=1
         ):
             if i == 1:
-                image_url = await scrape_artist_image(trackdata["artist"])
+                image_url = await self.get_artist_image(trackdata["artist"])
                 content.colour = await self.cached_image_color(image_url)
                 content.set_thumbnail(url=image_url)
 
@@ -1455,7 +1456,7 @@ class LastFm(commands.Cog):
             return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
 
         content = discord.Embed(title=f"Who knows **{artistname}**?")
-        image_url = await scrape_artist_image(artistname)
+        image_url = await self.get_artist_image(artistname)
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Collective plays: {total}")
 
@@ -1537,7 +1538,7 @@ class LastFm(commands.Cog):
             )
 
         if image_url is None:
-            image_url = await scrape_artist_image(artistname)
+            image_url = await self.get_artist_image(artistname)
 
         content = discord.Embed(title=f"Who knows **{trackname}**\n— by {artistname}")
         content.set_thumbnail(url=image_url)
@@ -1615,7 +1616,7 @@ class LastFm(commands.Cog):
             )
 
         if image_url is None:
-            image_url = await scrape_artist_image(artistname)
+            image_url = await self.get_artist_image(artistname)
 
         content = discord.Embed(title=f"Who knows **{albumname}**\n— by {artistname}")
         content.set_thumbnail(url=image_url)
@@ -1935,6 +1936,55 @@ class LastFm(commands.Cog):
         )
         # content.add_field(name="Listening time", value=listening_time)
         await ctx.send(embed=content)
+
+    async def get_artist_image(self, artist):
+        start = time()
+        image_life = 604800  # 1 week
+        cached = await self.bot.db.execute(
+            "SELECT image_hash, scrape_date FROM artist_image_cache WHERE artist_name = %s",
+            artist,
+            one_row=True,
+        )
+
+        if cached:
+            lifetime = arrow.utcnow().timestamp - cached[1].timestamp()
+            print(lifetime)
+            if (lifetime) < image_life:
+                print("using cached image, took", time() - start, "s")
+                return self.cover_base_urls[-1].format(cached[0])
+
+        url = f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
+        async with aiohttp.ClientSession() as session:
+            data = await fetch(session, url, handling="text")
+        if data is None:
+            image = None
+
+        soup = BeautifulSoup(data, "html.parser")
+        image = soup.find("img", {"class": "image-list-image"})
+        if image is None:
+            try:
+                image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
+            except AttributeError:
+                image = None
+
+        if image is None:
+            return ""
+        else:
+            image_hash = image["src"].split("/")[-1].split(".")[0]
+            await self.bot.db.execute(
+                """
+                INSERT INTO artist_image_cache (artist_name, image_hash, scrape_date)
+                    VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    image_hash = VALUES(image_hash),
+                    scrape_date = VALUES(scrape_date)
+                """,
+                artist,
+                image_hash,
+                arrow.now().datetime,
+            )
+            print("scraped new image, took", time() - start, "s")
+            return self.cover_base_urls[-1].format(image_hash)
 
 
 # class ends here
@@ -2352,24 +2402,6 @@ async def custom_period(user, group_by, shift_hours=24):
                 },
             }
         }
-
-
-async def scrape_artist_image(artist):
-    url = f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
-    async with aiohttp.ClientSession() as session:
-        data = await fetch(session, url, handling="text")
-    if data is None:
-        return ""
-
-    soup = BeautifulSoup(data, "html.parser")
-    image = soup.find("img", {"class": "image-list-image"})
-    if image is None:
-        try:
-            image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
-        except AttributeError:
-            return ""
-
-    return image["src"].replace("/avatar170s/", "/300x300/") if image else ""
 
 
 async def fetch(session, url, params=None, handling="json"):

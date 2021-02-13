@@ -306,6 +306,7 @@ CREATE TABLE IF NOT EXISTS image_color_cache (
 CREATE TABLE IF NOT EXISTS artist_image_cache (
     artist_name VARCHAR(255),
     image_hash VARCHAR(32),
+    scrape_date DATETIME,
     PRIMARY KEY (artist_name)
 );
 
@@ -313,6 +314,7 @@ CREATE TABLE IF NOT EXISTS album_image_cache (
     artist_name VARCHAR(255),
     album_name VARCHAR(255),
     image_hash VARCHAR(32),
+    scrape_date DATETIME,
     PRIMARY KEY (artist_name, album_name)
 );
 
