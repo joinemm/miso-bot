@@ -318,7 +318,11 @@ async def reaction_buttons(
         except asyncio.TimeoutError:
             break
         else:
-            exits = await functions[str(payload.emoji)]()
+            try:
+                exits = await functions[str(payload.emoji)]()
+            except discord.errors.NotFound:
+                # message was deleted
+                return
             try:
                 await message.remove_reaction(payload.emoji, payload.member)
             except discord.errors.NotFound:
