@@ -420,7 +420,6 @@ def calculate_entry(message, words_message, wordlist):
         else:
             while user_word != correct_word and offset < 3:
                 k = i - offset
-                print(k)
                 if k < 0:
                     k = 0
                 user_word = user_words[k]
