@@ -18,6 +18,7 @@ class WebServer(commands.Cog):
         self.app.router.add_route("GET", "/guilds", self.guild_count)
         self.app.router.add_route("GET", "/users", self.user_count)
         self.app.router.add_route("GET", "/ping", self.ping_handler)
+        self.app.router.add_route("GET", "/stats", self.website_statistics)
         self.app.router.add_route("GET", "/commands", self.command_count)
         # Configure default CORS settings.
         self.cors = aiohttp_cors.setup(
@@ -76,6 +77,20 @@ class WebServer(commands.Cog):
     async def command_count(self, request):
         count = await self.bot.db.execute("SELECT SUM(uses) FROM command_usage", one_value=True)
         return web.Response(text=f"{count}")
+
+    async def website_statistics(self, request):
+        command_count = await self.bot.db.execute(
+            "SELECT SUM(uses) FROM command_usage", one_value=True
+        )
+        guild_count = len(self.bot.guilds)
+        user_count = len(set(self.bot.get_all_members()))
+        return web.json_response(
+            {
+                "commands": int(command_count),
+                "guilds": guild_count,
+                "users": user_count,
+            }
+        )
 
     def cog_unload(self):
         self.bot.loop.create_task(self.shutdown())
