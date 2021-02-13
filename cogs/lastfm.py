@@ -9,7 +9,6 @@ import re
 import html
 import math
 import io
-from time import time
 import colorgram
 import urllib.parse
 from bs4 import BeautifulSoup
@@ -457,11 +456,13 @@ class LastFm(commands.Cog):
                     f"You have not listened to **{artistname}** in the past {period}s!"
                 )
 
+        total = 0
         rows = []
         for i, (name, playcount) in enumerate(data, start=1):
             rows.append(
                 f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{util.escape_md(name)}**"
             )
+            total += playcount
 
         artistname = urllib.parse.quote_plus(artistname)
         content = discord.Embed()
@@ -474,6 +475,9 @@ class LastFm(commands.Cog):
             icon_url=ctx.usertarget.avatar_url,
             url=f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
             f"+{datatype}?date_preset={period_http_format(period)}",
+        )
+        content.set_footer(
+            text=f"total {total} {format_plays(total)} across {len(rows)} {datatype}"
         )
 
         await util.send_as_pages(ctx, content, rows)
@@ -541,7 +545,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     async def album_top_tracks(self, ctx, period, artistname, albumname):
-        """Scrape either top tracks or top albums from lastfm library page."""
+        """Scrape the top tracks of given album from lastfm library page."""
         artistname = urllib.parse.quote_plus(artistname)
         albumname = urllib.parse.quote_plus(albumname)
         async with aiohttp.ClientSession() as session:
@@ -554,11 +558,6 @@ class LastFm(commands.Cog):
                 raise exceptions.LastFMError(404, "Album page not found")
 
             soup = BeautifulSoup(data, "html.parser")
-            data = []
-            try:
-                chartlist = soup.find("tbody", {"data-playlisting-add-entries": ""})
-            except ValueError:
-                return None, []
 
             album = {
                 "image_url": soup.find("header", {"class": "library-header"})
@@ -571,18 +570,10 @@ class LastFm(commands.Cog):
                 .text.strip(),
             }
 
-            items = chartlist.findAll("tr", {"class": "chartlist-row"})
-            for item in items:
-                name = item.find("td", {"class": "chartlist-name"}).find("a").get("title")
-                playcount = (
-                    item.find("span", {"class": "chartlist-count-bar-value"})
-                    .text.replace("scrobbles", "")
-                    .replace("scrobble", "")
-                    .strip()
-                )
-                data.append((name, int(playcount.replace(",", ""))))
+            all_results = get_list_contents(soup)
+            all_results += await get_additional_pages(session, soup, url)
 
-            return album, data
+            return album, all_results
 
     async def artist_top(self, ctx, period, artistname, datatype):
         """Scrape either top tracks or top albums from lastfm library page."""
@@ -597,11 +588,6 @@ class LastFm(commands.Cog):
                 raise exceptions.LastFMError(404, "Artist page not found")
 
             soup = BeautifulSoup(data, "html.parser")
-            data = []
-            try:
-                chartlist = soup.find("tbody", {"data-playlisting-add-entries": ""})
-            except ValueError:
-                return None, []
 
             artist = {
                 "image_url": soup.find("span", {"class": "library-header-image"})
@@ -611,18 +597,10 @@ class LastFm(commands.Cog):
                 "formatted_name": soup.find("a", {"class": "library-header-crumb"}).text.strip(),
             }
 
-            items = chartlist.findAll("tr", {"class": "chartlist-row"})
-            for item in items:
-                name = item.find("td", {"class": "chartlist-name"}).find("a").get("title")
-                playcount = (
-                    item.find("span", {"class": "chartlist-count-bar-value"})
-                    .text.replace("scrobbles", "")
-                    .replace("scrobble", "")
-                    .strip()
-                )
-                data.append((name, int(playcount.replace(",", ""))))
+            all_results = get_list_contents(soup)
+            all_results += await get_additional_pages(session, soup, url)
 
-            return artist, data
+            return artist, all_results
 
     async def artist_overview(self, ctx, period, artistname):
         """Overall artist view."""
@@ -683,7 +661,7 @@ class LastFm(commands.Cog):
 
         artistname = urllib.parse.quote_plus(artistname)
         listeners = artistinfo["artist"]["stats"]["listeners"]
-        globalplaycount = artistinfo["artist"]["stats"]["playcount"]
+        globalscrobbles = artistinfo["artist"]["stats"]["playcount"]
         similar = [a["name"] for a in artistinfo["artist"]["similar"]["artist"]]
         tags = [t["name"] for t in artistinfo["artist"]["tags"]["tag"]]
 
@@ -691,7 +669,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=artist["image_url"])
         content.colour = await self.cached_image_color(artist["image_url"])
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)}\n{artist['formatted_name']} "
+            name=f"{util.displayname(ctx.usertarget)} — {artist['formatted_name']} "
             + (f"{humanized_period(period)} " if period != "overall" else "")
             + "Overview",
             icon_url=ctx.usertarget.avatar_url,
@@ -699,9 +677,7 @@ class LastFm(commands.Cog):
             f"?date_preset={period_http_format(period)}",
         )
 
-        content.set_footer(
-            text=f"{listeners} Listeners | {globalplaycount} Scrobbles | {', '.join(tags)}"
-        )
+        content.set_footer(text=f"{', '.join(tags)}")
 
         crown_holder = await self.bot.db.execute(
             """
@@ -713,18 +689,17 @@ class LastFm(commands.Cog):
         )
 
         if crown_holder == ctx.usertarget.id:
-            crownstate = ":crown: "
+            crownstate = " :crown:"
         else:
             crownstate = ""
 
-        content.add_field(
-            name="Scrobbles | Albums | Tracks",
-            value=f"{crownstate}**{metadata[0]}** | **{metadata[1]}** | **{metadata[2]}**",
-            inline=False,
-        )
+        scrobbles, albums_count, tracks_count = metadata
+        content.add_field(name="Listeners", value=f"**{listeners}**")
+        content.add_field(name="Scrobbles", value=f"**{globalscrobbles}**")
+        content.add_field(name="Your scrobbles", value=f"**{scrobbles}**{crownstate}")
 
         content.add_field(
-            name="Top albums",
+            name=f":cd: {albums_count} Albums",
             value="\n".join(
                 f"`#{i:2}` **{util.escape_md(item)}** ({playcount})"
                 for i, (item, playcount) in enumerate(albums, start=1)
@@ -732,7 +707,7 @@ class LastFm(commands.Cog):
             inline=True,
         )
         content.add_field(
-            name="Top tracks",
+            name=f":musical_note: {tracks_count} Tracks",
             value="\n".join(
                 f"`#{i:2}` **{util.escape_md(item)}** ({playcount})"
                 for i, (item, playcount) in enumerate(tracks, start=1)
@@ -1938,7 +1913,6 @@ class LastFm(commands.Cog):
         await ctx.send(embed=content)
 
     async def get_artist_image(self, artist):
-        start = time()
         image_life = 604800  # 1 week
         cached = await self.bot.db.execute(
             "SELECT image_hash, scrape_date FROM artist_image_cache WHERE artist_name = %s",
@@ -1948,25 +1922,10 @@ class LastFm(commands.Cog):
 
         if cached:
             lifetime = arrow.utcnow().timestamp - cached[1].timestamp()
-            print(lifetime)
             if (lifetime) < image_life:
-                print("using cached image, took", time() - start, "s")
                 return self.cover_base_urls[-1].format(cached[0])
 
-        url = f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
-        async with aiohttp.ClientSession() as session:
-            data = await fetch(session, url, handling="text")
-        if data is None:
-            image = None
-
-        soup = BeautifulSoup(data, "html.parser")
-        image = soup.find("img", {"class": "image-list-image"})
-        if image is None:
-            try:
-                image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
-            except AttributeError:
-                image = None
-
+        image = await scrape_artist_image(artist)
         if image is None:
             return ""
         else:
@@ -1983,11 +1942,28 @@ class LastFm(commands.Cog):
                 image_hash,
                 arrow.now().datetime,
             )
-            print("scraped new image, took", time() - start, "s")
             return self.cover_base_urls[-1].format(image_hash)
 
 
 # class ends here
+
+
+async def scrape_artist_image(artist):
+    url = f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
+    async with aiohttp.ClientSession() as session:
+        data = await fetch(session, url, handling="text")
+    if data is None:
+        image = None
+
+    soup = BeautifulSoup(data, "html.parser")
+    image = soup.find("img", {"class": "image-list-image"})
+    if image is None:
+        try:
+            image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
+        except AttributeError:
+            image = None
+
+    return image
 
 
 def setup(bot):
@@ -2476,3 +2452,52 @@ async def username_to_ctx(ctx):
 def remove_mentions(text):
     """Remove mentions from string."""
     return (re.sub(r"<@\!?[0-9]+>", "", text)).strip()
+
+
+def get_list_contents(soup):
+    """Scrape lastfm for listing pages"""
+    try:
+        chartlist = soup.find("tbody", {"data-playlisting-add-entries": ""})
+    except ValueError:
+        []
+
+    results = []
+    items = chartlist.findAll("tr", {"class": "chartlist-row"})
+    for item in items:
+        name = item.find("td", {"class": "chartlist-name"}).find("a").get("title")
+        playcount = (
+            item.find("span", {"class": "chartlist-count-bar-value"})
+            .text.replace("scrobbles", "")
+            .replace("scrobble", "")
+            .strip()
+        )
+        results.append((name, int(playcount.replace(",", ""))))
+
+    return results
+
+
+async def get_additional_pages(session, soup, url):
+    """Check for pagination on listing page and asynchronously fetch all the remaining pages"""
+    pagination = soup.find("ul", {"class": "pagination-list"})
+
+    if pagination is None:
+        return []
+
+    page_count = len(pagination.findAll("li", {"class": "pagination-page"}))
+
+    async def get_additional_page(n):
+        new_url = url + f"&page={n}"
+        data = await fetch(session, new_url, handling="text")
+        soup = BeautifulSoup(data, "html.parser")
+        return get_list_contents(soup)
+
+    tasks = []
+    if page_count > 1:
+        for i in range(2, page_count + 1):
+            tasks.append(get_additional_page(i))
+
+    results = []
+    for result in await asyncio.gather(*tasks):
+        results += result
+
+    return results
