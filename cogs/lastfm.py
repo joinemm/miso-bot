@@ -1953,7 +1953,7 @@ async def scrape_artist_image(artist):
     async with aiohttp.ClientSession() as session:
         data = await fetch(session, url, handling="text")
     if data is None:
-        image = None
+        return None
 
     soup = BeautifulSoup(data, "html.parser")
     image = soup.find("img", {"class": "image-list-image"})

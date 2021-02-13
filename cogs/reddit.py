@@ -65,7 +65,6 @@ class Reddit(commands.Cog):
                 "Sorry, this subreddit does not support the random post feature!"
             )
 
-        print(options)
         if options["images"]:
             i = 0
             while i < 25 or not is_image_post(post):
