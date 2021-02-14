@@ -152,7 +152,7 @@ class LastFm(commands.Cog):
 
         await ctx.send(f"**{username} — {state}** :cd:\n{video_url}")
 
-    @fm.command(aliases=["np"])
+    @fm.command(aliases=["np", "no"])
     async def nowplaying(self, ctx):
         """Show your currently playing song."""
         data = await api_request(
