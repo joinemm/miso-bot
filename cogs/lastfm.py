@@ -68,7 +68,7 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def set(self, ctx, username):
-        """Save your LastFm username."""
+        """Save your Last.fm username."""
         if ctx.foreign_target:
             raise exceptions.Warning("You cannot set Last.fm username for someone else!")
 
@@ -92,9 +92,9 @@ class LastFm(commands.Cog):
 
     @fm.command()
     async def unset(self, ctx):
-        """Unlink your LastFm."""
+        """Unlink your Last.fm."""
         if ctx.foreign_target:
-            raise exceptions.Warning("You cannot unset someone else's LastFm username!")
+            raise exceptions.Warning("You cannot unset someone else's Last.fm username!")
 
         await self.bot.db.execute(
             """
@@ -106,7 +106,7 @@ class LastFm(commands.Cog):
             ctx.author.id,
             None,
         )
-        await ctx.send(":broken_heart: Removed your LastFm username from the database")
+        await ctx.send(":broken_heart: Removed your Last.fm username from the database")
 
     @fm.command()
     async def profile(self, ctx):
@@ -171,7 +171,7 @@ class LastFm(commands.Cog):
 
         content = discord.Embed()
         content.colour = await self.cached_image_color(image_url)
-        content.description = f"**{util.escape_md(album)}**"
+        content.description = f":cd: **{util.escape_md(album)}**"
         content.title = f"**{util.escape_md(artist)} — *{util.escape_md(track)}* **"
         content.set_thumbnail(url=image_url)
 
@@ -477,7 +477,7 @@ class LastFm(commands.Cog):
             f"+{datatype}?date_preset={period_http_format(period)}",
         )
         content.set_footer(
-            text=f"total {total} {format_plays(total)} across {len(rows)} {datatype}"
+            text=f"Total {total} {format_plays(total)} across {len(rows)} {datatype}"
         )
 
         await util.send_as_pages(ctx, content, rows)
@@ -1930,6 +1930,10 @@ class LastFm(commands.Cog):
             return ""
         else:
             image_hash = image["src"].split("/")[-1].split(".")[0]
+            if image_hash == MISSING_IMAGE_HASH:
+                # basic star image, dont save it
+                return ""
+
             await self.bot.db.execute(
                 """
                 INSERT INTO artist_image_cache (artist_name, image_hash, scrape_date)
