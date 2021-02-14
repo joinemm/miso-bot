@@ -127,7 +127,7 @@ class Kpop(commands.Cog):
         if group_name is None:
             search_term = full_name
         else:
-            search_term = f"{group_name} {stage_name}"
+            search_term = f"{group_name} {stage_name} kpop"
 
         image = await self.google_image_search(search_term)
         content = discord.Embed()
@@ -252,7 +252,6 @@ class Kpop(commands.Cog):
                                 gender,
                             ]
                             values.append(value)
-                            print(value)
 
                 await self.bot.db.executemany(
                     """
