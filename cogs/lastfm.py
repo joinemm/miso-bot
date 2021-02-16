@@ -1826,7 +1826,9 @@ class LastFm(commands.Cog):
             return None
 
         username = data["user"]["name"]
-        blacklisted = None
+        blacklisted = await self.bot.db.execute(
+            "SELECT * from lastfm_cheater WHERE lastfm_username = %s", username.lower()
+        )
         playcount = data["user"]["playcount"]
         profile_url = data["user"]["url"]
         profile_pic_url = data["user"]["image"][3]["#text"]
@@ -1846,7 +1848,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=profile_pic_url)
         content.set_footer(text=f"Total plays: {playcount}")
         content.colour = int(self.lastfm_red, 16)
-        if blacklisted is not None:
+        if blacklisted:
             content.description = ":warning: `This account is flagged as a cheater`"
 
         return content
