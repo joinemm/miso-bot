@@ -52,7 +52,7 @@ class Typings(commands.Cog):
 
         wordlist = get_wordlist(wordcount, language)
         if wordlist[0] is None:
-            langs = "\n".join(wordlist[1])
+            langs = ", ".join(wordlist[1])
             return await ctx.send(
                 f"Unsupported language `{language}`.\n"
                 f"Currently supported languages are:\n>>> {langs}"
@@ -99,6 +99,14 @@ class Typings(commands.Cog):
         if wordcount > 250:
             return await ctx.send("Maximum word count is 250!")
 
+        wordlist = get_wordlist(wordcount, language)
+        if wordlist[0] is None:
+            langs = ", ".join(wordlist[1])
+            return await ctx.send(
+                f"Unsupported language `{language}`.\n"
+                f"Currently supported languages are:\n>>> {langs}"
+            )
+
         content = discord.Embed(
             title=f":keyboard:  Starting a new typing race | {wordcount} words",
             color=discord.Color.gold(),
@@ -108,7 +116,7 @@ class Typings(commands.Cog):
             "React with :white_check_mark: to start the race."
         )
 
-        content.add_field(name="Participants", value=f"**{ctx.author}**")
+        content.add_field(name="Participants", value=f"**{util.displayname(ctx.author)}**")
         enter_message = await ctx.send(embed=content)
 
         note_emoji = "🗒"
@@ -155,7 +163,7 @@ class Typings(commands.Cog):
                     await enter_message.edit(embed=content)
                 elif reaction.emoji == check_emoji:
                     if user == ctx.author:
-                        if len(players) < 2:
+                        if len(players) < 1:
                             cant_race_alone = await ctx.send("You can't race alone!")
                             await asyncio.sleep(1)
                             try:
@@ -184,15 +192,8 @@ class Typings(commands.Cog):
 
         await asyncio.sleep(1)
 
-        wordlist = get_wordlist(wordcount, language)
-        if wordlist[0] is None:
-            langs = "\n".join(wordlist[1])
-            return await ctx.send(
-                f"Unsupported language `{language}`.\n"
-                f"Currently supported languages are:\n>>> {langs}"
-            )
-
-        await words_message.edit(content=f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
+        await words_message.delete()
+        words_message = await ctx.send(f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
 
         tasks = []
         for player in players:
