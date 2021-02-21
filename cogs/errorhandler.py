@@ -177,7 +177,7 @@ class ErrorHander(commands.Cog):
                 ),
             ):
                 perms = ctx.author.permissions_in(ctx.channel)
-                if perms.administrator or perms.manage_server:
+                if perms.administrator:
                     try:
                         await ctx.reinvoke()
                         return
