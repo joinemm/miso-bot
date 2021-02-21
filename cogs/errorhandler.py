@@ -157,6 +157,23 @@ class ErrorHander(commands.Cog):
             await self.send(ctx, "error", "Sorry, you are not authorized to use this command!")
 
         elif isinstance(error, exceptions.Blacklist):
+            # admins can bypass these blacklists
+            if isinstance(
+                error,
+                (
+                    exceptions.BlacklistedMember,
+                    exceptions.BlacklistedChannel,
+                    exceptions.BlacklistedCommand,
+                ),
+            ):
+                perms = ctx.author.permissions_in(ctx.channel)
+                if perms.administrator:
+                    try:
+                        await ctx.reinvoke()
+                        return
+                    except Exception as e:
+                        await self.on_command_error(ctx, e)
+
             delete = await self.bot.db.execute(
                 "SELECT delete_blacklisted_usage FROM guild_settings WHERE guild_id = %s",
                 ctx.guild.id,
