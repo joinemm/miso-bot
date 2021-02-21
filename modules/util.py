@@ -784,6 +784,20 @@ def activities_string(activities, markdown=True, show_emoji=True):
     return text if text != "" else None
 
 
+async def send_tasks_result_list(ctx, successful_operations, failed_operations):
+    content = discord.Embed(
+        color=(int("77b255", 16) if successful_operations else int("dd2e44", 16))
+    )
+    rows = []
+    for op in successful_operations:
+        rows.append(f":white_check_mark: {op}")
+    for op in failed_operations:
+        rows.append(f":x: {op}")
+
+    content.description = "\n".join(rows)
+    await ctx.send(embed=content)
+
+
 def patrons_only():
     async def predicate(ctx):
         if ctx.author.id == ctx.bot.owner_id:
