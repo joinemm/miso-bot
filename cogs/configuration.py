@@ -463,13 +463,279 @@ class Configuration(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
     async def autoresponses(self, ctx, value: bool):
-        """Disable or enable automatic responses to certain message content."""
+        """Disable or enable automatic responses to certain message content such as hi or stfu."""
         await queries.update_setting(ctx, "guild_settings", "autoresponses", value)
         self.bot.cache.autoresponse[str(ctx.guild.id)] = value
         if value:
             await util.send_success(ctx, "Automatic responses are now **enabled**")
         else:
             await util.send_success(ctx, "Automatic responses are now **disabled**")
+
+    @commands.group()
+    @commands.has_permissions(manage_guild=True)
+    async def blacklist(self, ctx):
+        """Restrict command usage."""
+        await util.command_group_help(ctx)
+
+    @blacklist.command(name="delete")
+    async def blacklist_delete(self, ctx, value: bool):
+        """Toggle whether delete messages on blacklist trigger."""
+        await queries.update_setting(ctx, "guild_settings", "delete_blacklisted_usage", value)
+        if value:
+            await util.send_success(ctx, "Now deleting messages that trigger any blacklists.")
+        else:
+            await util.send_success(ctx, "No longer deleting messages that trigger blacklists.")
+
+    @blacklist.command(name="show")
+    async def blacklist_show(self, ctx):
+        """Show everything that's currently blacklisted."""
+        content = discord.Embed(
+            title=f":scroll: {ctx.guild.name} Blacklist", color=int("ffd983", 16)
+        )
+
+        blacklisted_channels = await self.bot.db.execute(
+            """
+            SELECT channel_id FROM blacklisted_channel WHERE guild_id = %s
+            """,
+            ctx.guild.id,
+            as_list=True,
+        )
+        blacklisted_members = await self.bot.db.execute(
+            """
+            SELECT user_id FROM blacklisted_member WHERE guild_id = %s
+            """,
+            ctx.guild.id,
+            as_list=True,
+        )
+        blacklisted_commands = await self.bot.db.execute(
+            """
+            SELECT command_name FROM blacklisted_command WHERE guild_id = %s
+            """,
+            ctx.guild.id,
+            as_list=True,
+        )
+
+        def length_limited_value(rows):
+            value = ""
+            for row in rows:
+                if len(value + "\n" + row) > 1019:
+                    value += "\n..."
+                    break
+
+                value += ("\n" if value != "" else "") + row
+
+            return value
+
+        if blacklisted_channels:
+            rows = [f"<#{channel_id}>" for channel_id in blacklisted_channels]
+            content.add_field(
+                name="Channels",
+                value=length_limited_value(rows),
+            )
+        if blacklisted_members:
+            rows = [f"<@{user_id}>" for user_id in blacklisted_members]
+            content.add_field(
+                name="Users",
+                value=length_limited_value(rows),
+            )
+        if blacklisted_commands:
+            rows = [f"`{ctx.prefix}{command}`" for command in blacklisted_commands]
+            content.add_field(
+                name="Commands",
+                value=length_limited_value(rows),
+            )
+
+        if not content.fields:
+            content.description = "Nothing is blacklisted yet!"
+
+        await ctx.send(embed=content)
+
+    @blacklist.command(name="channel")
+    async def blacklist_channel(self, ctx, *channels):
+        """Blacklist a channel."""
+        successes = []
+        fails = []
+        for channel_arg in channels:
+            try:
+                channel = await commands.TextChannelConverter().convert(ctx, channel_arg)
+            except commands.errors.BadArgument:
+                fails.append(f"Cannot find channel {channel_arg}")
+            else:
+                await self.bot.db.execute(
+                    """
+                    INSERT INTO blacklisted_channel (channel_id, guild_id)
+                        VALUES (%s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        channel_id = VALUES(channel_id)
+                    """,
+                    channel.id,
+                    ctx.guild.id,
+                )
+                self.bot.cache.blacklist["global"]["channel"].add(channel.id)
+                successes.append(f"Blacklisted {channel.mention}")
+
+        await util.send_tasks_result_list(ctx, successes, fails)
+
+    @blacklist.command(name="member")
+    async def blacklist_member(self, ctx, *members):
+        """Blacklist member of this server."""
+        successes = []
+        fails = []
+        for member_arg in members:
+            try:
+                member = await commands.MemberConverter().convert(ctx, member_arg)
+            except commands.errors.BadArgument:
+                fails.append(f"Cannot find member {member_arg}")
+            else:
+                if member == ctx.author:
+                    fails.append("You cannot blacklist yourself!")
+                    continue
+
+                await self.bot.db.execute(
+                    """
+                    INSERT INTO blacklisted_member (user_id, guild_id)
+                        VALUES (%s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        user_id = VALUES(user_id)
+                    """,
+                    member.id,
+                    ctx.guild.id,
+                )
+                try:
+                    self.bot.cache.blacklist[str(ctx.guild.id)]["member"].add(member.id)
+                except KeyError:
+                    self.bot.cache.blacklist[str(ctx.guild.id)] = {
+                        "member": set([member.id]),
+                        "command": set(),
+                    }
+                successes.append(f"Blacklisted {member.mention}")
+
+        await util.send_tasks_result_list(ctx, successes, fails)
+
+    @blacklist.command(name="command")
+    async def blacklist_command(self, ctx, *, command):
+        """Blacklist a command."""
+        cmd = self.bot.get_command(command)
+        if cmd is None:
+            raise exceptions.Warning(f"Command `{ctx.prefix}{command}` not found.")
+
+        await self.bot.db.execute(
+            "INSERT IGNORE blacklisted_command VALUES (%s, %s)", cmd.qualified_name, ctx.guild.id
+        )
+        try:
+            self.bot.cache.blacklist[str(ctx.guild.id)]["command"].add(cmd.qualified_name.lower())
+        except KeyError:
+            self.bot.cache.blacklist[str(ctx.guild.id)] = {
+                "member": set(),
+                "command": set([cmd.qualified_name.lower()]),
+            }
+        await util.send_success(
+            ctx, f"`{ctx.prefix}{cmd}` is now a blacklisted command on this server."
+        )
+
+    @blacklist.command(name="global")
+    @commands.is_owner()
+    async def blacklist_global(self, ctx, user: discord.User, *, reason):
+        """Blacklist someone globally from Miso Bot."""
+        await self.bot.db.execute(
+            "INSERT IGNORE blacklisted_user VALUES (%s, %s)", user.id, reason
+        )
+        self.bot.cache.blacklist["global"]["user"].add(user.id)
+        await util.send_success(ctx, f"**{user}** can no longer use Miso Bot!")
+
+    @blacklist.command(name="guild")
+    @commands.is_owner()
+    async def blacklist_guild(self, ctx, guild_id: int, *, reason):
+        """Blacklist a guild from adding or using Miso Bot."""
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            raise exceptions.Warning(f"Cannot find guild with id `{guild_id}`")
+
+        await self.bot.db.execute(
+            "INSERT IGNORE blacklisted_guild VALUES (%s, %s)", guild.id, reason
+        )
+        self.bot.cache.blacklist["global"]["guild"].add(guild_id)
+        await guild.leave()
+        await util.send_success(ctx, f"**{guild}** can no longer use Miso Bot!")
+
+    @commands.group(aliases=["whitelist"])
+    @commands.has_permissions(manage_guild=True)
+    async def unblacklist(self, ctx):
+        """Reverse blacklisting."""
+        await util.command_group_help(ctx)
+
+    @unblacklist.command(name="channel")
+    async def whitelist_channel(self, ctx, *channels):
+        """Whitelist a channel."""
+        successes = []
+        fails = []
+        for channel_arg in channels:
+            try:
+                channel = await commands.TextChannelConverter().convert(ctx, channel_arg)
+            except commands.errors.BadArgument:
+                fails.append(f"Cannot find channel {channel_arg}")
+            else:
+                await self.bot.db.execute(
+                    "DELETE FROM blacklisted_channel WHERE guild_id = %s AND channel_id = %s",
+                    ctx.guild.id,
+                    channel.id,
+                )
+                self.bot.cache.blacklist["global"]["channel"].discard(channel.id)
+                successes.append(f"Unblacklisted {channel.mention}")
+
+        await util.send_tasks_result_list(ctx, successes, fails)
+
+    @unblacklist.command(name="member")
+    async def whitelist_member(self, ctx, *members):
+        """Whitelist a member of this server."""
+        successes = []
+        fails = []
+        for member_arg in members:
+            try:
+                member = await commands.MemberConverter().convert(ctx, member_arg)
+            except commands.errors.BadArgument:
+                fails.append(f"Cannot find member {member_arg}")
+            else:
+                await self.bot.db.execute(
+                    "DELETE FROM blacklisted_member WHERE guild_id = %s AND user_id = %s",
+                    ctx.guild.id,
+                    member.id,
+                )
+                self.bot.cache.blacklist[str(ctx.guild.id)]["member"].discard(member.id)
+                successes.append(f"Unblacklisted {member.mention}")
+
+        await util.send_tasks_result_list(ctx, successes, fails)
+
+    @unblacklist.command(name="command")
+    async def whitelist_command(self, ctx, *, command):
+        """Whitelist a command."""
+        cmd = self.bot.get_command(command)
+        if cmd is None:
+            raise exceptions.Warning(f"Command `{ctx.prefix}{command}` not found.")
+
+        await self.bot.db.execute(
+            "DELETE FROM blacklisted_command WHERE guild_id = %s AND command_name = %s",
+            ctx.guild.id,
+            cmd.qualified_name,
+        )
+        self.bot.cache.blacklist[str(ctx.guild.id)]["command"].discard(cmd.qualified_name.lower())
+        await util.send_success(ctx, f"`{ctx.prefix}{cmd}` is no longer blacklisted.")
+
+    @unblacklist.command(name="global")
+    @commands.is_owner()
+    async def whitelist_global(self, ctx, *, user: discord.User):
+        """Whitelist someone globally."""
+        await self.bot.db.execute("DELETE FROM blacklisted_user WHERE user_id = %s", user.id)
+        self.bot.cache.blacklist["global"]["user"].discard(user.id)
+        await util.send_success(ctx, f"**{user}** can now use Miso Bot again!")
+
+    @unblacklist.command(name="guild")
+    @commands.is_owner()
+    async def whitelist_guild(self, ctx, guild_id: int):
+        """Whitelist a guild."""
+        await self.bot.db.execute("DELETE FROM blacklisted_guild WHERE guild_id = %s", guild_id)
+        self.bot.cache.blacklist["global"]["guild"].discard(guild_id)
+        await util.send_success(ctx, f"Guild with id `{guild_id}` can use Miso Bot again!")
 
 
 def setup(bot):
