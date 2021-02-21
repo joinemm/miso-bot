@@ -292,28 +292,6 @@ class Notifications(commands.Cog):
                 await self.send_notification(ctx.author, message, keywords, test=True)
                 await ctx.send(":ok_hand: Check your DM")
 
-    @notification.command(hidden=True)
-    @commands.is_owner()
-    async def convert(self, ctx):
-        data = await self.bot.db.execute("SELECT guild_id, user_id, keyword FROM notification")
-        for guild_id, user_id, keyword in data:
-            new_keyword = keyword.lower().strip()
-            await self.bot.db.execute(
-                "DELETE FROM notification WHERE guild_id = %s AND user_id = %s AND keyword = %s",
-                guild_id,
-                user_id,
-                keyword,
-            )
-            await self.bot.db.execute(
-                "INSERT INTO notification (keyword, guild_id, user_id) VALUES(%s, %s, %s)",
-                new_keyword,
-                guild_id,
-                user_id,
-            )
-
-            self.bot.logger.info(f"updated {guild_id}/{user_id}/{keyword} to {new_keyword}")
-        await ctx.send("done")
-
 
 def setup(bot):
     bot.add_cog(Notifications(bot))
