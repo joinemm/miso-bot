@@ -294,32 +294,23 @@ class Notifications(commands.Cog):
 
     @notification.command(hidden=True)
     @commands.is_owner()
-    async def convert(self, ctx, dry: bool):
+    async def convert(self, ctx):
         data = await self.bot.db.execute("SELECT guild_id, user_id, keyword FROM notification")
-        global_people = await self.bot.db.execute(
-            "SELECT distinct(user_id) FROM notification WHERE guild_id = 0", as_list=True
-        )
-        for user_id in global_people:
-            user = self.bot.get_user(user_id)
-            if user is None:
-                self.bot.logger.info(f"Could not find {user_id}")
-            else:
-                if not dry:
-                    await user.send(
-                        ":information_source: You are receiving this message because you have set global notifications. "
-                        "Global notifications have been discontinued so please set them in every server separately from now on"
-                    )
-                self.bot.logger.info(f"Sending information to {user}")
-
         for guild_id, user_id, keyword in data:
             new_keyword = keyword.lower().strip()
-            if not dry:
-                await self.bot.db.execute(
-                    "UPDATE notification SET keyword = %s WHERE guild_id = %s AND user_id = %s",
-                    new_keyword,
-                    guild_id,
-                    user_id,
-                )
+            await self.bot.db.execute(
+                "DELETE FROM notification WHERE guild_id = %s AND user_id = %s AND keyword = %s",
+                guild_id,
+                user_id,
+                keyword,
+            )
+            await self.bot.db.execute(
+                "INSERT INTO notification (keyword, guild_id, user_id) VALUES(%s, %s, %s)",
+                new_keyword,
+                guild_id,
+                user_id,
+            )
+
             self.bot.logger.info(f"updated {guild_id}/{user_id}/{keyword} to {new_keyword}")
         await ctx.send("done")
 

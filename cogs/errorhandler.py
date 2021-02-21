@@ -126,20 +126,6 @@ class ErrorHander(commands.Cog):
                 ctx, "warning", f"Cannot execute command! Bot is missing permission {perms}"
             )
 
-        elif isinstance(error, commands.CommandOnCooldown):
-            if await queries.is_donator(ctx, ctx.author, 2):
-                try:
-                    await ctx.reinvoke()
-                    return
-                except Exception as e:
-                    await self.on_command_error(ctx, e)
-            else:
-                await self.send(
-                    ctx,
-                    "cooldown",
-                    f"You are on cooldown. Please wait `{error.retry_after:.0f} seconds`",
-                )
-
         elif isinstance(error, commands.errors.MaxConcurrencyReached):
             await ctx.send("Stop spamming! >:(")
 
@@ -155,34 +141,6 @@ class ErrorHander(commands.Cog):
 
         elif isinstance(error, (commands.NotOwner, commands.CheckFailure)):
             await self.send(ctx, "error", "Sorry, you are not authorized to use this command!")
-
-        elif isinstance(error, exceptions.Blacklist):
-            # admins can bypass these blacklists
-            if isinstance(
-                error,
-                (
-                    exceptions.BlacklistedMember,
-                    exceptions.BlacklistedChannel,
-                    exceptions.BlacklistedCommand,
-                ),
-            ):
-                perms = ctx.author.permissions_in(ctx.channel)
-                if perms.administrator:
-                    try:
-                        await ctx.reinvoke()
-                        return
-                    except Exception as e:
-                        await self.on_command_error(ctx, e)
-
-            delete = await self.bot.db.execute(
-                "SELECT delete_blacklisted_usage FROM guild_settings WHERE guild_id = %s",
-                ctx.guild.id,
-                one_value=True,
-            )
-            await self.send(ctx, "error", error.message, delete_after=(5 if delete else None))
-            if delete:
-                await asyncio.sleep(5)
-                await ctx.message.delete()
 
         elif isinstance(error, (commands.BadArgument, flags._parser.ArgumentParsingError)):
             await self.send(ctx, "warning", str(error), help_footer=True)
@@ -207,6 +165,48 @@ class ErrorHander(commands.Cog):
                 message = error.display()
 
             await self.send(ctx, "lastfm", message)
+
+        elif isinstance(error, exceptions.Blacklist):
+            # admins can bypass these blacklists
+            if isinstance(
+                error,
+                (
+                    exceptions.BlacklistedMember,
+                    exceptions.BlacklistedChannel,
+                    exceptions.BlacklistedCommand,
+                ),
+            ):
+                perms = ctx.author.permissions_in(ctx.channel)
+                if perms.administrator or perms.manage_server:
+                    try:
+                        await ctx.reinvoke()
+                        return
+                    except Exception as e:
+                        await self.on_command_error(ctx, e)
+
+            delete = await self.bot.db.execute(
+                "SELECT delete_blacklisted_usage FROM guild_settings WHERE guild_id = %s",
+                ctx.guild.id,
+                one_value=True,
+            )
+            await self.send(ctx, "error", error.message, delete_after=(5 if delete else None))
+            if delete:
+                await asyncio.sleep(5)
+                await ctx.message.delete()
+
+        elif isinstance(error, commands.CommandOnCooldown):
+            if await queries.is_donator(ctx, ctx.author, 2):
+                try:
+                    await ctx.reinvoke()
+                    return
+                except Exception as e:
+                    await self.on_command_error(ctx, e)
+            else:
+                await self.send(
+                    ctx,
+                    "cooldown",
+                    f"You are on cooldown. Please wait `{error.retry_after:.0f} seconds`",
+                )
 
         else:
             await self.log_and_traceback(ctx, error)
