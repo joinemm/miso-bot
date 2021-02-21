@@ -182,7 +182,7 @@ class ErrorHander(commands.Cog):
                         await ctx.reinvoke()
                         return
                     except Exception as e:
-                        await self.on_command_error(ctx, e)
+                        return await self.on_command_error(ctx, e)
 
             delete = await self.bot.db.execute(
                 "SELECT delete_blacklisted_usage FROM guild_settings WHERE guild_id = %s",
