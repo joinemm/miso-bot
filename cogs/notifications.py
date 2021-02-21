@@ -222,7 +222,7 @@ class Notifications(commands.Cog):
         content = discord.Embed(title=":love_letter: Your notifications", color=int("dd2e44", 16))
 
         rows = []
-        for guild_id, keyword, times_triggered in words:
+        for guild_id, keyword, times_triggered in sorted(words):
             guild = self.bot.get_guild(guild_id)
             if guild is None:
                 continue
