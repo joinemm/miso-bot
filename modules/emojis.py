@@ -33,10 +33,14 @@ class Badge(Enum):
     hypesquad_brilliance = "<:hypesquad_brilliance:783744824444190740>"
     hypesquad_bravery = "<:hypesquad_bravery:783744840928198736>"
     hypesquad_balance = "<:hypesquad_balance:783745461499592734>"
-    early_verified_bot_developer = "<:early_verified_bot_developer:783744740301996042>"
+    verified_bot_developer = "<:verified_bot_developer:783744740301996042>"
     early_supporter = "<:early_supporter:783744759101390888>"
     bug_hunter = "<:bug_hunter:783744806815268914>"
     bug_hunter_level_2 = "<:bug_hunter_level_2:783744783670968331>"
+    team_user = ""
+    system = ""
+    verified_bot = "<:verified_bot:813396139373101076>"
+    boosting = "<:boosting:813395502439727165>"
 
 
 HUGS = [
