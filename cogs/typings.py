@@ -9,13 +9,15 @@ from modules import util, exceptions
 
 
 class Typings(commands.Cog):
-    """Typing speed tests"""
+    """Test your typing speed"""
 
     def __init__(self, bot):
         self.bot = bot
         self.icon = "⌨️"
         self.separators = [" ", " ", " ", "  ", "  ", " "]
         self.font = "𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣"
+        with open("data/wordlist.json") as f:
+            self.languages = json.load(f)
 
     def obfuscate(self, text):
         while " " in text:
@@ -36,7 +38,7 @@ class Typings(commands.Cog):
 
     @typing.command(name="test")
     async def typing_test(self, ctx, language=None, wordcount: int = 25):
-        """Take a typing test and see your typing speed."""
+        """Take a typing test."""
         if language is None:
             language = wordcount
         try:
@@ -50,7 +52,7 @@ class Typings(commands.Cog):
         if wordcount > 250:
             return await ctx.send("Maximum word count is 250!")
 
-        wordlist = get_wordlist(wordcount, language)
+        wordlist = self.get_wordlist(wordcount, language)
         if wordlist[0] is None:
             langs = ", ".join(wordlist[1])
             return await ctx.send(
@@ -58,7 +60,7 @@ class Typings(commands.Cog):
                 f"Currently supported languages are:\n>>> {langs}"
             )
 
-        og_msg = await ctx.send(f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
+        words_message = await ctx.reply(f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
 
         def check(_message):
             return _message.author == ctx.author and _message.channel == ctx.channel
@@ -66,26 +68,26 @@ class Typings(commands.Cog):
         try:
             message = await self.bot.wait_for("message", timeout=300.0, check=check)
         except asyncio.TimeoutError:
-            return await ctx.send("Too slow.")
+            return await ctx.send(f"{ctx.author.mention} Too slow.")
 
         else:
-            wpm, accuracy, not_long_enough = calculate_entry(message, og_msg, wordlist)
+            wpm, accuracy, not_long_enough = calculate_entry(message, words_message, wordlist)
             if self.anticheat(message) or wpm > 216:
-                return await ctx.send(f"{ctx.author.mention} Stop cheating >:(")
+                return await message.reply("Stop cheating >:(")
 
             if not_long_enough:
-                await ctx.send(
-                    f"{ctx.author.mention} :warning: `score not valid, you must type at least 90% of the words`"
+                await message.reply(
+                    ":warning: `score not valid, you must type at least 90% of the words`"
                 )
             else:
-                await ctx.send(f"{ctx.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**")
+                await message.reply(f"**{int(wpm)} WPM / {int(accuracy)}% Accuracy**")
                 await self.save_wpm(
                     ctx.author, ctx.guild, wpm, accuracy, wordcount, language, False
                 )
 
     @typing.command(name="race")
     async def typing_race(self, ctx, language=None, wordcount: int = 25):
-        """Race against other people."""
+        """Typing race against other people."""
         if language is None:
             language = wordcount
         try:
@@ -99,7 +101,7 @@ class Typings(commands.Cog):
         if wordcount > 250:
             return await ctx.send("Maximum word count is 250!")
 
-        wordlist = get_wordlist(wordcount, language)
+        wordlist = self.get_wordlist(wordcount, language)
         if wordlist[0] is None:
             langs = ", ".join(wordlist[1])
             return await ctx.send(
@@ -108,8 +110,8 @@ class Typings(commands.Cog):
             )
 
         content = discord.Embed(
-            title=f":keyboard:  Starting a new typing race | {wordcount} words",
-            color=discord.Color.gold(),
+            title=f":rocket: Starting a new typing race | {wordcount} words",
+            color=int("55acee", 16),
         )
         content.description = (
             "React with :notepad_spiral: to enter the race.\n"
@@ -138,17 +140,13 @@ class Typings(commands.Cog):
 
         while not race_in_progress:
             try:
-                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=300.0, check=check)
+                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=120.0, check=check)
             except asyncio.TimeoutError:
                 try:
                     for emoji in [note_emoji, check_emoji]:
-                        await enter_message.remove_reaction(emoji, ctx.bot.user)
-                except discord.errors.NotFound:
+                        asyncio.ensure_future(enter_message.remove_reaction(emoji, ctx.bot.user))
+                except (discord.errors.NotFound, discord.errors.Forbidden):
                     pass
-                except discord.errors.Forbidden:
-                    await ctx.send(
-                        "`error: i'm missing required discord permission [ manage messages ]`"
-                    )
                 break
             else:
                 if reaction.emoji == note_emoji:
@@ -163,7 +161,7 @@ class Typings(commands.Cog):
                     await enter_message.edit(embed=content)
                 elif reaction.emoji == check_emoji:
                     if user == ctx.author:
-                        if len(players) < 1:
+                        if len(players) < 2:
                             cant_race_alone = await ctx.send("You can't race alone!")
                             await asyncio.sleep(1)
                             try:
@@ -180,7 +178,8 @@ class Typings(commands.Cog):
 
         if not race_in_progress:
             content.remove_field(0)
-            content.add_field(name="Race timed out", value="Not enough players")
+            content.description = ""
+            content.add_field(name="Race timed out", value="2 minutes passed")
             return await enter_message.edit(embed=content)
 
         words_message = await ctx.send("Starting race in 3...")
@@ -205,18 +204,16 @@ class Typings(commands.Cog):
 
         results = await asyncio.gather(*tasks)
 
-        content = discord.Embed(
-            title=":checkered_flag: Race complete!", color=discord.Color.green()
-        )
+        content = discord.Embed(title=":checkered_flag: Race complete!", color=int("e1e8ed", 16))
         rows = []
         values = []
-        for i, (player, score) in enumerate(
+        for i, (player, wpm, accuracy) in enumerate(
             sorted(results, key=itemgetter(1), reverse=True), start=1
         ):
             values.append((ctx.guild.id, player.id, 1, 1 if i == 1 else 0))
             rows.append(
-                f"{f'`#{i:2}`' if i > 1 else ':crown:'} {util.displayname(player)} — "
-                + (f"**{int(score)} WPM**" if score != 0 else ":o:")
+                f"{f'`#{i}`' if i > 1 else ':trophy:'} **{util.displayname(player)}** — "
+                + (f"**{int(wpm)} WPM / {int(accuracy)}% Accuracy**" if wpm != 0 else ":x:")
             )
 
         await self.bot.db.executemany(
@@ -242,48 +239,46 @@ class Typings(commands.Cog):
             message = await self.bot.wait_for("message", timeout=300.0, check=progress_check)
         except asyncio.TimeoutError:
             ctx.send(f"{player.mention} too slow!")
-            return player, 0
+            return player, 0, 0
         else:
             wpm, accuracy, not_long_enough = calculate_entry(message, words_message, wordlist)
             if self.anticheat(message) or wpm > 216:
-                await ctx.send(f"{message.author.mention} Stop cheating >:(")
-                return player, 0
+                await message.reply("Stop cheating >:(")
+                return player, 0, 0
 
             if not_long_enough:
-                await ctx.send(
-                    f"{message.author.mention} :warning: `score not valid, you must type at least 90% of the words`"
+                await message.reply(
+                    ":warning: `score not valid, you must type at least 90% of the words`"
                 )
-                return player, 0
+                return player, 0, 0
             else:
-                await ctx.send(
-                    f"{message.author.mention} **{int(wpm)} WPM / {int(accuracy)}% ACC**"
-                )
+                await message.add_reaction("✅")
                 await self.save_wpm(
                     message.author, ctx.guild, wpm, accuracy, wordcount, language, True
                 )
-                return player, wpm
+                return player, wpm, accuracy
 
     @typing.command(name="history")
-    async def typing_history(self, ctx, user: discord.Member = None):
+    async def typing_history(self, ctx, member: discord.Member = None):
         """See your typing test history."""
-        if user is None:
-            user = ctx.author
+        if member is None:
+            member = ctx.author
 
         data = await self.bot.db.execute(
             """
             SELECT test_date, wpm, accuracy, word_count, test_language FROM typing_stats
             WHERE user_id = %s ORDER BY test_date DESC
             """,
-            user.id,
+            member.id,
         )
         if not data:
             raise exceptions.Info(
-                ("You haven't" if user is ctx.author else f"**{user.name}** hasn't")
+                ("You haven't" if member is ctx.author else f"**{member.name}** hasn't")
                 + " taken any typing tests yet!",
             )
 
         content = discord.Embed(
-            title=f":stopwatch: Typing history for {user.name}",
+            title=f":stopwatch: {util.displayname(member)} Typing test history",
             color=int("dd2e44", 16),
         )
         content.set_footer(text=f"Total {len(data)} typing tests taken")
@@ -324,15 +319,17 @@ class Typings(commands.Cog):
 
     @typing.command(name="stats")
     async def typing_stats(self, ctx, user: discord.Member = None):
-        """See your typing test statistics."""
+        """See your typing statistics."""
         if user is None:
             user = ctx.author
 
         data = await self.bot.db.execute(
             """
             SELECT COUNT(test_date), MAX(wpm), AVG(wpm), AVG(accuracy), race_count, win_count
-            FROM typing_stats LEFT JOIN typing_race ON typing_stats.user_id = typing_race.user_id
-            WHERE typing_stats.user_id = %s GROUP BY typing_stats.user_id
+                FROM typing_stats LEFT JOIN typing_race
+                ON typing_stats.user_id = typing_race.user_id
+            WHERE typing_stats.user_id = %s
+            GROUP BY typing_stats.user_id
             """,
             user.id,
             one_row=True,
@@ -384,23 +381,20 @@ class Typings(commands.Cog):
             was_race,
         )
 
+    def get_wordlist(self, wordcount, language):
+        all_words = self.languages.get(language.lower())
+        if all_words is None:
+            return None, [str(lang) for lang in all_words]
+        wordlist = []
+        while len(wordlist) < wordcount:
+            word = random.choice(all_words)
+            if not wordlist or not wordlist[-1] == word:
+                wordlist.append(word)
+        return wordlist
+
 
 def setup(bot):
     bot.add_cog(Typings(bot))
-
-
-def get_wordlist(wordcount, language):
-    with open("data/wordlist.json") as f:
-        data = json.load(f)
-        all_words = data.get(language.lower())
-        if all_words is None:
-            return None, [str(lang) for lang in data]
-    wordlist = []
-    while len(wordlist) < wordcount:
-        word = random.choice(all_words)
-        if not wordlist or not wordlist[-1] == word:
-            wordlist.append(word)
-    return wordlist
 
 
 def calculate_entry(message, words_message, wordlist):
