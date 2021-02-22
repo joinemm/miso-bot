@@ -14,6 +14,7 @@ class Cache:
         self.autoresponse = {}
         self.levelupmessage = {}
         self.blacklist = {}
+        self.marriages = set()
         bot.loop.create_task(self.initialize_settings_cache())
 
     async def initialize_settings_cache(self):
@@ -53,6 +54,13 @@ class Cache:
                 ),
             }
         }
+
+        self.marriages = [
+            set(pair)
+            for pair in await self.bot.db.execute(
+                "SELECT first_user_id, second_user_id FROM marriage"
+            )
+        ]
 
         for guild_id, user_id in await self.bot.db.execute(
             "SELECT guild_id, user_id FROM blacklisted_member"
