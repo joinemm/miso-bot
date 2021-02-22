@@ -364,7 +364,7 @@ class LastFm(commands.Cog):
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": size}
         )
         user_attr = data["recenttracks"]["@attr"]
-        tracks = data["recenttracks"]["track"][:15]
+        tracks = data["recenttracks"]["track"][:size]
 
         if not tracks:
             raise exceptions.Info("You have not listened to anything yet!")
