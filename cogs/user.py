@@ -119,24 +119,10 @@ class User(commands.Cog):
                 await util.color_from_image_url(str(user.avatar_url_as(size=64, format="png"))), 16
             )
 
-        fishdata = await self.bot.db.execute(
-            """
-            SELECT fishy_count, last_fishy FROM fishy WHERE user_id = %s
-            """,
-            user.id,
-            one_row=True,
-        )
-        if fishdata:
-            fishy = fishdata[0]
-            last_fishy = humanize.naturaltime(fishdata[1])
-        else:
-            fishy = 0
-            last_fishy = "Never"
-
         content.add_field(name="Status", value=status_display)
+        content.add_field(name="Badges", value=" ".join(util.flags_to_badges(user)))
         content.add_field(name="Activity", value=activity_display)
-        content.add_field(name="Fishy", value=fishy)
-        content.add_field(name="Last fishy", value=last_fishy)
+        content.add_field(name="Mention", value=user.mention)
         content.add_field(name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M"))
 
         if isinstance(user, discord.Member):
@@ -153,14 +139,16 @@ class User(commands.Cog):
             content.add_field(
                 name="Server rank", value=await self.get_rank(user, "user_activity", user.guild)
             )
-            content.add_field(name="Global Rank", value=await self.get_rank(user, "user_activity"))
 
-            role_string = (
-                " ".join(role.mention for role in reversed(user.roles[1:]))
-                if len(user.roles) > 1
-                else "None"
-            )
-            content.add_field(name="Roles", value=role_string, inline=False)
+            roles_length = 0
+            role_string = ""
+            for role in reversed(user.roles[1:]):
+                role_string += " " + role.mention
+                roles_length += len(role.name)
+            if role_string == "":
+                role_string = "None"
+
+            content.add_field(name="Roles", value=role_string, inline=(roles_length < 20))
 
         await ctx.send(embed=content)
 
@@ -327,7 +315,7 @@ class User(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["globalranking", "grank"])
-    @commands.cooldown(1, 30, type=commands.BucketType.member)
+    @commands.cooldown(1, 60, type=commands.BucketType.member)
     async def globalrank(self, ctx, user: discord.Member = None):
         """See your global activity ranking."""
         if user is None:

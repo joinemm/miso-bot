@@ -7,7 +7,7 @@ import colorgram
 import arrow
 import re
 import io
-from modules import queries, exceptions
+from modules import queries, exceptions, emojis
 import aiohttp
 from discord.ext import commands
 from PIL import Image, UnidentifiedImageError
@@ -72,6 +72,18 @@ async def is_blacklisted(ctx):
             raise exceptions.BlacklistedCommand()
 
     return True
+
+
+def flags_to_badges(user):
+    """Get list of badge emojis from public user flags."""
+    result = []
+    for flag, value in iter(user.public_flags):
+        if value:
+            result.append(emojis.Badge[flag].value)
+    if isinstance(user, discord.Member):
+        if user.premium_since is not None:
+            result.append(emojis.Badge["boosting"].value)
+    return result or ["-"]
 
 
 def region_flag(region: discord.VoiceRegion):
@@ -753,12 +765,13 @@ def activities_string(activities, markdown=True, show_emoji=True):
 
     emoji = None
     message = None
-    if custom_activity:
-        emoji = custom_activity.emoji
-        message = custom_activity.name
 
     if message is None and spotify_activity is not None:
         message = "Listening to " + ("**Spotify**" if markdown else "Spotify")
+
+    if custom_activity:
+        emoji = custom_activity.emoji
+        message = custom_activity.name
 
     if message is None and base_activity is not None:
         if base_activity.type == discord.ActivityType.playing:
