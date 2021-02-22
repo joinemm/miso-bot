@@ -1,3 +1,4 @@
+import asyncio
 import discord
 import bleach
 import humanize
@@ -14,6 +15,7 @@ class User(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.icon = "👤"
+        self.proposals = set()
         self.medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
         with open("html/profile.min.html", "r", encoding="utf-8") as file:
             self.profile_html = file.read()
@@ -809,6 +811,123 @@ class User(commands.Cog):
         await util.send_success(
             ctx, f"Profile background color set to `{color_value or 'default'}`!"
         )
+
+    @commands.command()
+    async def marry(self, ctx, user: discord.Member):
+        """Marry someone."""
+        if user == ctx.author:
+            return await ctx.send("You cannot marry yourself...")
+        if set([user.id, ctx.author.id]) in self.bot.cache.marriages:
+            return await ctx.send("You two are already married!")
+        for el in self.bot.cache.marriages:
+            if ctx.author.id in el:
+                pair = list(el)
+                if ctx.author.id == pair[0]:
+                    partner = self.bot.get_user(pair[1])
+                else:
+                    partner = self.bot.get_user(pair[0])
+                return await ctx.send(
+                    f":confused: You are already married to **{partner}**! You must divorce before marrying someone else..."
+                )
+            elif user.id in el:
+                return await ctx.send(
+                    f":grimacing: **{user}** is already married to someone else, sorry!"
+                )
+
+        if (user.id, ctx.author.id) in self.proposals:
+            await self.bot.db.execute(
+                "INSERT INTO marriage VALUES (%s, %s, %s)",
+                user.id,
+                ctx.author.id,
+                arrow.now().datetime,
+            )
+            self.bot.cache.marriages.append(set([user.id, ctx.author.id]))
+            await ctx.send(
+                embed=discord.Embed(
+                    color=int("dd2e44", 16),
+                    description=f":revolving_hearts: **{user}** and **{ctx.author}** are now married :wedding:",
+                )
+            )
+            new_proposals = set()
+            for el in self.proposals:
+                if el[0] not in [user.id, ctx.author.id]:
+                    new_proposals.add(el)
+            self.proposals = new_proposals
+        else:
+            self.proposals.add((ctx.author.id, user.id))
+            await ctx.send(
+                embed=discord.Embed(
+                    color=int("f4abba", 16),
+                    description=f":heartpulse: *You propose to **{user}***",
+                )
+            )
+
+    @commands.command()
+    async def divorce(self, ctx):
+        """End your marriage."""
+        partner = ""
+        for el in self.bot.cache.marriages:
+            if ctx.author.id in el:
+                pair = list(el)
+                if ctx.author.id == pair[0]:
+                    partner = self.bot.get_user(pair[1])
+                else:
+                    partner = self.bot.get_user(pair[0])
+
+        if partner == "":
+            return await ctx.send(":thinking: You are not married!")
+
+        content = discord.Embed(
+            description=f":broken_heart: Divorce **{partner}**?", color=int("dd2e44", 16)
+        )
+        msg = await ctx.send(embed=content)
+
+        async def confirm():
+            self.bot.cache.marriages.remove(el)
+            await self.bot.db.execute(
+                "DELETE FROM marriage WHERE first_user_id = %s OR second_user_id = %s",
+                ctx.author.id,
+                ctx.author.id,
+            )
+            await ctx.send(
+                f":pensive: You and {partner.mention if partner is not None else partner} are now divorced...",
+            )
+
+        async def cancel():
+            pass
+
+        functions = {"✅": confirm, "❌": cancel}
+        asyncio.ensure_future(
+            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+        )
+
+    @commands.command()
+    async def marriage(self, ctx):
+        """Check your marriage status."""
+        data = await self.bot.db.execute(
+            """
+            SELECT first_user_id, second_user_id, marriage_date
+                FROM marriage
+            WHERE first_user_id = %s OR second_user_id = %s""",
+            ctx.author.id,
+            ctx.author.id,
+            one_row=True,
+        )
+        if data:
+            if data[0] == ctx.author.id:
+                partner = self.bot.get_user(data[1])
+            else:
+                partner = self.bot.get_user(data[0])
+            marriage_date = data[2]
+            length = humanize.naturaldelta(arrow.utcnow().timestamp - marriage_date.timestamp())
+            await ctx.send(
+                embed=discord.Embed(
+                    color=int("f4abba", 16),
+                    description=f":wedding: You have been married to **{partner}** for **{length}**",
+                )
+            )
+        else:
+            await ctx.send("You are not married!")
 
 
 def setup(bot):

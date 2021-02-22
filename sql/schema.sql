@@ -318,6 +318,13 @@ CREATE TABLE IF NOT EXISTS album_image_cache (
     PRIMARY KEY (artist_name, album_name)
 );
 
+CREATE TABLE IF NOT EXISTS marriage (
+    first_user_id BIGINT UNIQUE,
+    second_user_id BIGINT UNIQUE,
+    marriage_date DATETIME,
+    PRIMARY KEY (first_user_id, second_user_id)
+);
+
 -- activity
 CREATE TABLE IF NOT EXISTS user_activity (
     guild_id BIGINT,
