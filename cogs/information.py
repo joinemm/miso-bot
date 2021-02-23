@@ -490,6 +490,18 @@ class Information(commands.Cog):
 
         await ctx.send(embed=content)
 
+    @commands.command()
+    async def stats(self, ctx):
+        """See bot stats."""
+        content = discord.Embed(
+            title=":bar_chart: Events since last reboot",
+            description="",
+            color=int("5c913b", 16),
+        )
+        for event, count in self.bot.cache.event_triggers.items():
+            content.description += f"\n`on_{event}`: **{count}**"
+        await ctx.send(embed=content)
+
 
 def setup(bot):
     bot.add_cog(Information(bot))

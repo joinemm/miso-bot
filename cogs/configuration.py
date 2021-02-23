@@ -252,6 +252,7 @@ class Configuration(commands.Cog):
         """Set starboard channel."""
         await queries.update_setting(ctx, "starboard_settings", "channel_id", channel.id)
         await util.send_success(ctx, f"Starboard channel is now {channel.mention}")
+        await self.bot.cache.cache_starboard_settings()
 
     @starboard.command(name="amount")
     async def starboard_amount(self, ctx, amount: int):
@@ -273,6 +274,7 @@ class Configuration(commands.Cog):
         await util.send_success(
             ctx, f"Messages now need **{amount}** {emoji} reactions to get into the starboard."
         )
+        await self.bot.cache.cache_starboard_settings()
 
     @starboard.command(name="toggle", aliases=["enabled"])
     async def starboard_toggle(self, ctx, value: bool):
@@ -282,6 +284,7 @@ class Configuration(commands.Cog):
             await util.send_success(ctx, "Starboard is now **enabled**")
         else:
             await util.send_success(ctx, "Starboard is now **disabled**")
+        await self.bot.cache.cache_starboard_settings()
 
     @starboard.command(name="emoji")
     async def starboard_emoji(self, ctx, emoji):
@@ -330,6 +333,14 @@ class Configuration(commands.Cog):
                 "unicode",
             )
             await util.send_success(ctx, f"Starboard emoji is now {emoji}")
+        await self.bot.cache.cache_starboard_settings()
+
+    @starboard.command(name="log")
+    async def starboard_log(self, ctx, channel: discord.TextChannel):
+        """Set starboard logging channel to log starring events."""
+        await queries.update_setting(ctx, "starboard_settings", "log_channel_id", channel.id)
+        await util.send_success(ctx, f"Starboard log channel is now {channel.mention}")
+        await self.bot.cache.cache_starboard_settings()
 
     @commands.group()
     @commands.guild_only()

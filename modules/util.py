@@ -763,7 +763,7 @@ def activities_string(activities, markdown=True, show_emoji=True):
             print(act)
             return "Unknown activity"
 
-    emoji = None
+    emoji = custom_activity.emoji if custom_activity else None
     message = None
 
     if message is None and spotify_activity is not None:

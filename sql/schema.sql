@@ -230,6 +230,7 @@ CREATE TABLE IF NOT EXISTS starboard_settings (
     emoji_name VARCHAR(64) DEFAULT ':star:' NOT NULL,
     emoji_id BIGINT DEFAULT NULL,
     emoji_type ENUM('unicode', 'custom') DEFAULT 'unicode' NOT NULL,
+    log_channel_id BIGINT DEFAULT NULL,
     PRIMARY KEY (guild_id)
 );
 

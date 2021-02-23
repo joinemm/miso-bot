@@ -15,7 +15,51 @@ class Cache:
         self.levelupmessage = {}
         self.blacklist = {}
         self.marriages = set()
+        self.starboard_settings = {}
+        self.event_triggers = {
+            "message": 0,
+            "message_delete": 0,
+            "message_edit": 0,
+            "reaction_add": 0,
+            "reaction_remove": 0,
+            "member_join": 0,
+            "member_remove": 0,
+            "guild_join": 0,
+            "guild_remove": 0,
+            "member_ban": 0,
+            "member_unban": 0,
+        }
         bot.loop.create_task(self.initialize_settings_cache())
+
+    async def cache_starboard_settings(self):
+        data = await self.bot.db.execute(
+            """
+            SELECT guild_id, is_enabled, channel_id, reaction_count,
+                emoji_name, emoji_id, emoji_type, log_channel_id
+            FROM starboard_settings
+            """
+        )
+        if not data:
+            return
+        for (
+            guild_id,
+            is_enabled,
+            channel_id,
+            reaction_count,
+            emoji_name,
+            emoji_id,
+            emoji_type,
+            log_channel_id,
+        ) in data:
+            self.starboard_settings[str(guild_id)] = [
+                is_enabled,
+                channel_id,
+                reaction_count,
+                emoji_name,
+                emoji_id,
+                emoji_type,
+                log_channel_id,
+            ]
 
     async def initialize_settings_cache(self):
         prefixes = await self.bot.db.execute("SELECT guild_id, prefix FROM guild_prefix")
@@ -80,3 +124,5 @@ class Cache:
                     "member": set(),
                     "command": set([command_name.lower()]),
                 }
+
+        await self.cache_starboard_settings()
