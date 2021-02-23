@@ -62,7 +62,7 @@ bot = MisoBot(
     command_prefix=util.determine_prefix,
     case_insensitive=True,
     allowed_mentions=discord.AllowedMentions(everyone=False),
-    max_messages=10000,
+    max_messages=50000,
     heartbeat_timeout=180,
     intents=discord.Intents(
         guilds=True,
