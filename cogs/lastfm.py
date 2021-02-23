@@ -2227,7 +2227,7 @@ def parse_chart_arguments(args):
                 continue
 
         if parsed["period"] is None:
-            parsed["period"] = get_period(a, allow_custom=False)
+            parsed["period"] = get_period(a, allow_custom=True)
 
         if parsed["showtitles"] is None and a == "notitle":
             parsed["showtitles"] = False
