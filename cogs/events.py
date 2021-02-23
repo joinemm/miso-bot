@@ -353,7 +353,7 @@ class Events(commands.Cog):
         if channel is None:
             return
 
-        message = payload.cached_message or channel.fetch_message(payload.message_id)
+        message = payload.cached_message or await channel.fetch_message(payload.message_id)
         if message is None:
             return
 
