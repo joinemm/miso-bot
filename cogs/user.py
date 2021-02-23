@@ -854,8 +854,10 @@ class User(commands.Cog):
     async def divorce(self, ctx):
         """End your marriage."""
         partner = ""
+        to_remove = []
         for el in self.bot.cache.marriages:
             if ctx.author.id in el:
+                to_remove.append(el)
                 pair = list(el)
                 if ctx.author.id == pair[0]:
                     partner = self.bot.get_user(pair[1])
@@ -871,7 +873,8 @@ class User(commands.Cog):
         msg = await ctx.send(embed=content)
 
         async def confirm():
-            self.bot.cache.marriages.remove(el)
+            for x in to_remove:
+                self.bot.cache.marriages.remove(x)
             await self.bot.db.execute(
                 "DELETE FROM marriage WHERE first_user_id = %s OR second_user_id = %s",
                 ctx.author.id,
