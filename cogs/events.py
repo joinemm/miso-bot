@@ -1,9 +1,7 @@
 import discord
-import re
 import arrow
 import asyncio
 import random
-from time import time
 from discord.ext import commands, tasks
 from modules import queries, util, log, emojis
 from libraries import emoji_literals
@@ -17,7 +15,6 @@ class Events(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.stfu_regex = re.compile(r"(?:^|\W){0}(?:$|\W)".format("stfu"), flags=re.IGNORECASE)
         self.statuses = [
             ("watching", lambda: f"{len(self.bot.guilds):,} servers"),
             ("listening", lambda: f"{len(set(self.bot.get_all_members())):,} users"),
@@ -27,28 +24,33 @@ class Events(commands.Cog):
         self.xp_cache = {}
         self.emoji_usage_cache = {"unicode": {}, "custom": {}}
         self.current_status = None
-        self.status_loop.start()
         self.xp_loop.start()
-        self.average_mps = []
         self.guildlog = 652916681299066900
+        self.xp_limit = 150
 
     def cog_unload(self):
         self.status_loop.cancel()
 
     async def write_usage_data(self):
-        start = time()
         values = []
         total_messages = 0
+        total_users = 0
+        total_xp = 0
         for guild_id in self.xp_cache:
             for user_id, value in self.xp_cache[guild_id].items():
+                xp = min(value["xp"], self.xp_limit)
                 values.append(
-                    (int(guild_id), int(user_id), value["bot"], value["xp"], value["messages"])
+                    (
+                        int(guild_id),
+                        int(user_id),
+                        value["bot"],
+                        xp,
+                        value["messages"],
+                    )
                 )
                 total_messages += value["messages"]
-
-        self.average_mps.append(total_messages)
-        if len(self.average_mps) > 10:
-            self.average_mps = self.average_mps[1:]
+                total_xp += xp
+                total_users += 1
 
         sql_tasks = []
         if values:
@@ -116,11 +118,12 @@ class Events(commands.Cog):
                 )
             )
         self.emoji_usage_cache["custom"] = {}
-        await asyncio.gather(*sql_tasks)
-        logger.info(
-            f"Inserted {total_messages} messages in {time()-start:.3f}s, "
-            f"{len(self.average_mps)*2} min average: {(sum(self.average_mps) / len(self.average_mps))/(60*2):.2f} msg/s"
-        )
+        if sql_tasks:
+            await asyncio.gather(*sql_tasks)
+            logger.info(
+                f"Inserted {total_messages} messages from {total_users} users, "
+                f"average {total_messages/300:.2f} messages / second, {total_xp/total_users} xp per user"
+            )
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx):
@@ -138,8 +141,9 @@ class Events(commands.Cog):
         logger.info(f"Loading complete | running {len(latencies)} shards")
         for shard_id, latency in latencies:
             logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
+        self.status_loop.start()
 
-    @tasks.loop(minutes=2.0)
+    @tasks.loop(minutes=5.0)
     async def xp_loop(self):
         try:
             await self.write_usage_data()
@@ -156,7 +160,6 @@ class Events(commands.Cog):
     @status_loop.before_loop
     async def before_status_loop(self):
         await self.bot.wait_until_ready()
-        await asyncio.sleep(30)  # avoid rate limit from discord in case of rapid reconnect
         logger.info("Starting status loop")
 
     async def next_status(self):
@@ -177,6 +180,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         """Called when the bot joins a new guild."""
+        self.bot.cache.event_triggers["guild_join"] += 1
         blacklisted = await self.bot.db.execute(
             "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
         )
@@ -199,6 +203,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         """Called when the bot leaves a guild."""
+        self.bot.cache.event_triggers["guild_remove"] += 1
         logger.info(f"Left guild {guild}")
         blacklisted = await self.bot.db.execute(
             "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
@@ -220,6 +225,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         """Called when a new member joins a guild."""
+        self.bot.cache.event_triggers["member_join"] += 1
         # log event
         logging_channel_id = await self.bot.db.execute(
             "SELECT member_log_channel_id FROM logging_settings WHERE guild_id = %s",
@@ -267,6 +273,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         """Called when user gets banned from a server."""
+        self.bot.cache.event_triggers["member_ban"] += 1
         channel_id = await self.bot.db.execute(
             "SELECT ban_log_channel_id FROM logging_settings WHERE guild_id = %s",
             guild.id,
@@ -289,8 +296,13 @@ class Events(commands.Cog):
                 pass
 
     @commands.Cog.listener()
+    async def on_member_unban(self, *_):
+        self.bot.cache.event_triggers["member_unban"] += 1
+
+    @commands.Cog.listener()
     async def on_member_remove(self, member):
         """Called when member leaves a guild."""
+        self.bot.cache.event_triggers["member_remove"] += 1
         # log event
         logging_channel_id = await self.bot.db.execute(
             "SELECT member_log_channel_id FROM logging_settings WHERE guild_id = %s",
@@ -326,9 +338,23 @@ class Events(commands.Cog):
                         pass
 
     @commands.Cog.listener()
-    async def on_message_delete(self, message):
+    async def on_raw_message_edit(self, payload):
+        if payload.data.get("content") is not None:
+            self.bot.cache.event_triggers["message_edit"] += 1
+
+    @commands.Cog.listener()
+    async def on_raw_message_delete(self, payload):
         """Listener that gets called when any message is deleted."""
+        self.bot.cache.event_triggers["message_delete"] += 1
         if not self.bot.is_ready():
+            return
+
+        channel = self.bot.get_channel(payload.channel_id)
+        if channel is None:
+            return
+
+        message = payload.cached_message or channel.fetch_message(payload.message_id)
+        if message is None:
             return
 
         # ignore bots
@@ -358,16 +384,17 @@ class Events(commands.Cog):
             one_value=True,
         )
         if channel_id:
-            channel = message.guild.get_channel(channel_id)
-            if channel is not None and message.channel != channel:
+            log_channel = message.guild.get_channel(channel_id)
+            if log_channel is not None and message.channel != log_channel:
                 try:
-                    await channel.send(embed=util.message_embed(message))
+                    await log_channel.send(embed=util.message_embed(message))
                 except discord.errors.Forbidden:
                     pass
 
     @commands.Cog.listener()
     async def on_message(self, message):
         """Listener that gets called on every message."""
+        self.bot.cache.event_triggers["message"] += 1
         if not self.bot.is_ready():
             return
 
@@ -484,7 +511,7 @@ class Events(commands.Cog):
     async def easter_eggs(self, message):
         """Easter eggs handler."""
         # stfu
-        if self.stfu_regex.findall(message.content) and random.randint(0, 1) == 0:
+        if random.randint(0, 3) == 0 and "stfu" in message.content.lower():
             try:
                 await message.channel.send("no u")
             except discord.errors.Forbidden:
@@ -500,30 +527,17 @@ class Events(commands.Cog):
                 pass
 
         # hello there
-        elif stripped_content == "hello there" and random.randint(0, 2) == 0:
+        elif stripped_content == "hello there" and random.randint(0, 3) == 0:
             try:
                 await message.channel.send("General Kenobi")
             except discord.errors.Forbidden:
                 pass
 
         # git gud
-        if message.content.lower().startswith("git "):
-            gitcommand = re.search(r"git (\S+)", message.content)
-            if gitcommand is None:
-                return
-            gitcommand = gitcommand.group(1)
-            if gitcommand == "--help":
-                msg = (
-                    "```\n"
-                    "usage: git [--version] [--help] [-C <path>] [-c <name>=<value>]\n"
-                    "           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n"
-                    "           [-p | --paginate | --no-pager] [--no-replace-objects] [--bare]\n"
-                    "           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]\n"
-                    "           <command> [<args>]```"
-                )
-            elif gitcommand == "--version":
-                msg = "`git version 2.28.0`"
-            elif gitcommand in [
+        elif message.content.lower().startswith("git "):
+            gitcommand = message.content.lower().split()[1].strip()
+            if gitcommand not in [
+                "",
                 "init",
                 "reset",
                 "rebase",
@@ -537,18 +551,20 @@ class Events(commands.Cog):
                 "add",
                 "clone",
             ]:
-                return
-            else:
                 msg = f"`git: '{gitcommand}' is not a git command. See 'git --help'.`"
+                try:
+                    await message.channel.send(msg)
+                except discord.errors.Forbidden:
+                    pass
 
-            try:
-                await message.channel.send(msg)
-            except discord.errors.Forbidden:
-                pass
+    @commands.Cog.listener()
+    async def on_raw_reaction_remove(self, _):
+        self.bot.cache.event_triggers["reaction_remove"] += 1
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         """Starboard event handler."""
+        self.bot.cache.event_triggers["reaction_add"] += 1
         if not self.bot.is_ready():
             return
 
@@ -556,15 +572,7 @@ class Events(commands.Cog):
         if user.bot:
             return
 
-        starboard_settings = await self.bot.db.execute(
-            """
-            SELECT is_enabled, channel_id, reaction_count, emoji_name, emoji_id, emoji_type
-            FROM starboard_settings WHERE guild_id = %s
-            """,
-            payload.guild_id,
-            one_row=True,
-        )
-
+        starboard_settings = self.bot.cache.starboard_settings.get(str(payload.guild_id))
         if not starboard_settings:
             return
 
@@ -575,7 +583,9 @@ class Events(commands.Cog):
             emoji_name,
             emoji_id,
             emoji_type,
+            log_channel_id,
         ) = starboard_settings
+
         board_channel = self.bot.get_channel(board_channel_id)
         if not is_enabled or board_channel is None:
             return
@@ -600,6 +610,7 @@ class Events(commands.Cog):
                 return
 
             reaction_count = 0
+            reacted_users = []
             for react in message.reactions:
                 if emoji_type == "custom":
                     if (
@@ -607,10 +618,12 @@ class Events(commands.Cog):
                         and react.emoji.id == payload.emoji.id
                     ):
                         reaction_count = react.count
+                        reacted_users = await react.users().flatten()
                         break
                 else:
                     if react.emoji == payload.emoji.name:
                         reaction_count = react.count
+                        reacted_users = await react.users().flatten()
                         break
 
             if reaction_count < required_reaction_count:
@@ -657,6 +670,24 @@ class Events(commands.Cog):
                         payload.message_id,
                         board_message.id,
                     )
+                    log_channel = self.bot.get_channel(log_channel_id)
+                    if log_channel is not None:
+                        content = discord.Embed(
+                            color=int("ffac33", 16), title="Message added to starboard"
+                        )
+                        content.add_field(
+                            name="Original message", value=f"[{message.id}]({message.jump_url})"
+                        )
+                        content.add_field(
+                            name="Board message",
+                            value=f"[{board_message.id}]({board_message.jump_url})",
+                        )
+                        content.add_field(
+                            name="Reacted users",
+                            value="\n".join(str(x) for x in reacted_users),
+                            inline=False,
+                        )
+                        await log_channel.send(embed=content)
                 except discord.errors.Forbidden:
                     pass
 
