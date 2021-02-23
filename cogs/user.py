@@ -120,7 +120,7 @@ class User(commands.Cog):
             )
 
         content.add_field(name="Status", value=status_display)
-        content.add_field(name="Badges", value=" ".join(util.flags_to_badges(user)))
+        content.add_field(name="Badges", value="> " + " ".join(util.flags_to_badges(user)))
         content.add_field(name="Activity", value=activity_display)
         content.add_field(name="Mention", value=user.mention)
         content.add_field(name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M"))
