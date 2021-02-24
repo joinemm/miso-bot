@@ -405,9 +405,10 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_message_delete(self, payload):
         """Listener that gets called when any message is deleted."""
-        self.bot.cache.event_triggers["message_delete"] += 1
         if not self.bot.is_ready():
             return
+
+        self.bot.cache.event_triggers["message_delete"] += 1
 
         channel = self.bot.get_channel(payload.channel_id)
         if channel is None:
@@ -454,10 +455,10 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Listener that gets called on every message."""
-        self.stats_messages += 1
-        self.bot.cache.event_triggers["message"] += 1
         if not self.bot.is_ready():
             return
+        self.stats_messages += 1
+        self.bot.cache.event_triggers["message"] += 1
 
         # ignore DMs
         if message.guild is None:
@@ -625,11 +626,11 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         """Starboard event handler."""
-        self.stats_reactions += 1
-        self.bot.cache.event_triggers["reaction_add"] += 1
         if not self.bot.is_ready():
             return
 
+        self.stats_reactions += 1
+        self.bot.cache.event_triggers["reaction_add"] += 1
         user = self.bot.get_user(payload.user_id)
         if user.bot:
             return

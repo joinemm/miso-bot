@@ -538,7 +538,7 @@ class Information(commands.Cog):
         start = now.shift(hours=-24)
         if start < first_data_ts:
             start = first_data_ts
-        for dt in arrow.Arrow.span_range("minute", start, now):
+        for dt in arrow.Arrow.span_range("minute", start, now.shift(minutes=-1)):
             dt = dt[0]
             value = datadict.get(str(dt.timestamp), 0)
             frame.append(dt.datetime)
