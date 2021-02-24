@@ -74,6 +74,7 @@ def time_series_graph(frame, data, color, background_color="#2f3136"):
     ax.spines["top"].set_visible(False)
     ax.tick_params(axis="x", colors="white")
     ax.tick_params(axis="y", colors="white")
+    ax.ticklabel_format(useOffset=False, style="plain", axis="y")
     plt.xticks(rotation=45)
 
     plt.savefig("downloads/graph.png", facecolor=background_color, bbox_inches="tight")
