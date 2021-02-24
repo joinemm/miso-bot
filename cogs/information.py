@@ -7,7 +7,7 @@ import arrow
 import copy
 import aiohttp
 from discord.ext import commands
-from libraries import emoji_literals
+from libraries import emoji_literals, plotter
 from modules import util, exceptions
 
 
@@ -501,6 +501,54 @@ class Information(commands.Cog):
         for event, count in self.bot.cache.event_triggers.items():
             content.description += f"\n`on_{event}`: **{count}**"
         await ctx.send(embed=content)
+
+    @commands.command()
+    async def statsgraph(self, ctx, stat):
+        stat = stat.lower()
+        available = [
+            "messages",
+            "reactions",
+            "commands_used",
+            "guild_count",
+            "member_count",
+            "notifications_sent",
+            "lastfm_api_requests",
+            "html_rendered",
+        ]
+        if stat not in available:
+            raise exceptions.Warning(f"Available stats: {', '.join(available)}")
+
+        data = await self.bot.db.execute(
+            f"""
+            SELECT UNIX_TIMESTAMP(ts), DAY(ts), HOUR(ts), MINUTE(ts), {stat}
+                FROM stats
+                WHERE ts >= NOW() + INTERVAL -1 DAY
+                AND ts <  NOW() + INTERVAL  0 DAY
+            ORDER BY ts
+            """
+        )
+        datadict = {}
+        for row in data:
+            datadict[str(row[0])] = row[-1]
+
+        patched_data = []
+        frame = []
+        now = arrow.utcnow()
+        first_data_ts = arrow.get(data[0][0])
+        start = now.shift(hours=-24)
+        if start < first_data_ts:
+            start = first_data_ts
+        for dt in arrow.Arrow.span_range("minute", start, now.shift(minutes=+1)):
+            dt = dt[0]
+            value = datadict.get(str(dt.timestamp), 0)
+            frame.append(dt.datetime)
+            patched_data.append(value)
+
+        plotter.time_series_graph(frame, patched_data, str(discord.Color.random())),
+        with open("downloads/graph.png", "rb") as img:
+            await ctx.send(
+                file=discord.File(img),
+            )
 
 
 def setup(bot):

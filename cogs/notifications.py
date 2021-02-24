@@ -48,6 +48,7 @@ class Notifications(commands.Cog):
         try:
             await user.send(embed=content)
             if not test:
+                self.bot.cache.stats_notifications_sent += 1
                 for keyword in keywords:
                     await self.bot.db.execute(
                         """
