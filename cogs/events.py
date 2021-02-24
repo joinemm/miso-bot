@@ -230,6 +230,8 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         """Called when the bot joins a new guild."""
+        if not self.bot.is_ready():
+            return
         self.bot.cache.event_triggers["guild_join"] += 1
         blacklisted = await self.bot.db.execute(
             "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
@@ -253,6 +255,8 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         """Called when the bot leaves a guild."""
+        if not self.bot.is_ready():
+            return
         self.bot.cache.event_triggers["guild_remove"] += 1
         logger.info(f"Left guild {guild}")
         blacklisted = await self.bot.db.execute(
@@ -275,6 +279,8 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         """Called when a new member joins a guild."""
+        if not self.bot.is_ready():
+            return
         self.bot.cache.event_triggers["member_join"] += 1
         # log event
         logging_channel_id = await self.bot.db.execute(
@@ -323,6 +329,8 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         """Called when user gets banned from a server."""
+        if not self.bot.is_ready():
+            return
         self.bot.cache.event_triggers["member_ban"] += 1
         channel_id = await self.bot.db.execute(
             "SELECT ban_log_channel_id FROM logging_settings WHERE guild_id = %s",
@@ -352,6 +360,8 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         """Called when member leaves a guild."""
+        if not self.bot.is_ready():
+            return
         self.bot.cache.event_triggers["member_remove"] += 1
         # log event
         logging_channel_id = await self.bot.db.execute(
