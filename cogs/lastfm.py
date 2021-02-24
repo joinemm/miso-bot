@@ -116,7 +116,7 @@ class LastFm(commands.Cog):
     @fm.command(aliases=["yt"])
     async def youtube(self, ctx):
         """See your current song on youtube."""
-        data = await api_request(
+        data = await self.api_request(
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
         )
 
@@ -155,7 +155,7 @@ class LastFm(commands.Cog):
     @fm.command(aliases=["np", "no"])
     async def nowplaying(self, ctx):
         """Show your currently playing song."""
-        data = await api_request(
+        data = await self.api_request(
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
         )
 
@@ -176,7 +176,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
 
         # tags and playcount
-        trackdata = await api_request(
+        trackdata = await self.api_request(
             {"user": ctx.username, "method": "track.getInfo", "artist": artist, "track": track},
             ignore_errors=True,
         )
@@ -216,9 +216,9 @@ class LastFm(commands.Cog):
         """
         arguments = parse_arguments(args)
         if arguments["period"] == "today":
-            data = await custom_period(ctx.username, "artist")
+            data = await self.custom_period(ctx.username, "artist")
         else:
-            data = await api_request(
+            data = await self.api_request(
                 {
                     "user": ctx.username,
                     "method": "user.gettopartists",
@@ -262,9 +262,9 @@ class LastFm(commands.Cog):
         """
         arguments = parse_arguments(args)
         if arguments["period"] == "today":
-            data = await custom_period(ctx.username, "album")
+            data = await self.custom_period(ctx.username, "album")
         else:
-            data = await api_request(
+            data = await self.api_request(
                 {
                     "user": ctx.username,
                     "method": "user.gettopalbums",
@@ -311,9 +311,9 @@ class LastFm(commands.Cog):
         """
         arguments = parse_arguments(args)
         if arguments["period"] == "today":
-            data = await custom_period(ctx.username, "track")
+            data = await self.custom_period(ctx.username, "track")
         else:
-            data = await api_request(
+            data = await self.api_request(
                 {
                     "user": ctx.username,
                     "method": "user.gettoptracks",
@@ -360,7 +360,7 @@ class LastFm(commands.Cog):
         except ValueError:
             size = 15
 
-        data = await api_request(
+        data = await self.api_request(
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": size}
         )
         user_attr = data["recenttracks"]["@attr"]
@@ -427,7 +427,7 @@ class LastFm(commands.Cog):
 
         artistname = remove_mentions(artistname)
         if artistname.lower() == "np":
-            artistname = (await getnowplaying(ctx))["artist"]
+            artistname = (await self.getnowplaying(ctx))["artist"]
             if artistname is None:
                 raise exceptions.Warning("Could not get currently playing artist!")
 
@@ -491,7 +491,7 @@ class LastFm(commands.Cog):
 
         album = remove_mentions(album)
         if album.lower() == "np":
-            npd = await getnowplaying(ctx)
+            npd = await self.getnowplaying(ctx)
             albumname = npd["album"]
             artistname = npd["artist"]
             if None in [albumname, artistname]:
@@ -607,7 +607,7 @@ class LastFm(commands.Cog):
         albums = []
         tracks = []
         metadata = [None, None, None]
-        artistinfo = await api_request({"method": "artist.getInfo", "artist": artistname})
+        artistinfo = await self.api_request({"method": "artist.getInfo", "artist": artistname})
         async with aiohttp.ClientSession() as session:
             url = (
                 f"https://last.fm/user/{ctx.username}/library/music/"
@@ -755,13 +755,13 @@ class LastFm(commands.Cog):
             "period": "overall",
             "limit": 1000,
         }
-        data = await api_request(dict(params, **{"page": 1}))
+        data = await self.api_request(dict(params, **{"page": 1}))
         topalbums = data["topalbums"]["album"]
         # total_pages = int(data["topalbums"]["@attr"]["totalPages"])
         # if total_pages > 1:
         #     tasks = []
         #     for i in range(2, total_pages + 1):
-        #         tasks.append(api_request(dict(params, **{"page": i})))
+        #         tasks.append(self.api_request(dict(params, **{"page": i})))
 
         #     data = await asyncio.gather(*tasks)
         #     for page in data:
@@ -958,9 +958,9 @@ class LastFm(commands.Cog):
             )
 
         if arguments["period"] == "today":
-            data = await custom_period(ctx.username, arguments["method"])
+            data = await self.custom_period(ctx.username, arguments["method"])
         else:
-            data = await api_request(
+            data = await self.api_request(
                 {
                     "user": ctx.username,
                     "method": arguments["method"],
@@ -1036,7 +1036,7 @@ class LastFm(commands.Cog):
             "imageFormat": "jpeg",
         }
 
-        return await util.render_html(payload)
+        return await util.render_html(self.bot, payload)
 
     async def server_lastfm_usernames(self, ctx, filter_cheaters=False):
         guild_user_ids = [user.id for user in ctx.guild.members]
@@ -1071,7 +1071,7 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(get_np(lastfm_username, member))
+            tasks.append(self.get_np(lastfm_username, member))
 
         total_linked = len(tasks)
         if tasks:
@@ -1121,7 +1121,7 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(get_lastplayed(lastfm_username, member))
+            tasks.append(self.get_lastplayed(lastfm_username, member))
 
         total_linked = len(tasks)
         total_listening = 0
@@ -1317,7 +1317,7 @@ class LastFm(commands.Cog):
     async def get_server_top(self, username, datatype):
         limit = 100
         if datatype == "artist":
-            data = await api_request(
+            data = await self.api_request(
                 {
                     "user": username,
                     "method": "user.gettopartists",
@@ -1327,7 +1327,7 @@ class LastFm(commands.Cog):
             )
             return data["topartists"]["artist"] if data is not None else None
         elif datatype == "album":
-            data = await api_request(
+            data = await self.api_request(
                 {
                     "user": username,
                     "method": "user.gettopalbums",
@@ -1337,7 +1337,7 @@ class LastFm(commands.Cog):
             )
             return data["topalbums"]["album"] if data is not None else None
         elif datatype == "track":
-            data = await api_request(
+            data = await self.api_request(
                 {
                     "user": username,
                     "method": "user.gettoptracks",
@@ -1363,7 +1363,7 @@ class LastFm(commands.Cog):
 
         artistname = remove_mentions(artistname)
         if artistname.lower() == "np":
-            artistname = (await getnowplaying(ctx))["artist"]
+            artistname = (await self.getnowplaying(ctx))["artist"]
             if artistname is None:
                 raise exceptions.Warning("Could not get currently playing artist!")
 
@@ -1376,7 +1376,7 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(get_playcount(artistname, lastfm_username, member))
+            tasks.append(self.get_playcount(artistname, lastfm_username, member))
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1461,7 +1461,7 @@ class LastFm(commands.Cog):
 
         track = remove_mentions(track)
         if track.lower() == "np":
-            npd = await getnowplaying(ctx)
+            npd = await self.getnowplaying(ctx)
             trackname = npd["track"]
             artistname = npd["artist"]
             if None in [trackname, artistname]:
@@ -1483,7 +1483,7 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(get_playcount_track(artistname, trackname, lastfm_username, member))
+            tasks.append(self.get_playcount_track(artistname, trackname, lastfm_username, member))
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1539,7 +1539,7 @@ class LastFm(commands.Cog):
 
         album = remove_mentions(album)
         if album.lower() == "np":
-            npd = await getnowplaying(ctx)
+            npd = await self.getnowplaying(ctx)
             albumname = npd["album"]
             artistname = npd["artist"]
             if None in [albumname, artistname]:
@@ -1561,7 +1561,7 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(get_playcount_album(artistname, albumname, lastfm_username, member))
+            tasks.append(self.get_playcount_album(artistname, albumname, lastfm_username, member))
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1641,7 +1641,7 @@ class LastFm(commands.Cog):
         """Report lastfm account."""
         lastfm_username = lastfm_username.strip("/").split("/")[-1].lower()
         url = f"https://www.last.fm/user/{lastfm_username}"
-        data = await api_request(
+        data = await self.api_request(
             {"user": lastfm_username, "method": "user.getinfo"}, ignore_errors=True
         )
         if data is None:
@@ -1730,7 +1730,7 @@ class LastFm(commands.Cog):
     async def lyrics(self, ctx, *, query):
         """Search for song lyrics."""
         if query.lower() == "np":
-            npd = await getnowplaying(ctx)
+            npd = await self.getnowplaying(ctx)
             trackname = npd["track"]
             artistname = npd["artist"]
             if None in [trackname, artistname]:
@@ -1821,7 +1821,9 @@ class LastFm(commands.Cog):
             return int(hex_color, 16)
 
     async def get_userinfo_embed(self, username):
-        data = await api_request({"user": username, "method": "user.getinfo"}, ignore_errors=True)
+        data = await self.api_request(
+            {"user": username, "method": "user.getinfo"}, ignore_errors=True
+        )
         if data is None:
             return None
 
@@ -1876,7 +1878,7 @@ class LastFm(commands.Cog):
             "to": current_day_floor.shift(minutes=-1).timestamp,
             "limit": 1000,
         }
-        content = await api_request(params)
+        content = await self.api_request(params)
         tracks = content["recenttracks"]["track"]
 
         # get rid of nowplaying track if user is currently scrobbling.
@@ -1950,6 +1952,295 @@ class LastFm(commands.Cog):
             )
             return self.cover_base_urls[-1].format(image_hash)
 
+    async def api_request(self, params, ignore_errors=False):
+        """Get json data from the lastfm api."""
+        url = "http://ws.audioscrobbler.com/2.0/"
+        params["api_key"] = LASTFM_APPID
+        params["format"] = "json"
+        tries = 0
+        max_tries = 2
+        while True:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params) as response:
+                    self.bot.cache.stats_lastfm_requests += 1
+                    try:
+                        content = await response.json()
+                    except aiohttp.client_exceptions.ContentTypeError:
+                        if ignore_errors:
+                            return None
+                        else:
+                            text = await response.text()
+                            raise exceptions.LastFMError(error_code=response.status, message=text)
+
+                    if content is None:
+                        raise exceptions.LastFMError(
+                            error_code=408,
+                            message="Could not connect to LastFM",
+                        )
+                    if response.status == 200 and content.get("error") is None:
+                        return content
+                    else:
+                        if int(content.get("error")) == 8:
+                            tries += 1
+                            if tries < max_tries:
+                                continue
+
+                        if ignore_errors:
+                            return None
+                        else:
+                            raise exceptions.LastFMError(
+                                error_code=content.get("error"),
+                                message=content.get("message"),
+                            )
+
+    async def custom_period(self, user, group_by, shift_hours=24):
+        """Parse recent tracks to get custom duration data (24 hour)."""
+        limit_timestamp = arrow.utcnow().shift(hours=-shift_hours)
+        data = await self.api_request(
+            {
+                "user": user,
+                "method": "user.getrecenttracks",
+                "from": limit_timestamp.timestamp,
+                "limit": 200,
+            }
+        )
+        loops = int(data["recenttracks"]["@attr"]["totalPages"])
+        if loops > 1:
+            for i in range(2, loops + 1):
+                newdata = await self.api_request(
+                    {
+                        "user": user,
+                        "method": "user.getrecenttracks",
+                        "from": limit_timestamp.timestamp,
+                        "limit": 200,
+                        "page": i,
+                    }
+                )
+                data["recenttracks"]["track"] += newdata["recenttracks"]["track"]
+
+        formatted_data = {}
+        if group_by in ["album", "user.gettopalbums"]:
+            for track in data["recenttracks"]["track"]:
+                album_name = track["album"]["#text"]
+                artist_name = track["artist"]["#text"]
+                if (artist_name, album_name) in formatted_data:
+                    formatted_data[(artist_name, album_name)]["playcount"] += 1
+                else:
+                    formatted_data[(artist_name, album_name)] = {
+                        "playcount": 1,
+                        "artist": {"name": artist_name},
+                        "name": album_name,
+                        "image": track["image"],
+                    }
+
+            albumsdata = sorted(
+                formatted_data.values(), key=lambda x: x["playcount"], reverse=True
+            )
+            return {
+                "topalbums": {
+                    "album": albumsdata,
+                    "@attr": {
+                        "user": data["recenttracks"]["@attr"]["user"],
+                        "total": len(formatted_data.values()),
+                    },
+                }
+            }
+
+        elif group_by in ["track", "user.gettoptracks"]:
+            for track in data["recenttracks"]["track"]:
+                track_name = track["name"]
+                artist_name = track["artist"]["#text"]
+                if (track_name, artist_name) in formatted_data:
+                    formatted_data[(track_name, artist_name)]["playcount"] += 1
+                else:
+                    formatted_data[(track_name, artist_name)] = {
+                        "playcount": 1,
+                        "artist": {"name": artist_name},
+                        "name": track_name,
+                        "image": track["image"],
+                    }
+
+            tracksdata = sorted(
+                formatted_data.values(), key=lambda x: x["playcount"], reverse=True
+            )
+            return {
+                "toptracks": {
+                    "track": tracksdata,
+                    "@attr": {
+                        "user": data["recenttracks"]["@attr"]["user"],
+                        "total": len(formatted_data.values()),
+                    },
+                }
+            }
+
+        elif group_by in ["artist", "user.gettopartists"]:
+            for track in data["recenttracks"]["track"]:
+                artist_name = track["artist"]["#text"]
+                if artist_name in formatted_data:
+                    formatted_data[artist_name]["playcount"] += 1
+                else:
+                    formatted_data[artist_name] = {
+                        "playcount": 1,
+                        "name": artist_name,
+                        "image": track["image"],
+                    }
+
+            artistdata = sorted(
+                formatted_data.values(), key=lambda x: x["playcount"], reverse=True
+            )
+            return {
+                "topartists": {
+                    "artist": artistdata,
+                    "@attr": {
+                        "user": data["recenttracks"]["@attr"]["user"],
+                        "total": len(formatted_data.values()),
+                    },
+                }
+            }
+
+    async def get_np(self, username, ref):
+        data = await self.api_request(
+            {"method": "user.getrecenttracks", "user": username, "limit": 1},
+            ignore_errors=True,
+        )
+        song = None
+        if data is not None:
+            try:
+                tracks = data["recenttracks"]["track"]
+                if tracks:
+                    if "@attr" in tracks[0]:
+                        if "nowplaying" in tracks[0]["@attr"]:
+                            song = {
+                                "artist": tracks[0]["artist"]["#text"],
+                                "name": tracks[0]["name"],
+                            }
+            except KeyError:
+                pass
+
+        return song, ref
+
+    async def get_lastplayed(self, username, ref):
+        data = await self.api_request(
+            {"method": "user.getrecenttracks", "user": username, "limit": 1},
+            ignore_errors=True,
+        )
+        song = None
+        if data is not None:
+            try:
+                tracks = data["recenttracks"]["track"]
+                if tracks:
+                    nowplaying = False
+                    if tracks[0].get("@attr"):
+                        if tracks[0]["@attr"].get("nowplaying"):
+                            nowplaying = True
+
+                    if tracks[0].get("date"):
+                        date = tracks[0]["date"]["uts"]
+                    else:
+                        date = arrow.now().timestamp
+
+                    song = {
+                        "artist": tracks[0]["artist"]["#text"],
+                        "name": tracks[0]["name"],
+                        "nowplaying": nowplaying,
+                        "date": int(date),
+                    }
+            except KeyError:
+                pass
+
+        return song, ref
+
+    async def getnowplaying(self, ctx):
+        await username_to_ctx(ctx)
+        playing = {"artist": None, "album": None, "track": None}
+
+        data = await self.api_request(
+            {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
+        )
+
+        try:
+            tracks = data["recenttracks"]["track"]
+            if tracks:
+                playing["artist"] = tracks[0]["artist"]["#text"]
+                playing["album"] = tracks[0]["album"]["#text"]
+                playing["track"] = tracks[0]["name"]
+        except KeyError:
+            pass
+
+        return playing
+
+    async def get_playcount_track(self, artist, track, username, reference=None):
+        data = await self.api_request(
+            {
+                "method": "track.getinfo",
+                "user": username,
+                "track": track,
+                "artist": artist,
+                "autocorrect": 1,
+            }
+        )
+        try:
+            count = int(data["track"]["userplaycount"])
+        except (KeyError, TypeError):
+            count = 0
+
+        artistname = data["track"]["artist"]["name"]
+        trackname = data["track"]["name"]
+
+        try:
+            image_url = data["track"]["album"]["image"][-1]["#text"]
+        except KeyError:
+            image_url = None
+
+        if reference is None:
+            return count
+        else:
+            return count, reference, (artistname, trackname, image_url)
+
+    async def get_playcount_album(self, artist, album, username, reference=None):
+        data = await self.api_request(
+            {
+                "method": "album.getinfo",
+                "user": username,
+                "album": album,
+                "artist": artist,
+                "autocorrect": 1,
+            }
+        )
+        try:
+            count = int(data["album"]["userplaycount"])
+        except (KeyError, TypeError):
+            count = 0
+
+        artistname = data["album"]["artist"]
+        albumname = data["album"]["name"]
+
+        try:
+            image_url = data["album"]["image"][-1]["#text"]
+        except KeyError:
+            image_url = None
+
+        if reference is None:
+            return count
+        else:
+            return count, reference, (artistname, albumname, image_url)
+
+    async def get_playcount(self, artist, username, reference=None):
+        data = await self.api_request(
+            {"method": "artist.getinfo", "user": username, "artist": artist, "autocorrect": 1}
+        )
+        try:
+            count = int(data["artist"]["stats"]["userplaycount"])
+        except (KeyError, TypeError):
+            count = 0
+
+        name = data["artist"]["name"]
+
+        if reference is None:
+            return count
+        else:
+            return count, reference, name
+
 
 # class ends here
 
@@ -1981,153 +2272,6 @@ def format_plays(amount):
         return "play"
     else:
         return "plays"
-
-
-async def getnowplaying(ctx):
-    await username_to_ctx(ctx)
-    playing = {"artist": None, "album": None, "track": None}
-
-    data = await api_request({"user": ctx.username, "method": "user.getrecenttracks", "limit": 1})
-
-    try:
-        tracks = data["recenttracks"]["track"]
-        if tracks:
-            playing["artist"] = tracks[0]["artist"]["#text"]
-            playing["album"] = tracks[0]["album"]["#text"]
-            playing["track"] = tracks[0]["name"]
-    except KeyError:
-        pass
-
-    return playing
-
-
-async def get_playcount_track(artist, track, username, reference=None):
-    data = await api_request(
-        {
-            "method": "track.getinfo",
-            "user": username,
-            "track": track,
-            "artist": artist,
-            "autocorrect": 1,
-        }
-    )
-    try:
-        count = int(data["track"]["userplaycount"])
-    except (KeyError, TypeError):
-        count = 0
-
-    artistname = data["track"]["artist"]["name"]
-    trackname = data["track"]["name"]
-
-    try:
-        image_url = data["track"]["album"]["image"][-1]["#text"]
-    except KeyError:
-        image_url = None
-
-    if reference is None:
-        return count
-    else:
-        return count, reference, (artistname, trackname, image_url)
-
-
-async def get_playcount_album(artist, album, username, reference=None):
-    data = await api_request(
-        {
-            "method": "album.getinfo",
-            "user": username,
-            "album": album,
-            "artist": artist,
-            "autocorrect": 1,
-        }
-    )
-    try:
-        count = int(data["album"]["userplaycount"])
-    except (KeyError, TypeError):
-        count = 0
-
-    artistname = data["album"]["artist"]
-    albumname = data["album"]["name"]
-
-    try:
-        image_url = data["album"]["image"][-1]["#text"]
-    except KeyError:
-        image_url = None
-
-    if reference is None:
-        return count
-    else:
-        return count, reference, (artistname, albumname, image_url)
-
-
-async def get_playcount(artist, username, reference=None):
-    data = await api_request(
-        {"method": "artist.getinfo", "user": username, "artist": artist, "autocorrect": 1}
-    )
-    try:
-        count = int(data["artist"]["stats"]["userplaycount"])
-    except (KeyError, TypeError):
-        count = 0
-
-    name = data["artist"]["name"]
-
-    if reference is None:
-        return count
-    else:
-        return count, reference, name
-
-
-async def get_np(username, ref):
-    data = await api_request(
-        {"method": "user.getrecenttracks", "user": username, "limit": 1},
-        ignore_errors=True,
-    )
-    song = None
-    if data is not None:
-        try:
-            tracks = data["recenttracks"]["track"]
-            if tracks:
-                if "@attr" in tracks[0]:
-                    if "nowplaying" in tracks[0]["@attr"]:
-                        song = {
-                            "artist": tracks[0]["artist"]["#text"],
-                            "name": tracks[0]["name"],
-                        }
-        except KeyError:
-            pass
-
-    return song, ref
-
-
-async def get_lastplayed(username, ref):
-    data = await api_request(
-        {"method": "user.getrecenttracks", "user": username, "limit": 1},
-        ignore_errors=True,
-    )
-    song = None
-    if data is not None:
-        try:
-            tracks = data["recenttracks"]["track"]
-            if tracks:
-                nowplaying = False
-                if tracks[0].get("@attr"):
-                    if tracks[0]["@attr"].get("nowplaying"):
-                        nowplaying = True
-
-                if tracks[0].get("date"):
-                    date = tracks[0]["date"]["uts"]
-                else:
-                    date = arrow.now().timestamp
-
-                song = {
-                    "artist": tracks[0]["artist"]["#text"],
-                    "name": tracks[0]["name"],
-                    "nowplaying": nowplaying,
-                    "date": int(date),
-                }
-        except KeyError:
-            pass
-
-    return song, ref
 
 
 def get_period(timeframe, allow_custom=True):
@@ -2243,147 +2387,6 @@ def parse_chart_arguments(args):
         parsed["showtitles"] = True
     parsed["amount"] = parsed["width"] * parsed["height"]
     return parsed
-
-
-async def api_request(params, ignore_errors=False):
-    """Get json data from the lastfm api."""
-    url = "http://ws.audioscrobbler.com/2.0/"
-    params["api_key"] = LASTFM_APPID
-    params["format"] = "json"
-    tries = 0
-    max_tries = 2
-    while True:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                try:
-                    content = await response.json()
-                except aiohttp.client_exceptions.ContentTypeError:
-                    if ignore_errors:
-                        return None
-                    else:
-                        text = await response.text()
-                        raise exceptions.LastFMError(error_code=response.status, message=text)
-
-                if content is None:
-                    raise exceptions.LastFMError(
-                        error_code=408,
-                        message="Could not connect to LastFM",
-                    )
-                if response.status == 200 and content.get("error") is None:
-                    return content
-                else:
-                    if int(content.get("error")) == 8:
-                        tries += 1
-                        if tries < max_tries:
-                            continue
-
-                    if ignore_errors:
-                        return None
-                    else:
-                        raise exceptions.LastFMError(
-                            error_code=content.get("error"),
-                            message=content.get("message"),
-                        )
-
-
-async def custom_period(user, group_by, shift_hours=24):
-    """Parse recent tracks to get custom duration data (24 hour)."""
-    limit_timestamp = arrow.utcnow().shift(hours=-shift_hours)
-    data = await api_request(
-        {
-            "user": user,
-            "method": "user.getrecenttracks",
-            "from": limit_timestamp.timestamp,
-            "limit": 200,
-        }
-    )
-    loops = int(data["recenttracks"]["@attr"]["totalPages"])
-    if loops > 1:
-        for i in range(2, loops + 1):
-            newdata = await api_request(
-                {
-                    "user": user,
-                    "method": "user.getrecenttracks",
-                    "from": limit_timestamp.timestamp,
-                    "limit": 200,
-                    "page": i,
-                }
-            )
-            data["recenttracks"]["track"] += newdata["recenttracks"]["track"]
-
-    formatted_data = {}
-    if group_by in ["album", "user.gettopalbums"]:
-        for track in data["recenttracks"]["track"]:
-            album_name = track["album"]["#text"]
-            artist_name = track["artist"]["#text"]
-            if (artist_name, album_name) in formatted_data:
-                formatted_data[(artist_name, album_name)]["playcount"] += 1
-            else:
-                formatted_data[(artist_name, album_name)] = {
-                    "playcount": 1,
-                    "artist": {"name": artist_name},
-                    "name": album_name,
-                    "image": track["image"],
-                }
-
-        albumsdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
-        return {
-            "topalbums": {
-                "album": albumsdata,
-                "@attr": {
-                    "user": data["recenttracks"]["@attr"]["user"],
-                    "total": len(formatted_data.values()),
-                },
-            }
-        }
-
-    elif group_by in ["track", "user.gettoptracks"]:
-        for track in data["recenttracks"]["track"]:
-            track_name = track["name"]
-            artist_name = track["artist"]["#text"]
-            if (track_name, artist_name) in formatted_data:
-                formatted_data[(track_name, artist_name)]["playcount"] += 1
-            else:
-                formatted_data[(track_name, artist_name)] = {
-                    "playcount": 1,
-                    "artist": {"name": artist_name},
-                    "name": track_name,
-                    "image": track["image"],
-                }
-
-        tracksdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
-        return {
-            "toptracks": {
-                "track": tracksdata,
-                "@attr": {
-                    "user": data["recenttracks"]["@attr"]["user"],
-                    "total": len(formatted_data.values()),
-                },
-            }
-        }
-
-    elif group_by in ["artist", "user.gettopartists"]:
-        for track in data["recenttracks"]["track"]:
-            artist_name = track["artist"]["#text"]
-            if artist_name in formatted_data:
-                formatted_data[artist_name]["playcount"] += 1
-            else:
-                formatted_data[artist_name] = {
-                    "playcount": 1,
-                    "name": artist_name,
-                    "image": track["image"],
-                }
-
-        artistdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
-        return {
-            "topartists": {
-                "artist": artistdata,
-                "@attr": {
-                    "user": data["recenttracks"]["@attr"]["user"],
-                    "total": len(formatted_data.values()),
-                },
-            }
-        }
 
 
 async def fetch(session, url, params=None, handling="json"):

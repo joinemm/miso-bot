@@ -278,9 +278,7 @@ class User(commands.Cog):
             f"{util.xp_to_next_level(level)} XP to levelup | Total xp: {xp}"
         )
 
-        await self.bot.loop.run_in_executor(
-            None, lambda: plotter.create_graph(activity_data, str(user.color), title=title)
-        )
+        plotter.create_graph(activity_data, str(user.color), title=title)
 
         with open("downloads/graph.png", "rb") as img:
             await ctx.send(
@@ -705,7 +703,7 @@ class User(commands.Cog):
             "height": 400,
             "imageFormat": "png",
         }
-        buffer = await util.render_html(payload)
+        buffer = await util.render_html(self.bot, payload)
         await ctx.send(file=discord.File(fp=buffer, filename=f"profile_{user.name}.png"))
 
     @commands.group()

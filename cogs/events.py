@@ -24,12 +24,52 @@ class Events(commands.Cog):
         self.xp_cache = {}
         self.emoji_usage_cache = {"unicode": {}, "custom": {}}
         self.current_status = None
-        self.xp_loop.start()
         self.guildlog = 652916681299066900
         self.xp_limit = 150
+        self.stats_messages = 0
+        self.stats_reactions = 0
+        self.stats_commands = 0
 
     def cog_unload(self):
         self.status_loop.cancel()
+
+    async def insert_stats(self):
+        self.bot.logger.info("inserting usage stats")
+        ts = arrow.now().floor("minute")
+        await self.bot.db.execute(
+            """
+            INSERT INTO stats (
+                ts, messages, reactions, commands_used,
+                guild_count, member_count, notifications_sent,
+                lastfm_api_requests, html_rendered
+            )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                messages = messages + VALUES(messages),
+                reactions = reactions + VALUES(reactions),
+                commands_used = commands_used + VALUES(commands_used),
+                guild_count = VALUES(guild_count),
+                member_count = VALUES(member_count),
+                notifications_sent = notifications_sent + values(notifications_sent),
+                lastfm_api_requests = lastfm_api_requests + values(lastfm_api_requests),
+                html_rendered = html_rendered + values(html_rendered)
+            """,
+            ts.datetime,
+            self.stats_messages,
+            self.stats_reactions,
+            self.stats_commands,
+            len(self.bot.guilds),
+            len(set(self.bot.get_all_members())),
+            self.bot.cache.stats_notifications_sent,
+            self.bot.cache.stats_lastfm_requests,
+            self.bot.cache.stats_html_rendered,
+        )
+        self.stats_messages = 0
+        self.stats_reactions = 0
+        self.stats_commands = 0
+        self.bot.cache.stats_notifications_sent = 0
+        self.bot.cache.stats_lastfm_requests = 0
+        self.bot.cache.stats_html_rendered = 0
 
     async def write_usage_data(self):
         values = []
@@ -131,6 +171,7 @@ class Events(commands.Cog):
         # prevent double invocation for subcommands
         if ctx.invoked_subcommand is None:
             command_logger.info(log.log_command(ctx))
+            self.stats_commands += 1
             if ctx.guild is not None:
                 await queries.save_command_usage(ctx)
 
@@ -142,20 +183,29 @@ class Events(commands.Cog):
         for shard_id, latency in latencies:
             logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
         self.status_loop.start()
+        self.xp_loop.start()
+        self.stats_loop.start()
 
     @tasks.loop(minutes=5.0)
     async def xp_loop(self):
         try:
             await self.write_usage_data()
         except Exception as e:
-            logger.error(e)
+            logger.error(f"xp_loop: {e}")
 
     @tasks.loop(minutes=3.0)
     async def status_loop(self):
         try:
             await self.next_status()
         except Exception as e:
-            logger.error(e)
+            logger.error(f"next_status: {e}")
+
+    @tasks.loop(minutes=1.0)
+    async def stats_loop(self):
+        try:
+            await self.insert_stats()
+        except Exception as e:
+            logger.error(f"stats_loop: {e}")
 
     @status_loop.before_loop
     async def before_status_loop(self):
@@ -394,6 +444,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Listener that gets called on every message."""
+        self.stats_messages += 1
         self.bot.cache.event_triggers["message"] += 1
         if not self.bot.is_ready():
             return
@@ -564,6 +615,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         """Starboard event handler."""
+        self.stats_reactions += 1
         self.bot.cache.event_triggers["reaction_add"] += 1
         if not self.bot.is_ready():
             return

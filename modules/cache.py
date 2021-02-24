@@ -29,6 +29,9 @@ class Cache:
             "member_ban": 0,
             "member_unban": 0,
         }
+        self.stats_notifications_sent = 0
+        self.stats_lastfm_requests = 0
+        self.stats_html_rendered = 0
         bot.loop.create_task(self.initialize_settings_cache())
 
     async def cache_starboard_settings(self):

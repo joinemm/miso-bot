@@ -831,10 +831,11 @@ def format_html(template, replacements):
     return re.sub(r"\$(\S*?)\$", dictsub, template)
 
 
-async def render_html(payload):
+async def render_html(bot, payload):
     async with aiohttp.ClientSession() as session:
         try:
             async with session.post("http://localhost:3000/html", data=payload) as response:
+                bot.cache.stats_html_rendered += 1
                 buffer = io.BytesIO(await response.read())
         except aiohttp.client_exceptions.ClientConnectorError:
             raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
