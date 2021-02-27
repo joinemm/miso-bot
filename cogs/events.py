@@ -689,6 +689,9 @@ class Events(commands.Cog):
                         reacted_users = await react.users().flatten()
                         break
 
+            reacted_users = set(reacted_users)
+            reacted_users.add(user)
+
             if reaction_count < required_reaction_count:
                 return
 
@@ -750,6 +753,7 @@ class Events(commands.Cog):
                             value="\n".join(str(x) for x in reacted_users),
                             inline=False,
                         )
+                        content.add_field(name="Most recent reaction by", value=str(user))
                         await log_channel.send(embed=content)
                 except discord.errors.Forbidden:
                     pass
