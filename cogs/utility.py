@@ -811,6 +811,79 @@ class Utility(commands.Cog):
 
         await ctx.send(embed=content)
 
+    @commands.group(aliases=["tz"])
+    async def timezone(self, ctx):
+        """Timezone commands."""
+        await util.command_group_help(ctx)
+
+    @timezone.command(name="now")
+    async def tz_now(self, ctx, member: discord.Member = None):
+        """Get current time."""
+        if member is None:
+            member = ctx.author
+
+        tz_str = await self.bot.db.execute(
+            "SELECT timezone FROM user_settings WHERE user_id = %s", member.id, one_value=True
+        )
+        if tz_str:
+            dt = arrow.now(tz_str)
+            await ctx.send(f":clock2: **{dt.format('MMM Do HH:mm')}**")
+        else:
+            raise exceptions.Warning(f"{member} has not set their timezone yet!")
+
+    @timezone.command(name="set")
+    async def tz_set(self, ctx, your_timezone):
+        """
+        Set your timezone.
+        Give timezone as a tz database name (case sensitive):
+        https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+        """
+        try:
+            ts = arrow.now(your_timezone)
+        except arrow.ParserError as e:
+            raise exceptions.Warning(str(e), help_footer=True)
+        await ctx.bot.db.execute(
+            """
+            INSERT INTO user_settings (user_id, timezone)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                timezone = VALUES(timezone)
+            """,
+            ctx.author.id,
+            your_timezone,
+        )
+        await util.send_success(
+            ctx,
+            f"Saved your timezone as **{your_timezone}**\n:clock2: Current time: **{ts.ctime()}**",
+        )
+
+    @timezone.command(name="list")
+    async def tz_list(self, ctx):
+        """List current time of all server members."""
+        content = discord.Embed(
+            title=f":clock2: Current time in {ctx.guild}",
+            color=int("3b88c3", 16),
+        )
+        rows = []
+        user_ids = [user.id for user in ctx.guild.members]
+        data = await self.bot.db.execute(
+            "SELECT user_id, timezone FROM user_settings WHERE user_id IN %s AND timezone IS NOT NULL",
+            user_ids,
+        )
+        if not data:
+            raise exceptions.Warning("No one on this server has set their timezone yet!")
+
+        dt_data = []
+        for user_id, tz_str in data:
+            dt_data.append((arrow.now(tz_str), ctx.guild.get_member(user_id)))
+
+        for dt, member in sorted(dt_data, reverse=True):
+            if member is None:
+                continue
+            rows.append(f"{dt.format('MMM Do HH:mm')} - **{util.displayname(member)}**")
+
+        await util.send_as_pages(ctx, content, rows)
+
 
 def setup(bot):
     bot.add_cog(Utility(bot))
