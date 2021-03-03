@@ -857,6 +857,20 @@ class Utility(commands.Cog):
             f"Saved your timezone as **{your_timezone}**\n:clock2: Current time: **{ts.ctime()}**",
         )
 
+    @timezone.command(name="unset")
+    async def tz_unset(self, ctx):
+        """Unset your timezone."""
+        await ctx.bot.db.execute(
+            """
+            INSERT INTO user_settings (user_id, timezone)
+                VALUES (%s, NULL)
+            ON DUPLICATE KEY UPDATE
+                timezone = VALUES(timezone)
+            """,
+            ctx.author.id,
+        )
+        await util.send_success(ctx, "Your timezone is no longer saved.")
+
     @timezone.command(name="list")
     async def tz_list(self, ctx):
         """List current time of all server members."""
