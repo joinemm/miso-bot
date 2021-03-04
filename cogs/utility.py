@@ -811,7 +811,7 @@ class Utility(commands.Cog):
 
         await ctx.send(embed=content)
 
-    @commands.group(aliases=["tz"])
+    @commands.group(aliases=["tz", "timezones"])
     async def timezone(self, ctx):
         """Timezone commands."""
         await util.command_group_help(ctx)
@@ -837,6 +837,9 @@ class Utility(commands.Cog):
         Set your timezone.
         Give timezone as a tz database name (case sensitive):
         https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+
+        Example:
+            >timezone set Europe/Helsinki
         """
         try:
             ts = arrow.now(your_timezone)
@@ -891,7 +894,7 @@ class Utility(commands.Cog):
         for user_id, tz_str in data:
             dt_data.append((arrow.now(tz_str), ctx.guild.get_member(user_id)))
 
-        for dt, member in sorted(dt_data, reverse=True):
+        for dt, member in sorted(dt_data, key=lambda x: x[0], reverse=True):
             if member is None:
                 continue
             rows.append(f"{dt.format('MMM Do HH:mm')} - **{util.displayname(member)}**")
