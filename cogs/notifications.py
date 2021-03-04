@@ -228,13 +228,15 @@ class Notifications(commands.Cog):
         if not words:
             raise exceptions.Info("You have not set any notifications yet!")
 
-        content = discord.Embed(title=":love_letter: Your notifications", color=int("dd2e44", 16))
+        content = discord.Embed(
+            title=f":love_letter: You have {len(words)} notifications", color=int("dd2e44", 16)
+        )
 
         rows = []
         for guild_id, keyword, times_triggered in sorted(words):
             guild = self.bot.get_guild(guild_id)
             if guild is None:
-                continue
+                guild = f"[Unknown server `{guild_id}`]"
 
             rows.append(f"**{guild}** : `{keyword}` - Triggered **{times_triggered}** times")
 

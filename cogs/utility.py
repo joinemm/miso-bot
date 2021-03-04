@@ -894,7 +894,7 @@ class Utility(commands.Cog):
         for user_id, tz_str in data:
             dt_data.append((arrow.now(tz_str), ctx.guild.get_member(user_id)))
 
-        for dt, member in sorted(dt_data, key=lambda x: x[0], reverse=True):
+        for dt, member in sorted(dt_data, key=lambda x: x[0].datetime, reverse=True):
             if member is None:
                 continue
             rows.append(f"{dt.format('MMM Do HH:mm')} - **{util.displayname(member)}**")
