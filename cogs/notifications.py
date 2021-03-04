@@ -122,6 +122,14 @@ class Notifications(commands.Cog):
                 "Global notifications have been removed for performance reasons."
             )
 
+        amount = await self.bot.db.execute(
+            "SELECT COUNT(*) FROM notification WHERE user_id = %s", ctx.author.id, one_value=True
+        )
+        if amount and amount >= 30:
+            raise exceptions.Warning(
+                f"You can only have a maximum of **30** notifications. You have **{amount}**"
+            )
+
         await ctx.message.delete()
         guild_id = ctx.guild.id
         keyword = keyword.lower().strip()
@@ -189,7 +197,7 @@ class Notifications(commands.Cog):
         try:
             await util.send_success(
                 ctx.author,
-                f'The keyword notification for `"{keyword}"` that you set in **{ctx.guild.name}** has been removed.',
+                f"The keyword notification for `{keyword}` that you set in **{ctx.guild.name}** has been removed.",
             )
         except discord.errors.Forbidden:
             raise exceptions.Warning("I was unable to send you a DM! Please change your settings.")
@@ -228,10 +236,10 @@ class Notifications(commands.Cog):
             if guild is None:
                 continue
 
-            rows.append(f"`{keyword}` in **{guild}** - triggered **{times_triggered}** times")
+            rows.append(f"**{guild}** : `{keyword}` - Triggered **{times_triggered}** times")
 
         try:
-            await util.send_as_pages(ctx.author, content, rows)
+            await util.send_as_pages(ctx.author, content, rows, maxpages=1, maxrows=50)
         except discord.errors.Forbidden:
             raise exceptions.Warning("I was unable to send you a DM! Please change your settings.")
 
