@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS kpop_idol (
     position VARCHAR(64),
     instagram VARCHAR(128),
     twitter VARCHAR(128),
+    image_url VARCHAR(256),
     UNIQUE(group_name, stage_name),
     PRIMARY KEY (idol_id)
 );

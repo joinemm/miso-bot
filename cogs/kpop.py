@@ -99,8 +99,8 @@ class Kpop(commands.Cog):
     async def send_idol(self, ctx, idol_id):
         idol_data = await self.bot.db.execute(
             """
-            SELECT full_name, stage_name, korean_name, korean_stage_name,
-                   date_of_birth, country, birthplace, group_name, height, weight, gender
+            SELECT idol_id, full_name, stage_name, korean_name, korean_stage_name,
+                   date_of_birth, country, group_name, height, weight, gender, image_url
                 FROM kpop_idol
             WHERE idol_id = %s
             """,
@@ -111,17 +111,18 @@ class Kpop(commands.Cog):
             raise exceptions.Error("There was an error getting idol data.")
 
         (
+            idol_id,
             full_name,
             stage_name,
             korean_name,
             korean_stage_name,
             date_of_birth,
             country,
-            birthplace,
             group_name,
             height,
             weight,
             gender,
+            image_url,
         ) = idol_data
 
         if group_name is None:
@@ -129,7 +130,13 @@ class Kpop(commands.Cog):
         else:
             search_term = f"{group_name} {stage_name} kpop"
 
-        image = await self.google_image_search(search_term)
+        if image_url is None:
+            image_url = await self.google_image_search(search_term)
+            if image_url != "":
+                await self.bot.db.execute(
+                    "UPDATE kpop_idol SET image_url = %s WHERE idol_id = %s", image_url, idol_id
+                )
+
         content = discord.Embed()
         if gender == "F":
             content.colour = int("e7586d", 16)
@@ -147,7 +154,7 @@ class Kpop(commands.Cog):
             - date_of_birth.year
             - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
         )
-        content.set_image(url=image)
+        content.set_image(url=image_url)
         content.add_field(name="Full name", value=full_name)
         content.add_field(name="Korean name", value=f"{korean_stage_name} ({korean_name})")
         content.add_field(
