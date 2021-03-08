@@ -227,32 +227,53 @@ class Information(commands.Cog):
         await util.page_switcher(ctx, pages)
 
     @commands.command()
-    async def emojistats(self, ctx, user: discord.Member = None):
+    async def emojistats(self, ctx, user: discord.Member = None, *args):
         """See most used emojis on the server, optionally filtered by user."""
-        opt = [] if user is None else [user.id]
-
-        custom_emojis = await self.bot.db.execute(
-            f"""
-            SELECT sum(uses), emoji_id, emoji_name
-                FROM custom_emoji_usage
-                WHERE guild_id = %s
-                {'AND user_id = %s' if user is not None else ''}
-            GROUP BY emoji_id
-            """,
-            ctx.guild.id,
-            *opt,
-        )
-        default_emojis = await self.bot.db.execute(
-            f"""
-            SELECT sum(uses), emoji_name
-                FROM unicode_emoji_usage
-                WHERE guild_id = %s
-                {'AND user_id = %s' if user is not None else ''}
-            GROUP BY emoji_name
-            """,
-            ctx.guild.id,
-            *opt,
-        )
+        global_user = False
+        if "global" in [x.lower() for x in args] and user is not None:
+            global_user = True
+            custom_emojis = await self.bot.db.execute(
+                """
+                SELECT sum(uses), emoji_id, emoji_name
+                    FROM custom_emoji_usage
+                    WHERE user_id = %s
+                GROUP BY emoji_id
+                """,
+                user.id,
+            )
+            default_emojis = await self.bot.db.execute(
+                """
+                SELECT sum(uses), emoji_name
+                    FROM unicode_emoji_usage
+                    WHERE user_id = %s
+                GROUP BY emoji_name
+                """,
+                user.id,
+            )
+        else:
+            opt = [] if user is None else [user.id]
+            custom_emojis = await self.bot.db.execute(
+                f"""
+                SELECT sum(uses), emoji_id, emoji_name
+                    FROM custom_emoji_usage
+                    WHERE guild_id = %s
+                    {'AND user_id = %s' if user is not None else ''}
+                GROUP BY emoji_id
+                """,
+                ctx.guild.id,
+                *opt,
+            )
+            default_emojis = await self.bot.db.execute(
+                f"""
+                SELECT sum(uses), emoji_name
+                    FROM unicode_emoji_usage
+                    WHERE guild_id = %s
+                    {'AND user_id = %s' if user is not None else ''}
+                GROUP BY emoji_name
+                """,
+                ctx.guild.id,
+                *opt,
+            )
 
         if not custom_emojis and not default_emojis:
             return await ctx.send("No emojis have been used yet!")
@@ -279,7 +300,7 @@ class Information(commands.Cog):
         content = discord.Embed(
             title="Most used emojis"
             + (f" by {user.name}" if user is not None else "")
-            + f" in {ctx.guild.name}",
+            + (" globally" if global_user else f" in {ctx.guild.name}"),
             color=int("ffcc4d", 16),
         )
         await util.send_as_pages(ctx, content, rows, maxrows=15)
