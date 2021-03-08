@@ -1704,7 +1704,10 @@ class LastFm(commands.Cog):
         async def confirm_ban():
             await self.bot.db.execute(
                 """
-                INSERT IGNORE lastfm_cheater (lastfm_username, flagged_on, reason)
+                INSERT INTO lastfm_cheater (lastfm_username, flagged_on, reason)
+                    VALUES(%s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    reason = VALUES(reason)
                 """,
                 lastfm_username.lower(),
                 arrow.now().datetime,
