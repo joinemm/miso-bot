@@ -339,12 +339,13 @@ class User(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def topservers(self, ctx):
+    async def topservers(self, ctx, timeframe=""):
         """See your top servers by XP."""
+        time, table = get_activity_table(timeframe)
         data = await self.bot.db.execute(
-            """
+            f"""
             SELECT guild_id, SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23)
-                as xp FROM user_activity
+                as xp FROM {table}
                 WHERE user_id = %s
             GROUP BY guild_id
             ORDER BY xp DESC
@@ -352,24 +353,22 @@ class User(commands.Cog):
             ctx.author.id,
         )
         rows = []
-        total_xp = 0
+        total_xp = sum(x[1] for x in data)
         for i, (guild_id, xp) in enumerate(data, start=1):
             guild = self.bot.get_guild(guild_id)
             if guild is None:
                 guild_name = guild_id
             else:
-                guild_name = guild.name
+                guild_name = f"**{guild.name}**"
 
-            level = util.get_level(xp)
-            total_xp += xp
-            rows.append(f"`#{i}` **{guild_name}** — Level **{level}**")
+            rows.append(f"`#{i}` {guild_name} — `{xp}` xp ({(xp/total_xp)*100:.1f}%)")
 
         content = discord.Embed()
         content.set_author(
-            name=f"Top servers by XP for {util.displayname(ctx.author, escape=False)}",
+            name=f"{util.displayname(ctx.author, escape=False)} — {time} top servers",
             icon_url=ctx.author.avatar_url,
         )
-        content.set_footer(text=f"Combined global level {util.get_level(total_xp)}")
+        content.set_footer(text=f"Total {len(rows)} servers")
         content.colour = ctx.author.color
         await util.send_as_pages(ctx, content, rows)
 
