@@ -524,7 +524,7 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def statsgraph(self, ctx, stat):
+    async def statsgraph(self, ctx, stat, hours: int = 24):
         stat = stat.lower()
         available = [
             "messages",
@@ -543,8 +543,8 @@ class Information(commands.Cog):
             f"""
             SELECT UNIX_TIMESTAMP(ts), DAY(ts), HOUR(ts), MINUTE(ts), {stat}
                 FROM stats
-                WHERE ts >= NOW() + INTERVAL -1 DAY
-                AND ts <  NOW() + INTERVAL  0 DAY
+                WHERE ts >= NOW() + INTERVAL -{hours} HOUR
+                AND ts <  NOW() + INTERVAL 0 DAY
             ORDER BY ts
             """
         )
@@ -556,7 +556,7 @@ class Information(commands.Cog):
         frame = []
         now = arrow.utcnow()
         first_data_ts = arrow.get(data[0][0])
-        start = now.shift(hours=-24)
+        start = now.shift(hours=-hours)
         if start < first_data_ts:
             start = first_data_ts
         for dt in arrow.Arrow.span_range("minute", start, now.shift(minutes=-1)):
