@@ -9,6 +9,7 @@ import aiohttp
 from discord.ext import commands
 from libraries import emoji_literals, plotter
 from modules import util, exceptions
+from numpy import nan
 
 
 class Information(commands.Cog):
@@ -561,7 +562,7 @@ class Information(commands.Cog):
             start = first_data_ts
         for dt in arrow.Arrow.span_range("minute", start, now.shift(minutes=-1)):
             dt = dt[0]
-            value = datadict.get(str(dt.timestamp), 0)
+            value = datadict.get(str(dt.timestamp), nan)
             frame.append(dt.datetime)
             patched_data.append(value)
 
