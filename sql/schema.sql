@@ -209,6 +209,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
     lastfm_username VARCHAR(64) DEFAULT NULL,
     sunsign VARCHAR(32) DEFAULT NULL,
     location_string VARCHAR(128) DEFAULT NULL,
+    timezone VARCHAR(32) DEFAULT NULL,
     PRIMARY KEY (user_id)
 );
 
