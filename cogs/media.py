@@ -188,11 +188,13 @@ class Media(commands.Cog):
         if not data.get("items"):
             return await ctx.send("No results found!")
 
-        items = []
-        for i, item in enumerate(data.get("items"), start=1):
-            items.append(f"`{i}.` https://youtube.com/watch?v={item['id']['videoId']}")
-
-        await util.paginate_list(ctx, items, use_locking=True, only_author=True)
+        await util.paginate_list(
+            ctx,
+            [f"https://youtube.com/watch?v={item['id']['videoId']}" for item in data.get("items")],
+            use_locking=True,
+            only_author=True,
+            index_entries=True,
+        )
 
     @flags.add_flag("urls", nargs="+")
     @flags.add_flag("-d", "--download", action="store_true")
@@ -508,21 +510,27 @@ class Media(commands.Cog):
     async def google(self, ctx, *, query):
         """Search from google."""
         results = await self.google_client.search(query, safesearch=False)
-        formatted_results = []
-        for i, result in enumerate(results, start=1):
-            formatted_results.append(f"`{i}.` **{result.title}**\n{result.url}")
 
-        await util.paginate_list(ctx, formatted_results)
+        await util.paginate_list(
+            ctx,
+            [f"**{result.title}**\n{result.url}" for result in results],
+            use_locking=True,
+            only_author=True,
+            index_entries=True,
+        )
 
     @commands.command()
     async def googleimages(self, ctx, *, query):
         """Search from google images."""
         results = await self.google_client.search(query, safesearch=False, image_search=True)
-        formatted_results = []
-        for result in results:
-            formatted_results.append(result.image_url)
 
-        await util.paginate_list(ctx, formatted_results, use_locking=True, only_author=True)
+        await util.paginate_list(
+            ctx,
+            [result.image_url for result in results],
+            use_locking=True,
+            only_author=True,
+            index_entries=False,
+        )
 
 
 def setup(bot):
