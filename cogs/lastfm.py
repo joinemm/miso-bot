@@ -51,10 +51,11 @@ class LastFm(commands.Cog):
         self.icon = "🎵"
         self.lastfm_red = "b90000"
         self.cover_base_urls = [
-            "https://lastfm.freetls.fastly.net/i/u/34s/{0}.png",
-            "https://lastfm.freetls.fastly.net/i/u/64s/{0}.png",
-            "https://lastfm.freetls.fastly.net/i/u/174s/{0}.png",
-            "https://lastfm.freetls.fastly.net/i/u/300x300/{0}.png",
+            "https://lastfm.freetls.fastly.net/i/u/34s/{0}",
+            "https://lastfm.freetls.fastly.net/i/u/64s/{0}",
+            "https://lastfm.freetls.fastly.net/i/u/174s/{0}",
+            "https://lastfm.freetls.fastly.net/i/u/300x300/{0}",
+            "https://lastfm.freetls.fastly.net/i/u/{0}",
         ]
         with open("html/fm_chart.min.html", "r", encoding="utf-8") as file:
             self.chart_html = file.read().replace("\n", "")
@@ -200,7 +201,7 @@ class LastFm(commands.Cog):
             content.timestamp = arrow.get(int(tracks[0]["date"]["uts"])).datetime
 
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} {state}",
+            name=f"{util.displayname(ctx.usertarget, escape=False)} {state}",
             icon_url=ctx.usertarget.avatar_url,
         )
 
@@ -246,7 +247,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique artists: {user_attr['total']}")
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} — {formatted_timeframe} top artists",
+            name=f"{util.displayname(ctx.usertarget, escape=False)} — {formatted_timeframe} top artists",
             icon_url=ctx.usertarget.avatar_url,
         )
 
@@ -295,7 +296,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique albums: {user_attr['total']}")
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} — {formatted_timeframe} top albums",
+            name=f"{util.displayname(ctx.usertarget, escape=False)} — {formatted_timeframe} top albums",
             icon_url=ctx.usertarget.avatar_url,
         )
 
@@ -346,7 +347,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique tracks: {user_attr['total']}")
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} — {formatted_timeframe} top tracks",
+            name=f"{util.displayname(ctx.usertarget, escape=False)} — {formatted_timeframe} top tracks",
             icon_url=ctx.usertarget.avatar_url,
         )
 
@@ -469,7 +470,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=artist["image_url"])
         content.colour = await self.cached_image_color(artist["image_url"])
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} — "
+            name=f"{util.displayname(ctx.usertarget, escape=False)} — "
             + (f"{humanized_period(period)} " if period != "overall" else "")
             + f"Top {datatype} by {artist['formatted_name']}",
             icon_url=ctx.usertarget.avatar_url,
@@ -481,6 +482,26 @@ class LastFm(commands.Cog):
         )
 
         await util.send_as_pages(ctx, content, rows)
+
+    @fm.command(name="cover")
+    async def cover(self, ctx):
+        """Ger the album cover of your currently playing song."""
+        data = await self.api_request(
+            {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
+        )
+        image_url = data["recenttracks"]["track"][0]["image"][-1]["#text"]
+        image_hash = image_url.split("/")[-1].split(".")[0]
+        big_image_url = self.cover_base_urls[4].format(image_hash)
+        artist_name = data["recenttracks"]["track"][0]["artist"]["#text"]
+        album_name = data["recenttracks"]["track"][0]["album"]["#text"]
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(big_image_url) as response:
+                buffer = io.BytesIO(await response.read())
+                await ctx.send(
+                    f"**{artist_name} — {album_name}**",
+                    file=discord.File(fp=buffer, filename=image_hash + ".jpg"),
+                )
 
     @fm.command(name="album")
     async def album(self, ctx, *, album):
@@ -534,7 +555,7 @@ class LastFm(commands.Cog):
         content.set_footer(text=f"Total album plays: {total_plays}")
         content.colour = await self.cached_image_color(album["image_url"])
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} — "
+            name=f"{util.displayname(ctx.usertarget, escape=False)} — "
             + (f"{humanized_period(period)} " if period != "overall" else "")
             + titlestring,
             icon_url=ctx.usertarget.avatar_url,
@@ -669,7 +690,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=artist["image_url"])
         content.colour = await self.cached_image_color(artist["image_url"])
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget)} — {artist['formatted_name']} "
+            name=f"{util.displayname(ctx.usertarget, escape=False)} — {artist['formatted_name']} "
             + (f"{humanized_period(period)} " if period != "overall" else "")
             + "Overview",
             icon_url=ctx.usertarget.avatar_url,
@@ -1630,7 +1651,7 @@ class LastFm(commands.Cog):
 
         content = discord.Embed(color=discord.Color.gold())
         content.set_author(
-            name=f"👑 {util.displayname(user)} artist crowns",
+            name=f"👑 {util.displayname(user, escape=False)} artist crowns",
             icon_url=user.avatar_url,
         )
         content.set_footer(text=f"Total {len(crownartists)} crowns")
@@ -1907,7 +1928,7 @@ class LastFm(commands.Cog):
 
         content = discord.Embed(color=int(self.lastfm_red, 16))
         content.set_author(
-            name=f"{ctx.username} | LAST.{timeframe.upper()}",
+            name=f"{util.displayname(ctx.usertarget, escape=False)} | LAST.{timeframe.upper()}",
             icon_url=ctx.usertarget.avatar_url,
         )
         content.description = "\n".join(rows)
@@ -1931,7 +1952,7 @@ class LastFm(commands.Cog):
         if cached:
             lifetime = arrow.utcnow().timestamp - cached[1].timestamp()
             if (lifetime) < image_life:
-                return self.cover_base_urls[-1].format(cached[0])
+                return self.cover_base_urls[3].format(cached[0])
 
         image = await scrape_artist_image(artist)
         if image is None:
@@ -1954,7 +1975,7 @@ class LastFm(commands.Cog):
                 image_hash,
                 arrow.now().datetime,
             )
-            return self.cover_base_urls[-1].format(image_hash)
+            return self.cover_base_urls[3].format(image_hash)
 
     async def api_request(self, params, ignore_errors=False):
         """Get json data from the lastfm api."""
