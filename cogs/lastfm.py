@@ -1647,6 +1647,12 @@ class LastFm(commands.Cog):
         if data is None:
             raise exceptions.Warning(f"`{url}` is not a valid Last.fm profile.")
 
+        exists = await self.bot.db.execute(
+            "SELECT * FROM lastfm_cheater WHERE lastfm_username = %s", lastfm_username.lower()
+        )
+        if exists:
+            raise exceptions.Info("This Last.fm account is already flagged")
+
         content = discord.Embed(title="New Last.fm user report")
         content.add_field(name="Profile", value=url)
         content.add_field(name="Reason", value=reason)
@@ -1679,7 +1685,7 @@ class LastFm(commands.Cog):
                     value=", ".join(connected_accounts),
                     inline=False,
                 )
-            content.set_footer(text=f">fmban {lastfm_username}")
+            content.set_footer(text=f">fmflag {lastfm_username} [reason]")
             content.description = ""
 
             await self.send_report(ctx, content, lastfm_username, reason)
@@ -1703,14 +1709,9 @@ class LastFm(commands.Cog):
 
         async def confirm_ban():
             await self.bot.db.execute(
-                """
-                INSERT INTO lastfm_cheater (lastfm_username, flagged_on, reason)
-                    VALUES(%s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    reason = VALUES(reason)
-                """,
+                "INSERT INTO lastfm_cheater VALUES(%s, %s, %s)",
                 lastfm_username.lower(),
-                arrow.now().datetime,
+                arrow.utcnow().datetime,
                 reason,
             )
             content.description = "Account flagged"
