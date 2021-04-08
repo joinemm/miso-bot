@@ -157,7 +157,7 @@ class Owner(commands.Cog):
             pages = []
             this_page = "```py\n"
             for row in data:
-                if len(this_page + str(row)) < 1993:
+                if len(this_page + "\n" + str(row)) < 1993:
                     this_page += "\n" + str(row)
                 else:
                     this_page += "\n```"
@@ -194,7 +194,7 @@ class Owner(commands.Cog):
         )
         await util.send_success(ctx, f"Flagged LastFM profile `{lastfm_username}` as a cheater.")
 
-    @commands.command()
+    @commands.command(aliases=["fmunban"])
     async def fmunflag(self, ctx, lastfm_username):
         """Remove cheater flag from an LastFM account."""
         await self.bot.db.execute(
