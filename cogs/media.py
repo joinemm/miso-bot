@@ -519,7 +519,7 @@ class Media(commands.Cog):
             index_entries=True,
         )
 
-    @commands.command()
+    @commands.command(aliases=["img"])
     async def googleimages(self, ctx, *, query):
         """Search from google images."""
         results = await self.google_client.search(query, safesearch=False, image_search=True)
