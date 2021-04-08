@@ -1,4 +1,5 @@
 import discord
+import asyncio
 import arrow
 from discord.ext import commands
 from modules import queries, exceptions, util, log
@@ -100,7 +101,7 @@ class CustomCommands(commands.Cog, name="Commands"):
                     "custom",
                 )
 
-    @commands.group()
+    @commands.group(aliases=["cmd"])
     @commands.guild_only()
     async def command(self, ctx):
         """Server specific custom commmands."""
@@ -195,9 +196,10 @@ class CustomCommands(commands.Cog, name="Commands"):
             content = discord.Embed(title=f"{ctx.guild.name} custom commands")
             await util.send_as_pages(ctx, content, rows)
         else:
-            await ctx.send("No custom commands added on this server yet")
+            raise exceptions.Info("No custom commands have been added on this server yet")
 
     @command.command(name="restrict")
+    @commands.has_permissions(manage_guild=True)
     async def command_restrict(self, ctx, value: bool):
         """Restrict command management to only people with manage_server permission."""
         await queries.update_setting(ctx, "guild_settings", "restrict_custom_commands", value)
@@ -209,6 +211,46 @@ class CustomCommands(commands.Cog, name="Commands"):
             await util.send_success(
                 ctx, "Adding custom commands is no longer restricted to server managers."
             )
+
+    @command.command(name="clear")
+    @commands.has_permissions(manage_guild=True)
+    async def command_clear(self, ctx):
+        """Delete all the custom commands on this server."""
+        count = (
+            await self.bot.db.execute(
+                "SELECT COUNT(*) FROM custom_command WHERE guild_id = %s",
+                ctx.guild.id,
+                one_value=True,
+            )
+            or 0
+        )
+        if count < 1:
+            raise exceptions.Warning("This server has no custom commands yet!")
+
+        content = discord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
+        content.description = f"This action will delete all **{count}** custom commands on this server and is **irreversible**."
+        msg = await ctx.send(embed=content)
+
+        async def confirm():
+            await self.bot.db.execute(
+                "DELETE FROM custom_command WHERE guild_id = %s",
+                ctx.guild.id,
+            )
+            content.title = f":white_check_mark: Cleared commands in {ctx.guild}"
+            content.description = ""
+            content.color = int("77b255", 16)
+            await msg.edit(embed=content)
+
+        async def cancel():
+            content.title = ":x: Action cancelled"
+            content.description = ""
+            content.color = int("dd2e44", 16)
+            await msg.edit(embed=content)
+
+        functions = {"✅": confirm, "❌": cancel}
+        asyncio.ensure_future(
+            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+        )
 
 
 def setup(bot):
