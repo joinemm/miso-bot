@@ -304,12 +304,14 @@ class Typings(commands.Cog):
             await self.bot.db.execute("DELETE FROM typing_stats WHERE user_id = %s", ctx.author.id)
             await self.bot.db.execute("DELETE FROM typing_race WHERE user_id = %s", ctx.author.id)
             content.title = ":white_check_mark: Cleared your data"
+            content.color = int("77b255", 16)
             content.description = ""
             await msg.edit(embed=content)
 
         async def cancel():
             content.title = ":x: Action cancelled"
             content.description = ""
+            content.color = int("dd2e44", 16)
             await msg.edit(embed=content)
 
         functions = {"✅": confirm, "❌": cancel}
