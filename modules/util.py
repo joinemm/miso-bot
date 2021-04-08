@@ -266,15 +266,21 @@ def create_pages(content, rows, maxrows=15, maxpages=10):
     return pages
 
 
-async def paginate_list(ctx, items, use_locking=False, only_author=False):
+async def paginate_list(ctx, items, use_locking=False, only_author=False, index_entries=True):
     pages = TwoWayIterator(items)
-    msg = await ctx.send(pages.current())
+    if index_entries:
+        msg = await ctx.send(f"`{pages.index + 1}.` {pages.current()}")
+    else:
+        msg = await ctx.send(pages.current())
 
     async def next_result():
         new_content = pages.next()
         if new_content is None:
             return
-        await msg.edit(content=new_content, embed=None)
+        if index_entries:
+            await msg.edit(content=f"`{pages.index + 1}.` {new_content}", embed=None)
+        else:
+            await msg.edit(content=new_content, embed=None)
 
     async def previous_result():
         new_content = pages.previous()
@@ -283,6 +289,7 @@ async def paginate_list(ctx, items, use_locking=False, only_author=False):
         await msg.edit(content=new_content, embed=None)
 
     async def done():
+        await msg.edit(content=f"{pages.current()}")
         return True
 
     functions = {"⬅": previous_result, "➡": next_result}
@@ -619,22 +626,6 @@ async def color_from_image_url(url, fallback="E74C3C", return_color_object=False
         return fallback
 
 
-def bool_to_int(value: bool):
-    """Turn boolean into 1 or 0."""
-    if value is True:
-        return 1
-    else:
-        return 0
-
-
-def int_to_bool(value):
-    """Turn integer into boolean."""
-    if value is None or value == 0:
-        return False
-    else:
-        return True
-
-
 def find_unicode_emojis(text):
     """Finds and returns all unicode emojis from a string"""
     emoji_list = set()
@@ -732,16 +723,6 @@ def create_goodbye_message(user, guild, messageformat):
         }
     )
     return messageformat.format_map(substitutes)
-
-
-def get_full_class_name(obj, limit=2):
-    """Gets full class name of any python object. Used for error names"""
-    module = obj.__class__.__module__
-    if module is None or module == str.__class__.__module__:
-        name = obj.__class__.__name__
-    else:
-        name = module + "." + obj.__class__.__name__
-    return ".".join(name.split(".")[-limit:])
 
 
 def activities_string(activities, markdown=True, show_emoji=True):
