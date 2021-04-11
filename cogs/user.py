@@ -907,7 +907,9 @@ class User(commands.Cog):
             else:
                 partner = self.bot.get_user(data[0])
             marriage_date = data[2]
-            length = humanize.naturaldelta(arrow.utcnow().timestamp - marriage_date.timestamp())
+            length = humanize.naturaldelta(
+                arrow.utcnow().timestamp - marriage_date.timestamp(), months=False
+            )
             await ctx.send(
                 embed=discord.Embed(
                     color=int("f4abba", 16),
