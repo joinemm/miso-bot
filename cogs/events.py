@@ -724,39 +724,39 @@ class Events(commands.Cog):
                 if len(message.attachments) > 0:
                     content.set_image(url=message.attachments[0].url)
 
-                try:
-                    board_message = await board_channel.send(embed=content)
-                    await self.bot.db.execute(
-                        """
-                        INSERT INTO starboard_message (original_message_id, starboard_message_id)
-                            VALUES(%s, %s)
-                        ON DUPLICATE KEY UPDATE
-                            starboard_message_id = VALUES(starboard_message_id)
-                        """,
-                        payload.message_id,
-                        board_message.id,
+                board_message = await board_channel.send(embed=content)
+                await self.bot.db.execute(
+                    """
+                    INSERT INTO starboard_message (original_message_id, starboard_message_id)
+                        VALUES(%s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        starboard_message_id = VALUES(starboard_message_id)
+                    """,
+                    payload.message_id,
+                    board_message.id,
+                )
+                log_channel = self.bot.get_channel(log_channel_id)
+                if log_channel is not None:
+                    content = discord.Embed(
+                        color=int("ffac33", 16), title="Message added to starboard"
                     )
-                    log_channel = self.bot.get_channel(log_channel_id)
-                    if log_channel is not None:
-                        content = discord.Embed(
-                            color=int("ffac33", 16), title="Message added to starboard"
-                        )
-                        content.add_field(
-                            name="Original message", value=f"[{message.id}]({message.jump_url})"
-                        )
-                        content.add_field(
-                            name="Board message",
-                            value=f"[{board_message.id}]({board_message.jump_url})",
-                        )
-                        content.add_field(
-                            name="Reacted users",
-                            value="\n".join(str(x) for x in reacted_users),
-                            inline=False,
-                        )
-                        content.add_field(name="Most recent reaction by", value=str(user))
+                    content.add_field(
+                        name="Original message", value=f"[{message.id}]({message.jump_url})"
+                    )
+                    content.add_field(
+                        name="Board message",
+                        value=f"[{board_message.id}]({board_message.jump_url})",
+                    )
+                    content.add_field(
+                        name="Reacted users",
+                        value="\n".join(str(x) for x in reacted_users)[:1023],
+                        inline=False,
+                    )
+                    content.add_field(name="Most recent reaction by", value=str(user))
+                    try:
                         await log_channel.send(embed=content)
-                except discord.errors.Forbidden:
-                    pass
+                    except Exception as e:
+                        await log_channel.send(f"`error in starboard log: {e}`")
 
             else:
                 # message is on board, update star count
