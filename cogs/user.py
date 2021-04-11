@@ -812,7 +812,7 @@ class User(commands.Cog):
                 else:
                     partner = self.bot.get_user(pair[0])
                 return await ctx.send(
-                    f":confused: You are already married to **{partner}**! You must divorce before marrying someone else..."
+                    f":confused: You are already married to **{util.displayname(partner)}**! You must divorce before marrying someone else..."
                 )
             elif user.id in el:
                 return await ctx.send(
@@ -830,7 +830,7 @@ class User(commands.Cog):
             await ctx.send(
                 embed=discord.Embed(
                     color=int("dd2e44", 16),
-                    description=f":revolving_hearts: **{user}** and **{ctx.author}** are now married :wedding:",
+                    description=f":revolving_hearts: **{util.displayname(user)}** and **{util.displayname(ctx.author)}** are now married :wedding:",
                 )
             )
             new_proposals = set()
@@ -843,7 +843,7 @@ class User(commands.Cog):
             await ctx.send(
                 embed=discord.Embed(
                     color=int("f4abba", 16),
-                    description=f":heartpulse: *You propose to **{user}***",
+                    description=f":heartpulse: *You propose to **{util.displayname(user)}***",
                 )
             )
 
@@ -865,7 +865,8 @@ class User(commands.Cog):
             return await ctx.send(":thinking: You are not married!")
 
         content = discord.Embed(
-            description=f":broken_heart: Divorce **{partner}**?", color=int("dd2e44", 16)
+            description=f":broken_heart: Divorce **{util.displayname(partner)}**?",
+            color=int("dd2e44", 16),
         )
         msg = await ctx.send(embed=content)
 
@@ -878,7 +879,10 @@ class User(commands.Cog):
                 ctx.author.id,
             )
             await ctx.send(
-                f":pensive: You and {partner.mention if partner is not None else partner} are now divorced...",
+                embed=discord.Embed(
+                    color=int("ffcc4d", 16),
+                    description=f":pensive: You and **{util.displayname(partner)}** are now divorced...",
+                )
             )
 
         async def cancel():
@@ -913,7 +917,7 @@ class User(commands.Cog):
             await ctx.send(
                 embed=discord.Embed(
                     color=int("f4abba", 16),
-                    description=f":wedding: You have been married to **{partner}** for **{length}**",
+                    description=f":wedding: You have been married to **{util.displayname(partner)}** for **{length}**",
                 )
             )
         else:
