@@ -808,9 +808,9 @@ class User(commands.Cog):
             if ctx.author.id in el:
                 pair = list(el)
                 if ctx.author.id == pair[0]:
-                    partner = self.bot.get_user(pair[1])
+                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(pair[1])
                 else:
-                    partner = self.bot.get_user(pair[0])
+                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(pair[0])
                 return await ctx.send(
                     f":confused: You are already married to **{util.displayname(partner)}**! You must divorce before marrying someone else..."
                 )
@@ -857,9 +857,9 @@ class User(commands.Cog):
                 to_remove.append(el)
                 pair = list(el)
                 if ctx.author.id == pair[0]:
-                    partner = self.bot.get_user(pair[1])
+                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(pair[1])
                 else:
-                    partner = self.bot.get_user(pair[0])
+                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(pair[0])
 
         if partner == "":
             return await ctx.send(":thinking: You are not married!")
@@ -907,9 +907,9 @@ class User(commands.Cog):
         )
         if data:
             if data[0] == ctx.author.id:
-                partner = self.bot.get_user(data[1])
+                partner = ctx.guild.get_member(data[1]) or self.bot.get_user(data[1])
             else:
-                partner = self.bot.get_user(data[0])
+                partner = ctx.guild.get_member(data[0]) or self.bot.get_user(data[0])
             marriage_date = data[2]
             length = humanize.naturaldelta(
                 arrow.utcnow().timestamp - marriage_date.timestamp(), months=False
