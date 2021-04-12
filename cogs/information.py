@@ -96,7 +96,7 @@ class Information(commands.Cog):
                 content.add_field(inline=True, name=tier_name, value="\n".join(users))
 
         if former:
-            content.add_field(inline=False, name="Former donators", value="\n".join(former))
+            content.add_field(inline=False, name="Former donators", value=", ".join(former))
 
         await ctx.send(embed=content)
 
