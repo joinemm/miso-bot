@@ -25,6 +25,9 @@ class PatronCheckFailure(commands.CheckFailure):
 
 
 def displayname(member, escape=True):
+    if member is None:
+        return None
+
     name = member.name
     if isinstance(member, discord.Member):
         name = member.nick or member.name
