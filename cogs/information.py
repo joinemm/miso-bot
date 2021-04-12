@@ -58,59 +58,45 @@ class Information(commands.Cog):
         """List of people who have donated."""
         patrons = await self.bot.db.execute(
             """
-            SELECT user_id, platform, currently_active, emoji
+            SELECT user_id, currently_active, emoji, donation_tier, amount
             FROM donator LEFT OUTER JOIN donation_tier ON donation_tier=id
             """
         )
-        donations = await self.bot.db.execute("SELECT user_id, amount FROM donation")
         content = discord.Embed(
-            title="List of donators ❤",
+            title=":heart: Miso Bot supporters",
             color=int("dd2e44", 16),
-            description="\n".join(
+            description=" | ".join(
                 [
-                    "https://github.com/sponsors/joinemm",
-                    "https://patreon.com/joinemm",
-                    "https://ko-fi.com/joinemm",
-                    "https://paypal.me/joinemm",
+                    "[github](https://github.com/sponsors/joinemm)",
+                    "[patreon](https://patreon.com/joinemm)",
+                    "[kofi](https://ko-fi.com/joinemm)",
+                    "[paypal](https://paypal.me/joinemm)",
                 ]
             ),
         )
-        current = {"patreon": [], "kofi": [], "github": [], "paypal": []}
+        current = {}
         former = []
-        for user_id, platform, is_active, emoji in sorted(
-            patrons, key=lambda x: x[2], reverse=True
+        for user_id, is_active, emoji, tier, amount in sorted(
+            patrons, key=lambda x: x[3], reverse=False
         ):
             user = self.bot.get_user(user_id)
             if user is None:
                 continue
 
             if is_active:
-                current[platform].append(f"**{user}** {emoji}")
+                try:
+                    current[f"{emoji} ${int(amount)} Tier"].append(f"{user}")
+                except KeyError:
+                    current[f"{emoji} ${int(amount)} Tier"] = [f"{user}"]
             else:
                 former.append(f"{user}")
 
-        single = []
-        for user_id, amount in sorted(donations, key=lambda x: x[1], reverse=True):
-            user = self.bot.get_user(user_id)
-            if user is None:
-                continue
-
-            single.append(f"**{user}** - ${int(amount)}")
-
-        if current["patreon"]:
-            content.add_field(inline=True, name="Patreon", value="\n".join(current["patreon"]))
-
-        if current["kofi"]:
-            content.add_field(inline=True, name="Ko-fi", value="\n".join(current["kofi"]))
-
-        if current["github"]:
-            content.add_field(inline=True, name="Github", value="\n".join(current["github"]))
-
-        if single:
-            content.add_field(inline=True, name="One time donations", value="\n".join(single))
+        if current:
+            for tier_name, users in current.items():
+                content.add_field(inline=True, name=tier_name, value="\n".join(users))
 
         if former:
-            content.add_field(inline=True, name="Former donators", value="\n".join(former))
+            content.add_field(inline=False, name="Former donators", value="\n".join(former))
 
         await ctx.send(embed=content)
 
