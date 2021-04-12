@@ -774,19 +774,16 @@ class LastFm(commands.Cog):
             "user": username,
             "method": "user.gettopalbums",
             "period": "overall",
-            "limit": 1000,
+            "limit": 500,  # 1000 doesnt work due to lastfm bug
         }
         data = await self.api_request(dict(params, **{"page": 1}))
         topalbums = data["topalbums"]["album"]
-        # total_pages = int(data["topalbums"]["@attr"]["totalPages"])
-        # if total_pages > 1:
-        #     tasks = []
-        #     for i in range(2, total_pages + 1):
-        #         tasks.append(self.api_request(dict(params, **{"page": i})))
+        total_pages = int(data["topalbums"]["@attr"]["totalPages"])
 
-        #     data = await asyncio.gather(*tasks)
-        #     for page in data:
-        #         topalbums += page["topalbums"]["album"]
+        # get additional page if exists for a total of 1000
+        if total_pages > 1:
+            data = await self.api_request(dict(params, **{"page": 2}))
+            topalbums += data["topalbums"]["album"]
 
         return topalbums
 
