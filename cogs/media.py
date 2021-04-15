@@ -1,18 +1,20 @@
-import discord
 import asyncio
 import json
+import os
 import random
 import re
-import tweepy
-import os
+
 import aiohttp
-import regex
 import arrow
 import async_cse
-from discord.ext import commands, flags
-from tweepy import OAuthHandler
+import discord
+import regex
+import tweepy
 from bs4 import BeautifulSoup
-from modules import util, exceptions
+from discord.ext import commands, flags
+from modules import exceptions, util
+from random_user_agent.user_agent import UserAgent
+from tweepy import OAuthHandler
 
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")
@@ -60,6 +62,7 @@ class Media(commands.Cog):
             "turkey": "tr",
             "tr": "tr",
         }
+        self.user_agents = UserAgent()
 
     @commands.group(aliases=["league"], case_insensitive=True)
     async def opgg(self, ctx):
@@ -210,7 +213,9 @@ class Media(commands.Cog):
                     url = f"https://www.instagram.com/p/{url.strip('/').split('/')[0]}"
 
                 headers = {
-                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
+                    "User-Agent": self.user_agents.get_random_user_agent(),
+                    "X-IG-App-ID": "936619743392459",
+                    "Cookie": "ig_cb=2; ig_did=CD9C9CD6-A65D-4CA0-A810-DA55EF09C143; csrftoken=du0pHNPkxq5hpQTiFhWVefvZ01aneHYa; mid=X67owAAEAAHD89ozXg9Fx48IPef0; ds_user_id=5951951432; sessionid=5951951432%3A0eHKUlAtGE83k1%3A13; fbm_124024574287414=base_domain=.instagram.com; shbid=10480; shbts=1618475928.6377892; rur=RVA",
                 }
                 post_id = url.split("/")[-1]
                 newurl = "https://www.instagram.com/graphql/query/"
@@ -228,7 +233,7 @@ class Media(commands.Cog):
                         data = await response.json()
                     except aiohttp.ContentTypeError:
                         raise exceptions.Error(
-                            "This proxy IP address has been banned by Instagram. Try again later."
+                            "Instagram is banning me from accessing their page. Please try again later."
                         )
                     data = data["data"]["shortcode_media"]
 
