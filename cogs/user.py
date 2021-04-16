@@ -81,7 +81,7 @@ class User(commands.Cog):
         content.set_image(url=user.avatar_url_as(static_format="png"))
         stats = await util.image_info_from_url(user.avatar_url)
         color = await util.color_from_image_url(str(user.avatar_url_as(size=64, format="png")))
-        content.colour = await util.get_color(ctx, color)
+        content.colour = int(color, 16)
         if stats is not None:
             content.set_footer(
                 text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
@@ -777,6 +777,7 @@ class User(commands.Cog):
         if color.lower() == "default":
             color_value = None
         else:
+            color = "#" + color.strip("#")
             color_hex = await util.get_color(ctx, color)
             if color_hex is None:
                 raise exceptions.Warning(f"Invalid color {color}")

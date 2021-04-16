@@ -436,7 +436,7 @@ class Miscellaneous(commands.Cog):
                     colors.append(url_color)
                     continue
 
-            color = await util.get_color(ctx, source)
+            color = await util.get_color(ctx, "#" + source.strip("#"))
             if color is not None:
                 colors.append(str(color))
                 continue
@@ -446,7 +446,7 @@ class Miscellaneous(commands.Cog):
         if not colors:
             return await ctx.send("No valid colors to show")
 
-        content = discord.Embed(colour=await util.get_color(ctx, colors[0]))
+        content = discord.Embed(colour=await util.get_color(ctx, "#" + colors[0].strip("#")))
 
         if len(colors) > 50:
             await ctx.send("Maximum amount of colors is 50, ignoring rest...")
@@ -459,7 +459,7 @@ class Miscellaneous(commands.Cog):
                 colordata = (await response.json()).get("colors")
 
         if len(colors) == 1:
-            discord_color = await util.get_color(ctx, colors[0])
+            discord_color = await util.get_color(ctx, "#" + colors[0].strip("#"))
             hexvalue = colordata[0]["requestedHex"]
             rgbvalue = discord_color.to_rgb()
             name = colordata[0]["name"]
