@@ -490,7 +490,7 @@ class Information(commands.Cog):
         content.set_image(url=guild.icon_url_as(static_format="png"))
         stats = await util.image_info_from_url(guild.icon_url)
         color = await util.color_from_image_url(str(guild.icon_url_as(size=128, format="png")))
-        content.colour = await util.get_color(ctx, color)
+        content.colour = int(color, 16)
         if stats is not None:
             content.set_footer(
                 text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
@@ -512,6 +512,7 @@ class Information(commands.Cog):
 
     @commands.command()
     async def statsgraph(self, ctx, stat, hours: int = 24):
+        """Show various stat graphs."""
         stat = stat.lower()
         available = [
             "messages",
