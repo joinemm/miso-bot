@@ -25,7 +25,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         if hasattr(c, "commands"):
             for subc in c.commands:
                 this_cmd += f"\n{' '*depth}└ **{subc.name}**" + (
-                    f"\n{' '*(depth+1)}{subc.short_doc}" if subc.short_doc is not None else ""
+                    f"\n{' '*(depth+1)}{subc.short_doc}" if subc.short_doc is not None else "-"
                 )
                 this_cmd += self.get_subcommands(subc, depth + 1)
 
@@ -64,7 +64,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         for command in filtered:
             embed.add_field(
                 name=f"{self.get_command_signature(command)}",
-                value=(f"{command.short_doc}\n" if command.short_doc is not None else "")
+                value=(f"{command.short_doc}\n" if command.short_doc is not None else "-")
                 + self.get_subcommands(command),
                 inline=False,
             )

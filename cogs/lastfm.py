@@ -155,7 +155,7 @@ class LastFm(commands.Cog):
 
     @fm.command(aliases=["np", "no"])
     async def nowplaying(self, ctx):
-        """Show your currently playing song."""
+        """Your currently playing song."""
         data = await self.api_request(
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
         )
@@ -485,7 +485,7 @@ class LastFm(commands.Cog):
 
     @fm.command(name="cover")
     async def cover(self, ctx):
-        """Ger the album cover of your currently playing song."""
+        """Ger the album cover of your current song."""
         data = await self.api_request(
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
         )
@@ -505,7 +505,7 @@ class LastFm(commands.Cog):
 
     @fm.command(name="album")
     async def album(self, ctx, *, album):
-        """Get your top tracks from a given album."""
+        """Get your top tracks from an album."""
         period = "overall"
         if album is None:
             return await util.send_command_help(ctx)
@@ -790,7 +790,7 @@ class LastFm(commands.Cog):
     @fm.command(aliases=["colourchart"])
     async def colorchart(self, ctx, colour, size="3x3"):
         """
-        Color based album chart.
+        Collage based on colors.
 
         Usage:
             >fm colorchart #<hex color> [NxN]
@@ -961,10 +961,10 @@ class LastFm(commands.Cog):
         if warn is not None:
             await warn.delete()
 
-    @fm.command()
+    @fm.command(aliases=["collage"])
     async def chart(self, ctx, *args):
         """
-        Visual chart of your top albums or artists.
+        Collage of your top albums or artists.
 
         Usage:
             >fm chart [album | artist] [timeframe] [width]x[height] [notitle]
@@ -1081,7 +1081,7 @@ class LastFm(commands.Cog):
 
     @server.command(name="nowplaying", aliases=["np"])
     async def server_nowplaying(self, ctx):
-        """What people on this server are listening to."""
+        """What this server is listening to."""
         listeners = []
         tasks = []
         for user_id, lastfm_username in await self.server_lastfm_usernames(ctx):
@@ -1131,7 +1131,7 @@ class LastFm(commands.Cog):
 
     @server.command(name="recent", aliases=["re"])
     async def server_recent(self, ctx):
-        """What people on this server have recently listened."""
+        """What this server has recently listened."""
         listeners = []
         tasks = []
         for user_id, lastfm_username in await self.server_lastfm_usernames(ctx):
@@ -1184,7 +1184,7 @@ class LastFm(commands.Cog):
 
     @server.command(name="topartists", aliases=["ta"])
     async def server_topartists(self, ctx):
-        """Combined top artists of this server's members."""
+        """Combined top artists of server members."""
         artist_map = {}
         tasks = []
         total_users = 0
@@ -1234,7 +1234,7 @@ class LastFm(commands.Cog):
 
     @server.command(name="topalbums", aliases=["talb"])
     async def server_topalbums(self, ctx):
-        """Combined top albums of this server's members."""
+        """Combined top albums of server members."""
         album_map = {}
         tasks = []
         total_users = 0
@@ -1284,7 +1284,7 @@ class LastFm(commands.Cog):
 
     @server.command(name="toptracks", aliases=["tt"])
     async def server_toptracks(self, ctx):
-        """Combined top tracks of this server's members."""
+        """Combined top tracks of server members."""
         track_map = {}
         tasks = []
         total_users = 0
@@ -1654,7 +1654,7 @@ class LastFm(commands.Cog):
         content.set_footer(text=f"Total {len(crownartists)} crowns")
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.command()
+    @commands.command(hidden=True)
     async def report(self, ctx, lastfm_username, *, reason):
         """Report lastfm account."""
         lastfm_username = lastfm_username.strip("/").split("/")[-1].lower()
