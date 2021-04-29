@@ -206,7 +206,7 @@ class Media(commands.Cog):
         """Get all the images from one or more instagram posts."""
         async with aiohttp.ClientSession() as session:
             for url in options["urls"]:
-                result = regex.findall("/p/(.*?)(/|\\Z)", url)
+                result = regex.findall("/(p|reel)/(.*?)(/|\\Z)", url)
                 if result:
                     url = f"https://www.instagram.com/p/{result[0][0]}"
                 else:
@@ -233,7 +233,7 @@ class Media(commands.Cog):
                         data = await response.json()
                     except aiohttp.ContentTypeError:
                         raise exceptions.Error(
-                            "Instagram is banning me from accessing their page. Please try again later."
+                            "Instagram has blocked me from accessing their content. Please try again later."
                         )
                     data = data["data"]["shortcode_media"]
 
