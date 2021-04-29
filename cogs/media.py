@@ -208,7 +208,7 @@ class Media(commands.Cog):
             for url in options["urls"]:
                 result = regex.findall("/(p|reel)/(.*?)(/|\\Z)", url)
                 if result:
-                    url = f"https://www.instagram.com/p/{result[0][0]}"
+                    url = f"https://www.instagram.com/p/{result[0][1]}"
                 else:
                     url = f"https://www.instagram.com/p/{url.strip('/').split('/')[0]}"
 
