@@ -25,6 +25,15 @@ AUDDIO_TOKEN = os.environ.get("AUDDIO_TOKEN")
 MISSING_IMAGE_HASH = "2a96cbd8b46e442fc41c2b86b821562f"
 
 
+def is_small_server():
+    async def predicate(ctx):
+        if ctx.guild.member_count > 1000:
+            raise exceptions.ServerTooBig(ctx.guild.member_count)
+        return True
+
+    return commands.check(predicate)
+
+
 class AlbumColorNode(object):
     def __init__(self, rgb, image_url):
         self.rgb = rgb
@@ -1074,6 +1083,7 @@ class LastFm(commands.Cog):
 
     @fm.group(aliases=["s", "guild"])
     @commands.guild_only()
+    @is_small_server()
     @commands.cooldown(2, 60, type=commands.BucketType.user)
     async def server(self, ctx):
         """Server wide statistics."""
@@ -1367,6 +1377,7 @@ class LastFm(commands.Cog):
 
     @commands.command(aliases=["wk", "whomstknows"])
     @commands.guild_only()
+    @is_small_server()
     @commands.cooldown(2, 60, type=commands.BucketType.user)
     async def whoknows(self, ctx, *, artistname=None):
         """
@@ -1465,6 +1476,7 @@ class LastFm(commands.Cog):
 
     @commands.command(aliases=["wkt", "whomstknowstrack"])
     @commands.guild_only()
+    @is_small_server()
     @commands.cooldown(2, 60, type=commands.BucketType.user)
     async def whoknowstrack(self, ctx, *, track=None):
         """
@@ -1543,6 +1555,7 @@ class LastFm(commands.Cog):
 
     @commands.command(aliases=["wka", "whomstknowsalbum"])
     @commands.guild_only()
+    @is_small_server()
     @commands.cooldown(2, 60, type=commands.BucketType.user)
     async def whoknowsalbum(self, ctx, *, album):
         """

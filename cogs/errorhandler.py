@@ -139,8 +139,15 @@ class ErrorHander(commands.Cog):
                 "Support me on patreon to use this command! <https://patreon.com/joinemm>",
             )
 
-        elif isinstance(error, (commands.NotOwner, commands.CheckFailure)):
-            await self.send(ctx, "error", "Sorry, you are not authorized to use this command!")
+        elif isinstance(error, exceptions.ServerTooBig):
+            await self.send(
+                ctx,
+                "warning",
+                "This command cannot be used in big servers!",
+            )
+
+        elif isinstance(error, (commands.NotOwner)):
+            await self.send(ctx, "error", "You cannot use this command.")
 
         elif isinstance(error, (commands.BadArgument, flags._parser.ArgumentParsingError)):
             await self.send(ctx, "warning", str(error), help_footer=True)
@@ -160,7 +167,7 @@ class ErrorHander(commands.Cog):
             elif error.error_code == 17:
                 message = "Unable to get listening information. Please check you LastFM privacy settings."
             elif error.error_code == 29:
-                message = "LastFM rate limit exceeded. Please try again in 60 seconds."
+                message = "LastFM rate limit exceeded. Please try again later."
             else:
                 message = error.display()
 

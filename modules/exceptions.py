@@ -36,6 +36,12 @@ class RendererError(commands.CommandError):
     pass
 
 
+class ServerTooBig(commands.CheckFailure):
+    def __init__(self, member_count):
+        super().__init__()
+        self.member_count = member_count
+
+
 class Blacklist(commands.CommandError):
     pass
 
