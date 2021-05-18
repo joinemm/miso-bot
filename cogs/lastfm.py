@@ -191,7 +191,7 @@ class LastFm(commands.Cog):
                 for tag in trackdata["toptags"]["tag"]:
                     tags.append(tag["name"])
                 content.set_footer(text=", ".join(tags))
-            except KeyError:
+            except (KeyError, TypeError):
                 pass
 
         # play state
