@@ -69,8 +69,8 @@ CREATE TABLE IF NOT EXISTS rolepicker_role (
 
 CREATE TABLE IF NOT EXISTS starboard_message (
     original_message_id BIGINT,
-    starboard_message_id BIGINT,
-    PRIMARY KEY (original_message_id, starboard_message_id)
+    starboard_message_id BIGINT UNIQUE,
+    PRIMARY KEY (original_message_id)
 );
 
 CREATE TABLE IF NOT EXISTS fishy (
