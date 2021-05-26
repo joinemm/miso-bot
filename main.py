@@ -83,7 +83,6 @@ bot = MisoBot(
 
 maintainance_extensions = [
     "errorhandler",
-    "migratedb",
     "owner",
 ]
 
