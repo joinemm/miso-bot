@@ -81,6 +81,9 @@ class Media(commands.Cog):
         ggsoup = GGSoup()
         await ggsoup.create(region, summoner_name)
 
+        if ggsoup.soup.find("div", {"class": "SummonerNotFoundLayout"}):
+            raise exceptions.Warning("Summoner not found!")
+
         content = discord.Embed()
         content.set_author(
             name=f"{ggsoup.text('span', 'Name')} [{region.upper()}]",
@@ -148,6 +151,10 @@ class Media(commands.Cog):
 
         ggsoup = GGSoup()
         await ggsoup.create(region, summoner_name, sub_url="spectator/")
+
+        error = ggsoup.soup.find("div", {"class": "SpectatorError"})
+        if error:
+            raise exceptions.Warning(error.find("h2").text)
 
         blue_team = ggsoup.soup.find("table", {"class": "Team-100"})
         red_team = ggsoup.soup.find("table", {"class": "Team-200"})
@@ -564,9 +571,11 @@ class GGSoup:
     def text(self, obj, classname, source=None):
         if source is None:
             source = self.soup
-        return source.find(obj, {"class": classname}).text.strip()
+        a = source.find(obj, {"class": classname})
+        return a.text.strip() if a else a
 
     def src(self, obj, classname, source=None):
         if source is None:
             source = self.soup
-        return "https:" + source.find(obj, {"class": classname}).get("src")
+        a = source.find(obj, {"class": classname})
+        return "https:" + a.get("src") if a else a
