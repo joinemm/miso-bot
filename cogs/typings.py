@@ -386,7 +386,7 @@ class Typings(commands.Cog):
     def get_wordlist(self, wordcount, language):
         all_words = self.languages.get(language.lower())
         if all_words is None:
-            return None, [str(lang) for lang in all_words]
+            return None, [str(lang) for lang in self.languages]
         wordlist = []
         while len(wordlist) < wordcount:
             word = random.choice(all_words)
