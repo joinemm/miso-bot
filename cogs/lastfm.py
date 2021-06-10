@@ -27,7 +27,15 @@ MISSING_IMAGE_HASH = "2a96cbd8b46e442fc41c2b86b821562f"
 
 def is_small_server():
     async def predicate(ctx):
-        if ctx.guild.member_count > 1000:
+        users = await ctx.bot.db.execute(
+            """
+            SELECT count(*) FROM user_settings WHERE user_id IN %s
+            AND lastfm_username IS NOT NULL
+            """,
+            [user.id for user in ctx.guild.members],
+            one_value=True,
+        )
+        if users > 150:
             raise exceptions.ServerTooBig(ctx.guild.member_count)
         return True
 
