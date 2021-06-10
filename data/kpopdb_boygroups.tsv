@@ -1,12 +1,12 @@
 profile	name	short_name	korean_name	debut_date	company	members	original_members	fanclub	active
 	100%		백퍼센트	2012-09-18	TOP Media	4	7	Perfection	Yes
-	14U		원포유	2017-04-17	BG	14	14		Yes
-	1TEAM		원팀	2019-03-27	LiveWorks	5	5		Yes
+	14U		원포유	2017-04-17	BG	14	14		No
+	1TEAM		원팀	2019-03-27	LiveWorks	5	5		No
 Profile	1the9		원더나인	2019-02-09	MBK	9	9		Yes
-	24K		투포케이	2012-09-06	Choeun	8	6	24U	Yes
+	24K		투포케이	2012-09-06	Choeun	5	6	24U	Yes
 	02:00		투에이엠	2008-06-21	JYP, Big Hit	4	4	I Am	No
 	14:00		투피엠	2008-07-04	JYP	6	7	Hottest	Yes
-	2Z	Tuzi	투지	2020-01-14	Morph	4	5		Yes
+	2Z	Tuzi	투지	2020-01-14	Morph	5	5		Yes
 	8Eight		에이트	2007-09-06	Big Hit	3	3	Sweet Voice	No
 	A-JAX		에이젝스	2012-06-01	DSP	5	7	A-LIGHT	No
 	A.C.E	ACE	에이스	2017-05-23	Beat	5	5	Choice	Yes
@@ -32,17 +32,18 @@ Profile	B1A4		비원에이포	2010-04-19	WM	5	5	BANA	Yes
 	BLACK6IX		블랙식스	2017-04-07	BLACK HOLE	6	6		Yes
 	Blanc7		블랑세븐	2017-03-03	Jackpot	7	7	Prism	No
 	BLK		비엘케이	2017-11-28	Byking	7	7		No
-Profile	Block B		블락비	2011-04-13	KQ	7	7	BBC	Yes
+Profile	Block B		블락비	2011-04-15	KQ	7	7	BBC	Yes
 	Boyfriend		보이프렌드	2011-05-26	Starship	6	6	Bestfriend	No
 	Boys Republic		소년공화국	2013-06-03	Happy Tribe, Universal	5	5	Royal Family	Hiatus
 Profile	BtoB		비투비	2012-03-21	Cube	7	7	Melody	Yes
 Profile	BTS	Bangtan Boys	방탄소년단	2013-06-13	Big Hit	7	7	ARMY	Yes
 	BXK	Boys X King	비엑스케이	2020-11-02	New Planet	6	6		Yes
 	C-Clown		씨클라운	2012-06-19	Yedang	6	6	Crown	No
-Profile	CICI		씨씨	2019-06-27	UPVOTE	4	4		Yes
+Profile	CICI		씨씨	2019-06-27	UPVOTE	4	4		No
+Profile	Ciipher		싸이퍼	2021-03-15	Rain	7	7		Yes
 Profile	CIX		씨아이엑스	2019-07-23	C9	5	5		Yes
 	CNBLUE		씨엔블루	2010-01-14	FNC	4	4	Boice	Yes
-Profile	CRAVITY		크래비티	2020-04-04	Starship	9	9		Yes
+Profile	CRAVITY		크래비티	2020-04-14	Starship	9	9		Yes
 	CROSS GENE		크로스진	2012-07-08	Amuse	5	6	Chromosome	Yes
 	D-Crunch		디크런치	2018-08-06	All-S	9	9		Yes
 	D.COY		디코이	2020-02-19	Rolling	5	5		Yes
@@ -54,8 +55,8 @@ Profile	DKB	Darkbee	다크비	2020-02-03	Brave	9	9		Yes
 Profile	DRIPPIN		드리핀	2020-10-26	Woollim	7	7		Yes
 	Dustin		더스틴	2020-01-06	LPA	7	7	The Sten	Yes
 	E'LAST		엘라스트	2020-06-09	E Entertainment	8	8		Yes
-Profile	ENHYPEN		엔하이픈		Be:lift	7	7	ENGENE	Yes
-Profile	ENOi		이엔오아이	2019-04-19	KITHEWHALE	7	7		Yes
+Profile	ENHYPEN		엔하이픈	2020-11-30	Be:lift	7	7	ENGENE	Yes
+Profile	ENOi		이엔오아이	2019-04-19	KITHEWHALE	7	7		No
 Profile	EXO		엑소	2012-04-08	SM	9	12	EXO-L	Yes
 	F.able		페이블	2020-06-04	Haerium	5	5		Yes
 	Fly to the Sky		플라이 투 더 스카이	1999-11-21	SM, H2	2	2	Fly High	Yes
@@ -73,7 +74,7 @@ Profile	GOT7		갓세븐	2014-01-16	JYP	7	7	I GOT7	Yes
 	HISTORY		히스토리	2013-04-26	LOEN	5	5	Storia	No
 	Homme		옴므	2010-06-28	Big Hit	2	2		No
 	Honeyst		허니스트	2017-05-17	FNC	4	4		Yes
-	Hotshot		핫샷	2014-10-29	Star Crew	5	6		Yes
+	Hotshot		핫샷	2014-10-29	Star Crew	5	6		No
 Profile	iKON		아이콘	2015-09-15	YG	6	7	iKONIC	Yes
 	Imfact		임팩트	2016-01-27	Star Empire	5	5		Yes
 Profile	IN2IT		인투잇	2017-10-26	MMO	7	8		Yes
@@ -82,9 +83,10 @@ Profile	IN2IT		인투잇	2017-10-26	MMO	7	8		Yes
 	IZ		아이즈	2017-08-31	Music K	4	4		Yes
 Profile	JBJ		제이비제이	2017-10-18	Fave	6	6		No
 	JBJ95		제이비제이95	2018-10-30	Hunus	2	2		Yes
-	JJCC		제이제이씨씨	2014-03-13	Jackie Chan Group	5	6		Yes
+	JJCC		제이제이씨씨	2014-03-13	Jackie Chan Group	5	6		No
 	JYJ		제이와이제이	2010-09-08	C-JeS	3	3	Cassiopeia	Yes
 	K-Much		케이머치	2014-01-07	Chrome	4	5		No
+	Kingdom		킹덤	2021-02-18	GF	7	7	Kingmakers	Yes
 Profile	KNK		크나큰	2016-03-03	YNB	5	5	Tinker Bell	Yes
 Profile	Limitless		리미트리스	2019-07-09	ONO	4	4		Yes
 	LU:KUS		루커스	2014-07-04	JWK	4	5		Yes
@@ -97,6 +99,7 @@ Profile	M.O.N.T	MONT	몬트	2019-01-04	FM	3	3		Yes
 	MBLAQ		엠블랙	2009-10-14	J. Tune	3	5	A+	Yes
 Profile	MCND		엠씨엔디	2020-02-27	TOP Media	5	5		Yes
 	Mfect	M.fect	엠펙트	2015-04-27	Midas	5	5		Yes
+Profile	MIRAE		미래소년	2021-03-17	DSP	7	7		Yes
 Profile	MONSTA X		몬스타엑스	2014-05-14	Starship	6	7	Monbebe	Yes
 	MR.MR		미스터미스터	2012-10-04	WinningIn	6	5		Yes
 Profile	MustB		머스트비	2019-01-21	MustM	7	7		Yes
@@ -124,8 +127,8 @@ Profile	PENTAGON	PTG	펜타곤	2016-10-10	Cube	9	10		Yes
 	RAINZ		레인즈	2017-10-12	(Genie)	7	7	Rainzer	No
 	Road Boyz		로드 보이즈	2015-11-17	Coconut	5	5		No
 	ROMEO		로미오	2015-11-04	CT	7	7		Yes
-	SECHKIES	6KIES	젝스키스	1997-04-15	DSP, YG	5	6	Yellowkies	Yes
-	Seven O'Clock	SOC	세븐어클락	2017-03-16	Staro, KDH	5	6		Yes
+	SECHSKIES	6KIES	젝스키스	1997-04-15	DSP, YG	5	6	Yellowkies	Yes
+	Seven O'Clock	SOC	세븐어클락	2017-03-16	Staro, KDH	5	6		No
 Profile	Seventeen	SVT	세븐틴	2015-05-26	Pledis	13	13	Carat	Yes
 Profile	SF9		에스에프나인	2016-10-05	FNC	9	9	Fantasy	Yes
 	SG Wannabe		SG 워너비	2004-01-20	B2M	3	4		Yes
@@ -138,7 +141,9 @@ Profile	Signal		시그널	2019-08-28	J-Star	4	4		Yes
 	SS501		더블에스오공일	2005-06-08	DSP, CI	5	5	Triple S	No
 Profile	Stray Kids	SKZ	스트레이 키즈	2018-03-26	JYP	9	9		Yes
 Profile	Super Junior	SJ	슈퍼주니어	2005-11-06	SM	11	12	ELF	Yes
+Profile	SuperM		슈퍼엠	2019-10-04	SM	7	7		Yes
 	Supernova		초신성	2007-09-21	CJ E&M	5	6		Yes
+Profile	T1419		티일사일구	2021-01-11	MLD	9	9		Yes
 	Target		타겟	2018-01-23	TNS	7	7		Yes
 	Teen Top		틴탑	2010-07-09	TOP Media	5	6	Angel	Yes
 Profile	The Boyz		더보이즈	2017-12-31	Cre.Ker	12	12		Yes
@@ -149,6 +154,7 @@ Profile	TOO		티오오	2020-04-01	n.CH	10	10		Yes
 	ToppDogg		탑독	2013-10-22	Stardom, Hunus	5	13	ToppKlass	No
 	TRAX		트랙스	2004-07-20	SM	2	4		No
 Profile	TRCNG		티알씨엔지	2017-10-10	TS	10	10		Yes
+Profile	Treasure		트레저	2020-08-07	YG	12	12		Yes
 	TREI		트레이	2019-02-19	Banana	3	3		No
 	TST	Top Secret	일급비밀	2017-01-04	JSL	5	7		Yes
 	Turbo		터보	1995-09-06	MBK, Turbo Co.	3	2		Hiatus
@@ -169,8 +175,9 @@ Profile	VIXX		빅스	2012-05-24	Jellyfish	5	6	Starlight	Yes
 	VOISPER		보이스퍼	2016-02-23	Evermore	4	4		Yes
 	VROMANCE		브로맨스	2016-06-12	RBW	4	4		Yes
 	Wanna One		워너원	2017-08-07	YMC	11	11	Wannable	No
-Profile	We In The Zone		위인더존	2019-05-27	Choon	5	5		Yes
+Profile	We In The Zone		위인더존	2019-05-27	Choon	5	5		No
 Profile	Wei		위아이	2020-10-05	OUI	6	6		Yes
 Profile	WINNER		위너	2014-08-12	YG	4	5	Ace	Yes
+	WOW		와우	2021-03-08	A.CONIC	7	7		Yes
 	XENEX		제넥스	2020-02-26	GiEok	5	5		Yes
 	ZE:A		제국의 아이들	2010-01-07	Star Empire	9	9	ZE:A Style	Hiatus
