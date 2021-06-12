@@ -1,0 +1,47 @@
+version: '3.7'
+
+services:
+  db:
+    container_name: miso-db
+    image: mariadb
+    restart: unless-stopped
+    volumes:
+      - /var/lib/mysql:/var/lib/mysql
+    environment:
+      - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes
+    networks:
+      - botnet
+
+  bot:
+    container_name: miso-bot
+    build: .
+    command: python main.py dev
+    restart: unless-stopped
+    depends_on:
+      - db
+    networks:
+      - botnet
+    ports:
+      - '6969:6969'
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=miso-db
+      - IMAGE_SERVER_HOST=image-server
+      - WEBSERVER_HOSTNAME=miso-bot
+
+  image-server:
+    image: ghcr.io/sushiibot/sushii-image-server:latest
+    container_name: image-server
+    restart: unless-stopped
+    init: true
+    cap_add:
+      - SYS_ADMIN
+    expose:
+      - 3000
+    networks:
+      - botnet
+
+networks:
+  botnet:
+    driver: bridge

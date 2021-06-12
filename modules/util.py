@@ -7,6 +7,7 @@ import colorgram
 import arrow
 import re
 import io
+import os
 from modules import queries, exceptions, emojis
 import aiohttp
 from discord.ext import commands
@@ -14,6 +15,9 @@ from PIL import Image, UnidentifiedImageError
 from durations_nlp import Duration
 from durations_nlp.exceptions import InvalidTokenError
 from libraries import emoji_literals
+
+
+IMAGE_SERVER_HOST = os.environ.get("IMAGE_SERVER_HOST")
 
 
 class ErrorMessage(Exception):
@@ -818,13 +822,17 @@ def format_html(template, replacements):
 async def render_html(bot, payload):
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.post("http://localhost:3000/html", data=payload) as response:
-                bot.cache.stats_html_rendered += 1
-                buffer = io.BytesIO(await response.read())
+            async with session.post(
+                f"http://{IMAGE_SERVER_HOST}:3000/html", data=payload
+            ) as response:
+                if response.status == 200:
+                    bot.cache.stats_html_rendered += 1
+                    buffer = io.BytesIO(await response.read())
+                    return buffer
+                else:
+                    raise exceptions.RendererError(f"{response.status} : {await response.text()}")
         except aiohttp.client_exceptions.ClientConnectorError:
             raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
-
-    return buffer
 
 
 class TwoWayIterator:

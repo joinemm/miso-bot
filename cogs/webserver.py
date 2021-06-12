@@ -1,9 +1,9 @@
-import yaml
 from modules import log
 from discord.ext import commands
 from aiohttp import web
 import aiohttp_cors
 import ssl
+import os
 
 logger = log.get_logger(__name__)
 
@@ -39,28 +39,32 @@ class WebServer(commands.Cog):
         self.bot.loop.create_task(self.run())
 
     async def run(self):
-        with open("polls.yaml") as f:
-            config = yaml.safe_load(f)
+        USE_HTTPS = os.environ.get("WEBSERVER_USE_HTTPS", "no")
+        HOST = os.environ.get("WEBSERVER_HOSTNAME")
+        PORT = int(os.environ.get("WEBSERVER_PORT", 0))
+        SSL_CERT = os.environ.get("WEBSERVER_SSL_CERT")
+        SSL_KEY = os.environ.get("WEBSERVER_SSL_KEY")
 
         # https
-        if config.get("https"):
+        if USE_HTTPS == "yes":
             ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            ssl_context.load_cert_chain(config.get("ssl_cert"), config.get("ssl_key"))
+            ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)
         else:
             ssl_context = None
 
-        try:
-            logger.info(f"Starting webserver on {config['host']}:{config['port']}")
-            await web._run_app(
-                self.app,
-                host=config["host"],
-                port=config["port"],
-                access_log=logger,
-                print=None,
-                ssl_context=ssl_context,
-            )
-        except OSError as e:
-            logger.warning(e)
+        if HOST is not None:
+            try:
+                logger.info(f"Starting webserver on {HOST}:{PORT}")
+                await web._run_app(
+                    self.app,
+                    host=HOST,
+                    port=PORT,
+                    access_log=logger,
+                    print=None,
+                    ssl_context=ssl_context,
+                )
+            except OSError as e:
+                logger.warning(e)
 
     async def index(self, request):
         return web.Response(text="Hi I'm Miso Bot!")
