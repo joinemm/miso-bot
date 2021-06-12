@@ -6,29 +6,24 @@ services:
     image: mariadb
     restart: unless-stopped
     volumes:
-      - /var/lib/mysql:/var/lib/mysql
+      - database:/var/lib/mysql
+      - ./sql/init:/docker-entrypoint-initdb.d:ro
+      - ./sql/scheduled:/scripts:ro
     environment:
-      - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes
+      - MARIADB_USER=bot
+      - MARIADB_PASSWORD=botpw
+      - MARIADB_DATABASE=misobot
+      - MARIADB_ROOT_PASSWORD=secure-af
     networks:
       - botnet
-
-  bot:
-    container_name: miso-bot
-    build: .
-    command: python main.py
-    restart: unless-stopped
-    depends_on:
-      - db
-    networks:
-      - botnet
-    ports:
-      - '6969:6969'
-    env_file:
-      - .env
-    environment:
-      - DB_HOST=miso-db
-      - IMAGE_SERVER_HOST=image-server
-      - WEBSERVER_HOSTNAME=miso-bot
+    labels:
+      ofelia.enabled: 'true'
+      ofelia.job-exec.daily-clear.schedule: '@daily'
+      ofelia.job-exec.daily-clear.command: sh -c "mysql -ubot -pbotpw -D misobot < /scripts/clear_activity_day.sql"
+      ofelia.job-exec.weekly-clear.schedule: '@weekly'
+      ofelia.job-exec.weekly-clear.command: sh -c "mysql -ubot -pbotpw -D misobot < /scripts/clear_activity_week.sql"
+      ofelia.job-exec.monthly-clear.schedule: '@monthly'
+      ofelia.job-exec.monthly-clear.command: sh -c "mysql -ubot -pbotpw -D misobot < /scripts/clear_activity_month.sql"
 
   image-server:
     image: ghcr.io/sushiibot/sushii-image-server:latest
@@ -42,6 +37,37 @@ services:
     networks:
       - botnet
 
+  ofelia:
+    image: mcuadros/ofelia:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+    command: daemon --docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  bot:
+    container_name: miso-bot
+    build: .
+    command: python main.py dev
+    restart: unless-stopped
+    depends_on:
+      - db
+      - image-server
+    networks:
+      - botnet
+    ports:
+      - '6969:6969'
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=miso-db
+      - IMAGE_SERVER_HOST=image-server
+      - WEBSERVER_HOSTNAME=miso-bot
+
 networks:
   botnet:
     driver: bridge
+
+volumes:
+  database:
