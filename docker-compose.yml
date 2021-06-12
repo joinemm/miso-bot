@@ -15,7 +15,7 @@ services:
   bot:
     container_name: miso-bot
     build: .
-    command: python main.py dev
+    command: python main.py
     restart: unless-stopped
     depends_on:
       - db
