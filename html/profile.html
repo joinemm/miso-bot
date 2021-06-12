@@ -4,6 +4,7 @@
     <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js'></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.9.0/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Catamaran">
+    <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
 
     <style type="text/css">
          :root {
@@ -176,6 +177,12 @@
         .overlay {
             background-color: rgba(0, 0, 0, 0.2);
         }
+        img.emoji {
+            height: 1em;
+            width: 1em;
+            margin: 0 .05em 0 .1em;
+            vertical-align: -0.1em;
+        }
     </style>
 </head>
 
@@ -226,6 +233,8 @@
     </div>
 </body>
 <script>
+    twemoji.parse(document.body);
+    
     if ($SHOW_GRAPH$) {
         var ctx = document.getElementById("MyChart").getContext("2d");
 
