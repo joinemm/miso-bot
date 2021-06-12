@@ -27,11 +27,16 @@ class Kpop(commands.Cog):
             "F": ":female_sign: ",
             "M": ":male_sign: ",
         }
-        with open("data/data.json", "r") as f:
-            data = json.load(f)
-            try:
-                self.artist_list = data["artists"]
-            except KeyError:
+        try:
+            with open("data/data.json", "r") as f:
+                data = json.load(f)
+                try:
+                    self.artist_list = data["artists"]
+                except KeyError:
+                    self.artist_list = []
+        except FileNotFoundError:
+            with open("data/data.json", "w") as f:
+                f.write("{}")
                 self.artist_list = []
 
     def cog_unload(self):
