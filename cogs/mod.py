@@ -244,7 +244,12 @@ class Mod(commands.Cog):
                 try:
                     user = await self.bot.fetch_user(int(discord_user))
                 except (ValueError, discord.NotFound):
-                    raise exceptions.Warning(f"Invalid user or id `{discord_user}`")
+                    await ctx.send(
+                        embed=discord.Embed(
+                            description=f":warning: Invalid user or id `{discord_user}`",
+                            color=int("be1931", 16),
+                        )
+                    )
 
             if user.id == 133311691852218378:
                 return await ctx.send("no.")
@@ -252,7 +257,12 @@ class Mod(commands.Cog):
             try:
                 await ctx.guild.ban(user, delete_message_days=0)
             except discord.errors.Forbidden:
-                raise exceptions.Error(f"It seems I don't have the permission to ban **{user}**")
+                await ctx.send(
+                    embed=discord.Embed(
+                        description=f":no_entry: It seems I don't have the permission to ban **{user}**",
+                        color=int("be1931", 16),
+                    )
+                )
             else:
                 await ctx.send(
                     embed=discord.Embed(
@@ -273,7 +283,12 @@ class Mod(commands.Cog):
                 try:
                     user = await self.bot.fetch_user(int(discord_user))
                 except (ValueError, discord.NotFound):
-                    raise exceptions.Warning(f"Invalid user or id `{discord_user}`")
+                    await ctx.send(
+                        embed=discord.Embed(
+                            description=f":warning: Invalid user or id `{discord_user}`",
+                            color=int("be1931", 16),
+                        )
+                    )
 
             if user.id == 133311691852218378:
                 return await ctx.send("no.")
@@ -286,8 +301,11 @@ class Mod(commands.Cog):
                 try:
                     await ctx.guild.ban(user, delete_message_days=0)
                 except discord.errors.Forbidden:
-                    raise exceptions.Error(
-                        f"It seems I don't have the permission to ban **{user}**"
+                    await ctx.send(
+                        embed=discord.Embed(
+                            description=f":no_entry: It seems I don't have the permission to ban **{user}**",
+                            color=int("be1931", 16),
+                        )
                     )
                 else:
                     await ctx.send(
@@ -296,8 +314,11 @@ class Mod(commands.Cog):
                         )
                     )
             else:
-                raise exceptions.Warning(
-                    f"There was an error finding discord user `{discord_user}`"
+                await ctx.send(
+                    embed=discord.Embed(
+                        description=f":warning: Invalid user or id `{discord_user}`",
+                        color=int("be1931", 16),
+                    )
                 )
 
     async def send_ban_confirmation(self, ctx, user):
