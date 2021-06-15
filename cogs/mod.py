@@ -232,6 +232,30 @@ class Mod(commands.Cog):
         self.cache_needs_refreshing = True
 
     @commands.command()
+    async def inspect(self, ctx, *ids: int):
+        """Get users from list of ids."""
+        if len(ids) > 25:
+            raise exceptions.Warning("Only 25 at a time please!")
+        rows = []
+        for user_id in ids:
+            user = self.bot.get_user(user_id)
+            if user is None:
+                try:
+                    user = await self.bot.fetch_user(user_id)
+                except discord.errors.NotFound:
+                    user = None
+
+            if user is None:
+                rows.append(f"`{user_id}` -> ?")
+            else:
+                rows.append(f"`{user_id}` -> {user} {user.mention}")
+
+        content = discord.Embed(
+            title=f":face_with_monocle: Inspecting {len(ids)} users...", color=int("bdddf4", 16)
+        )
+        await util.send_as_pages(ctx, content, rows, maxrows=25)
+
+    @commands.command()
     @commands.has_permissions(ban_members=True)
     async def fastban(self, ctx, *discord_users):
         """Ban user(s) without confirmation box."""
