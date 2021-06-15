@@ -336,10 +336,14 @@ class Configuration(commands.Cog):
         await self.bot.cache.cache_starboard_settings()
 
     @starboard.command(name="log")
-    async def starboard_log(self, ctx, channel: discord.TextChannel):
+    async def starboard_log(self, ctx, channel: ChannelSetting):
         """Set starboard logging channel to log starring events."""
-        await queries.update_setting(ctx, "starboard_settings", "log_channel_id", channel.id)
-        await util.send_success(ctx, f"Starboard log channel is now {channel.mention}")
+        if channel is None:
+            await queries.update_setting(ctx, "starboard_settings", "log_channel_id", None)
+            await util.send_success(ctx, "Starboard log is now disabled")
+        else:
+            await queries.update_setting(ctx, "starboard_settings", "log_channel_id", channel.id)
+            await util.send_success(ctx, f"Starboard log channel is now {channel.mention}")
         await self.bot.cache.cache_starboard_settings()
 
     @commands.group()
