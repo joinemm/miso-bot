@@ -22,7 +22,6 @@ A discord bot with almost 100 commands and features, including but not limited t
 -   Customizable profiles
 -   Server activity graph
 -   Minecraft server status
--   Meme creation by inserting text
 -   Starboard
 -   Voting channels
 -   Fishing
@@ -39,12 +38,12 @@ A discord bot with almost 100 commands and features, including but not limited t
 -   Papago Naver translator
 -   Google Translate
 -   Wolfram alpha
--   Wikipedia
 -   Reminders
 -   Custom commands
 -   Changeable prefix
 -   OPGG
 -   Cryptocurrency data
+-   Kpop idol database
 
 ...and much more. Visit <https://misobot.xyz> for more detailed overview of the features.
 
@@ -56,38 +55,10 @@ Invite to you server using this link!
 
 ---
 
-#### Deployment
+### Deployment using docker
 
-The python dependencies are managed using [poetry](https://python-poetry.org/).
-
+First copy `.env.example` to `.env` and fill it with your own keys.
+Everything else should be handled by the `docker-compose.yml`
 ```
-sudo apt-get install python3 python3-pip mariadb-server
-sudo mysql_secure_installation
-git clone --recurse-submodules https://github.com/joinemm/miso-bot.git
-cd miso-bot
-poetry install
-cp polls.yaml.example polls.yaml
-cp .env.example .env
-```
-> fill `polls.yaml` and `.env` with your values.
-```
-sudo mysql
-```
-> mysql commands (replace user and password with your own preferred values)
-```
-CREATE DATABASE misobot;
-GRANT ALL ON misobot.* TO 'miso'@'localhost' IDENTIFIED BY 'password' WITH GRANT OPTION;
-connect misobot;
-source sql/schema.sql
-source sql/kpop_schema.sql
-source sql/staticdata.sql
-exit
-```
-> Start the image server (optional, but image generation will not work without it). Keep it running in the background.
-```
-./launch-image-server
-```
-> Finally, run the bot
-```
-poetry run python main.py
+docker-compose up --build
 ```
