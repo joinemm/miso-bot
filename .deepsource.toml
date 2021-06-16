@@ -24,7 +24,3 @@ enabled = true
 [[analyzers]]
 name = "sql"
 enabled = true
-
-[[transformers]]
-name = "black"
-enabled = true
