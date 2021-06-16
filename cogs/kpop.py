@@ -47,7 +47,9 @@ class Kpop(commands.Cog):
 
     async def google_image_search(self, keyword):
         try:
-            results = await self.google_client.search(keyword, safesearch=False, image_search=True)
+            results = await self.google_client.search(
+                keyword, safesearch=False, image_search=True
+            )
         except async_cse.search.APIError:
             return ""
         if results:
@@ -138,7 +140,9 @@ class Kpop(commands.Cog):
             image_url = await self.google_image_search(search_term)
             if image_url != "":
                 await self.bot.db.execute(
-                    "UPDATE kpop_idol SET image_url = %s WHERE idol_id = %s", image_url, idol_id
+                    "UPDATE kpop_idol SET image_url = %s WHERE idol_id = %s",
+                    image_url,
+                    idol_id,
                 )
 
         content = discord.Embed()
@@ -160,9 +164,12 @@ class Kpop(commands.Cog):
         )
         content.set_image(url=image_url)
         content.add_field(name="Full name", value=full_name)
-        content.add_field(name="Korean name", value=f"{korean_stage_name} ({korean_name})")
         content.add_field(
-            name="Birthday", value=arrow.get(date_of_birth).format("YYYY-MM-DD") + f" (age {age})"
+            name="Korean name", value=f"{korean_stage_name} ({korean_name})"
+        )
+        content.add_field(
+            name="Birthday",
+            value=arrow.get(date_of_birth).format("YYYY-MM-DD") + f" (age {age})",
         )
         content.add_field(name="Country", value=country)
         content.add_field(name="Height", value=f"{height} cm" if height else "unknown")
@@ -197,11 +204,17 @@ class Kpop(commands.Cog):
             artists = []
             async with session.get(url) as response:
                 soup = BeautifulSoup(await response.text(), "html.parser")
-                content = soup.find("div", {"class": "entry-content herald-entry-content"})
+                content = soup.find(
+                    "div", {"class": "entry-content herald-entry-content"}
+                )
                 outer = content.find_all("p")
                 for p in outer:
                     for artist in p.find_all("a"):
-                        artist = artist.text.replace("Profile", "").replace("profile", "").strip()
+                        artist = (
+                            artist.text.replace("Profile", "")
+                            .replace("profile", "")
+                            .strip()
+                        )
                         if not artist == "":
                             artists.append(artist)
             return artists

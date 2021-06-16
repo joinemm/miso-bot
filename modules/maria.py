@@ -48,7 +48,9 @@ class MariaDB:
         await self.pool.wait_closed()
         logger.info("Closed MariaDB connection pool")
 
-    async def execute(self, statement, *params, one_row=False, one_value=False, as_list=False):
+    async def execute(
+        self, statement, *params, one_row=False, one_value=False, as_list=False
+    ):
         if await self.wait_for_pool():
             async with self.pool.acquire() as conn:
                 async with conn.cursor() as cur:

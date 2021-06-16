@@ -158,7 +158,9 @@ class Utility(commands.Cog):
                         await user.send(embed=embed)
                         logger.info(f'Reminded {user} to "{content}"')
                     except discord.errors.Forbidden:
-                        logger.warning(f"Unable to remind {user}, missing DM permissions!")
+                        logger.warning(
+                            f"Unable to remind {user}, missing DM permissions!"
+                        )
             else:
                 logger.info(f"Deleted expired reminder by unknown user {user_id}")
 
@@ -263,7 +265,9 @@ class Utility(commands.Cog):
             )
 
         if seconds < 1:
-            raise exceptions.Info("You must give a valid time at least 1 second in the future!")
+            raise exceptions.Info(
+                "You must give a valid time at least 1 second in the future!"
+            )
 
         await self.bot.db.execute(
             """
@@ -327,7 +331,9 @@ class Utility(commands.Cog):
                     ctx.author.id,
                     saved_address,
                 )
-                return await util.send_success(ctx, f"Saved your location as `{saved_address}`")
+                return await util.send_success(
+                    ctx, f"Saved your location as `{saved_address}`"
+                )
             # use given string as temporary location
             location = address
 
@@ -378,7 +384,9 @@ class Utility(commands.Cog):
         content = discord.Embed(
             color=int("e1e8ed", 16), title=f":flag_{country}: {formatted_name}"
         )
-        content.add_field(name=f"{weather_icon} {summary}", value="\n".join(information_rows))
+        content.add_field(
+            name=f"{weather_icon} {summary}", value="\n".join(information_rows)
+        )
         content.set_footer(text=f"🕐 Local time {localtime}")
         await ctx.send(embed=content)
 
@@ -401,10 +409,13 @@ class Utility(commands.Cog):
                 syns = definition["meta"]["syns"][0]
                 content = discord.Embed(color=int("d71921", 16))
                 content.set_author(
-                    name=f"{base_word.capitalize()}, {fl}" + (" (offensive)" if offensive else ""),
+                    name=f"{base_word.capitalize()}, {fl}"
+                    + (" (offensive)" if offensive else ""),
                     icon_url=api_icon,
                 )
-                content.description = ",\n".join(x.capitalize() for x in definition["shortdef"])
+                content.description = ",\n".join(
+                    x.capitalize() for x in definition["shortdef"]
+                )
                 content.add_field(name="Synonyms", value=", ".join(syns))
                 pages.append(content)
 
@@ -414,7 +425,9 @@ class Utility(commands.Cog):
             if len(data) > 5:
                 data = data[:5]
             suggestions = ", ".join(f"`{x}`" for x in data)
-            await ctx.send(f'No definitions found for "{word}". Did you mean: {suggestions}?')
+            await ctx.send(
+                f'No definitions found for "{word}". Did you mean: {suggestions}?'
+            )
 
     @commands.command()
     async def define(self, ctx, *, word):
@@ -428,14 +441,18 @@ class Utility(commands.Cog):
         }
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{api_url}lemmas/en/{word}", headers=headers) as response:
+            async with session.get(
+                f"{api_url}lemmas/en/{word}", headers=headers
+            ) as response:
                 data = await response.json()
 
             # searched for word id, now use the word id to get definition
             all_entries = []
 
             if data.get("results"):
-                definitions_embed = discord.Embed(colour=discord.Colour.from_rgb(0, 189, 242))
+                definitions_embed = discord.Embed(
+                    colour=discord.Colour.from_rgb(0, 189, 242)
+                )
                 definitions_embed.description = ""
 
                 found_word = data["results"][0]["id"]
@@ -449,18 +466,30 @@ class Utility(commands.Cog):
                     name = data["results"][0]["word"]
 
                     for i in range(len(entry["entries"][0]["senses"])):
-                        for definition in entry["entries"][0]["senses"][i].get("definitions", []):
+                        for definition in entry["entries"][0]["senses"][i].get(
+                            "definitions", []
+                        ):
                             this_top_level_definition = f"\n**{i + 1}.** {definition}"
-                            if len(definitions_value + this_top_level_definition) > 1024:
+                            if (
+                                len(definitions_value + this_top_level_definition)
+                                > 1024
+                            ):
                                 break
                             definitions_value += this_top_level_definition
                             try:
-                                for y in range(len(entry["entries"][0]["senses"][i]["subsenses"])):
-                                    for subdef in entry["entries"][0]["senses"][i]["subsenses"][y][
-                                        "definitions"
-                                    ]:
-                                        this_definition = f"\n**└ {i + 1}.{y + 1}.** {subdef}"
-                                        if len(definitions_value + this_definition) > 1024:
+                                for y in range(
+                                    len(entry["entries"][0]["senses"][i]["subsenses"])
+                                ):
+                                    for subdef in entry["entries"][0]["senses"][i][
+                                        "subsenses"
+                                    ][y]["definitions"]:
+                                        this_definition = (
+                                            f"\n**└ {i + 1}.{y + 1}.** {subdef}"
+                                        )
+                                        if (
+                                            len(definitions_value + this_definition)
+                                            > 1024
+                                        ):
                                             break
                                         definitions_value += this_definition
 
@@ -485,12 +514,15 @@ class Utility(commands.Cog):
                     return await ctx.send(f"No definitions found for `{word}`")
 
                 definitions_embed.set_author(
-                    name=all_entries[0]["id"], icon_url="https://i.imgur.com/vDvSmF3.png"
+                    name=all_entries[0]["id"],
+                    icon_url="https://i.imgur.com/vDvSmF3.png",
                 )
 
                 for entry in all_entries:
                     definitions_embed.add_field(
-                        name=f"{entry['type']}", value=entry["definitions"], inline=False
+                        name=f"{entry['type']}",
+                        value=entry["definitions"],
+                        inline=False,
                     )
 
                 await ctx.send(embed=definitions_embed)
@@ -585,7 +617,9 @@ class Utility(commands.Cog):
                 }
 
                 async with session.post(url, headers=headers, data=params) as response:
-                    translation = (await response.json())["message"]["result"]["translatedText"]
+                    translation = (await response.json())["message"]["result"][
+                        "translatedText"
+                    ]
 
             else:
                 # use google
@@ -602,7 +636,9 @@ class Utility(commands.Cog):
                     data = await response.json()
 
                 try:
-                    translation = html.unescape(data["data"]["translations"][0]["translatedText"])
+                    translation = html.unescape(
+                        data["data"]["translations"][0]["translatedText"]
+                    )
                 except KeyError:
                     return await ctx.send("Sorry, I could not translate this :(")
 
@@ -664,7 +700,9 @@ class Utility(commands.Cog):
                     break
 
                 else:
-                    await message.edit(content="There was an error while creating your gif :(")
+                    await message.edit(
+                        content="There was an error while creating your gif :("
+                    )
                     break
 
                 await asyncio.sleep(i)
@@ -822,7 +860,9 @@ class Utility(commands.Cog):
             member = ctx.author
 
         tz_str = await self.bot.db.execute(
-            "SELECT timezone FROM user_settings WHERE user_id = %s", member.id, one_value=True
+            "SELECT timezone FROM user_settings WHERE user_id = %s",
+            member.id,
+            one_value=True,
         )
         if tz_str:
             dt = arrow.now(tz_str)
@@ -887,7 +927,9 @@ class Utility(commands.Cog):
             user_ids,
         )
         if not data:
-            raise exceptions.Warning("No one on this server has set their timezone yet!")
+            raise exceptions.Warning(
+                "No one on this server has set their timezone yet!"
+            )
 
         dt_data = []
         for user_id, tz_str in data:
