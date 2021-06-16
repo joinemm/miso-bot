@@ -66,8 +66,7 @@ class MariaDB:
                     return [row[0] for row in data]
                 return data
             return ()
-        else:
-            raise exceptions.Error("Could not connect to the local MariaDB instance!")
+        raise exceptions.Error("Could not connect to the local MariaDB instance!")
 
     async def executemany(self, statement, params):
         if await self.wait_for_pool():
