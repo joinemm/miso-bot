@@ -42,7 +42,7 @@ def is_small_server():
     return commands.check(predicate)
 
 
-class AlbumColorNode(object):
+class AlbumColorNode():
     def __init__(self, rgb, image_url):
         self.rgb = rgb
         self.data = image_url

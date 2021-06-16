@@ -803,7 +803,7 @@ class User(commands.Cog):
         """Marry someone."""
         if user == ctx.author:
             return await ctx.send("You cannot marry yourself...")
-        if set([user.id, ctx.author.id]) in self.bot.cache.marriages:
+        if {user.id, ctx.author.id} in self.bot.cache.marriages:
             return await ctx.send("You two are already married!")
         for el in self.bot.cache.marriages:
             if ctx.author.id in el:
@@ -827,7 +827,7 @@ class User(commands.Cog):
                 ctx.author.id,
                 arrow.now().datetime,
             )
-            self.bot.cache.marriages.append(set([user.id, ctx.author.id]))
+            self.bot.cache.marriages.append({user.id, ctx.author.id})
             await ctx.send(
                 embed=discord.Embed(
                     color=int("dd2e44", 16),

@@ -544,9 +544,7 @@ class Information(commands.Cog):
         frame = []
         now = arrow.utcnow()
         first_data_ts = arrow.get(data[0][0])
-        start = now.shift(hours=-hours)
-        if start < first_data_ts:
-            start = first_data_ts
+        start = max(now.shift(hours=-hours), first_data_ts)
         for dt in arrow.Arrow.span_range("minute", start, now.shift(minutes=-1)):
             dt = dt[0]
             value = datadict.get(str(dt.timestamp), nan)

@@ -620,7 +620,7 @@ class Configuration(commands.Cog):
                     self.bot.cache.blacklist[str(ctx.guild.id)]["member"].add(member.id)
                 except KeyError:
                     self.bot.cache.blacklist[str(ctx.guild.id)] = {
-                        "member": set([member.id]),
+                        "member": {member.id},
                         "command": set(),
                     }
                 successes.append(f"Blacklisted {member.mention}")
@@ -642,7 +642,7 @@ class Configuration(commands.Cog):
         except KeyError:
             self.bot.cache.blacklist[str(ctx.guild.id)] = {
                 "member": set(),
-                "command": set([cmd.qualified_name.lower()]),
+                "command": {cmd.qualified_name.lower()},
             }
         await util.send_success(
             ctx, f"`{ctx.prefix}{cmd}` is now a blacklisted command on this server."

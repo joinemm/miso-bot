@@ -203,7 +203,6 @@ async def page_switcher(ctx, pages):
     :param ctx   : Context
     :param pages : List of embeds to use as pages
     """
-
     if len(pages) == 1:
         return await ctx.send(embed=pages[0])
 
@@ -318,7 +317,6 @@ async def reaction_buttons(
     :param only_author : only allow the user who used the command use the buttons
     :param single_use  : delete buttons after one is used
     """
-
     try:
         for emojiname in functions:
             await message.add_reaction(emojiname)
@@ -452,9 +450,8 @@ def xp_from_message(message):
     xp = eligible_words + (10 * len(message.attachments))
     if xp == 0:
         xp = 1
-    if xp > 50:
-        xp = 50
-    return xp
+
+    return min(xp, 50)
 
 
 async def get_user(ctx, argument, fallback=None):

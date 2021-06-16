@@ -16,10 +16,6 @@ class EmbedHelpCommand(commands.HelpCommand):
     def get_command_signature(self, command):
         return f"{self.clean_prefix}{command.qualified_name} {command.signature}"
 
-    def add_aliases_if_needed(self, embed, mapping):
-        if mapping.aliases:
-            embed.set_footer(text="Aliases: " + ", ".join(mapping.aliases))
-
     def get_subcommands(self, c, depth=1):
         this_cmd = ""
         if hasattr(c, "commands"):
@@ -98,7 +94,9 @@ class EmbedHelpCommand(commands.HelpCommand):
             title=f"{self.get_command_signature(command)}",
             colour=self.COLOUR,
         )
-        self.add_aliases_if_needed(embed, command)
+
+        if command.aliases:
+            embed.set_footer(text="Aliases: " + ", ".join(command.aliases))
 
         if command.help:
             embed.description = command.help

@@ -115,7 +115,7 @@ class Cache:
             try:
                 self.blacklist[str(guild_id)]["member"].add(user_id)
             except KeyError:
-                self.blacklist[str(guild_id)] = {"member": set([user_id]), "command": set()}
+                self.blacklist[str(guild_id)] = {"member": {user_id}, "command": set()}
 
         for guild_id, command_name in await self.bot.db.execute(
             "SELECT guild_id, command_name FROM blacklisted_command"
@@ -125,7 +125,7 @@ class Cache:
             except KeyError:
                 self.blacklist[str(guild_id)] = {
                     "member": set(),
-                    "command": set([command_name.lower()]),
+                    "command": {command_name.lower()},
                 }
 
         await self.cache_starboard_settings()

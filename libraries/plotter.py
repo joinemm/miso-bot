@@ -21,9 +21,7 @@ def create_graph(
     # remove under 0
     power = []
     for x in power_smooth:
-        if x < 0:
-            x = 0
-        power.append(x)
+        power.append(min(x, 0))
 
     power_smooth = np.array(power)
 

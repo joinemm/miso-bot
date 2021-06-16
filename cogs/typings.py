@@ -416,9 +416,7 @@ def calculate_entry(message, words_message, wordlist):
             continue
         else:
             while user_word != correct_word and offset < 3:
-                k = i - offset
-                if k < 0:
-                    k = 0
+                k = max(i - offset, 0)
                 user_word = user_words[k]
                 offset += 1
 

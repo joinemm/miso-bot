@@ -414,7 +414,6 @@ class Media(commands.Cog):
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx, *, query):
         """Search for a random gif."""
-
         scripts = []
         async with aiohttp.ClientSession() as session:
             tasks = []

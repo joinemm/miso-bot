@@ -418,10 +418,7 @@ class Miscellaneous(commands.Cog):
                 except (IndexError, ValueError):
                     amount = 1
 
-                if amount > 51:
-                    amount = 51
-
-                for _ in range(amount):
+                for _ in range(min(amount, 50)):
                     colors.append("{:06x}".format(random.randint(0, 0xFFFFFF)))
                 continue
 
