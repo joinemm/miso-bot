@@ -319,11 +319,11 @@ class Utility(commands.Cog):
             if cmd == "save":
                 await self.bot.db.execute(
                     """
-                                INSERT INTO user_settings (user_id, location_string)
-                                    VALUES (%s, %s)
-                                ON DUPLICATE KEY UPDATE
-                                    location_string = VALUES(location_string)
-                                """,
+                    INSERT INTO user_settings (user_id, location_string)
+                        VALUES (%s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        location_string = VALUES(location_string)
+                    """,
                     ctx.author.id,
                     saved_address,
                 )

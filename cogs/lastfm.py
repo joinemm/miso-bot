@@ -1978,12 +1978,12 @@ class LastFm(commands.Cog):
 
         await self.bot.db.execute(
             """
-                        INSERT INTO artist_image_cache (artist_name, image_hash, scrape_date)
-                            VALUES (%s, %s, %s)
-                        ON DUPLICATE KEY UPDATE
-                            image_hash = VALUES(image_hash),
-                            scrape_date = VALUES(scrape_date)
-                        """,
+            INSERT INTO artist_image_cache (artist_name, image_hash, scrape_date)
+                VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                image_hash = VALUES(image_hash),
+                scrape_date = VALUES(scrape_date)
+            """,
             artist,
             image_hash,
             arrow.now().datetime,
