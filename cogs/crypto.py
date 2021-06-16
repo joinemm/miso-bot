@@ -80,7 +80,9 @@ class Cryptocurrency(commands.Cog):
                 "height": 512,
                 "imageFormat": "png",
             }
-            async with session.post("http://localhost:3000/html", data=data) as response:
+            async with session.post(
+                "http://localhost:3000/html", data=data
+            ) as response:
                 with open("downloads/candlestick.png", "wb") as f:
                     while True:
                         block = await response.content.read(1024)
@@ -112,12 +114,15 @@ class Cryptocurrency(commands.Cog):
             url=f"https://www.binance.com/en/trade/{data.get('symbol')}",
         )
         content.add_field(
-            name="Current price", value=f"{Decimal(data.get('lastPrice')).normalize():,f}"
+            name="Current price",
+            value=f"{Decimal(data.get('lastPrice')).normalize():,f}",
         )
         content.add_field(
             name="24h High", value=f"{Decimal(data.get('highPrice')).normalize():,f}"
         )
-        content.add_field(name="24h Low", value=f"{Decimal(data.get('lowPrice')).normalize():,f}")
+        content.add_field(
+            name="24h Low", value=f"{Decimal(data.get('lowPrice')).normalize():,f}"
+        )
         pricechange = Decimal(data.get("priceChange")).normalize()
         if pricechange > 0:
             direction = emojis.GREEN_UP

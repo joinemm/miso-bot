@@ -42,15 +42,22 @@ class Information(commands.Cog):
     async def donate(self, ctx):
         """Donate to keep the bot running smoothly!"""
         content = discord.Embed(
-            title="Consider donating to help keep Miso Bot online!", colour=discord.Colour.orange()
+            title="Consider donating to help keep Miso Bot online!",
+            colour=discord.Colour.orange(),
         )
         content.add_field(
-            name="Github Sponsor", value="https://github.com/sponsors/joinemm", inline=False
+            name="Github Sponsor",
+            value="https://github.com/sponsors/joinemm",
+            inline=False,
         )
-        content.add_field(name="Patreon", value="https://www.patreon.com/joinemm", inline=False)
+        content.add_field(
+            name="Patreon", value="https://www.patreon.com/joinemm", inline=False
+        )
         content.add_field(name="Ko-Fi", value="https://ko-fi.com/joinemm", inline=False)
         content.add_field(name="Bitcoin", value="`1HDwoc5ith4goXmh6CAQC3TP6i1GAqanB1`")
-        content.set_footer(text="Donations will be used to pay for server and upkeep costs")
+        content.set_footer(
+            text="Donations will be used to pay for server and upkeep costs"
+        )
         await ctx.send(embed=content)
 
     @commands.command(aliases=["patrons", "supporters", "sponsors"])
@@ -96,7 +103,9 @@ class Information(commands.Cog):
                 content.add_field(inline=True, name=tier_name, value="\n".join(users))
 
         if former:
-            content.add_field(inline=False, name="Former donators", value=", ".join(former))
+            content.add_field(
+                inline=False, name="Former donators", value=", ".join(former)
+            )
 
         await ctx.send(embed=content)
 
@@ -117,8 +126,12 @@ class Information(commands.Cog):
         )
         content.set_thumbnail(url=self.bot.user.avatar_url)
         content.add_field(name="Website", value="https://misobot.xyz", inline=False)
-        content.add_field(name="Github", value="https://github.com/joinemm/miso-bot", inline=False)
-        content.add_field(name="Discord", value="https://discord.gg/RzDW3Ne", inline=False)
+        content.add_field(
+            name="Github", value="https://github.com/joinemm/miso-bot", inline=False
+        )
+        content.add_field(
+            name="Discord", value="https://discord.gg/RzDW3Ne", inline=False
+        )
 
         data = await get_commits("joinemm", "miso-bot")
         last_update = data[0]["commit"]["author"].get("date")
@@ -130,7 +143,9 @@ class Information(commands.Cog):
     async def ping(self, ctx):
         """Get the bot's ping."""
         test_message = await ctx.send(":ping_pong:")
-        cmd_lat = (test_message.created_at - ctx.message.created_at).total_seconds() * 1000
+        cmd_lat = (
+            test_message.created_at - ctx.message.created_at
+        ).total_seconds() * 1000
         discord_lat = self.bot.latency * 1000
         content = discord.Embed(
             colour=discord.Color.red(),
@@ -282,7 +297,9 @@ class Information(commands.Cog):
         for i, (uses, emoji_name) in enumerate(
             sorted(all_emojis, key=lambda x: x[0], reverse=True), start=1
         ):
-            rows.append(f"`#{i:2}` {emoji_name} — **{uses}** Use" + ("s" if uses > 1 else ""))
+            rows.append(
+                f"`#{i:2}` {emoji_name} — **{uses}** Use" + ("s" if uses > 1 else "")
+            )
 
         content = discord.Embed(
             title="Most used emojis"
@@ -350,7 +367,8 @@ class Information(commands.Cog):
     async def commandstats_global(self, ctx, user: discord.Member = None):
         """Most used commands globally."""
         content = discord.Embed(
-            title=":bar_chart: Most used commands" + ("" if user is None else f" by {user}")
+            title=":bar_chart: Most used commands"
+            + ("" if user is None else f" by {user}")
         )
         opt = []
         if user is not None:
@@ -388,9 +406,13 @@ class Information(commands.Cog):
         """Stats of a single command."""
         command = self.bot.get_command(command_name)
         if command is None:
-            raise exceptions.Info(f"Command `{ctx.prefix}{command_name}` does not exist!")
+            raise exceptions.Info(
+                f"Command `{ctx.prefix}{command_name}` does not exist!"
+            )
 
-        content = discord.Embed(title=f":bar_chart: `{ctx.prefix}{command.qualified_name}`")
+        content = discord.Embed(
+            title=f":bar_chart: `{ctx.prefix}{command.qualified_name}`"
+        )
 
         # set command name to be tuple of subcommands if this is a command group
         group = hasattr(command, "commands")
@@ -401,7 +423,11 @@ class Information(commands.Cog):
         else:
             command_name = command.qualified_name
 
-        total_uses, most_used_by_user_id, most_used_by_user_amount = await self.bot.db.execute(
+        (
+            total_uses,
+            most_used_by_user_id,
+            most_used_by_user_amount,
+        ) = await self.bot.db.execute(
             f"""
             SELECT SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
                 SELECT SUM(uses) as use_sum, user_id FROM command_usage
@@ -459,7 +485,9 @@ class Information(commands.Cog):
         # additional data for command groups
         if group:
             content.description = "Command Group"
-            subcommands_tuple = tuple([f"{command.name} {x.name}" for x in command.commands])
+            subcommands_tuple = tuple(
+                [f"{command.name} {x.name}" for x in command.commands]
+            )
             subcommand_usage = await self.bot.db.execute(
                 """
                 SELECT command_name, SUM(uses) FROM command_usage
@@ -489,7 +517,9 @@ class Information(commands.Cog):
         content.set_author(name=str(guild), url=guild.icon_url)
         content.set_image(url=guild.icon_url_as(static_format="png"))
         stats = await util.image_info_from_url(guild.icon_url)
-        color = await util.color_from_image_url(str(guild.icon_url_as(size=128, format="png")))
+        color = await util.color_from_image_url(
+            str(guild.icon_url_as(size=128, format="png"))
+        )
         content.colour = int(color, 16)
         if stats is not None:
             content.set_footer(
