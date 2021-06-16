@@ -52,8 +52,7 @@ class Kpop(commands.Cog):
             return ""
         if results:
             return results[0].image_url
-        else:
-            return ""
+        return ""
 
     @commands.group(case_insensitive=True)
     async def idol(self, ctx):
@@ -357,7 +356,7 @@ def get_gender(user_input):
         user_input = user_input.lower()
         if user_input in ["f", "girl", "girls", "female", "females"]:
             return ("F",)
-        elif user_input in ["m", "boy", "boys", "man", "men"]:
+        if user_input in ["m", "boy", "boys", "man", "men"]:
             return ("M",)
     return (
         "F",

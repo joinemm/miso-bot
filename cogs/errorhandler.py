@@ -94,13 +94,12 @@ class ErrorHander(commands.Cog):
         if isinstance(error, exceptions.Info):
             command_logger.info(log.log_command(ctx, extra=error))
             return await self.send(ctx, "info", str(error), error.kwargs)
-        elif isinstance(error, exceptions.Warning):
+        if isinstance(error, exceptions.Warning):
             command_logger.warning(log.log_command(ctx, extra=error))
             return await self.send(ctx, "warning", str(error), error.kwargs)
-        else:
-            command_logger.error(
-                f'{type(error).__name__:25} > {ctx.guild} : {ctx.author} "{ctx.message.content}" > {error}'
-            )
+        command_logger.error(
+            f'{type(error).__name__:25} > {ctx.guild} : {ctx.author} "{ctx.message.content}" > {error}'
+        )
 
         if isinstance(error, exceptions.Error):
             return await self.send(ctx, "error", str(error), error.kwargs)

@@ -469,10 +469,9 @@ class LastFm(commands.Cog):
             artistname = util.escape_md(artistname)
             if period == "overall":
                 return await ctx.send(f"You have never listened to **{artistname}**!")
-            else:
-                return await ctx.send(
-                    f"You have not listened to **{artistname}** in the past {period}s!"
-                )
+            return await ctx.send(
+                f"You have not listened to **{artistname}** in the past {period}s!"
+            )
 
         total = 0
         rows = []
@@ -548,10 +547,9 @@ class LastFm(commands.Cog):
                 return await ctx.send(
                     f"You have never listened to **{albumname}** by **{artistname}**!"
                 )
-            else:
-                return await ctx.send(
-                    f"You have not listened to **{albumname}** by **{artistname}** in the past {period}s!"
-                )
+            return await ctx.send(
+                f"You have not listened to **{albumname}** by **{artistname}** in the past {period}s!"
+            )
 
         artistname = album["artist"]
         albumname = album["formatted_name"]
@@ -666,10 +664,9 @@ class LastFm(commands.Cog):
                 artistname = util.escape_md(artistname)
                 if period == "overall":
                     return await ctx.send(f"You have never listened to **{artistname}**!")
-                else:
-                    return await ctx.send(
-                        f"You have not listened to **{artistname}** in the past {period}s!"
-                    )
+                return await ctx.send(
+                    f"You have not listened to **{artistname}** in the past {period}s!"
+                )
 
             for container, destination in zip([albumsdiv, tracksdiv], [albums, tracks]):
                 items = container.findAll("tr", {"class": "chartlist-row"})
@@ -1362,7 +1359,7 @@ class LastFm(commands.Cog):
                 ignore_errors=True,
             )
             return data["topartists"]["artist"] if data is not None else None
-        elif datatype == "album":
+        if datatype == "album":
             data = await self.api_request(
                 {
                     "user": username,
@@ -1372,7 +1369,7 @@ class LastFm(commands.Cog):
                 ignore_errors=True,
             )
             return data["topalbums"]["album"] if data is not None else None
-        elif datatype == "track":
+        if datatype == "track":
             data = await self.api_request(
                 {
                     "user": username,
@@ -1844,24 +1841,23 @@ class LastFm(commands.Cog):
         )
         if cached_color:
             return int(cached_color, 16)
-        else:
-            color = await util.color_from_image_url(
-                image_url, fallback=None, return_color_object=True
-            )
-            if color is None:
-                return int(self.lastfm_red, 16)
+        color = await util.color_from_image_url(
+            image_url, fallback=None, return_color_object=True
+        )
+        if color is None:
+            return int(self.lastfm_red, 16)
 
-            hex_color = util.rgb_to_hex(color)
-            await self.bot.db.execute(
-                "INSERT IGNORE image_color_cache (image_hash, r, g, b, hex) VALUES (%s, %s, %s, %s, %s)",
-                image_hash,
-                color.r,
-                color.g,
-                color.b,
-                hex_color,
-            )
+        hex_color = util.rgb_to_hex(color)
+        await self.bot.db.execute(
+            "INSERT IGNORE image_color_cache (image_hash, r, g, b, hex) VALUES (%s, %s, %s, %s, %s)",
+            image_hash,
+            color.r,
+            color.g,
+            color.b,
+            hex_color,
+        )
 
-            return int(hex_color, 16)
+        return int(hex_color, 16)
 
     async def get_userinfo_embed(self, username):
         data = await self.api_request(
@@ -1975,25 +1971,24 @@ class LastFm(commands.Cog):
         image = await scrape_artist_image(artist)
         if image is None:
             return ""
-        else:
-            image_hash = image["src"].split("/")[-1].split(".")[0]
-            if image_hash == MISSING_IMAGE_HASH:
-                # basic star image, dont save it
-                return ""
+        image_hash = image["src"].split("/")[-1].split(".")[0]
+        if image_hash == MISSING_IMAGE_HASH:
+            # basic star image, dont save it
+            return ""
 
-            await self.bot.db.execute(
-                """
-                INSERT INTO artist_image_cache (artist_name, image_hash, scrape_date)
-                    VALUES (%s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    image_hash = VALUES(image_hash),
-                    scrape_date = VALUES(scrape_date)
-                """,
-                artist,
-                image_hash,
-                arrow.now().datetime,
-            )
-            return self.cover_base_urls[3].format(image_hash)
+        await self.bot.db.execute(
+            """
+                        INSERT INTO artist_image_cache (artist_name, image_hash, scrape_date)
+                            VALUES (%s, %s, %s)
+                        ON DUPLICATE KEY UPDATE
+                            image_hash = VALUES(image_hash),
+                            scrape_date = VALUES(scrape_date)
+                        """,
+            artist,
+            image_hash,
+            arrow.now().datetime,
+        )
+        return self.cover_base_urls[3].format(image_hash)
 
     async def api_request(self, params, ignore_errors=False):
         """Get json data from the lastfm api."""
@@ -2011,9 +2006,8 @@ class LastFm(commands.Cog):
                     except aiohttp.client_exceptions.ContentTypeError:
                         if ignore_errors:
                             return None
-                        else:
-                            text = await response.text()
-                            raise exceptions.LastFMError(error_code=response.status, message=text)
+                        text = await response.text()
+                        raise exceptions.LastFMError(error_code=response.status, message=text)
 
                     if content is None:
                         raise exceptions.LastFMError(
@@ -2022,19 +2016,17 @@ class LastFm(commands.Cog):
                         )
                     if response.status == 200 and content.get("error") is None:
                         return content
-                    else:
-                        if int(content.get("error")) == 8:
-                            tries += 1
-                            if tries < max_tries:
-                                continue
+                    if int(content.get("error")) == 8:
+                        tries += 1
+                        if tries < max_tries:
+                            continue
 
-                        if ignore_errors:
-                            return None
-                        else:
-                            raise exceptions.LastFMError(
-                                error_code=content.get("error"),
-                                message=content.get("message"),
-                            )
+                    if ignore_errors:
+                        return None
+                    raise exceptions.LastFMError(
+                        error_code=content.get("error"),
+                        message=content.get("message"),
+                    )
 
     async def custom_period(self, user, group_by, shift_hours=24):
         """Parse recent tracks to get custom duration data (24 hour)."""
@@ -2089,7 +2081,7 @@ class LastFm(commands.Cog):
                 }
             }
 
-        elif group_by in ["track", "user.gettoptracks"]:
+        if group_by in ["track", "user.gettoptracks"]:
             for track in data["recenttracks"]["track"]:
                 track_name = track["name"]
                 artist_name = track["artist"]["#text"]
@@ -2116,7 +2108,7 @@ class LastFm(commands.Cog):
                 }
             }
 
-        elif group_by in ["artist", "user.gettopartists"]:
+        if group_by in ["artist", "user.gettopartists"]:
             for track in data["recenttracks"]["track"]:
                 artist_name = track["artist"]["#text"]
                 if artist_name in formatted_data:
@@ -2237,8 +2229,7 @@ class LastFm(commands.Cog):
 
         if reference is None:
             return count
-        else:
-            return count, reference, (artistname, trackname, image_url)
+        return count, reference, (artistname, trackname, image_url)
 
     async def get_playcount_album(self, artist, album, username, reference=None):
         data = await self.api_request(
@@ -2265,8 +2256,7 @@ class LastFm(commands.Cog):
 
         if reference is None:
             return count
-        else:
-            return count, reference, (artistname, albumname, image_url)
+        return count, reference, (artistname, albumname, image_url)
 
     async def get_playcount(self, artist, username, reference=None):
         data = await self.api_request(
@@ -2281,8 +2271,7 @@ class LastFm(commands.Cog):
 
         if reference is None:
             return count
-        else:
-            return count, reference, name
+        return count, reference, name
 
 
 # class ends here
@@ -2313,8 +2302,7 @@ def setup(bot):
 def format_plays(amount):
     if amount == 1:
         return "play"
-    else:
-        return "plays"
+    return "plays"
 
 
 def get_period(timeframe, allow_custom=True):
@@ -2438,10 +2426,9 @@ async def fetch(session, url, params=None, handling="json"):
             return None
         if handling == "json":
             return await response.json()
-        elif handling == "text":
+        if handling == "text":
             return await response.text()
-        else:
-            return await response
+        return await response
 
 
 def period_http_format(period):
