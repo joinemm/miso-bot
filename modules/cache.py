@@ -65,16 +65,22 @@ class Cache:
             ]
 
     async def initialize_settings_cache(self):
-        prefixes = await self.bot.db.execute("SELECT guild_id, prefix FROM guild_prefix")
+        prefixes = await self.bot.db.execute(
+            "SELECT guild_id, prefix FROM guild_prefix"
+        )
         for guild_id, prefix in prefixes:
             self.prefixes[str(guild_id)] = prefix
 
         self.rolepickers = set(
-            await self.bot.db.execute("SELECT channel_id FROM rolepicker_settings", as_list=True)
+            await self.bot.db.execute(
+                "SELECT channel_id FROM rolepicker_settings", as_list=True
+            )
         )
 
         self.votechannels = set(
-            await self.bot.db.execute("SELECT channel_id FROM voting_channel", as_list=True)
+            await self.bot.db.execute(
+                "SELECT channel_id FROM voting_channel", as_list=True
+            )
         )
 
         guild_settings = await self.bot.db.execute(
@@ -87,7 +93,9 @@ class Cache:
         self.blacklist = {
             "global": {
                 "user": set(
-                    await self.bot.db.execute("SELECT user_id FROM blacklisted_user", as_list=True)
+                    await self.bot.db.execute(
+                        "SELECT user_id FROM blacklisted_user", as_list=True
+                    )
                 ),
                 "guild": set(
                     await self.bot.db.execute(

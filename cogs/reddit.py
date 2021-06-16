@@ -31,7 +31,9 @@ class Reddit(commands.Cog):
             "year": "yearly",
         }
         self.client = asyncpraw.Reddit(
-            client_id=CLIENT_ID, client_secret=CLIENT_SECRET, user_agent="discord:miso_bot"
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            user_agent="discord:miso_bot",
         )
 
     # COMMANDS
@@ -87,7 +89,9 @@ class Reddit(commands.Cog):
         subreddit = await self.client.subreddit(subreddit.lower())
         post = await get_n_post(subreddit.hot(), number)
 
-        await self.send_post(ctx, subreddit, post, f"#{number} hottest post from r/{subreddit}")
+        await self.send_post(
+            ctx, subreddit, post, f"#{number} hottest post from r/{subreddit}"
+        )
 
     @reddit.command(name="controversial", aliases=["c"])
     async def reddit_controversial(self, ctx, subreddit, number="1", timespan="all"):
@@ -132,7 +136,9 @@ class Reddit(commands.Cog):
         subreddit = await self.client.subreddit(subreddit.lower())
         post = await get_n_post(subreddit.new(), number)
 
-        await self.send_post(ctx, subreddit, post, f"#{number} newest post from r/{subreddit}")
+        await self.send_post(
+            ctx, subreddit, post, f"#{number} newest post from r/{subreddit}"
+        )
 
     # FUNCTIONS
 
@@ -149,7 +155,9 @@ class Reddit(commands.Cog):
                 ":underage: NSFW subreddits can only be viewed in an NSFW channel!"
             )
 
-        content, message_content = await self.render_submission(post, not ctx.channel.is_nsfw())
+        content, message_content = await self.render_submission(
+            post, not ctx.channel.is_nsfw()
+        )
         content.set_footer(text=footer)
         await ctx.send(embed=content)
         if message_content is not None:
@@ -161,7 +169,8 @@ class Reddit(commands.Cog):
         content = discord.Embed()
         content.title = (
             f"`[{submission.link_flair_text}]` "
-            if hasattr(submission, "link_flair_text") and submission.link_flair_text is not None
+            if hasattr(submission, "link_flair_text")
+            and submission.link_flair_text is not None
             else ""
         )
         content.title += submission.title[:256]
@@ -177,13 +186,16 @@ class Reddit(commands.Cog):
                 name=f"u/{redditor.name}",
                 url=f"https://old.reddit.com/u/{redditor.name}",
                 icon_url=(
-                    redditor.icon_img if hasattr(redditor, "icon_img") else discord.Embed.Empty
+                    redditor.icon_img
+                    if hasattr(redditor, "icon_img")
+                    else discord.Embed.Empty
                 ),
             )
 
         suffix_elements = [
             f"{emojis.UPVOTE} {submission.score} ({int(submission.upvote_ratio*100)}%)",
-            f"{submission.num_comments} comment" + ("s" if submission.num_comments > 1 else ""),
+            f"{submission.num_comments} comment"
+            + ("s" if submission.num_comments > 1 else ""),
             f"[Permalink](https://old.reddit.com{submission.permalink})",
         ]
         suffix = "\n\n**" + " | ".join(suffix_elements) + "**"
@@ -191,7 +203,9 @@ class Reddit(commands.Cog):
         if submission.is_self:
             submission.selftext = submission.selftext.replace("&#x200B;", "")
             if len(submission.selftext + suffix) > 2044:
-                content.description = submission.selftext[: (2044 - len(suffix) - 3)] + "..."
+                content.description = (
+                    submission.selftext[: (2044 - len(suffix) - 3)] + "..."
+                )
             else:
                 content.description = submission.selftext
         else:
@@ -215,7 +229,9 @@ class Reddit(commands.Cog):
         elif submission.spoiler:
             content.title = "`[SPOILER]` " + content.title
 
-        if submission.is_self and ((censor and submission.over_18) or submission.spoiler):
+        if submission.is_self and (
+            (censor and submission.over_18) or submission.spoiler
+        ):
             content.description = "||" + content.description + "||"
 
         content.description += suffix
@@ -264,7 +280,9 @@ async def get_n_post(gen, n, ignore_sticky=True):
 
 def is_image_post(submission):
     """is submission content embedable image."""
-    return (not submission.is_self) and submission.url.endswith((".png", ".jpg", ".jpeg", ".gif"))
+    return (not submission.is_self) and submission.url.endswith(
+        (".png", ".jpg", ".jpeg", ".gif")
+    )
 
 
 def self_embeds(url):

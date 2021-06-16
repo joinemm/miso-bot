@@ -110,7 +110,9 @@ class Mod(commands.Cog):
             >purge <amount> [mentions...]
         """
         if amount > 100:
-            raise exceptions.Warning("You cannot delete more than 100 messages at a time.")
+            raise exceptions.Warning(
+                "You cannot delete more than 100 messages at a time."
+            )
 
         await ctx.message.delete()
 
@@ -124,7 +126,9 @@ class Mod(commands.Cog):
             try:
                 await ctx.channel.delete_messages(deleted)
             except discord.errors.HTTPException:
-                raise exceptions.Error("You can only delete messages that are under 14 days old.")
+                raise exceptions.Error(
+                    "You can only delete messages that are under 14 days old."
+                )
         else:
             deleted = await ctx.channel.purge(limit=amount)
 
@@ -171,12 +175,18 @@ class Mod(commands.Cog):
         try:
             await member.add_roles(mute_role)
         except discord.errors.Forbidden:
-            raise exceptions.Error(f"It seems I don't have permission to mute {member.mention}")
+            raise exceptions.Error(
+                f"It seems I don't have permission to mute {member.mention}"
+            )
 
         await util.send_success(
             ctx,
             f"Muted {member.mention}"
-            + (f" for **{util.stringfromtime(seconds)}**" if seconds is not None else ""),
+            + (
+                f" for **{util.stringfromtime(seconds)}**"
+                if seconds is not None
+                else ""
+            ),
         )
 
         if seconds is not None:
@@ -219,7 +229,9 @@ class Mod(commands.Cog):
         try:
             await member.remove_roles(mute_role)
         except discord.errors.Forbidden:
-            raise exceptions.Error(f"It seems I don't have permission to unmute {member.mention}")
+            raise exceptions.Error(
+                f"It seems I don't have permission to unmute {member.mention}"
+            )
 
         await util.send_success(ctx, f"Unmuted {member.mention}")
         await self.bot.db.execute(
@@ -251,7 +263,8 @@ class Mod(commands.Cog):
                 rows.append(f"`{user_id}` -> {user} {user.mention}")
 
         content = discord.Embed(
-            title=f":face_with_monocle: Inspecting {len(ids)} users...", color=int("bdddf4", 16)
+            title=f":face_with_monocle: Inspecting {len(ids)} users...",
+            color=int("bdddf4", 16),
         )
         await util.send_as_pages(ctx, content, rows, maxrows=25)
 
@@ -334,7 +347,8 @@ class Mod(commands.Cog):
                 else:
                     await ctx.send(
                         embed=discord.Embed(
-                            description=f":hammer: Banned `{user}`", color=int("f4900c", 16)
+                            description=f":hammer: Banned `{user}`",
+                            color=int("f4900c", 16),
                         )
                     )
             else:
@@ -347,7 +361,9 @@ class Mod(commands.Cog):
 
     async def send_ban_confirmation(self, ctx, user):
         content = discord.Embed(title=":hammer: Ban user?", color=int("f4900c", 16))
-        content.description = f"{user.mention}\n**{user.name}#{user.discriminator}**\n{user.id}"
+        content.description = (
+            f"{user.mention}\n**{user.name}#{user.discriminator}**\n{user.id}"
+        )
         msg = await ctx.send(embed=content)
 
         async def confirm_ban():
@@ -366,7 +382,9 @@ class Mod(commands.Cog):
 
         functions = {"✅": confirm_ban, "❌": cancel_ban}
         asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+            util.reaction_buttons(
+                ctx, msg, functions, only_author=True, single_use=True
+            )
         )
 
 

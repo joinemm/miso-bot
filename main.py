@@ -31,7 +31,9 @@ if maintainance_mode:
         type=discord.ActivityType.playing, name="Maintainance mode"
     )
 else:
-    starting_activity = discord.Activity(type=discord.ActivityType.playing, name="Booting up...")
+    starting_activity = discord.Activity(
+        type=discord.ActivityType.playing, name="Booting up..."
+    )
 
 
 class MisoBot(commands.AutoShardedBot):
@@ -40,7 +42,9 @@ class MisoBot(commands.AutoShardedBot):
         self.default_prefix = prefix
         self.logger = logger
         self.start_time = time()
-        self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
+        self.global_cd = commands.CooldownMapping.from_cooldown(
+            15, 60, commands.BucketType.member
+        )
         self.db = maria.MariaDB(self)
         self.cache = cache.Cache(self)
         self.version = "4.0"
