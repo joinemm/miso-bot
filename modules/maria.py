@@ -65,8 +65,7 @@ class MariaDB:
                 if as_list:
                     return [row[0] for row in data]
                 return data
-            else:
-                return ()
+            return ()
         else:
             raise exceptions.Error("Could not connect to the local MariaDB instance!")
 

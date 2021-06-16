@@ -86,9 +86,8 @@ def flags_to_badges(user):
     for flag, value in iter(user.public_flags):
         if value:
             result.append(emojis.Badge[flag].value)
-    if isinstance(user, discord.Member):
-        if user.premium_since is not None:
-            result.append(emojis.Badge["boosting"].value)
+    if isinstance(user, discord.Member) and user.premium_since is not None:
+        result.append(emojis.Badge["boosting"].value)
     return result or ["-"]
 
 

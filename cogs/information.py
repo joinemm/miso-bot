@@ -78,7 +78,7 @@ class Information(commands.Cog):
         )
         current = {}
         former = []
-        for user_id, is_active, emoji, tier, amount in sorted(
+        for user_id, is_active, emoji, _tier, amount in sorted(
             patrons, key=lambda x: x[3], reverse=False
         ):
             user = self.bot.get_user(user_id)
@@ -553,7 +553,7 @@ class Information(commands.Cog):
             frame.append(dt.datetime)
             patched_data.append(value)
 
-        plotter.time_series_graph(frame, patched_data, str(discord.Color.random())),
+        plotter.time_series_graph(frame, patched_data, str(discord.Color.random()))
         with open("downloads/graph.png", "rb") as img:
             await ctx.send(
                 file=discord.File(img),

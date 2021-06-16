@@ -179,12 +179,13 @@ class Utility(commands.Cog):
     async def on_command_error(self, ctx, error):
         """only for CommandNotFound."""
         error = getattr(error, "original", error)
-        if isinstance(error, commands.CommandNotFound):
-            if ctx.message.content.startswith(f"{ctx.prefix}!"):
-                ctx.timer = time()
-                ctx.iscallback = True
-                ctx.command = self.bot.get_command("!")
-                await ctx.command.callback(self, ctx)
+        if isinstance(error, commands.CommandNotFound) and ctx.message.content.startswith(
+            f"{ctx.prefix}!"
+        ):
+            ctx.timer = time()
+            ctx.iscallback = True
+            ctx.command = self.bot.get_command("!")
+            await ctx.command.callback(self, ctx)
 
     async def resolve_bang(self, ctx, bang, args):
         async with aiohttp.ClientSession() as session:
@@ -922,26 +923,25 @@ async def get_timezone(session, coord, clocktype="12hour"):
         "lng": str(coord["lon"]),
     }
     async with session.get(url, params=params) as response:
-        if response.status == 200:
-            timestring = (await response.json()).get("formatted").split(" ")
-            try:
-                hours, minutes = [int(x) for x in timestring[1].split(":")[:2]]
-            except IndexError:
-                return "N/A"
-
-            if clocktype == "12hour":
-                if hours > 12:
-                    suffix = "PM"
-                    hours -= 12
-                else:
-                    suffix = "AM"
-                    if hours == 0:
-                        hours = 12
-                return f"{hours}:{minutes:02d} {suffix}"
-            return f"{hours}:{minutes:02d}"
-
-        else:
+        if response.status != 200:
             return f"HTTP ERROR {response.status}"
+
+        timestring = (await response.json()).get("formatted").split(" ")
+        try:
+            hours, minutes = [int(x) for x in timestring[1].split(":")[:2]]
+        except IndexError:
+            return "N/A"
+
+        if clocktype == "12hour":
+            if hours > 12:
+                suffix = "PM"
+                hours -= 12
+            else:
+                suffix = "AM"
+                if hours == 0:
+                    hours = 12
+            return f"{hours}:{minutes:02d} {suffix}"
+        return f"{hours}:{minutes:02d}"
 
 
 async def detect_language(session, string):

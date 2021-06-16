@@ -48,24 +48,29 @@ class Blacklist(commands.CommandError):
 
 class BlacklistedUser(Blacklist):
     def __init__(self):
+        super().__init__()
         self.message = "You have been blacklisted from using Miso Bot"
 
 
 class BlacklistedMember(Blacklist):
     def __init__(self):
+        super().__init__()
         self.message = "You have been blacklisted from using commands by the server moderators"
 
 
 class BlacklistedGuild(Blacklist):
     def __init__(self):
+        super().__init__()
         self.message = "This server is blacklisted from using Miso Bot"
 
 
 class BlacklistedCommand(Blacklist):
     def __init__(self):
+        super().__init__()
         self.message = "This command has been disabled by the server moderators"
 
 
 class BlacklistedChannel(Blacklist):
     def __init__(self):
+        super().__init__()
         self.message = "Command usage in this channel has been disabled by the server moderators"

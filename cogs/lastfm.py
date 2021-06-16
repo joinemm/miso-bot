@@ -537,7 +537,7 @@ class LastFm(commands.Cog):
         else:
             try:
                 albumname, artistname = [x.strip() for x in album.split("|")]
-                if albumname == "" or artistname == "":
+                if "" in (albumname, artistname):
                     raise ValueError
             except ValueError:
                 raise exceptions.Warning("Incorrect format! use `album | artist`")
@@ -1505,7 +1505,7 @@ class LastFm(commands.Cog):
         else:
             try:
                 trackname, artistname = [x.strip() for x in track.split("|")]
-                if trackname == "" or artistname == "":
+                if "" in (trackname, artistname):
                     raise ValueError
             except ValueError:
                 raise exceptions.Warning("Incorrect format! use `track | artist`")
@@ -1584,7 +1584,7 @@ class LastFm(commands.Cog):
         else:
             try:
                 albumname, artistname = [x.strip() for x in album.split("|")]
-                if albumname == "" or artistname == "":
+                if "" in (albumname, artistname):
                     raise ValueError
             except ValueError:
                 raise exceptions.Warning("Incorrect format! use `album | artist`")
@@ -2141,13 +2141,11 @@ class LastFm(commands.Cog):
         if data is not None:
             try:
                 tracks = data["recenttracks"]["track"]
-                if tracks:
-                    if "@attr" in tracks[0]:
-                        if "nowplaying" in tracks[0]["@attr"]:
-                            song = {
-                                "artist": tracks[0]["artist"]["#text"],
-                                "name": tracks[0]["name"],
-                            }
+                if tracks and "@attr" in tracks[0] and "nowplaying" in tracks[0]["@attr"]:
+                    song = {
+                        "artist": tracks[0]["artist"]["#text"],
+                        "name": tracks[0]["name"],
+                    }
             except KeyError:
                 pass
 
@@ -2497,7 +2495,7 @@ def get_list_contents(soup):
     try:
         chartlist = soup.find("tbody", {"data-playlisting-add-entries": ""})
     except ValueError:
-        []
+        return []
 
     results = []
     items = chartlist.findAll("tr", {"class": "chartlist-row"})

@@ -61,13 +61,12 @@ class CustomCommands(commands.Cog, name="Commands"):
 
     async def can_add_commands(self, ctx):
         """Checks if guild is restricting command adding and whether the current user can add commands."""
-        if not ctx.author.guild_permissions.manage_guild:
-            if await self.bot.db.execute(
-                "SELECT restrict_custom_commands FROM guild_settings WHERE guild_id = %s",
-                ctx.guild.id,
-                one_value=True,
-            ):
-                return False
+        if not ctx.author.guild_permissions.manage_guild and await self.bot.db.execute(
+            "SELECT restrict_custom_commands FROM guild_settings WHERE guild_id = %s",
+            ctx.guild.id,
+            one_value=True,
+        ):
+            return False
 
         return True
 
@@ -152,11 +151,14 @@ class CustomCommands(commands.Cog, name="Commands"):
             raise exceptions.Warning(f"Custom command `{ctx.prefix}{name}` does not exist")
 
         owner = ctx.guild.get_member(owner_id)
-        if owner is not None and owner != ctx.author:
-            if not ctx.author.guild_permissions.manage_guild:
-                raise exceptions.Warning(
-                    f"`{ctx.prefix}{name}` can only be removed by **{owner}** unless you have `manage_server` permission."
-                )
+        if (
+            owner is not None
+            and owner != ctx.author
+            and not ctx.author.guild_permissions.manage_guild
+        ):
+            raise exceptions.Warning(
+                f"`{ctx.prefix}{name}` can only be removed by **{owner}** unless you have `manage_server` permission."
+            )
 
         await self.bot.db.execute(
             "DELETE FROM custom_command WHERE guild_id = %s AND command_trigger = %s",

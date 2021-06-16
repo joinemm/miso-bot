@@ -350,11 +350,13 @@ class Media(commands.Cog):
                     video_urls = media[i]["video_info"]["variants"]
                     largest_rate = -1
                     for x in range(len(video_urls)):
-                        if video_urls[x]["content_type"] == "video/mp4":
-                            if video_urls[x]["bitrate"] > largest_rate:
-                                largest_rate = video_urls[x]["bitrate"]
-                                video_url = video_urls[x]["url"]
-                                media_url = video_urls[x]["url"]
+                        if (
+                            video_urls[x]["content_type"] == "video/mp4"
+                            and video_urls[x]["bitrate"] > largest_rate
+                        ):
+                            largest_rate = video_urls[x]["bitrate"]
+                            video_url = video_urls[x]["url"]
+                            media_url = video_urls[x]["url"]
                 media_files.append((" ".join(hashtags), media_url, video_url))
 
             content = discord.Embed(colour=int(tweet.user.profile_link_color, 16))
