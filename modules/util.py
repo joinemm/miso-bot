@@ -38,8 +38,7 @@ def displayname(member, escape=True):
 
     if escape:
         return escape_md(name)
-    else:
-        return name
+    return name
 
 
 async def send_success(ctx, message):
@@ -53,8 +52,7 @@ async def determine_prefix(bot, message):
     if message.guild:
         prefix = bot.cache.prefixes.get(str(message.guild.id), bot.default_prefix)
         return commands.when_mentioned_or(prefix)(bot, message)
-    else:
-        return commands.when_mentioned_or(bot.default_prefix)(bot, message)
+    return commands.when_mentioned_or(bot.default_prefix)(bot, message)
 
 
 async def is_blacklisted(ctx):
@@ -101,7 +99,7 @@ def region_flag(region: discord.VoiceRegion):
         discord.VoiceRegion.europe,
     ]:
         return ":flag_eu:"
-    elif region in [
+    if region in [
         discord.VoiceRegion.us_central,
         discord.VoiceRegion.us_east,
         discord.VoiceRegion.us_south,
@@ -110,37 +108,36 @@ def region_flag(region: discord.VoiceRegion):
         discord.VoiceRegion.vip_us_west,
     ]:
         return ":flag_us:"
-    elif region in [
+    if region in [
         discord.VoiceRegion.amsterdam,
         discord.VoiceRegion.vip_amsterdam,
     ]:
         return ":flag_nl:"
-    elif region is discord.VoiceRegion.dubai:
+    if region is discord.VoiceRegion.dubai:
         return "flag_ae"
-    elif region is discord.VoiceRegion.frankfurt:
+    if region is discord.VoiceRegion.frankfurt:
         return ":flag_de:"
-    elif region is discord.VoiceRegion.hongkong:
+    if region is discord.VoiceRegion.hongkong:
         return ":flag_hk:"
-    elif region is discord.VoiceRegion.india:
+    if region is discord.VoiceRegion.india:
         return ":flag_in:"
-    elif region is discord.VoiceRegion.japan:
+    if region is discord.VoiceRegion.japan:
         return ":flag_jp:"
-    elif region is discord.VoiceRegion.london:
+    if region is discord.VoiceRegion.london:
         return ":flag_gb:"
-    elif region is discord.VoiceRegion.russia:
+    if region is discord.VoiceRegion.russia:
         return ":flag_ru:"
-    elif region is discord.VoiceRegion.singapore:
+    if region is discord.VoiceRegion.singapore:
         return ":flag_sg:"
-    elif region is discord.VoiceRegion.south_korea:
+    if region is discord.VoiceRegion.south_korea:
         return ":flag_kr:"
-    elif region is discord.VoiceRegion.southafrica:
+    if region is discord.VoiceRegion.southafrica:
         return ":flag_za:"
-    elif region is discord.VoiceRegion.sydney:
+    if region is discord.VoiceRegion.sydney:
         return ":flag_au:"
-    elif region is discord.VoiceRegion.brazil:
+    if region is discord.VoiceRegion.brazil:
         return ":flag_br:"
-    else:
-        return ":woman_shrugging:"
+    return ":woman_shrugging:"
 
 
 async def send_as_pages(ctx, content, rows, maxrows=15, maxpages=10):
@@ -482,8 +479,7 @@ async def get_member(ctx, argument, fallback=None, try_user=False):
     except commands.errors.BadArgument:
         if try_user:
             return await get_user(ctx, argument, fallback)
-        else:
-            return fallback
+        return fallback
 
 
 async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
@@ -623,8 +619,7 @@ async def color_from_image_url(url, fallback="E74C3C", return_color_object=False
 
         if return_color_object:
             return dominant_color
-        else:
-            return rgb_to_hex(dominant_color)
+        return rgb_to_hex(dominant_color)
     except Exception as e:
         print(e)
         return fallback
@@ -800,11 +795,9 @@ def patrons_only():
     async def predicate(ctx):
         if ctx.author.id == ctx.bot.owner_id:
             return True
-        else:
-            if await queries.is_donator(ctx, ctx.author):
-                return True
-            else:
-                raise PatronCheckFailure
+        if await queries.is_donator(ctx, ctx.author):
+            return True
+        raise PatronCheckFailure
 
     return commands.check(predicate)
 
@@ -826,8 +819,7 @@ async def render_html(bot, payload):
                     bot.cache.stats_html_rendered += 1
                     buffer = io.BytesIO(await response.read())
                     return buffer
-                else:
-                    raise exceptions.RendererError(f"{response.status} : {await response.text()}")
+                raise exceptions.RendererError(f"{response.status} : {await response.text()}")
         except aiohttp.client_exceptions.ClientConnectorError:
             raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
 
@@ -842,16 +834,14 @@ class TwoWayIterator:
     def next(self):
         if self.index == len(self.items) - 1:
             return None
-        else:
-            self.index += 1
-            return self.items[self.index]
+        self.index += 1
+        return self.items[self.index]
 
     def previous(self):
         if self.index == 0:
             return None
-        else:
-            self.index -= 1
-            return self.items[self.index]
+        self.index -= 1
+        return self.items[self.index]
 
     def current(self):
         return self.items[self.index]

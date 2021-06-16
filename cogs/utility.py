@@ -319,18 +319,17 @@ class Utility(commands.Cog):
             if cmd == "save":
                 await self.bot.db.execute(
                     """
-                    INSERT INTO user_settings (user_id, location_string)
-                        VALUES (%s, %s)
-                    ON DUPLICATE KEY UPDATE
-                        location_string = VALUES(location_string)
-                    """,
+                                INSERT INTO user_settings (user_id, location_string)
+                                    VALUES (%s, %s)
+                                ON DUPLICATE KEY UPDATE
+                                    location_string = VALUES(location_string)
+                                """,
                     ctx.author.id,
                     saved_address,
                 )
                 return await util.send_success(ctx, f"Saved your location as `{saved_address}`")
-            else:
-                # use given string as temporary location
-                location = address
+            # use given string as temporary location
+            location = address
 
         async with aiohttp.ClientSession() as session:
             params = {"address": location, "key": GOOGLE_API_KEY}
@@ -937,9 +936,7 @@ async def get_timezone(session, coord, clocktype="12hour"):
                     if hours == 0:
                         hours = 12
                 return f"{hours}:{minutes:02d} {suffix}"
-
-            else:
-                return f"{hours}:{minutes:02d}"
+            return f"{hours}:{minutes:02d}"
 
         else:
             return f"HTTP ERROR {response.status}"

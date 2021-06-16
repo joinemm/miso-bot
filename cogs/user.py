@@ -67,8 +67,7 @@ class User(commands.Cog):
 
         if pos is None or total is None:
             return "N/A"
-        else:
-            return f"#{int(pos)} / {total}"
+        return f"#{int(pos)} / {total}"
 
     @commands.command(aliases=["dp", "av", "pfp"])
     async def avatar(self, ctx, *, user: discord.User = None):
@@ -565,12 +564,11 @@ class User(commands.Cog):
             length = len(username)
             if length < 15:
                 return "24px"
-            elif length < 20:
+            if length < 20:
                 return "18px"
-            elif length < 25:
+            if length < 25:
                 return "15px"
-            else:
-                return "11px"
+            return "11px"
 
         def make_badge(classname):
             return f'<li class="badge-container"><i class="corner-logo {classname}"></i></li>'
@@ -815,7 +813,7 @@ class User(commands.Cog):
                 return await ctx.send(
                     f":confused: You are already married to **{util.displayname(partner)}**! You must divorce before marrying someone else..."
                 )
-            elif user.id in el:
+            if user.id in el:
                 return await ctx.send(
                     f":grimacing: **{user}** is already married to someone else, sorry!"
                 )
@@ -938,5 +936,4 @@ def get_activity_table(timeframe):
         return "monthly ", "user_activity_month"
     if timeframe in ["year", "yearly"]:
         return "yearly ", "user_activity_year"
-    else:
-        return "", "user_activity"
+    return "", "user_activity"

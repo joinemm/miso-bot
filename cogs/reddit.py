@@ -53,12 +53,11 @@ class Reddit(commands.Cog):
                 return await ctx.send(
                     f":warning: `r/{subreddit}` is either banned or doesn't exist!"
                 )
-            elif e.response.status == 403:
+            if e.response.status == 403:
                 return await ctx.send(
                     f":warning: `r/{subreddit}` is either quarantined or private!"
                 )
-            else:
-                raise e
+            raise e
 
         if post is None:
             return await ctx.send(
@@ -242,8 +241,7 @@ class Reddit(commands.Cog):
         if number < 1 or number > 50:
             await ctx.send(":warning: `number` must be between `1` and `50`")
             return False
-        else:
-            return True
+        return True
 
 
 async def get_n_post(gen, n, ignore_sticky=True):
@@ -256,8 +254,7 @@ async def get_n_post(gen, n, ignore_sticky=True):
                 n += 1
             if i >= n:
                 return post
-            else:
-                i += 1
+            i += 1
     except asyncprawcore.exceptions.Redirect:
         raise RedditError("this subreddit doesn't seem to exist!")
 
@@ -292,8 +289,7 @@ def can_send_nsfw(ctx, content):
 
     if is_nsfw:
         return ctx.channel.is_nsfw()
-    else:
-        return True
+    return True
 
 
 def setup(bot):

@@ -24,8 +24,7 @@ class MariaDB:
         if self.pool is None:
             logger.error("Pool wait timeout! ABORTING")
             return False
-        else:
-            return True
+        return True
 
     async def initialize_pool(self):
         cred = {
@@ -57,18 +56,16 @@ class MariaDB:
                     data = await cur.fetchall()
             if data is None:
                 return ()
+            if data:
+                if one_value:
+                    return data[0][0]
+                if one_row:
+                    return data[0]
+                if as_list:
+                    return [row[0] for row in data]
+                return data
             else:
-                if data:
-                    if one_value:
-                        return data[0][0]
-                    elif one_row:
-                        return data[0]
-                    elif as_list:
-                        return [row[0] for row in data]
-                    else:
-                        return data
-                else:
-                    return ()
+                return ()
         else:
             raise exceptions.Error("Could not connect to the local MariaDB instance!")
 
@@ -79,5 +76,4 @@ class MariaDB:
                     await cur.executemany(statement, params)
                     await conn.commit()
             return ()
-        else:
-            raise exceptions.Error("Could not connect to the local MariaDB instance!")
+        raise exceptions.Error("Could not connect to the local MariaDB instance!")

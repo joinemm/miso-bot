@@ -10,8 +10,7 @@ class ChannelSetting(commands.TextChannelConverter):
     async def convert(self, ctx, argument):
         if argument.lower() in ["disable", "none", "delete", "remove"]:
             return None
-        else:
-            return await super().convert(ctx, argument)
+        return await super().convert(ctx, argument)
 
 
 class Configuration(commands.Cog):
