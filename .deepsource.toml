@@ -3,10 +3,6 @@ version = 1
 exclude_patterns = ["libraries/**"]
 
 [[analyzers]]
-name = "shell"
-enabled = true
-
-[[analyzers]]
 name = "python"
 enabled = true
 
