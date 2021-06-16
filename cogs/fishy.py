@@ -1,7 +1,9 @@
-import discord
 import random
+
+import discord
 import humanize
 from discord.ext import commands
+
 from modules import util
 
 

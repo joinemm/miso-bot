@@ -1,13 +1,15 @@
 import os
 import sys
-import uvloop
-import discord
 import traceback
-from discord.ext import commands
 from time import time
-from modules import log, util, maria, cache
-from modules.help import EmbedHelpCommand
+
+import discord
+import uvloop
+from discord.ext import commands
 from dotenv import load_dotenv
+
+from modules import cache, log, maria, util
+from modules.help import EmbedHelpCommand
 
 uvloop.install()
 load_dotenv(verbose=True)

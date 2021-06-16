@@ -1,7 +1,9 @@
-import discord
 import os
+
+import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
+
 from modules import util
 
 

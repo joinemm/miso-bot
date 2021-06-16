@@ -1,21 +1,22 @@
-import math
 import asyncio
-import discord
 import copy
-import regex
-import colorgram
-import arrow
-import re
 import io
+import math
 import os
-from modules import queries, exceptions, emojis
+import re
+
 import aiohttp
+import arrow
+import colorgram
+import discord
+import regex
 from discord.ext import commands
-from PIL import Image, UnidentifiedImageError
 from durations_nlp import Duration
 from durations_nlp.exceptions import InvalidTokenError
-from libraries import emoji_literals
+from PIL import Image, UnidentifiedImageError
 
+from libraries import emoji_literals
+from modules import emojis, exceptions, queries
 
 IMAGE_SERVER_HOST = os.environ.get("IMAGE_SERVER_HOST")
 

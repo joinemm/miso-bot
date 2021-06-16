@@ -1,15 +1,17 @@
-import discord
-import math
-import psutil
-import time
-import os
-import arrow
 import copy
+import math
+import os
+import time
+
 import aiohttp
+import arrow
+import discord
+import psutil
 from discord.ext import commands
-from libraries import emoji_literals, plotter
-from modules import util, exceptions
 from numpy import nan
+
+from libraries import emoji_literals, plotter
+from modules import exceptions, util
 
 
 class Information(commands.Cog):

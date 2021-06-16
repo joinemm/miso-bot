@@ -1,9 +1,10 @@
-import discord
-import arrow
 import asyncio
-from discord.ext import commands, tasks
-from modules import exceptions, util, log
 
+import arrow
+import discord
+from discord.ext import commands, tasks
+
+from modules import exceptions, log, util
 
 logger = log.get_logger(__name__)
 

@@ -1,14 +1,16 @@
-import discord
-import json
-import aiohttp
-import os
-import html
-import arrow
 import asyncio
+import html
+import json
+import os
 from time import time
+
+import aiohttp
+import arrow
+import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
-from modules import queries, log, emojis, util, exceptions
+
+from modules import emojis, exceptions, log, queries, util
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
 DARKSKY_API_KEY = os.environ.get("DARK_SKY_KEY")

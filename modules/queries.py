@@ -1,4 +1,4 @@
-from modules import log, exceptions
+from modules import exceptions, log
 
 logger = log.get_logger(__name__)
 

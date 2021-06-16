@@ -1,9 +1,11 @@
-from modules import log
-from discord.ext import commands
-from aiohttp import web
-import aiohttp_cors
-import ssl
 import os
+import ssl
+
+import aiohttp_cors
+from aiohttp import web
+from discord.ext import commands
+
+from modules import log
 
 logger = log.get_logger(__name__)
 

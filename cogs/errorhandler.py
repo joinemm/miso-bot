@@ -1,8 +1,10 @@
-import traceback
-import discord
 import asyncio
+import traceback
+
+import discord
 from discord.ext import commands, flags
-from modules import queries, exceptions, log, util, emojis
+
+from modules import emojis, exceptions, log, queries, util
 
 logger = log.get_logger(__name__)
 command_logger = log.get_logger("commands")

@@ -1,12 +1,14 @@
 import asyncio
-import discord
-import bleach
-import humanize
 import typing
+
 import arrow
+import bleach
+import discord
+import humanize
 from discord.ext import commands
+
 from libraries import plotter
-from modules import queries, emojis, exceptions, util
+from modules import emojis, exceptions, queries, util
 
 
 class User(commands.Cog):

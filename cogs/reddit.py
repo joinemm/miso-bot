@@ -1,11 +1,12 @@
-import discord
+import os
+
 import arrow
 import asyncpraw
-import os
 import asyncprawcore
+import discord
 from discord.ext import commands, flags
-from modules import emojis, util
 
+from modules import emojis, util
 
 CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET")

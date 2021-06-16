@@ -1,7 +1,7 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import make_interp_spline
 import matplotlib.ticker as plticker
+import numpy as np
+from scipy.interpolate import make_interp_spline
 
 
 def create_graph(

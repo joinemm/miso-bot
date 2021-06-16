@@ -1,11 +1,13 @@
-import discord
-import random
 import asyncio
-import arrow
 import json
-from discord.ext import commands
+import random
 from operator import itemgetter
-from modules import util, exceptions
+
+import arrow
+import discord
+from discord.ext import commands
+
+from modules import exceptions, util
 
 
 class Typings(commands.Cog):

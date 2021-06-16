@@ -1,6 +1,5 @@
 from modules import log
 
-
 logger = log.get_logger(__name__)
 log.get_logger(__name__)
 

@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
+
 from libraries import emoji_literals
-from modules import queries, exceptions, util
+from modules import exceptions, queries, util
 
 
 class ChannelSetting(commands.TextChannelConverter):

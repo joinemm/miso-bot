@@ -1,8 +1,10 @@
-import discord
 import asyncio
+
+import discord
 import regex
 from discord.ext import commands
-from modules import exceptions, util, emojis
+
+from modules import emojis, exceptions, util
 
 
 class Notifications(commands.Cog):

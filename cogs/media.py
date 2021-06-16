@@ -12,9 +12,10 @@ import regex
 import tweepy
 from bs4 import BeautifulSoup
 from discord.ext import commands, flags
-from modules import exceptions, util
 from random_user_agent.user_agent import UserAgent
 from tweepy import OAuthHandler
+
+from modules import exceptions, util
 
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")

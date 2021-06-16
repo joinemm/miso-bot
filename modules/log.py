@@ -1,6 +1,7 @@
 import logging
-import coloredlogs
 from time import time
+
+import coloredlogs
 
 
 def get_logger(logger_name):

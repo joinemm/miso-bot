@@ -1,10 +1,11 @@
-import discord
 import random
-import arrow
+
 import aiohttp
-from libraries import minestat
+import arrow
+import discord
 from discord.ext import commands
-from libraries import emoji_literals
+
+from libraries import emoji_literals, minestat
 from modules import exceptions, util
 
 

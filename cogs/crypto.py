@@ -1,9 +1,11 @@
-import discord
-import aiohttp
 import re
-from discord.ext import commands
 from decimal import Decimal
-from modules import emojis, util, exceptions
+
+import aiohttp
+import discord
+from discord.ext import commands
+
+from modules import emojis, exceptions, util
 
 
 class Cryptocurrency(commands.Cog):

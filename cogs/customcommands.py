@@ -1,8 +1,10 @@
-import discord
 import asyncio
+
 import arrow
+import discord
 from discord.ext import commands
-from modules import queries, exceptions, util, log
+
+from modules import exceptions, log, queries, util
 
 command_logger = log.get_command_logger()
 

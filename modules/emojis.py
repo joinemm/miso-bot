@@ -1,7 +1,6 @@
 import random
 from enum import Enum
 
-
 VIVISMIRK = "<:vivismirk:749950217218162719>"
 
 UPVOTE = "<:miso_upvote:748235458571534508>"

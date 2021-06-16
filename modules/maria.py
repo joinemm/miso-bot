@@ -1,8 +1,9 @@
-import aiomysql
 import asyncio
 import os
-from modules import log, exceptions
 
+import aiomysql
+
+from modules import exceptions, log
 
 logger = log.get_logger(__name__)
 log.get_logger("aiomysql")

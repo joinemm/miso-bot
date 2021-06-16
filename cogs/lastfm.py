@@ -1,21 +1,22 @@
-import discord
-import random
-import kdtree
-import os
 import asyncio
-import arrow
-import aiohttp
-import re
 import html
-import math
 import io
-import colorgram
+import math
+import os
+import random
+import re
 import urllib.parse
+
+import aiohttp
+import arrow
+import colorgram
+import discord
+import kdtree
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from PIL import Image
-from modules import exceptions, emojis, util
 
+from modules import emojis, exceptions, util
 
 LASTFM_APPID = os.environ.get("LASTFM_APIKEY")
 LASTFM_TOKEN = os.environ.get("LASTFM_SECRET")
@@ -42,7 +43,7 @@ def is_small_server():
     return commands.check(predicate)
 
 
-class AlbumColorNode():
+class AlbumColorNode:
     def __init__(self, rgb, image_url):
         self.rgb = rgb
         self.data = image_url
@@ -1841,9 +1842,7 @@ class LastFm(commands.Cog):
         )
         if cached_color:
             return int(cached_color, 16)
-        color = await util.color_from_image_url(
-            image_url, fallback=None, return_color_object=True
-        )
+        color = await util.color_from_image_url(image_url, fallback=None, return_color_object=True)
         if color is None:
             return int(self.lastfm_red, 16)
 
