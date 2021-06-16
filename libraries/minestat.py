@@ -29,7 +29,7 @@ class MineStat:
     DEFAULT_TIMEOUT = 5  # default TCP timeout in seconds
 
     def enum(**enums):
-        return type('Enum', (), enums)
+        return type("Enum", (), enums)
 
     Retval = enum(SUCCESS=0, CONNFAIL=-1, TIMEOUT=-2, UNKNOWN=-3)
 
@@ -61,10 +61,10 @@ class MineStat:
             self.online = False
 
         # Parse the received data
-        if raw_data is None or raw_data == '':
+        if raw_data is None or raw_data == "":
             self.online = False
         else:
-            data = raw_data.decode('cp437').split('\x00\x00\x00')
+            data = raw_data.decode("cp437").split("\x00\x00\x00")
             if data and len(data) >= self.NUM_FIELDS:
                 self.online = True
                 self.version = data[2].replace("\x00", "")

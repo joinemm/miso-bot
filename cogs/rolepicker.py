@@ -49,7 +49,9 @@ class Rolepicker(commands.Cog):
             one_value=True,
         )
         if not role_id:
-            raise exceptions.Warning(f"Could not find role with the name `{name}` in the picker.")
+            raise exceptions.Warning(
+                f"Could not find role with the name `{name}` in the picker."
+            )
 
         await self.bot.db.execute(
             """
@@ -66,7 +68,9 @@ class Rolepicker(commands.Cog):
     @rolepicker.command()
     async def channel(self, ctx, channel: discord.TextChannel):
         """Set the channel you can add roles in."""
-        await queries.update_setting(ctx, "rolepicker_settings", "channel_id", channel.id)
+        await queries.update_setting(
+            ctx, "rolepicker_settings", "channel_id", channel.id
+        )
         self.bot.cache.rolepickers.add(channel.id)
         await util.send_success(
             ctx,
@@ -85,7 +89,8 @@ class Rolepicker(commands.Cog):
             ctx.guild.id,
         )
         content = discord.Embed(
-            title=f":scroll: Available roles in {ctx.guild.name}", color=int("ffd983", 16)
+            title=f":scroll: Available roles in {ctx.guild.name}",
+            color=int("ffd983", 16),
         )
         rows = []
         for role_name, role_id in sorted(data):
@@ -101,7 +106,9 @@ class Rolepicker(commands.Cog):
     async def enabled(self, ctx, value: bool):
         """Enable the rolepicker. (if disabled)"""
         await queries.update_setting(ctx, "rolepicker_settings", "is_enabled", value)
-        await util.send_success(ctx, f"Rolepicker is now **{'enabled' if value else 'disabled'}**")
+        await util.send_success(
+            ctx, f"Rolepicker is now **{'enabled' if value else 'disabled'}**"
+        )
 
     @commands.Cog.listener()
     async def on_message(self, message):

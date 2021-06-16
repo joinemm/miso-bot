@@ -37,8 +37,12 @@ class Owner(commands.Cog):
         )
 
         rows = []
-        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
-            rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
+        for guild in sorted(
+            self.bot.guilds, key=lambda x: x.member_count, reverse=True
+        ):
+            rows.append(
+                f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
+            )
 
         await util.send_as_pages(ctx, content, rows)
 
@@ -46,23 +50,35 @@ class Owner(commands.Cog):
     async def findguild(self, ctx, *, search_term):
         """Find a guild by name."""
         rows = []
-        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
+        for guild in sorted(
+            self.bot.guilds, key=lambda x: x.member_count, reverse=True
+        ):
             if search_term.lower() in guild.name.lower():
-                rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
+                rows.append(
+                    f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
+                )
 
-        content = discord.Embed(title=f"Found **{len(rows)}** guilds matching search term")
+        content = discord.Embed(
+            title=f"Found **{len(rows)}** guilds matching search term"
+        )
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
     async def userguilds(self, ctx, user: discord.User):
         """Get all guilds user is part of."""
         rows = []
-        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
+        for guild in sorted(
+            self.bot.guilds, key=lambda x: x.member_count, reverse=True
+        ):
             guildmember = guild.get_member(user.id)
             if guildmember is not None:
-                rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
+                rows.append(
+                    f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
+                )
 
-        content = discord.Embed(title=f"User **{user}** found in **{len(rows)}** guilds")
+        content = discord.Embed(
+            title=f"User **{user}** found in **{len(rows)}** guilds"
+        )
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
@@ -78,7 +94,9 @@ class Owner(commands.Cog):
         await util.command_group_help(ctx)
 
     @donator.command(name="addsingle")
-    async def donator_addsingle(self, ctx, user: discord.User, platform, amount: float, ts=None):
+    async def donator_addsingle(
+        self, ctx, user: discord.User, platform, amount: float, ts=None
+    ):
         """Add a new single time donation."""
         if ts is None:
             ts = arrow.utcnow().datetime
@@ -116,7 +134,8 @@ class Owner(commands.Cog):
             since_ts,
         )
         await util.send_success(
-            ctx, f"**{user}** is now a **Tier {tier}** donator on **{platform}** as *{username}*"
+            ctx,
+            f"**{user}** is now a **Tier {tier}** donator on **{platform}** as *{username}*",
         )
 
     @donator.command(name="remove")
@@ -129,7 +148,8 @@ class Owner(commands.Cog):
     async def donator_toggle(self, ctx, user: discord.User):
         """Toggle user's donator status."""
         await self.bot.db.execute(
-            "UPDATE donator SET currently_active = !currently_active WHERE user_id = %s", user.id
+            "UPDATE donator SET currently_active = !currently_active WHERE user_id = %s",
+            user.id,
         )
         await util.send_success(ctx, f"**{user}** donator status changed.")
 
@@ -137,9 +157,13 @@ class Owner(commands.Cog):
     async def donator_tier(self, ctx, user: discord.User, new_tier: int):
         """Change user's donation tier."""
         await self.bot.db.execute(
-            "UPDATE donator SET donation_tier = %s WHERE user_id = %s", new_tier, user.id
+            "UPDATE donator SET donation_tier = %s WHERE user_id = %s",
+            new_tier,
+            user.id,
         )
-        await util.send_success(ctx, f"**{user}** donation changed to **Tier {new_tier}**")
+        await util.send_success(
+            ctx, f"**{user}** donation changed to **Tier {new_tier}**"
+        )
 
     @commands.command(name="db", aliases=["dbe", "dbq"])
     @commands.is_owner()
@@ -192,15 +216,20 @@ class Owner(commands.Cog):
             arrow.utcnow().datetime,
             reason,
         )
-        await util.send_success(ctx, f"Flagged LastFM profile `{lastfm_username}` as a cheater.")
+        await util.send_success(
+            ctx, f"Flagged LastFM profile `{lastfm_username}` as a cheater."
+        )
 
     @commands.command(aliases=["fmunban"])
     async def fmunflag(self, ctx, lastfm_username):
         """Remove cheater flag from an LastFM account."""
         await self.bot.db.execute(
-            "DELETE FROM lastfm_cheater WHERE lastfm_username = %s", lastfm_username.lower()
+            "DELETE FROM lastfm_cheater WHERE lastfm_username = %s",
+            lastfm_username.lower(),
         )
-        await util.send_success(ctx, f"`{lastfm_username}` is no longer flagged as a cheater.")
+        await util.send_success(
+            ctx, f"`{lastfm_username}` is no longer flagged as a cheater."
+        )
 
 
 def clean_codeblock(text):

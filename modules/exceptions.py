@@ -53,7 +53,9 @@ class BlacklistedUser(Blacklist):
 
 class BlacklistedMember(Blacklist):
     def __init__(self):
-        self.message = "You have been blacklisted from using commands by the server moderators"
+        self.message = (
+            "You have been blacklisted from using commands by the server moderators"
+        )
 
 
 class BlacklistedGuild(Blacklist):
@@ -68,4 +70,6 @@ class BlacklistedCommand(Blacklist):
 
 class BlacklistedChannel(Blacklist):
     def __init__(self):
-        self.message = "Command usage in this channel has been disabled by the server moderators"
+        self.message = (
+            "Command usage in this channel has been disabled by the server moderators"
+        )

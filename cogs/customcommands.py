@@ -114,7 +114,9 @@ class CustomCommands(commands.Cog, name="Commands"):
             raise commands.MissingPermissions(["manage_server"])
 
         if name in self.bot_command_list():
-            raise exceptions.Warning(f"`{ctx.prefix}{name}` is already a built in command!")
+            raise exceptions.Warning(
+                f"`{ctx.prefix}{name}` is already a built in command!"
+            )
         if await self.bot.db.execute(
             "SELECT content FROM custom_command WHERE guild_id = %s AND command_trigger = %s",
             ctx.guild.id,
@@ -134,7 +136,8 @@ class CustomCommands(commands.Cog, name="Commands"):
             ctx.author.id,
         )
         await util.send_success(
-            ctx, f"Custom command `{ctx.prefix}{name}` added with the response \n```{response}```"
+            ctx,
+            f"Custom command `{ctx.prefix}{name}` added with the response \n```{response}```",
         )
 
     @command.command()
@@ -147,7 +150,9 @@ class CustomCommands(commands.Cog, name="Commands"):
             one_value=True,
         )
         if not owner_id:
-            raise exceptions.Warning(f"Custom command `{ctx.prefix}{name}` does not exist")
+            raise exceptions.Warning(
+                f"Custom command `{ctx.prefix}{name}` does not exist"
+            )
 
         owner = ctx.guild.get_member(owner_id)
         if owner is not None and owner != ctx.author:
@@ -161,7 +166,9 @@ class CustomCommands(commands.Cog, name="Commands"):
             ctx.guild.id,
             name,
         )
-        await util.send_success(ctx, f"Custom command `{ctx.prefix}{name}` has been deleted")
+        await util.send_success(
+            ctx, f"Custom command `{ctx.prefix}{name}` has been deleted"
+        )
 
     @command.command()
     async def search(self, ctx, name):
@@ -196,20 +203,25 @@ class CustomCommands(commands.Cog, name="Commands"):
             content = discord.Embed(title=f"{ctx.guild.name} custom commands")
             await util.send_as_pages(ctx, content, rows)
         else:
-            raise exceptions.Info("No custom commands have been added on this server yet")
+            raise exceptions.Info(
+                "No custom commands have been added on this server yet"
+            )
 
     @command.command(name="restrict")
     @commands.has_permissions(manage_guild=True)
     async def command_restrict(self, ctx, value: bool):
         """Restrict command management to only people with manage_server permission."""
-        await queries.update_setting(ctx, "guild_settings", "restrict_custom_commands", value)
+        await queries.update_setting(
+            ctx, "guild_settings", "restrict_custom_commands", value
+        )
         if value:
             await util.send_success(
                 ctx, "Adding custom commands is now restricted to server managers."
             )
         else:
             await util.send_success(
-                ctx, "Adding custom commands is no longer restricted to server managers."
+                ctx,
+                "Adding custom commands is no longer restricted to server managers.",
             )
 
     @command.command(name="clear")
@@ -227,7 +239,9 @@ class CustomCommands(commands.Cog, name="Commands"):
         if count < 1:
             raise exceptions.Warning("This server has no custom commands yet!")
 
-        content = discord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
+        content = discord.Embed(
+            title=":warning: Are you sure?", color=int("ffcc4d", 16)
+        )
         content.description = f"This action will delete all **{count}** custom commands on this server and is **irreversible**."
         msg = await ctx.send(embed=content)
 
@@ -249,7 +263,9 @@ class CustomCommands(commands.Cog, name="Commands"):
 
         functions = {"✅": confirm, "❌": cancel}
         asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+            util.reaction_buttons(
+                ctx, msg, functions, only_author=True, single_use=True
+            )
         )
 
 

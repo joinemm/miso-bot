@@ -121,7 +121,9 @@ class Events(commands.Cog):
                 for emoji_name, value in self.emoji_usage_cache["unicode"][guild_id][
                     user_id
                 ].items():
-                    unicode_emoji_values.append((int(guild_id), int(user_id), emoji_name, value))
+                    unicode_emoji_values.append(
+                        (int(guild_id), int(user_id), emoji_name, value)
+                    )
 
         if unicode_emoji_values:
             sql_tasks.append(
@@ -140,9 +142,17 @@ class Events(commands.Cog):
         custom_emoji_values = []
         for guild_id in self.emoji_usage_cache["custom"]:
             for user_id in self.emoji_usage_cache["custom"][guild_id]:
-                for emoji_id, value in self.emoji_usage_cache["custom"][guild_id][user_id].items():
+                for emoji_id, value in self.emoji_usage_cache["custom"][guild_id][
+                    user_id
+                ].items():
                     custom_emoji_values.append(
-                        (int(guild_id), int(user_id), value["name"], emoji_id, value["uses"])
+                        (
+                            int(guild_id),
+                            int(user_id),
+                            value["name"],
+                            emoji_id,
+                            value["uses"],
+                        )
                     )
 
         if custom_emoji_values:
@@ -234,10 +244,14 @@ class Events(commands.Cog):
             return
         self.bot.cache.event_triggers["guild_join"] += 1
         blacklisted = await self.bot.db.execute(
-            "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
+            "SELECT reason FROM blacklisted_guild WHERE guild_id = %s",
+            guild.id,
+            one_value=True,
         )
         if blacklisted:
-            logger.info(f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}")
+            logger.info(
+                f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}"
+            )
             return await guild.leave()
 
         logger.info(f"New guild : {guild}")
@@ -260,7 +274,9 @@ class Events(commands.Cog):
         self.bot.cache.event_triggers["guild_remove"] += 1
         logger.info(f"Left guild {guild}")
         blacklisted = await self.bot.db.execute(
-            "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
+            "SELECT reason FROM blacklisted_guild WHERE guild_id = %s",
+            guild.id,
+            one_value=True,
         )
         if blacklisted:
             return
@@ -308,14 +324,18 @@ class Events(commands.Cog):
                 if greeter_channel is not None:
                     try:
                         await greeter_channel.send(
-                            embed=util.create_welcome_embed(member, member.guild, message_format)
+                            embed=util.create_welcome_embed(
+                                member, member.guild, message_format
+                            )
                         )
                     except discord.errors.Forbidden:
                         pass
 
         # add autoroles
         roles = await self.bot.db.execute(
-            "SELECT role_id FROM autorole WHERE guild_id = %s", member.guild.id, as_list=True
+            "SELECT role_id FROM autorole WHERE guild_id = %s",
+            member.guild.id,
+            as_list=True,
         )
         for role_id in roles:
             role = member.guild.get_role(role_id)
@@ -392,7 +412,9 @@ class Events(commands.Cog):
 
                     try:
                         await channel.send(
-                            util.create_goodbye_message(member, member.guild, message_format)
+                            util.create_goodbye_message(
+                                member, member.guild, message_format
+                            )
                         )
                     except discord.errors.Forbidden:
                         pass
@@ -483,8 +505,12 @@ class Events(commands.Cog):
         if self.xp_cache.get(str(message.guild.id)) is None:
             self.xp_cache[str(message.guild.id)] = {}
         try:
-            self.xp_cache[str(message.guild.id)][str(message.author.id)]["xp"] += message_xp
-            self.xp_cache[str(message.guild.id)][str(message.author.id)]["messages"] += 1
+            self.xp_cache[str(message.guild.id)][str(message.author.id)][
+                "xp"
+            ] += message_xp
+            self.xp_cache[str(message.guild.id)][str(message.author.id)][
+                "messages"
+            ] += 1
         except KeyError:
             self.xp_cache[str(message.guild.id)][str(message.author.id)] = {
                 "xp": message_xp,
@@ -518,32 +544,34 @@ class Events(commands.Cog):
                     str(message.author.id)
                 ] = {}
             try:
-                self.emoji_usage_cache["unicode"][str(message.guild.id)][str(message.author.id)][
-                    emoji_name
-                ] += 1
+                self.emoji_usage_cache["unicode"][str(message.guild.id)][
+                    str(message.author.id)
+                ][emoji_name] += 1
             except KeyError:
-                self.emoji_usage_cache["unicode"][str(message.guild.id)][str(message.author.id)][
-                    emoji_name
-                ] = 1
+                self.emoji_usage_cache["unicode"][str(message.guild.id)][
+                    str(message.author.id)
+                ][emoji_name] = 1
 
         for emoji_name, emoji_id in custom_emojis:
             if self.emoji_usage_cache["custom"].get(str(message.guild.id)) is None:
                 self.emoji_usage_cache["custom"][str(message.guild.id)] = {}
             if (
-                self.emoji_usage_cache["custom"][str(message.guild.id)].get(str(message.author.id))
+                self.emoji_usage_cache["custom"][str(message.guild.id)].get(
+                    str(message.author.id)
+                )
                 is None
             ):
                 self.emoji_usage_cache["custom"][str(message.guild.id)][
                     str(message.author.id)
                 ] = {}
             try:
-                self.emoji_usage_cache["custom"][str(message.guild.id)][str(message.author.id)][
-                    str(emoji_id)
-                ]["uses"] += 1
+                self.emoji_usage_cache["custom"][str(message.guild.id)][
+                    str(message.author.id)
+                ][str(emoji_id)]["uses"] += 1
             except KeyError:
-                self.emoji_usage_cache["custom"][str(message.guild.id)][str(message.author.id)][
-                    str(emoji_id)
-                ] = {"uses": 1, "name": emoji_name}
+                self.emoji_usage_cache["custom"][str(message.guild.id)][
+                    str(message.author.id)
+                ][str(emoji_id)] = {"uses": 1, "name": emoji_name}
 
         if autoresponses:
             await self.easter_eggs(message)
@@ -635,7 +663,9 @@ class Events(commands.Cog):
         if user.bot:
             return
 
-        starboard_settings = self.bot.cache.starboard_settings.get(str(payload.guild_id))
+        starboard_settings = self.bot.cache.starboard_settings.get(
+            str(payload.guild_id)
+        )
         if not starboard_settings:
             return
 
@@ -701,7 +731,9 @@ class Events(commands.Cog):
                 one_value=True,
             )
             emoji_display = (
-                "⭐" if emoji_type == "custom" else emoji_literals.NAME_TO_UNICODE[emoji_name]
+                "⭐"
+                if emoji_type == "custom"
+                else emoji_literals.NAME_TO_UNICODE[emoji_name]
             )
 
             board_message = None
@@ -714,7 +746,9 @@ class Events(commands.Cog):
             if board_message is None:
                 # message is not on board yet, or it was deleted
                 content = discord.Embed(color=int("ffac33", 16))
-                content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
+                content.set_author(
+                    name=f"{message.author}", icon_url=message.author.avatar_url
+                )
                 jump = f"\n\n[context]({message.jump_url})"
                 content.description = message.content[: 2048 - len(jump)] + jump
                 content.timestamp = message.created_at
@@ -741,7 +775,8 @@ class Events(commands.Cog):
                         color=int("ffac33", 16), title="Message added to starboard"
                     )
                     content.add_field(
-                        name="Original message", value=f"[{message.id}]({message.jump_url})"
+                        name="Original message",
+                        value=f"[{message.id}]({message.jump_url})",
                     )
                     content.add_field(
                         name="Board message",
