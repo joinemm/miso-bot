@@ -1,0 +1,29 @@
+version = 1
+
+exclude_patterns = ["libraries/**"]
+
+[[analyzers]]
+name = "shell"
+enabled = true
+
+[[analyzers]]
+name = "python"
+enabled = true
+
+  [analyzers.meta]
+  runtime_version = "3.x.x"
+
+[[analyzers]]
+name = "docker"
+enabled = true
+
+  [analyzers.meta]
+  dockerfile_paths = ["Dockerfile"]
+
+[[analyzers]]
+name = "sql"
+enabled = true
+
+[[transformers]]
+name = "black"
+enabled = true
