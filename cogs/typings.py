@@ -251,12 +251,11 @@ class Typings(commands.Cog):
                     ":warning: `score not valid, you must type at least 90% of the words`"
                 )
                 return player, 0, 0
-            else:
-                await message.add_reaction("✅")
-                await self.save_wpm(
-                    message.author, ctx.guild, wpm, accuracy, wordcount, language, True
-                )
-                return player, wpm, accuracy
+            await message.add_reaction("✅")
+            await self.save_wpm(
+                message.author, ctx.guild, wpm, accuracy, wordcount, language, True
+            )
+            return player, wpm, accuracy
 
     @typing.command(name="history")
     async def typing_history(self, ctx, member: discord.Member = None):
