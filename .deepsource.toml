@@ -12,15 +12,8 @@ enabled = true
 
   [analyzers.meta]
   runtime_version = "3.x.x"
-  max_line_length = 100
+  max_line_length = 99
 
 [[analyzers]]
 name = "docker"
-enabled = true
-
-  [analyzers.meta]
-  dockerfile_paths = ["Dockerfile"]
-
-[[analyzers]]
-name = "sql"
 enabled = true
