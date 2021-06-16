@@ -56,3 +56,4 @@ uvloop==0.14.0
 webencodings==0.5.1; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0"
 wikipedia==1.4.0
 yarl==1.6.3; python_version >= "3.6" and python_full_version >= "3.5.3"
+pre-commit==2.13.0
