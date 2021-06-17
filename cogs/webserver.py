@@ -3,7 +3,7 @@ import ssl
 
 import aiohttp_cors
 from aiohttp import web
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from modules import log
 
@@ -16,6 +16,7 @@ class WebServer(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.app = web.Application()
+        self.cached = {"guilds": 0, "users": 0, "commands": 0}
         self.app.router.add_route("GET", "/", self.index)
         self.app.router.add_route("GET", "/guilds", self.guild_count)
         self.app.router.add_route("GET", "/users", self.user_count)
@@ -39,6 +40,7 @@ class WebServer(commands.Cog):
             self.cors.add(route)
 
         self.bot.loop.create_task(self.run())
+        self.cache_stats.start()
 
     async def run(self):
         USE_HTTPS = os.environ.get("WEBSERVER_USE_HTTPS", "no")
@@ -85,20 +87,23 @@ class WebServer(commands.Cog):
         return web.Response(text=f"{count}")
 
     async def website_statistics(self, request):
-        command_count = await self.bot.db.execute(
-            "SELECT SUM(uses) FROM command_usage", one_value=True
+        return web.json_response(self.cached)
+
+    @tasks.loop(minutes=1)
+    async def cache_stats(self):
+        self.cached["commands"] = int(
+            await self.bot.db.execute("SELECT SUM(uses) FROM command_usage", one_value=True)
         )
-        guild_count = len(self.bot.guilds)
-        user_count = len(set(self.bot.get_all_members()))
-        return web.json_response(
-            {
-                "commands": int(command_count),
-                "guilds": guild_count,
-                "users": user_count,
-            }
-        )
+        self.cached["guilds"] = len(self.bot.guilds)
+        self.cached["users"] = len(set(self.bot.get_all_members()))
+
+    @cache_stats.before_loop
+    async def before_caching(self):
+        await self.bot.wait_until_ready()
+        logger.info("Starting web stats caching loop")
 
     def cog_unload(self):
+        self.cache_stats.cancel()
         self.bot.loop.create_task(self.shutdown())
 
     async def shutdown(self):
