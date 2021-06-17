@@ -146,7 +146,7 @@ class ErrorHander(commands.Cog):
                 "This command cannot be used in big servers!",
             )
 
-        elif isinstance(error, (commands.NotOwner)):
+        elif isinstance(error, (commands.NotOwner, commands.CheckFailure)):
             await self.send(ctx, "error", "You cannot use this command.")
 
         elif isinstance(error, (commands.BadArgument, flags._parser.ArgumentParsingError)):
@@ -172,6 +172,9 @@ class ErrorHander(commands.Cog):
                 message = error.display()
 
             await self.send(ctx, "lastfm", message)
+
+        elif isinstance(error, exceptions.RendererError):
+            await self.send(ctx, "error", "HTML Rendering error: " + str(error))
 
         elif isinstance(error, exceptions.Blacklist):
             # admins can bypass these blacklists

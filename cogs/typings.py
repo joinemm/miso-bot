@@ -240,7 +240,7 @@ class Typings(commands.Cog):
         try:
             message = await self.bot.wait_for("message", timeout=300.0, check=progress_check)
         except asyncio.TimeoutError:
-            ctx.send(f"{player.mention} too slow!")
+            await ctx.send(f"{player.mention} too slow!")
             return player, 0, 0
         else:
             wpm, accuracy, not_long_enough = calculate_entry(message, words_message, wordlist)

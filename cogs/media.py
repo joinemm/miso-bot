@@ -295,12 +295,10 @@ class Media(commands.Cog):
                     # send as embeds
                     for medianode in medias:
                         if medianode.get("is_video"):
-                            await ctx.send(embed=content)
                             await ctx.send(medianode.get("video_url"))
                         else:
                             content.set_image(url=medianode.get("display_url"))
                             await ctx.send(embed=content)
-                        content.description = None
                         content._author = None
 
         try:
