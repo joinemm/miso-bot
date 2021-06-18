@@ -487,12 +487,12 @@ class Configuration(commands.Cog):
             await util.send_success(ctx, "Automatic responses are now **disabled**")
 
     @commands.group()
-    @commands.has_permissions(manage_guild=True)
     async def blacklist(self, ctx):
         """Restrict command usage."""
         await util.command_group_help(ctx)
 
     @blacklist.command(name="delete")
+    @commands.has_permissions(manage_guild=True)
     async def blacklist_delete(self, ctx, value: bool):
         """Toggle whether delete messages on blacklist trigger."""
         await queries.update_setting(ctx, "guild_settings", "delete_blacklisted_usage", value)
@@ -502,6 +502,7 @@ class Configuration(commands.Cog):
             await util.send_success(ctx, "No longer deleting messages that trigger blacklists.")
 
     @blacklist.command(name="show")
+    @commands.has_permissions(manage_guild=True)
     async def blacklist_show(self, ctx):
         """Show everything that's currently blacklisted."""
         content = discord.Embed(
@@ -566,6 +567,7 @@ class Configuration(commands.Cog):
         await ctx.send(embed=content)
 
     @blacklist.command(name="channel")
+    @commands.has_permissions(manage_guild=True)
     async def blacklist_channel(self, ctx, *channels):
         """Blacklist a channel."""
         successes = []
@@ -592,6 +594,7 @@ class Configuration(commands.Cog):
         await util.send_tasks_result_list(ctx, successes, fails)
 
     @blacklist.command(name="member")
+    @commands.has_permissions(manage_guild=True)
     async def blacklist_member(self, ctx, *members):
         """Blacklist member of this server."""
         successes = []
@@ -628,6 +631,7 @@ class Configuration(commands.Cog):
         await util.send_tasks_result_list(ctx, successes, fails)
 
     @blacklist.command(name="command")
+    @commands.has_permissions(manage_guild=True)
     async def blacklist_command(self, ctx, *, command):
         """Blacklist a command."""
         cmd = self.bot.get_command(command)
@@ -674,12 +678,12 @@ class Configuration(commands.Cog):
         await util.send_success(ctx, f"**{guild}** can no longer use Miso Bot!")
 
     @commands.group(aliases=["whitelist"])
-    @commands.has_permissions(manage_guild=True)
     async def unblacklist(self, ctx):
         """Reverse blacklisting."""
         await util.command_group_help(ctx)
 
     @unblacklist.command(name="channel")
+    @commands.has_permissions(manage_guild=True)
     async def whitelist_channel(self, ctx, *channels):
         """Whitelist a channel."""
         successes = []
@@ -701,6 +705,7 @@ class Configuration(commands.Cog):
         await util.send_tasks_result_list(ctx, successes, fails)
 
     @unblacklist.command(name="member")
+    @commands.has_permissions(manage_guild=True)
     async def whitelist_member(self, ctx, *members):
         """Whitelist a member of this server."""
         successes = []
@@ -722,6 +727,7 @@ class Configuration(commands.Cog):
         await util.send_tasks_result_list(ctx, successes, fails)
 
     @unblacklist.command(name="command")
+    @commands.has_permissions(manage_guild=True)
     async def whitelist_command(self, ctx, *, command):
         """Whitelist a command."""
         cmd = self.bot.get_command(command)
