@@ -110,6 +110,7 @@ extensions = [
     "reddit",
     "crypto",
     "kpop",
+    "stats",
 ]
 
 if maintainance_mode:
