@@ -1,4 +1,5 @@
-downloads/
+downloads/*
+!downloads/temp
 *.pyc
 venv/
 stash/
