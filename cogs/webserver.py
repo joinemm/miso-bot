@@ -43,6 +43,7 @@ class WebServer(commands.Cog):
         self.cache_stats.start()
 
     async def run(self):
+        await self.bot.wait_until_ready()
         USE_HTTPS = os.environ.get("WEBSERVER_USE_HTTPS", "no")
         HOST = os.environ.get("WEBSERVER_HOSTNAME")
         PORT = int(os.environ.get("WEBSERVER_PORT", 0))
