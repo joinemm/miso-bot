@@ -64,20 +64,7 @@ class Notifications(commands.Cog):
                         keyword,
                     )
         except discord.errors.Forbidden:
-            self.bot.logger.warning(
-                f"Forbidden when trying to send a notification to {member}, removing notification."
-            )
-            await self.bot.db.execute(
-                """
-                DELETE FROM notification WHERE guild_id = %s AND user_id = %s AND keyword = %s
-                """,
-                member.guild.id,
-                member.id,
-                keyword,
-            )
-
-            # remake notification cache
-            await self.create_cache()
+            self.bot.logger.warning(f"Forbidden when trying to send a notification to {member}.")
 
     @commands.Cog.listener()
     async def on_message(self, message):
