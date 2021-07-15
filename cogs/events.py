@@ -498,79 +498,57 @@ class Events(commands.Cog):
         if message.author.bot:
             return
 
-        # announce_levelup = self.bot.cache.levelupmessage.get(str(message.guild.id), False)
-        # disabled for now
-        announce_levelup = False
         autoresponses = self.bot.cache.autoresponse.get(str(message.guild.id), True)
 
         # log emojis
-        unicode_emojis = util.find_unicode_emojis(message.content)
-        custom_emojis = util.find_custom_emojis(message.content)
+        if self.bot.cache.log_emoji:
+            unicode_emojis = util.find_unicode_emojis(message.content)
+            custom_emojis = util.find_custom_emojis(message.content)
 
-        for emoji_name in unicode_emojis:
-            if self.emoji_usage_cache["unicode"].get(str(message.guild.id)) is None:
-                self.emoji_usage_cache["unicode"][str(message.guild.id)] = {}
-            if (
-                self.emoji_usage_cache["unicode"][str(message.guild.id)].get(
-                    str(message.author.id)
-                )
-                is None
-            ):
-                self.emoji_usage_cache["unicode"][str(message.guild.id)][
-                    str(message.author.id)
-                ] = {}
-            try:
-                self.emoji_usage_cache["unicode"][str(message.guild.id)][str(message.author.id)][
-                    emoji_name
-                ] += 1
-            except KeyError:
-                self.emoji_usage_cache["unicode"][str(message.guild.id)][str(message.author.id)][
-                    emoji_name
-                ] = 1
+            for emoji_name in unicode_emojis:
+                if self.emoji_usage_cache["unicode"].get(str(message.guild.id)) is None:
+                    self.emoji_usage_cache["unicode"][str(message.guild.id)] = {}
+                if (
+                    self.emoji_usage_cache["unicode"][str(message.guild.id)].get(
+                        str(message.author.id)
+                    )
+                    is None
+                ):
+                    self.emoji_usage_cache["unicode"][str(message.guild.id)][
+                        str(message.author.id)
+                    ] = {}
+                try:
+                    self.emoji_usage_cache["unicode"][str(message.guild.id)][
+                        str(message.author.id)
+                    ][emoji_name] += 1
+                except KeyError:
+                    self.emoji_usage_cache["unicode"][str(message.guild.id)][
+                        str(message.author.id)
+                    ][emoji_name] = 1
 
-        for emoji_name, emoji_id in custom_emojis:
-            if self.emoji_usage_cache["custom"].get(str(message.guild.id)) is None:
-                self.emoji_usage_cache["custom"][str(message.guild.id)] = {}
-            if (
-                self.emoji_usage_cache["custom"][str(message.guild.id)].get(str(message.author.id))
-                is None
-            ):
-                self.emoji_usage_cache["custom"][str(message.guild.id)][
-                    str(message.author.id)
-                ] = {}
-            try:
-                self.emoji_usage_cache["custom"][str(message.guild.id)][str(message.author.id)][
-                    str(emoji_id)
-                ]["uses"] += 1
-            except KeyError:
-                self.emoji_usage_cache["custom"][str(message.guild.id)][str(message.author.id)][
-                    str(emoji_id)
-                ] = {"uses": 1, "name": emoji_name}
+            for emoji_name, emoji_id in custom_emojis:
+                if self.emoji_usage_cache["custom"].get(str(message.guild.id)) is None:
+                    self.emoji_usage_cache["custom"][str(message.guild.id)] = {}
+                if (
+                    self.emoji_usage_cache["custom"][str(message.guild.id)].get(
+                        str(message.author.id)
+                    )
+                    is None
+                ):
+                    self.emoji_usage_cache["custom"][str(message.guild.id)][
+                        str(message.author.id)
+                    ] = {}
+                try:
+                    self.emoji_usage_cache["custom"][str(message.guild.id)][
+                        str(message.author.id)
+                    ][str(emoji_id)]["uses"] += 1
+                except KeyError:
+                    self.emoji_usage_cache["custom"][str(message.guild.id)][
+                        str(message.author.id)
+                    ][str(emoji_id)] = {"uses": 1, "name": emoji_name}
 
         if autoresponses:
             await self.easter_eggs(message)
-
-        # level up message
-        if announce_levelup:
-            activity_data = await self.bot.db.execute(
-                "SELECT * FROM user_activity WHERE user_id = %s AND guild_id = %s",
-                message.author.id,
-                message.guild.id,
-                one_row=True,
-            )
-            if activity_data:
-                xp = sum(activity_data[3:])
-                level_before = util.get_level(xp - message_xp)
-                level_now = util.get_level(xp)
-
-                if level_now > level_before:
-                    try:
-                        await message.channel.send(
-                            f"{message.author.mention} just leveled up! (level **{level_now}**)",
-                            delete_after=5,
-                        )
-                    except discord.errors.Forbidden:
-                        pass
 
     async def easter_eggs(self, message):
         """Easter eggs handler."""
