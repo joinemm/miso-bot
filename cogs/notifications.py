@@ -31,7 +31,7 @@ class Notifications(commands.Cog):
             except KeyError:
                 self.notifications_cache[str(guild_id)][keyword.lower().strip()] = [user_id]
 
-    async def send_notification(self, user, message, keywords, test=False):
+    async def send_notification(self, member, message, keywords, test=False):
         content = discord.Embed(color=message.author.color)
         content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
         pattern = regex.compile(self.keyword_regex, words=keywords, flags=regex.IGNORECASE)
@@ -48,7 +48,8 @@ class Notifications(commands.Cog):
         content.timestamp = message.created_at
 
         try:
-            await user.send(embed=content)
+            await member.send(embed=content)
+            self.bot.logger.info(f"Sending notification for words {keywords} to {member}")
             if not test:
                 self.bot.cache.stats_notifications_sent += 1
                 for keyword in keywords:
@@ -59,11 +60,24 @@ class Notifications(commands.Cog):
                         WHERE guild_id = %s AND user_id = %s AND keyword = %s
                         """,
                         message.guild.id,
-                        user.id,
+                        member.id,
                         keyword,
                     )
         except discord.errors.Forbidden:
-            self.bot.logger.warning(f"Forbidden when trying to send a notification to {user}")
+            self.bot.logger.warning(
+                f"Forbidden when trying to send a notification to {member}, removing notification."
+            )
+            await self.bot.db.execute(
+                """
+                DELETE FROM notification WHERE guild_id = %s AND user_id = %s AND keyword = %s
+                """,
+                member.guild.id,
+                member.id,
+                keyword,
+            )
+
+            # remake notification cache
+            await self.create_cache()
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -85,16 +99,28 @@ class Notifications(commands.Cog):
         if not keywords:
             return
 
-        pattern = regex.compile(self.keyword_regex, words=keywords, flags=regex.IGNORECASE)
+        filtered_keywords = {}
+        for keyword, users in keywords.items():
+            filtered_users = []
+            for user_id in users:
+                member = message.guild.get_member(user_id)
+                if member is not None and member in message.channel.members:
+                    filtered_users.append(member.id)
+            if filtered_users:
+                filtered_keywords[keyword] = filtered_users
 
-        users_keywords = {}
+        pattern = regex.compile(
+            self.keyword_regex, words=filtered_keywords.keys(), flags=regex.IGNORECASE
+        )
+
         finds = pattern.findall(message.content)
         if not finds:
             return
 
+        users_keywords = {}
         for keyword in set(finds):
             keyword = keyword.lower().strip()
-            users_to_notify = keywords.get(keyword, [])
+            users_to_notify = filtered_keywords.get(keyword, [])
             for user_id in users_to_notify:
                 if user_id == message.author.id:
                     continue
@@ -106,10 +132,8 @@ class Notifications(commands.Cog):
 
         for user_id, users_words in users_keywords.items():
             member = message.guild.get_member(user_id)
-            if member is None or member not in message.channel.members:
-                continue
-
-            asyncio.ensure_future(self.send_notification(member, message, users_words))
+            if member is not None:
+                asyncio.ensure_future(self.send_notification(member, message, users_words))
 
     @commands.group(case_insensitive=True, aliases=["noti", "notif"])
     async def notification(self, ctx):

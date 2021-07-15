@@ -7,6 +7,7 @@ log.get_logger(__name__)
 class Cache:
     def __init__(self, bot):
         self.bot = bot
+        self.log_emoji = False
         self.prefixes = {}
         self.rolepickers = set()
         self.votechannels = set()
