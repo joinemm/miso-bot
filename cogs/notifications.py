@@ -91,7 +91,7 @@ class Notifications(commands.Cog):
             filtered_users = []
             for user_id in users:
                 member = message.guild.get_member(user_id)
-                if member is not None and member is not message.author:
+                if member is not None and member.id is not message.author.id:
                     filtered_users.append(member.id)
             if filtered_users:
                 filtered_keywords[keyword] = filtered_users
@@ -119,7 +119,7 @@ class Notifications(commands.Cog):
 
         for user_id, users_words in users_keywords.items():
             member = message.guild.get_member(user_id)
-            if member is not None and member in message.channel.members:
+            if member is not None and member.permissions_in(message.channel).read_messages:
                 asyncio.ensure_future(self.send_notification(member, message, users_words))
 
     @commands.group(case_insensitive=True, aliases=["noti", "notif"])
