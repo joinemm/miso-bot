@@ -289,7 +289,23 @@ class Events(commands.Cog):
             if logging_channel is not None:
                 embed = discord.Embed(color=discord.Color.green())
                 embed.set_author(name=str(member), icon_url=member.avatar_url)
-                await logging_channel.send(embed=embed)
+                try:
+                    await logging_channel.send(embed=embed)
+                except discord.errors.Forbidden:
+                    pass
+
+        # add autoroles
+        roles = await self.bot.db.execute(
+            "SELECT role_id FROM autorole WHERE guild_id = %s", member.guild.id, as_list=True
+        )
+        for role_id in roles:
+            role = member.guild.get_role(role_id)
+            if role is None:
+                continue
+            try:
+                await member.add_roles(role)
+            except discord.errors.Forbidden:
+                pass
 
         # welcome message
         greeter = await self.bot.db.execute(
@@ -308,19 +324,6 @@ class Events(commands.Cog):
                         )
                     except discord.errors.Forbidden:
                         pass
-
-        # add autoroles
-        roles = await self.bot.db.execute(
-            "SELECT role_id FROM autorole WHERE guild_id = %s", member.guild.id, as_list=True
-        )
-        for role_id in roles:
-            role = member.guild.get_role(role_id)
-            if role is None:
-                continue
-            try:
-                await member.add_roles(role)
-            except discord.errors.Forbidden:
-                pass
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
@@ -368,7 +371,10 @@ class Events(commands.Cog):
             if logging_channel is not None:
                 embed = discord.Embed(color=discord.Color.red())
                 embed.set_author(name=str(member), icon_url=member.avatar_url)
-                await logging_channel.send(embed=embed)
+                try:
+                    await logging_channel.send(embed=embed)
+                except discord.errors.Forbidden:
+                    pass
 
         # goodbye message
         goodbye = await self.bot.db.execute(

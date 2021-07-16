@@ -275,6 +275,7 @@ class Mod(commands.Cog):
                             color=int("be1931", 16),
                         )
                     )
+                    continue
 
             if user.id == 133311691852218378:
                 return await ctx.send("no.")
@@ -314,6 +315,7 @@ class Mod(commands.Cog):
                             color=int("be1931", 16),
                         )
                     )
+                    continue
 
             if user.id == 133311691852218378:
                 return await ctx.send("no.")
