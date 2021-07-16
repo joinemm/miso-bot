@@ -186,7 +186,7 @@ class Events(commands.Cog):
             logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
         self.status_loop.start()
         self.xp_loop.start()
-        self.stats_loop.start()
+        # self.stats_loop.start()
 
     @tasks.loop(minutes=5.0)
     async def xp_loop(self):
@@ -232,8 +232,6 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         """Called when the bot joins a new guild."""
-        if not self.bot.is_ready():
-            return
         self.bot.cache.event_triggers["guild_join"] += 1
         blacklisted = await self.bot.db.execute(
             "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
@@ -257,8 +255,6 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         """Called when the bot leaves a guild."""
-        if not self.bot.is_ready():
-            return
         self.bot.cache.event_triggers["guild_remove"] += 1
         logger.info(f"Left guild {guild}")
         blacklisted = await self.bot.db.execute(
@@ -281,8 +277,6 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         """Called when a new member joins a guild."""
-        if not self.bot.is_ready():
-            return
         self.bot.cache.event_triggers["member_join"] += 1
         # log event
         logging_channel_id = await self.bot.db.execute(
@@ -331,8 +325,6 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         """Called when user gets banned from a server."""
-        if not self.bot.is_ready():
-            return
         self.bot.cache.event_triggers["member_ban"] += 1
         channel_id = await self.bot.db.execute(
             "SELECT ban_log_channel_id FROM logging_settings WHERE guild_id = %s",
@@ -578,7 +570,9 @@ class Events(commands.Cog):
         # git gud
         elif message.content.lower().startswith("git "):
             gitcommand = message.content.lower().split()[1].strip()
-            if gitcommand not in [
+            if gitcommand == "--help":
+                await message.channel.send("This is a joke.")
+            elif gitcommand not in [
                 "",
                 "init",
                 "reset",
@@ -613,6 +607,9 @@ class Events(commands.Cog):
         self.bot.cache.event_triggers["reaction_add"] += 1
         user = self.bot.get_user(payload.user_id)
         if user.bot:
+            return
+
+        if payload.channel_id in self.bot.cache.starboard_blacklisted_channels:
             return
 
         starboard_settings = self.bot.cache.starboard_settings.get(str(payload.guild_id))
