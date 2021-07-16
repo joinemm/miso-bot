@@ -96,6 +96,9 @@ class Notifications(commands.Cog):
             if filtered_users:
                 filtered_keywords[keyword] = filtered_users
 
+        if len(filtered_keywords) < 1:
+            return
+
         pattern = regex.compile(
             self.keyword_regex, words=filtered_keywords.keys(), flags=regex.IGNORECASE
         )
