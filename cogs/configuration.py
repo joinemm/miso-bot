@@ -346,6 +346,88 @@ class Configuration(commands.Cog):
             await util.send_success(ctx, f"Starboard log channel is now {channel.mention}")
         await self.bot.cache.cache_starboard_settings()
 
+    @starboard.command(name="blacklist")
+    async def starboard_blacklist(self, ctx, channel: discord.TextChannel):
+        """Blacklist a channel from being counted for starboard."""
+        await self.bot.db.execute(
+            """
+            INSERT INTO starboard_blacklist (guild_id, channel_id)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                channel_id = channel_id
+            """,
+            ctx.guild.id,
+            channel.id,
+        )
+        await util.send_success(ctx, f"Stars are no longer counted in {channel.mention}")
+        await self.bot.cache.cache_starboard_settings()
+
+    @starboard.command(name="unblacklist")
+    async def starboard_unblacklist(self, ctx, channel: discord.TextChannel):
+        """Unblacklist a channel from being counted for starboard."""
+        await self.bot.db.execute(
+            """
+            DELETE FROM starboard_blacklist WHERE guild_id = %s AND channel_id = %s
+            """,
+            ctx.guild.id,
+            channel.id,
+        )
+        await util.send_success(ctx, f"Stars are now again counted in {channel.mention}")
+        await self.bot.cache.cache_starboard_settings()
+
+    @starboard.command(name="current")
+    async def starboard_current(self, ctx):
+        """See current starboard config."""
+        starboard_settings = self.bot.cache.starboard_settings.get(str(ctx.guild.id))
+        if not starboard_settings:
+            raise exceptions.Warning("Nothing has been configured on this server yet!")
+
+        (
+            is_enabled,
+            board_channel_id,
+            required_reaction_count,
+            emoji_name,
+            emoji_id,
+            emoji_type,
+            log_channel_id,
+        ) = starboard_settings
+
+        if emoji_type == "custom":
+            emoji = self.bot.get_emoji(emoji_id)
+        else:
+            emoji = emoji_name
+
+        blacklisted_channels = await self.bot.db.execute(
+            """
+            SELECT channel_id FROM starboard_blacklist WHERE guild_id = %s
+            """,
+            ctx.guild.id,
+            as_list=True,
+        )
+
+        content = discord.Embed(title=":star: Current starboard settings", color=int("ffac33", 16))
+        content.add_field(
+            name="State", value=":white_check_mark: Enabled" if is_enabled else ":x: Disabled"
+        )
+        content.add_field(name="Emoji", value=emoji)
+        content.add_field(name="Reactions required", value=required_reaction_count)
+        content.add_field(
+            name="Board channel",
+            value=f"<#{board_channel_id}>" if board_channel_id is not None else None,
+        )
+        content.add_field(
+            name="Log channel",
+            value=f"<#{log_channel_id}>" if log_channel_id is not None else None,
+        )
+        content.add_field(
+            name="Blacklisted channels",
+            value=" ".join(f"<#{cid}>" for cid in blacklisted_channels)
+            if blacklisted_channels
+            else None,
+        )
+
+        await ctx.send(embed=content)
+
     @commands.group()
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)

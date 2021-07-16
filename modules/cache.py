@@ -64,7 +64,15 @@ class Cache:
                 log_channel_id,
             ]
 
+        self.starboard_blacklisted_channels = set(
+            await self.bot.db.execute(
+                "SELECT channel_id FROM starboard_blacklist",
+                as_list=True,
+            )
+        )
+
     async def initialize_settings_cache(self):
+        self.bot.logger.info("Caching settings...")
         prefixes = await self.bot.db.execute("SELECT guild_id, prefix FROM guild_prefix")
         for guild_id, prefix in prefixes:
             self.prefixes[str(guild_id)] = prefix

@@ -73,6 +73,12 @@ CREATE TABLE IF NOT EXISTS starboard_message (
     PRIMARY KEY (original_message_id)
 );
 
+CREATE TABLE IF NOT EXISTS starboard_blacklist (
+    guild_id BIGINT,
+    channel_id BIGINT,
+    PRIMARY KEY (guild_id, channel_id)
+);
+
 CREATE TABLE IF NOT EXISTS fishy (
     user_id BIGINT,
     last_fishy DATETIME DEFAULT NULL,
