@@ -91,7 +91,7 @@ class Notifications(commands.Cog):
             filtered_users = []
             for user_id in users:
                 member = message.guild.get_member(user_id)
-                if member is not None and member in message.channel.members:
+                if member is not None and member is not message.author:
                     filtered_users.append(member.id)
             if filtered_users:
                 filtered_keywords[keyword] = filtered_users
@@ -112,9 +112,6 @@ class Notifications(commands.Cog):
             keyword = keyword.lower().strip()
             users_to_notify = filtered_keywords.get(keyword, [])
             for user_id in users_to_notify:
-                if user_id == message.author.id:
-                    continue
-
                 try:
                     users_keywords[user_id].append(keyword)
                 except KeyError:
@@ -122,7 +119,7 @@ class Notifications(commands.Cog):
 
         for user_id, users_words in users_keywords.items():
             member = message.guild.get_member(user_id)
-            if member is not None:
+            if member is not None and member in message.channel.members:
                 asyncio.ensure_future(self.send_notification(member, message, users_words))
 
     @commands.group(case_insensitive=True, aliases=["noti", "notif"])
