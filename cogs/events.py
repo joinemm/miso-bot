@@ -240,6 +240,7 @@ class Events(commands.Cog):
             logger.info(f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}")
             return await guild.leave()
 
+        await self.bot.wait_until_ready()
         logger.info(f"New guild : {guild}")
         content = discord.Embed(color=discord.Color.green())
         content.title = "New guild!"
@@ -263,6 +264,7 @@ class Events(commands.Cog):
         if blacklisted:
             return
 
+        await self.bot.wait_until_ready()
         content = discord.Embed(color=discord.Color.red())
         content.title = "Left guild!"
         content.description = (
@@ -284,6 +286,7 @@ class Events(commands.Cog):
             member.guild.id,
             one_value=True,
         )
+        await self.bot.wait_until_ready()
         if logging_channel_id:
             logging_channel = member.guild.get_channel(logging_channel_id)
             if logging_channel is not None:
@@ -337,6 +340,7 @@ class Events(commands.Cog):
         if not channel_id:
             return
 
+        await self.bot.wait_until_ready()
         channel = guild.get_channel(channel_id)
         if channel is not None:
             try:
@@ -366,6 +370,7 @@ class Events(commands.Cog):
             member.guild.id,
             one_value=True,
         )
+        await self.bot.wait_until_ready()
         if logging_channel_id:
             logging_channel = member.guild.get_channel(logging_channel_id)
             if logging_channel is not None:
