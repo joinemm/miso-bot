@@ -3,7 +3,6 @@
 deepsource.toml
 sql
 sushii-image-server
-downloads
 .github
 .vscode
 *.pyc
