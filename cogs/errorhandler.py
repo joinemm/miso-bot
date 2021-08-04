@@ -187,7 +187,7 @@ class ErrorHander(commands.Cog):
                 ),
             ):
                 perms = ctx.author.permissions_in(ctx.channel)
-                if perms.administrator:
+                if perms.administrator or ctx.author.id == ctx.bot.owner_id:
                     try:
                         await ctx.reinvoke()
                         return
