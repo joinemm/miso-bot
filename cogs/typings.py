@@ -74,7 +74,7 @@ class Typings(commands.Cog):
 
         else:
             wpm, accuracy, not_long_enough = calculate_entry(message, words_message, wordlist)
-            if self.anticheat(message) or wpm > 216:
+            if self.anticheat(message) or wpm > 300:
                 return await message.reply("Stop cheating >:(")
 
             if not_long_enough:
@@ -244,7 +244,7 @@ class Typings(commands.Cog):
             return player, 0, 0
         else:
             wpm, accuracy, not_long_enough = calculate_entry(message, words_message, wordlist)
-            if self.anticheat(message) or wpm > 216:
+            if self.anticheat(message) or wpm > 300:
                 await message.reply("Stop cheating >:(")
                 return player, 0, 0
 
