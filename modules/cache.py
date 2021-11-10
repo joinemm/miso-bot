@@ -16,6 +16,7 @@ class Cache:
         self.blacklist = {}
         self.marriages = set()
         self.starboard_settings = {}
+        self.starboard_blacklisted_channels = set()
         self.event_triggers = {
             "message": 0,
             "message_delete": 0,

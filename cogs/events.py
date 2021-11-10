@@ -185,7 +185,7 @@ class Events(commands.Cog):
         for shard_id, latency in latencies:
             logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
         self.status_loop.start()
-        #self.xp_loop.start()
+        # self.xp_loop.start()
         # self.stats_loop.start()
 
     @tasks.loop(minutes=5.0)
@@ -402,11 +402,6 @@ class Events(commands.Cog):
                     except discord.errors.Forbidden:
                         pass
 
-    #@commands.Cog.listener()
-    async def on_raw_message_edit(self, payload):
-        if payload.data.get("content") is not None:
-            self.bot.cache.event_triggers["message_edit"] += 1
-
     @commands.Cog.listener()
     async def on_raw_message_delete(self, payload):
         """Listener that gets called when any message is deleted."""
@@ -607,10 +602,6 @@ class Events(commands.Cog):
                 except discord.errors.Forbidden:
                     pass
 
-    #@commands.Cog.listener()
-    async def on_raw_reaction_remove(self, _):
-        self.bot.cache.event_triggers["reaction_remove"] += 1
-
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         """Starboard event handler."""
@@ -639,7 +630,7 @@ class Events(commands.Cog):
             emoji_type,
             log_channel_id,
         ) = starboard_settings
-       
+
         if not is_enabled:
             return
 
