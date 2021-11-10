@@ -1295,12 +1295,13 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @server.command(name="topartists", aliases=["ta"])
-    async def server_topartists(self, ctx):
+    async def server_topartists(self, ctx, *args):
         """Combined top artists of server members."""
         artist_map = {}
         tasks = []
         total_users = 0
         total_plays = 0
+        arguments = parse_arguments(args)
         for user_id, lastfm_username in await self.server_lastfm_usernames(
             ctx, filter_cheaters=True
         ):
@@ -1308,7 +1309,9 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(self.get_server_top(lastfm_username, "artist"))
+            tasks.append(
+                self.get_server_top(lastfm_username, "artist", period=arguments["period"])
+            )
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1328,7 +1331,12 @@ class LastFm(commands.Cog):
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
         rows = []
-        content = discord.Embed(title=f"Most listened to artists in {ctx.guild}")
+        formatted_timeframe = humanized_period(arguments["period"]).capitalize()
+        content = discord.Embed()
+        content.set_author(
+            name=f"{ctx.guild} — {formatted_timeframe} top artists",
+            icon_url=ctx.guild.icon_url_as(size=64),
+        )
         content.set_footer(text=f"Taking into account top 100 artists of {total_users} members")
         for i, (artistname, playcount) in enumerate(
             sorted(artist_map.items(), key=lambda x: x[1], reverse=True), start=1
@@ -1345,12 +1353,13 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @server.command(name="topalbums", aliases=["talb"])
-    async def server_topalbums(self, ctx):
+    async def server_topalbums(self, ctx, *args):
         """Combined top albums of server members."""
         album_map = {}
         tasks = []
         total_users = 0
         total_plays = 0
+        arguments = parse_arguments(args)
         for user_id, lastfm_username in await self.server_lastfm_usernames(
             ctx, filter_cheaters=True
         ):
@@ -1358,7 +1367,7 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(self.get_server_top(lastfm_username, "album"))
+            tasks.append(self.get_server_top(lastfm_username, "album", period=arguments["period"]))
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1379,7 +1388,12 @@ class LastFm(commands.Cog):
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
         rows = []
-        content = discord.Embed(title=f"Most listened to albums in {ctx.guild}")
+        formatted_timeframe = humanized_period(arguments["period"]).capitalize()
+        content = discord.Embed()
+        content.set_author(
+            name=f"{ctx.guild} — {formatted_timeframe} top albums",
+            icon_url=ctx.guild.icon_url_as(size=64),
+        )
         content.set_footer(text=f"Taking into account top 100 albums of {total_users} members")
         for i, (albumname, albumdata) in enumerate(
             sorted(album_map.items(), key=lambda x: x[1]["plays"], reverse=True), start=1
@@ -1395,12 +1409,13 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @server.command(name="toptracks", aliases=["tt"])
-    async def server_toptracks(self, ctx):
+    async def server_toptracks(self, ctx, *args):
         """Combined top tracks of server members."""
         track_map = {}
         tasks = []
         total_users = 0
         total_plays = 0
+        arguments = parse_arguments(args)
         for user_id, lastfm_username in await self.server_lastfm_usernames(
             ctx, filter_cheaters=True
         ):
@@ -1408,7 +1423,7 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(self.get_server_top(lastfm_username, "track"))
+            tasks.append(self.get_server_top(lastfm_username, "track", period=arguments["period"]))
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1429,7 +1444,12 @@ class LastFm(commands.Cog):
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
         rows = []
-        content = discord.Embed(title=f"Most listened to tracks in {ctx.guild}")
+        formatted_timeframe = humanized_period(arguments["period"]).capitalize()
+        content = discord.Embed()
+        content.set_author(
+            name=f"{ctx.guild} — {formatted_timeframe} top tracks",
+            icon_url=ctx.guild.icon_url_as(size=64),
+        )
         content.set_footer(text=f"Taking into account top 100 tracks of {total_users} members")
         for i, (trackname, trackdata) in enumerate(
             sorted(track_map.items(), key=lambda x: x[1]["plays"], reverse=True), start=1
@@ -1738,6 +1758,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
+    @is_small_server()
     @commands.guild_only()
     async def crowns(self, ctx, *, user: discord.Member = None):
         """Check your artist crowns."""
