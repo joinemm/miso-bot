@@ -171,6 +171,60 @@ class LastFm(commands.Cog):
 
         await ctx.send(f"**{username} — {state}** :cd:\n{video_url}")
 
+    @fm.group()
+    async def voting(self, ctx):
+        """Configure nowplaying voting reactions."""
+        await util.command_group_help(ctx)
+
+    @voting.command(name="enabled")
+    async def voting_enabled(self, ctx, value: bool):
+        """Toggle whether the voting is enabled for you or not."""
+        await self.bot.db.execute(
+            """
+            INSERT INTO lastfm_vote_setting (user_id, is_enabled)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                is_enabled = VALUES(is_enabled)
+            """,
+            ctx.author.id,
+            value,
+        )
+        await util.send_success(
+            ctx, f"Nowplaying reactions for your messages turned **{'on' if value else 'off'}**"
+        )
+
+    @voting.command(name="upvote")
+    @util.patrons_only()
+    async def voting_upvote(self, ctx, emoji):
+        await ctx.message.add_reaction(emoji)
+        await self.bot.db.execute(
+            """
+            INSERT INTO lastfm_vote_setting (user_id, upvote_emoji)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                upvote_emoji = VALUES(upvote_emoji)
+            """,
+            ctx.author.id,
+            emoji,
+        )
+        await util.send_success(ctx, f"Your upvote reaction emoji is now {emoji}")
+
+    @voting.command(name="downvote")
+    @util.patrons_only()
+    async def voting_downvote(self, ctx, emoji):
+        await ctx.message.add_reaction(emoji)
+        await self.bot.db.execute(
+            """
+            INSERT INTO lastfm_vote_setting (user_id, downvote_emoji)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                downvote_emoji = VALUES(downvote_emoji)
+            """,
+            ctx.author.id,
+            emoji,
+        )
+        await util.send_success(ctx, f"Your downvote reaction emoji is now {emoji}")
+
     @fm.command(aliases=["np", "no"])
     async def nowplaying(self, ctx):
         """Your currently playing song."""
@@ -223,7 +277,21 @@ class LastFm(commands.Cog):
             icon_url=ctx.usertarget.avatar_url,
         )
 
-        await ctx.send(embed=content)
+        message = await ctx.send(embed=content)
+
+        voting_settings = await ctx.bot.db.execute(
+            """
+            SELECT is_enabled, upvote_emoji, downvote_emoji
+            FROM lastfm_vote_setting WHERE user_id = %s
+            """,
+            ctx.author.id,
+            one_row=True,
+        )
+        if voting_settings:
+            (voting_mode, upvote, downvote) = voting_settings
+            if voting_mode:
+                await message.add_reaction(upvote or "👍")
+                await message.add_reaction(downvote or "👎")
 
     @fm.command(aliases=["ta"])
     async def topartists(self, ctx, *args):

@@ -133,6 +133,14 @@ CREATE TABLE IF NOT EXISTS donator (
     FOREIGN KEY (donation_tier) REFERENCES donation_tier (id)
 );
 
+CREATE TABLE IF NOT EXISTS lastfm_vote_setting (
+    user_id BIGINT,
+    is_enabled BOOLEAN DEFAULT TRUE,
+    upvote_emoji VARCHAR(128) DEFAULT NULL,
+    downvote_emoji VARCHAR(128) DEFAULT NULL,
+    PRIMARY KEY (user_id)
+);
+
 CREATE TABLE IF NOT EXISTS donation (
     user_id BIGINT,
     platform ENUM('patreon', 'github', 'ko-fi', 'paypal'),
