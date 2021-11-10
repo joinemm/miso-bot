@@ -1095,6 +1095,102 @@ class LastFm(commands.Cog):
         """Server wide statistics."""
         await util.command_group_help(ctx)
 
+    @server.command(name="chart", aliases=["collage"])
+    async def server_chart(self, ctx, *args):
+        """
+        Collage of the server's top albums or artists.
+
+        Usage:
+            >fm server chart [album | artist] [timeframe] [width]x[height] [notitle]
+        """
+        arguments = parse_chart_arguments(args)
+        if arguments["width"] + arguments["height"] > 30:
+            raise exceptions.Info(
+                "Size is too big! Chart `width` + `height` total must not exceed `30`"
+            )
+
+        chart_total = arguments["width"] * arguments["height"]
+
+        tasks = []
+        for user_id, lastfm_username in await self.server_lastfm_usernames(
+            ctx, filter_cheaters=True
+        ):
+            member = ctx.guild.get_member(user_id)
+            if member is None:
+                continue
+
+            tasks.append(
+                self.get_server_top(
+                    lastfm_username,
+                    "album" if arguments["method"] == "user.gettopalbums" else "artist",
+                    period=arguments["period"],
+                )
+            )
+
+        chart_type = "ERROR"
+        content_map = {}
+        if tasks:
+            data = await asyncio.gather(*tasks)
+            chart = []
+
+            if arguments["method"] == "user.gettopalbums":
+                chart_type = "top album"
+                for user_data in data:
+                    if user_data is None:
+                        continue
+                    for album in user_data:
+                        album_name = album["name"]
+                        artist = album["artist"]["name"]
+                        name = f"{album_name} — {artist}"
+                        plays = int(album["playcount"])
+                        image_url = album["image"][3]["#text"]
+                        if name in content_map:
+                            content_map[name]["plays"] += plays
+                        else:
+                            content_map[name] = {"plays": plays, "image": image_url}
+
+            elif arguments["method"] == "user.gettopartists":
+                chart_type = "top artist"
+                for user_data in data:
+                    if user_data is None:
+                        continue
+                    for artist in user_data:
+                        name = artist["name"]
+                        plays = int(artist["playcount"])
+                        if name in content_map:
+                            content_map[name]["plays"] += plays
+                        else:
+                            content_map[name] = {"plays": plays, "image": None}
+
+        else:
+            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+
+        for i, (name, content_data) in enumerate(
+            sorted(content_map.items(), key=lambda x: x[1]["plays"], reverse=True), start=1
+        ):
+            chart.append(
+                (
+                    content_data["image"]
+                    if chart_type == "top album"
+                    else await self.get_artist_image(name),
+                    f"{content_data['plays']} {format_plays(content_data['plays'])}<br>{name}",
+                )
+            )
+            if i >= chart_total:
+                break
+
+        buffer = await self.chart_factory(
+            chart, arguments["width"], arguments["height"], show_labels=arguments["showtitles"]
+        )
+
+        await ctx.send(
+            f"`{ctx.guild} {humanized_period(arguments['period'])} "
+            f"{arguments['width']}x{arguments['height']} {chart_type} chart`",
+            file=discord.File(
+                fp=buffer, filename=f"fmchart_{ctx.guild}_{arguments['period']}.jpeg"
+            ),
+        )
+
     @server.command(name="nowplaying", aliases=["np"])
     async def server_nowplaying(self, ctx):
         """What this server is listening to."""
@@ -1348,7 +1444,7 @@ class LastFm(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows, 15)
 
-    async def get_server_top(self, username, datatype):
+    async def get_server_top(self, username, datatype, period="overall"):
         limit = 100
         if datatype == "artist":
             data = await self.api_request(
@@ -1356,6 +1452,7 @@ class LastFm(commands.Cog):
                     "user": username,
                     "method": "user.gettopartists",
                     "limit": limit,
+                    "period": period,
                 },
                 ignore_errors=True,
             )
@@ -1366,6 +1463,7 @@ class LastFm(commands.Cog):
                     "user": username,
                     "method": "user.gettopalbums",
                     "limit": limit,
+                    "period": period,
                 },
                 ignore_errors=True,
             )
@@ -1376,6 +1474,7 @@ class LastFm(commands.Cog):
                     "user": username,
                     "method": "user.gettoptracks",
                     "limit": limit,
+                    "period": period,
                 },
                 ignore_errors=True,
             )
@@ -2361,7 +2460,7 @@ def parse_arguments(args):
     return parsed
 
 
-def parse_chart_arguments(args):
+def parse_chart_arguments(args, server_version=False):
     parsed = {
         "period": None,
         "amount": None,
@@ -2394,12 +2493,12 @@ def parse_chart_arguments(args):
                 parsed["method"] = "user.gettopartists"
                 continue
 
-            if a in ["re", "recent", "recents"]:
+            if a in ["re", "recent", "recents"] and not server_version:
                 parsed["method"] = "user.getrecenttracks"
                 continue
 
         if parsed["period"] is None:
-            parsed["period"] = get_period(a, allow_custom=True)
+            parsed["period"] = get_period(a, allow_custom=not server_version)
 
         if parsed["showtitles"] is None and a == "notitle":
             parsed["showtitles"] = False
