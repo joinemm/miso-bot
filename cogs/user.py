@@ -205,7 +205,7 @@ class User(commands.Cog):
         content.add_field(name="Emojis", value=str(len(guild.emojis)))
         content.add_field(name="Boost level", value=guild.premium_tier)
         content.add_field(name="Boosts", value=guild.premium_subscription_count)
-        content.add_field(name="Filesize limit", value=humanize.naturalsize(guild.filesize_limit))
+        content.add_field(name="Filesize limit", value=humanize.naturalsize(guild.filesize_limit, binary=True))
         content.add_field(
             name="Channels",
             value=(
