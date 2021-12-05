@@ -2,7 +2,7 @@ import asyncio
 import traceback
 
 import discord
-from discord.ext import commands, flags
+from discord.ext import commands
 
 from modules import emojis, exceptions, log, queries, util
 
@@ -149,7 +149,7 @@ class ErrorHander(commands.Cog):
         elif isinstance(error, (commands.NotOwner, commands.CheckFailure)):
             await self.send(ctx, "error", "You cannot use this command.")
 
-        elif isinstance(error, (commands.BadArgument, flags._parser.ArgumentParsingError)):
+        elif isinstance(error, (commands.BadArgument)):
             await self.send(ctx, "warning", str(error), help_footer=True)
 
         elif isinstance(error, discord.errors.Forbidden):

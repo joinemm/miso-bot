@@ -4,7 +4,7 @@ import arrow
 import asyncpraw
 import asyncprawcore
 import discord
-from discord.ext import commands, flags
+from discord.ext import commands
 
 from modules import emojis, util
 
@@ -42,10 +42,10 @@ class Reddit(commands.Cog):
         """Reddit commands."""
         await util.command_group_help(ctx)
 
-    @flags.add_flag("-i", "--images", action="store_true")
-    @reddit.command(cls=flags.FlagCommand, name="random", aliases=["r"])
-    async def reddit_random(self, ctx, subreddit, **options):
+    @reddit.command(name="random", aliases=["r"])
+    async def reddit_random(self, ctx, subreddit, *, options):
         """Get random post from given subreddit."""
+        images = "-i" in options
         subreddit = await self.client.subreddit(subreddit.lower())
         try:
             post = await subreddit.random()
@@ -65,7 +65,7 @@ class Reddit(commands.Cog):
                 "Sorry, this subreddit does not support the random post feature!"
             )
 
-        if options["images"]:
+        if images:
             i = 0
             while i < 25 or not is_image_post(post):
                 post = await subreddit.random()

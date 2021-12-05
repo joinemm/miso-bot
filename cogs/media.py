@@ -11,7 +11,7 @@ import discord
 import regex
 import tweepy
 from bs4 import BeautifulSoup
-from discord.ext import commands, flags
+from discord.ext import commands
 from random_user_agent.user_agent import UserAgent
 from tweepy import OAuthHandler
 
@@ -209,13 +209,18 @@ class Media(commands.Cog):
             index_entries=True,
         )
 
-    @flags.add_flag("urls", nargs="+")
-    @flags.add_flag("-d", "--download", action="store_true")
-    @flags.command(aliases=["ig", "insta"])
-    async def instagram(self, ctx, **options):
+    @commands.command(aliases=["ig", "insta"])
+    async def instagram(self, ctx, *, links):
         """Get all the images from one or more instagram posts."""
+        urls = []
+        download = False
+        for link in links:
+            if link.lower in ["-d", "--download"]:
+                download = True
+            else:
+                urls.append(link)
         async with aiohttp.ClientSession() as session:
-            for url in options["urls"]:
+            for url in urls:
                 result = regex.findall("/(p|reel)/(.*?)(/|\\Z)", url)
                 if result:
                     url = f"https://www.instagram.com/p/{result[0][1]}"
@@ -267,7 +272,7 @@ class Media(commands.Cog):
                     await ctx.send(f":warning: Could not find any media from `{url}`")
                     continue
 
-                if options["download"]:
+                if download:
                     # send as files
                     timestamp = arrow.get(data["taken_at_timestamp"]).format("YYMMDD")
                     caption = f":bust_in_silhouette: **@{username}**\n:calendar: {timestamp}\n:link: <{url}>"
@@ -325,12 +330,17 @@ class Media(commands.Cog):
         except discord.Forbidden:
             pass
 
-    @flags.add_flag("urls", nargs="+")
-    @flags.add_flag("-d", "--download", action="store_true")
-    @flags.command(aliases=["twt"])
-    async def twitter(self, ctx, **options):
+    @commands.command(aliases=["twt"])
+    async def twitter(self, ctx, *, links):
         """Get all the images from one or more tweets."""
-        for tweet_url in options["urls"]:
+        urls = []
+        download = False
+        for link in links:
+            if link.lower in ["-d", "--download"]:
+                download = True
+            else:
+                urls.append(link)
+        for tweet_url in urls:
             if "status" in tweet_url:
                 tweet_id = re.search(r"status/(\d+)", tweet_url).group(1)
             else:
@@ -378,7 +388,7 @@ class Media(commands.Cog):
                 url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}",
             )
 
-            if options["download"]:
+            if download:
                 # download file and rename, upload to discord
                 tweet_link = "https://" + tweet.full_text.split(" ")[-1].split("https://")[-1]
                 async with aiohttp.ClientSession() as session:
