@@ -9,6 +9,12 @@ from modules import log
 
 logger = log.get_logger(__name__)
 
+USE_HTTPS = os.environ.get("WEBSERVER_USE_HTTPS", "no")
+HOST = os.environ.get("WEBSERVER_HOSTNAME")
+PORT = int(os.environ.get("WEBSERVER_PORT", 0))
+SSL_CERT = os.environ.get("WEBSERVER_SSL_CERT")
+SSL_KEY = os.environ.get("WEBSERVER_SSL_KEY")
+
 
 class WebServer(commands.Cog):
     """Internal web server for getting ping and checking uptime"""
@@ -39,23 +45,18 @@ class WebServer(commands.Cog):
         for route in list(self.app.router.routes()):
             self.cors.add(route)
 
+        # https
+        if USE_HTTPS == "yes":
+            self.ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            self.ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)
+        else:
+            self.ssl_context = None
+
         self.bot.loop.create_task(self.run())
         self.cache_stats.start()
 
     async def run(self):
         await self.bot.wait_until_ready()
-        USE_HTTPS = os.environ.get("WEBSERVER_USE_HTTPS", "no")
-        HOST = os.environ.get("WEBSERVER_HOSTNAME")
-        PORT = int(os.environ.get("WEBSERVER_PORT", 0))
-        SSL_CERT = os.environ.get("WEBSERVER_SSL_CERT")
-        SSL_KEY = os.environ.get("WEBSERVER_SSL_KEY")
-
-        # https
-        if USE_HTTPS == "yes":
-            ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)
-        else:
-            ssl_context = None
 
         if HOST is not None:
             try:
@@ -66,7 +67,7 @@ class WebServer(commands.Cog):
                     port=PORT,
                     access_log=logger,
                     print=None,
-                    ssl_context=ssl_context,
+                    ssl_context=self.ssl_context,
                 )
             except OSError as e:
                 logger.warning(e)

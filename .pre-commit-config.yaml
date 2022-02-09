@@ -2,15 +2,15 @@ repos:
   - repo: https://github.com/PyCQA/isort
     rev: 5.8.0
     hooks:
-    - id: isort
+      - id: isort
 
   - repo: https://github.com/ambv/black
     rev: 21.6b0
     hooks:
-    - id: black
-      language_version: python3.9
-  
+      - id: black
+        language_version: python3.10.2
+
   - repo: https://github.com/PyCQA/flake8
     rev: 3.9.2
     hooks:
-    - id: flake8
+      - id: flake8
