@@ -149,9 +149,13 @@ async def cooldown_check(ctx):
 
 
 @bot.event
-async def on_connect():
+async def on_ready():
     if not bot.extensions_loaded:
         load_extensions()
+    latencies = bot.latencies
+    logger.info(f"Loading complete | running {len(latencies)} shards")
+    for shard_id, latency in latencies:
+        logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
 
 
 def load_extensions():

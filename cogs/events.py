@@ -31,9 +31,17 @@ class Events(commands.Cog):
         self.stats_messages = 0
         self.stats_reactions = 0
         self.stats_commands = 0
+        self.bot.loop.create_task(self.start_tasks())
 
     def cog_unload(self):
         self.status_loop.cancel()
+
+    async def start_tasks(self):
+        """Start tasks."""
+        await self.bot.wait_until_ready()
+        self.status_loop.start()
+        # self.xp_loop.start()
+        # self.stats_loop.start()
 
     async def insert_stats(self):
         self.bot.logger.info("inserting usage stats")
@@ -176,17 +184,6 @@ class Events(commands.Cog):
             self.stats_commands += 1
             if ctx.guild is not None:
                 await queries.save_command_usage(ctx)
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        """Runs when the bot connects to the discord servers."""
-        latencies = self.bot.latencies
-        logger.info(f"Loading complete | running {len(latencies)} shards")
-        for shard_id, latency in latencies:
-            logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
-        self.status_loop.start()
-        # self.xp_loop.start()
-        # self.stats_loop.start()
 
     @tasks.loop(minutes=5.0)
     async def xp_loop(self):
