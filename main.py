@@ -46,6 +46,7 @@ class MisoBot(commands.AutoShardedBot):
         self.db = maria.MariaDB(self)
         self.cache = cache.Cache(self)
         self.version = "4.0"
+        self.extensions_loaded = False
 
     async def close(self):
         await self.db.cleanup()
@@ -65,7 +66,7 @@ bot = MisoBot(
     case_insensitive=True,
     allowed_mentions=discord.AllowedMentions(everyone=False),
     max_messages=20000,
-    heartbeat_timeout=360,
+    heartbeat_timeout=60,
     intents=discord.Intents(
         guilds=True,
         members=True,  # requires verification
@@ -147,7 +148,14 @@ async def cooldown_check(ctx):
     return True
 
 
-if __name__ == "__main__":
+@bot.event
+async def on_connect():
+    if not bot.extensions_loaded:
+        load_extensions()
+
+
+def load_extensions():
+    logger.info("Loading extensions...")
     for extension in extensions:
         try:
             bot.load_extension(f"cogs.{extension}")
@@ -157,6 +165,11 @@ if __name__ == "__main__":
             traceback.print_exception(type(error), error, error.__traceback__)
 
     bot.load_extension("jishaku")
+    bot.extensions_loaded = True
+    logger.info("All extensions loaded successfully!")
+
+
+if __name__ == "__main__":
     logger.info(f'Using default prefix "{prefix}"')
     bot.start_time = time()
     bot.run(TOKEN)
