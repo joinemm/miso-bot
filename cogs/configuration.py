@@ -537,6 +537,7 @@ class Configuration(commands.Cog):
         await self.bot.db.execute(
             "DELETE FROM autorole WHERE guild_id = %s AND role_id = %s", ctx.guild.id, role_id
         )
+        await self.bot.cache.cache_autoroles()
         await util.send_success(ctx, f"No longer giving new members <@&{role_id}>")
 
     @autorole.command(name="list")
