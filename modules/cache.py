@@ -100,7 +100,7 @@ class Cache:
             try:
                 self.autoroles[str(guild_id)].add(role_id)
             except KeyError:
-                self.autoroles[str(guild_id)] = set(role_id)
+                self.autoroles[str(guild_id)] = set([role_id])
 
     async def initialize_settings_cache(self):
         self.bot.logger.info("Caching settings...")
