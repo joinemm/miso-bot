@@ -14,6 +14,8 @@ class Cache:
         self.autoresponse = {}
         self.levelupmessage = {}
         self.blacklist = {}
+        self.logging_settings = {}
+        self.autoroles = {}
         self.marriages = set()
         self.starboard_settings = {}
         self.starboard_blacklisted_channels = set()
@@ -71,6 +73,34 @@ class Cache:
                 as_list=True,
             )
         )
+
+    async def cache_logging_settings(self):
+        logging_settings = await self.bot.db.execute(
+            """
+            SELECT guild_id, member_log_channel_id, ban_log_channel_id, message_log_channel_id
+            FROM logging_settings
+            """
+        )
+        for (
+            guild_id,
+            member_log_channel_id,
+            ban_log_channel_id,
+            message_log_channel_id,
+        ) in logging_settings:
+            self.logging_settings[str(guild_id)] = {
+                "member_log_channel_id": member_log_channel_id,
+                "ban_log_channel_id": ban_log_channel_id,
+                "message_log_channel_id": message_log_channel_id,
+            }
+
+    async def cache_autoroles(self):
+        for guild_id, role_id in await self.bot.db.execute(
+            "SELECT guild_id, role_id FROM autorole"
+        ):
+            try:
+                self.autoroles[str(guild_id)].add(role_id)
+            except KeyError:
+                self.autoroles[str(guild_id)] = set(role_id)
 
     async def initialize_settings_cache(self):
         self.bot.logger.info("Caching settings...")
@@ -138,3 +168,5 @@ class Cache:
                 }
 
         await self.cache_starboard_settings()
+        await self.cache_logging_settings()
+        await self.cache_autoroles()

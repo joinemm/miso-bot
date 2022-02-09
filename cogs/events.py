@@ -257,14 +257,14 @@ class Events(commands.Cog):
     async def on_guild_remove(self, guild):
         """Called when the bot leaves a guild."""
         self.bot.cache.event_triggers["guild_remove"] += 1
-        logger.info(f"Left guild {guild}")
-        blacklisted = await self.bot.db.execute(
-            "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
-        )
-        if blacklisted:
-            return
+        # blacklisted = await self.bot.db.execute(
+        #     "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
+        # )
+        # if blacklisted:
+        #     return
 
         await self.bot.wait_until_ready()
+        logger.info(f"Left guild {guild}")
         content = discord.Embed(color=discord.Color.red())
         content.title = "Left guild!"
         content.description = (
@@ -281,12 +281,12 @@ class Events(commands.Cog):
         """Called when a new member joins a guild."""
         self.bot.cache.event_triggers["member_join"] += 1
         # log event
-        logging_channel_id = await self.bot.db.execute(
-            "SELECT member_log_channel_id FROM logging_settings WHERE guild_id = %s",
-            member.guild.id,
-            one_value=True,
-        )
         await self.bot.wait_until_ready()
+        logging_channel_id = None
+        logging_settings = self.bot.cache.logging_settings.get(str(member.guild.id))
+        if logging_settings:
+            logging_channel_id = logging_settings.get("member_log_channel_id")
+
         if logging_channel_id:
             logging_channel = member.guild.get_channel(logging_channel_id)
             if logging_channel is not None:
@@ -298,9 +298,7 @@ class Events(commands.Cog):
                     pass
 
         # add autoroles
-        roles = await self.bot.db.execute(
-            "SELECT role_id FROM autorole WHERE guild_id = %s", member.guild.id, as_list=True
-        )
+        roles = self.bot.cache.autoroles.get(str(member.guild.id), [])
         for role_id in roles:
             role = member.guild.get_role(role_id)
             if role is None:
@@ -332,27 +330,26 @@ class Events(commands.Cog):
     async def on_member_ban(self, guild, user):
         """Called when user gets banned from a server."""
         self.bot.cache.event_triggers["member_ban"] += 1
-        channel_id = await self.bot.db.execute(
-            "SELECT ban_log_channel_id FROM logging_settings WHERE guild_id = %s",
-            guild.id,
-            one_value=True,
-        )
-        if not channel_id:
-            return
 
         await self.bot.wait_until_ready()
-        channel = guild.get_channel(channel_id)
-        if channel is not None:
-            try:
-                await channel.send(
-                    embed=discord.Embed(
-                        description=f":hammer: User banned **{user}** {user.mention}",
-                        color=int("f4900c", 16),
-                        timestamp=arrow.utcnow().datetime,
+        logging_channel_id = None
+        logging_settings = self.bot.cache.logging_settings.get(str(guild.id))
+        if logging_settings:
+            logging_channel_id = logging_settings.get("ban_log_channel_id")
+
+        if logging_channel_id:
+            channel = guild.get_channel(logging_channel_id)
+            if channel is not None:
+                try:
+                    await channel.send(
+                        embed=discord.Embed(
+                            description=f":hammer: User banned **{user}** {user.mention}",
+                            color=int("f4900c", 16),
+                            timestamp=arrow.utcnow().datetime,
+                        )
                     )
-                )
-            except discord.errors.Forbidden:
-                pass
+                except discord.errors.Forbidden:
+                    pass
 
     @commands.Cog.listener()
     async def on_member_unban(self, *_):
@@ -365,12 +362,12 @@ class Events(commands.Cog):
             return
         self.bot.cache.event_triggers["member_remove"] += 1
         # log event
-        logging_channel_id = await self.bot.db.execute(
-            "SELECT member_log_channel_id FROM logging_settings WHERE guild_id = %s",
-            member.guild.id,
-            one_value=True,
-        )
         await self.bot.wait_until_ready()
+        logging_channel_id = None
+        logging_settings = self.bot.cache.logging_settings.get(str(member.guild.id))
+        if logging_settings:
+            logging_channel_id = logging_settings.get("member_log_channel_id")
+
         if logging_channel_id:
             logging_channel = member.guild.get_channel(logging_channel_id)
             if logging_channel is not None:
@@ -430,27 +427,24 @@ class Events(commands.Cog):
         if len(message.content) == 0 and len(message.attachments) == 0:
             return
 
-        # ignored channels
-        ignored_channels = await self.bot.db.execute(
-            "SELECT channel_id FROM message_log_ignore WHERE guild_id = %s",
-            message.guild.id,
-            as_list=True,
-        )
-        if message.channel.id in ignored_channels:
-            return
-
-        channel_id = await self.bot.db.execute(
-            "SELECT message_log_channel_id FROM logging_settings WHERE guild_id = %s",
-            message.guild.id,
-            one_value=True,
-        )
+        channel_id = None
+        logging_settings = self.bot.cache.logging_settings.get(str(message.guild.id))
+        if logging_settings:
+            channel_id = logging_settings.get("message_log_channel_id")
         if channel_id:
             log_channel = message.guild.get_channel(channel_id)
             if log_channel is not None and message.channel != log_channel:
-                try:
-                    await log_channel.send(embed=util.message_embed(message))
-                except discord.errors.Forbidden:
-                    pass
+                # ignored channels
+                ignored_channels = await self.bot.db.execute(
+                    "SELECT channel_id FROM message_log_ignore WHERE guild_id = %s",
+                    message.guild.id,
+                    as_list=True,
+                )
+                if message.channel.id not in ignored_channels:
+                    try:
+                        await log_channel.send(embed=util.message_embed(message))
+                    except discord.errors.Forbidden:
+                        pass
 
     @commands.Cog.listener()
     async def on_message(self, message):

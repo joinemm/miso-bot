@@ -65,7 +65,7 @@ bot = MisoBot(
     case_insensitive=True,
     allowed_mentions=discord.AllowedMentions(everyone=False),
     max_messages=20000,
-    heartbeat_timeout=180,
+    heartbeat_timeout=360,
     intents=discord.Intents(
         guilds=True,
         members=True,  # requires verification
@@ -95,7 +95,7 @@ extensions = [
     "customcommands",
     "fishy",
     "information",
-    #"rolepicker",
+    # "rolepicker",
     "mod",
     "owner",
     "notifications",

@@ -156,6 +156,7 @@ class Configuration(commands.Cog):
             "member_log_channel_id",
             channel.id if channel is not None else None,
         )
+        await self.bot.cache.cache_logging_settings()
         if channel is None:
             await util.send_success(ctx, "Members logging **disabled**")
         else:
@@ -174,6 +175,7 @@ class Configuration(commands.Cog):
             "ban_log_channel_id",
             channel.id if channel is not None else None,
         )
+        await self.bot.cache.cache_logging_settings()
         if channel is None:
             await util.send_success(ctx, "Bans logging **disabled**")
         else:
@@ -197,6 +199,7 @@ class Configuration(commands.Cog):
             "message_log_channel_id",
             channel.id if channel is not None else None,
         )
+        await self.bot.cache.cache_logging_settings()
         if channel is None:
             await util.send_success(ctx, "Deleted message logging **disabled**")
         else:
