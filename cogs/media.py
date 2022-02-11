@@ -19,13 +19,17 @@ from modules import exceptions, log, util
 
 logger = log.get_logger(__name__)
 
+setattr(asyncio.sslproto._SSLProtocolTransport, "_start_tls_compatible", True)
+
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")
 IG_COOKIE = os.environ.get("IG_COOKIE")
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
-ROTATING_PROXY_URL = os.environ.get("ROTATING_PROXY_URL")
+PROXY_URL = os.environ.get("PROXY_URL")
+PROXY_USER = os.environ.get("PROXY_USER")
+PROXY_PASS = os.environ.get("PROXY_PASS")
 GCS_DEVELOPER_KEY = os.environ.get("GOOGLE_KEY")
 
 
@@ -107,14 +111,11 @@ class Media(commands.Cog):
 
         content.add_field(
             name="Rank",
-            value=f"**{rank}**"
-            + (f" {lp} **|** {wins_losses}" if rank != "Unranked" else ""),
+            value=f"**{rank}**" + (f" {lp} **|** {wins_losses}" if rank != "Unranked" else ""),
             inline=False,
         )
 
-        rank_image = "https:" + ggsoup.soup.find("div", {"class": "Medal"}).find(
-            "img"
-        ).get("src")
+        rank_image = "https:" + ggsoup.soup.find("div", {"class": "Medal"}).find("img").get("src")
         content.set_thumbnail(url=rank_image)
         content.colour = int("5383e8", 16)
 
@@ -128,20 +129,14 @@ class Media(commands.Cog):
                 f"**{played_count.replace(' Played', '** Played')} **{name}** ({winrate})"
             )
 
-        content.add_field(
-            name="Champions", value="\n".join(champions) if champions else "None"
-        )
+        content.add_field(name="Champions", value="\n".join(champions) if champions else "None")
 
         match_history = []
         for match in ggsoup.soup.findAll("div", {"class": "GameItem"}):
             gametype = ggsoup.text("div", "GameType", match)
-            champion = (
-                match.find("div", {"class": "ChampionName"}).find("a").text.strip()
-            )
+            champion = match.find("div", {"class": "ChampionName"}).find("a").text.strip()
             win = match.get("data-game-result") == "win"
-            kda = "".join(
-                ggsoup.text("div", "KDA", match.find("div", {"class": "KDA"})).split()
-            )
+            kda = "".join(ggsoup.text("div", "KDA", match.find("div", {"class": "KDA"})).split())
             emoji = ":blue_square:" if win else ":red_square:"
             match_history.append(f"{emoji} **{gametype}** as **{champion}** `{kda}`")
 
@@ -214,10 +209,7 @@ class Media(commands.Cog):
 
         await util.paginate_list(
             ctx,
-            [
-                f"https://youtube.com/watch?v={item['id']['videoId']}"
-                for item in data.get("items")
-            ],
+            [f"https://youtube.com/watch?v={item['id']['videoId']}" for item in data.get("items")],
             use_locking=True,
             only_author=True,
             index_entries=True,
@@ -255,8 +247,12 @@ class Media(commands.Cog):
                     + '","child_comment_count":3,"fetch_comment_count":40,"parent_comment_count":24,"has_threaded_comments":true}',
                 }
 
+                if PROXY_USER or PROXY_PASS:
+                    proxy_auth = aiohttp.BasicAuth(PROXY_USER, PROXY_PASS)
+                else:
+                    proxy_auth = None
                 async with session.get(
-                    newurl, params=params, headers=headers, proxy=ROTATING_PROXY_URL
+                    newurl, params=params, headers=headers, proxy=PROXY_URL, proxy_auth=proxy_auth
                 ) as response:
                     try:
                         data = await response.json()
@@ -302,16 +298,10 @@ class Media(commands.Cog):
                                 media_url = file.get("display_url")
                                 extension = "jpg"
 
-                            filename = (
-                                f"{timestamp}-@{username}-{post_id}-{n}.{extension}"
-                            )
+                            filename = f"{timestamp}-@{username}-{post_id}-{n}.{extension}"
                             async with session.get(media_url) as response:
                                 if (
-                                    int(
-                                        response.headers.get(
-                                            "content-length", max_filesize + 1
-                                        )
-                                    )
+                                    int(response.headers.get("content-length", max_filesize + 1))
                                     > max_filesize
                                 ):
                                     too_big = True
@@ -336,9 +326,7 @@ class Media(commands.Cog):
                     # send as embeds
                     for n, medianode in enumerate(medias, start=1):
                         if n == len(medias):
-                            content.timestamp = arrow.get(
-                                data["taken_at_timestamp"]
-                            ).datetime
+                            content.timestamp = arrow.get(data["taken_at_timestamp"]).datetime
                         if medianode.get("is_video"):
                             await ctx.send(medianode.get("video_url"))
                         else:
@@ -371,9 +359,7 @@ class Media(commands.Cog):
             try:
                 tweet = await ctx.bot.loop.run_in_executor(
                     None,
-                    lambda: self.twitter_api.get_status(
-                        tweet_id, tweet_mode="extended"
-                    ),
+                    lambda: self.twitter_api.get_status(tweet_id, tweet_mode="extended"),
                 )
 
             except Exception:
@@ -387,9 +373,7 @@ class Media(commands.Cog):
                 media = []
 
             if not media:
-                await ctx.send(
-                    f":warning: Could not find any images from tweet id `{tweet_id}`"
-                )
+                await ctx.send(f":warning: Could not find any images from tweet id `{tweet_id}`")
                 continue
 
             for i in range(len(media)):
@@ -417,9 +401,7 @@ class Media(commands.Cog):
 
             if download:
                 # download file and rename, upload to discord
-                tweet_link = (
-                    "https://" + tweet.full_text.split(" ")[-1].split("https://")[-1]
-                )
+                tweet_link = "https://" + tweet.full_text.split(" ")[-1].split("https://")[-1]
                 async with aiohttp.ClientSession() as session:
                     timestamp = arrow.get(tweet.created_at).format("YYMMDD")
                     caption = (
@@ -435,17 +417,15 @@ class Media(commands.Cog):
                         else:
                             extension = "mp4"
 
-                        filename = f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
+                        filename = (
+                            f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
+                        )
                         too_big = False
                         max_filesize = 8388608  # discord has 8MB file size limit
                         url = media_url.replace(".jpg", "?format=jpg&name=orig")
                         async with session.get(url) as response:
                             if (
-                                int(
-                                    response.headers.get(
-                                        "content-length", max_filesize + 1
-                                    )
-                                )
+                                int(response.headers.get("content-length", max_filesize + 1))
                                 > max_filesize
                             ):
                                 too_big = True
@@ -495,13 +475,9 @@ class Media(commands.Cog):
         async with aiohttp.ClientSession() as session:
             tasks = []
             if len(query.split(" ")) == 1:
-                tasks.append(
-                    extract_scripts(session, f"https://gfycat.com/gifs/tag/{query}")
-                )
+                tasks.append(extract_scripts(session, f"https://gfycat.com/gifs/tag/{query}"))
 
-            tasks.append(
-                extract_scripts(session, f"https://gfycat.com/gifs/search/{query}")
-            )
+            tasks.append(extract_scripts(session, f"https://gfycat.com/gifs/search/{query}"))
             scripts = sum(await asyncio.gather(*tasks), [])
 
         urls = []
@@ -526,9 +502,7 @@ class Media(commands.Cog):
             return True
 
         buttons = {"❌": msg.delete, "🔁": randomize, "🔒": done}
-        asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, buttons, only_author=True)
-        )
+        asyncio.ensure_future(util.reaction_buttons(ctx, msg, buttons, only_author=True))
 
     @commands.command()
     async def melon(self, ctx, timeframe):
@@ -564,9 +538,7 @@ class Media(commands.Cog):
         #     util.escape_md(x.find("a").text)
         #     for x in soup.find_all("div", {"class": "ellipsis rank03"})
         # ]
-        image = soup.find("img", {"onerror": "WEBPOCIMG.defaultAlbumImg(this);"}).get(
-            "src"
-        )
+        image = soup.find("img", {"onerror": "WEBPOCIMG.defaultAlbumImg(this);"}).get("src")
 
         content = nextcord.Embed(color=nextcord.Color.from_rgb(0, 205, 60))
         content.set_author(
@@ -618,9 +590,7 @@ class Media(commands.Cog):
     @commands.command(aliases=["img"])
     async def googleimages(self, ctx, *, query):
         """Search from google images."""
-        results = await self.google_client.search(
-            query, safesearch=False, image_search=True
-        )
+        results = await self.google_client.search(query, safesearch=False, image_search=True)
 
         await util.paginate_list(
             ctx,

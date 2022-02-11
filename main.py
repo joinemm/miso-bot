@@ -6,18 +6,15 @@ from time import time
 
 import nextcord
 import uvloop
+from dotenv import load_dotenv
 from nextcord.ext import commands
 
 from modules import cache, log, maria, util
 from modules.help import EmbedHelpCommand
 
-# from dotenv import load_dotenv
-
-
-logging.basicConfig(level=logging.INFO)
-
 uvloop.install()
-# load_dotenv(verbose=True)
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
 logger = log.get_logger(__name__)
 
 DEV = "dev" in sys.argv
@@ -38,9 +35,7 @@ if maintainance_mode:
         type=nextcord.ActivityType.playing, name="Maintainance mode"
     )
 else:
-    starting_activity = nextcord.Activity(
-        type=nextcord.ActivityType.playing, name="Booting up..."
-    )
+    starting_activity = nextcord.Activity(type=nextcord.ActivityType.playing, name="Booting up...")
 
 
 class MisoBot(commands.AutoShardedBot):
@@ -49,9 +44,7 @@ class MisoBot(commands.AutoShardedBot):
         self.default_prefix = prefix
         self.logger = logger
         self.start_time = time()
-        self.global_cd = commands.CooldownMapping.from_cooldown(
-            15, 60, commands.BucketType.member
-        )
+        self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
         self.db = maria.MariaDB(self)
         self.cache = cache.Cache(self)
         self.version = "5.0"
@@ -163,9 +156,7 @@ async def on_ready():
     if not bot.extensions_loaded:
         load_extensions()
         bot.boot_up_time = time() - bot.start_time
-        logger.info(
-            f"Boot up process completed in {util.stringfromtime(bot.boot_up_time)}"
-        )
+        logger.info(f"Boot up process completed in {util.stringfromtime(bot.boot_up_time)}")
     latencies = bot.latencies
     logger.info(f"Loading complete | running {len(latencies)} shards")
     for shard_id, latency in latencies:

@@ -113,9 +113,7 @@ class User(commands.Cog):
                 status_emoji = "mobile"
             else:
                 status_emoji = user.status.name
-            status_display = (
-                f"{emojis.Status[status_emoji].value} {user.status.name.capitalize()}"
-            )
+            status_display = f"{emojis.Status[status_emoji].value} {user.status.name.capitalize()}"
 
         else:
             activity_display = "Unavailable"
@@ -128,14 +126,10 @@ class User(commands.Cog):
             )
 
         content.add_field(name="Status", value=status_display)
-        content.add_field(
-            name="Badges", value="> " + " ".join(util.flags_to_badges(user))
-        )
+        content.add_field(name="Badges", value="> " + " ".join(util.flags_to_badges(user)))
         content.add_field(name="Activity", value=activity_display)
         content.add_field(name="Mention", value=user.mention)
-        content.add_field(
-            name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M")
-        )
+        content.add_field(name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M"))
 
         if isinstance(user, nextcord.Member):
             content.colour = user.color
@@ -147,9 +141,7 @@ class User(commands.Cog):
             for member in ctx.guild.members:
                 if member.joined_at < user.joined_at:
                     member_number += 1
-            content.add_field(
-                name="Member", value=f"#{member_number} / {len(ctx.guild.members)}"
-            )
+            content.add_field(name="Member", value=f"#{member_number} / {len(ctx.guild.members)}")
             content.add_field(
                 name="Server rank",
                 value=await self.get_rank(user, "user_activity", user.guild),
@@ -163,9 +155,7 @@ class User(commands.Cog):
             if role_string == "":
                 role_string = "None"
 
-            content.add_field(
-                name="Roles", value=role_string, inline=(roles_length < 20)
-            )
+            content.add_field(name="Roles", value=role_string, inline=(roles_length < 20))
 
         await ctx.send(embed=content)
 
@@ -187,9 +177,7 @@ class User(commands.Cog):
     @commands.command()
     async def members(self, ctx):
         """Show the newest members of this server."""
-        sorted_members = sorted(
-            ctx.guild.members, key=lambda x: x.joined_at, reverse=True
-        )
+        sorted_members = sorted(ctx.guild.members, key=lambda x: x.joined_at, reverse=True)
         membercount = len(sorted_members)
         content = nextcord.Embed(title=f"{ctx.guild.name} members")
         rows = []
@@ -216,20 +204,14 @@ class User(commands.Cog):
         )
         content.set_thumbnail(url=guild.icon.url)
         content.add_field(name="Owner", value=str(guild.owner))
-        content.add_field(
-            name="Region", value=f"{util.region_flag(guild.region)} {guild.region}"
-        )
-        content.add_field(
-            name="Created at", value=guild.created_at.strftime("%d/%m/%Y %H:%M")
-        )
+        content.add_field(name="Region", value=f"{util.region_flag(guild.region)} {guild.region}")
+        content.add_field(name="Created at", value=guild.created_at.strftime("%d/%m/%Y %H:%M"))
         content.add_field(name="Members", value=str(guild.member_count))
         content.add_field(name="Roles", value=str(len(guild.roles)))
         content.add_field(name="Emojis", value=str(len(guild.emojis)))
         content.add_field(name="Boost level", value=guild.premium_tier)
         content.add_field(name="Boosts", value=guild.premium_subscription_count)
-        content.add_field(
-            name="Filesize limit", value=humanize.naturalsize(guild.filesize_limit)
-        )
+        content.add_field(name="Filesize limit", value=humanize.naturalsize(guild.filesize_limit))
         content.add_field(
             name="Channels",
             value=(
@@ -255,9 +237,7 @@ class User(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command(aliases=["level"])
-    async def activity(
-        self, ctx, user: typing.Optional[nextcord.Member] = None, scope=""
-    ):
+    async def activity(self, ctx, user: typing.Optional[nextcord.Member] = None, scope=""):
         """See your hourly activity chart (GMT)."""
         if user is None:
             user = ctx.author
@@ -429,9 +409,7 @@ class User(commands.Cog):
             else:
                 ranking = f"`#{i:2}`"
 
-            rows.append(
-                f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy"
-            )
+            rows.append(f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy")
             i += 1
 
         if not rows:
@@ -733,9 +711,7 @@ class User(commands.Cog):
             "imageFormat": "png",
         }
         buffer = await util.render_html(self.bot, payload)
-        await ctx.send(
-            file=nextcord.File(fp=buffer, filename=f"profile_{user.name}.png")
-        )
+        await ctx.send(file=nextcord.File(fp=buffer, filename=f"profile_{user.name}.png"))
 
     @commands.group()
     async def editprofile(self, ctx):
@@ -798,9 +774,7 @@ class User(commands.Cog):
         if value:
             await util.send_success(ctx, "Now showing activity graph on your profile.")
         else:
-            await util.send_success(
-                ctx, "Activity graph on your profile is now hidden."
-            )
+            await util.send_success(ctx, "Activity graph on your profile is now hidden.")
 
     @editprofile.command(name="color", aliases=["colour"])
     async def editprofile_color(self, ctx, color):
@@ -843,13 +817,9 @@ class User(commands.Cog):
             if ctx.author.id in el:
                 pair = list(el)
                 if ctx.author.id == pair[0]:
-                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(
-                        pair[1]
-                    )
+                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(pair[1])
                 else:
-                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(
-                        pair[0]
-                    )
+                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(pair[0])
                 return await ctx.send(
                     f":confused: You are already married to **{util.displayname(partner)}**! You must divorce before marrying someone else..."
                 )
@@ -896,13 +866,9 @@ class User(commands.Cog):
                 to_remove.append(el)
                 pair = list(el)
                 if ctx.author.id == pair[0]:
-                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(
-                        pair[1]
-                    )
+                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(pair[1])
                 else:
-                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(
-                        pair[0]
-                    )
+                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(pair[0])
 
         if partner == "":
             return await ctx.send(":thinking: You are not married!")
@@ -933,9 +899,7 @@ class User(commands.Cog):
 
         functions = {"✅": confirm, "❌": cancel}
         asyncio.ensure_future(
-            util.reaction_buttons(
-                ctx, msg, functions, only_author=True, single_use=True
-            )
+            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
         )
 
     @commands.command()
