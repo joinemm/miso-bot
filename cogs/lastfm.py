@@ -1352,10 +1352,10 @@ class LastFm(commands.Cog):
         content = nextcord.Embed()
         content.set_author(
             name=f"What is {ctx.guild.name} listening to?",
-            icon_url=ctx.guild.icon.url.replace(size=64),
+            icon_url=ctx.guild.icon.replace(size=64),
         )
         content.colour = int(
-            await util.color_from_image_url(str(ctx.guild.icon.url.replace(size=64))),
+            await util.color_from_image_url(str(ctx.guild.icon.replace(size=64))),
             16,
         )
         content.set_footer(
@@ -1410,10 +1410,10 @@ class LastFm(commands.Cog):
         content = nextcord.Embed()
         content.set_author(
             name=f"What has {ctx.guild.name} been listening to?",
-            icon_url=ctx.guild.icon.url.replace(size=64),
+            icon_url=ctx.guild.icon.replace(size=64),
         )
         content.colour = int(
-            await util.color_from_image_url(str(ctx.guild.icon.url.replace(size=64))),
+            await util.color_from_image_url(str(ctx.guild.icon.replace(size=64))),
             16,
         )
         content.set_footer(
@@ -1466,7 +1466,7 @@ class LastFm(commands.Cog):
         content = nextcord.Embed()
         content.set_author(
             name=f"{ctx.guild} — {formatted_timeframe} top artists",
-            icon_url=ctx.guild.icon.url.replace(size=64),
+            icon_url=ctx.guild.icon.replace(size=64),
         )
         content.set_footer(
             text=f"Taking into account top 100 artists of {total_users} members"
@@ -1531,7 +1531,7 @@ class LastFm(commands.Cog):
         content = nextcord.Embed()
         content.set_author(
             name=f"{ctx.guild} — {formatted_timeframe} top albums",
-            icon_url=ctx.guild.icon.url.replace(size=64),
+            icon_url=ctx.guild.icon.replace(size=64),
         )
         content.set_footer(
             text=f"Taking into account top 100 albums of {total_users} members"
@@ -1598,7 +1598,7 @@ class LastFm(commands.Cog):
         content = nextcord.Embed()
         content.set_author(
             name=f"{ctx.guild} — {formatted_timeframe} top tracks",
-            icon_url=ctx.guild.icon.url.replace(size=64),
+            icon_url=ctx.guild.icon.replace(size=64),
         )
         content.set_footer(
             text=f"Taking into account top 100 tracks of {total_users} members"
@@ -2260,7 +2260,7 @@ class LastFm(commands.Cog):
         )
 
         if cached:
-            lifetime = arrow.utcnow().timestamp - cached[1].timestamp()
+            lifetime = arrow.utcnow().timestamp() - cached[1].timestamp()
             if (lifetime) < image_life:
                 return self.cover_base_urls[3].format(cached[0])
 

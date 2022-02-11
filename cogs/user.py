@@ -209,7 +209,7 @@ class User(commands.Cog):
             if guild is None:
                 raise exceptions.Warning(f'Guild with id "{guild_id}" not found.')
 
-        image_small = str(guild.icon.url.replace(format="png", size=64))
+        image_small = str(guild.icon.replace(format="png", size=64))
         content = nextcord.Embed(
             title=f"**{guild.name}** | #{guild.id}",
             color=int(await util.color_from_image_url(image_small), 16),

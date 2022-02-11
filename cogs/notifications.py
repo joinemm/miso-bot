@@ -135,7 +135,7 @@ class Notifications(commands.Cog):
             member = message.guild.get_member(user_id)
             if (
                 member is not None
-                and member.permissions_in(message.channel).read_messages
+                and message.channel.permissions_for(member).read_messages
             ):
                 asyncio.ensure_future(
                     self.send_notification(member, message, users_words)
