@@ -2,8 +2,8 @@ import asyncio
 import random
 
 import arrow
-import discord
-from discord.ext import commands, tasks
+import nextcord
+from nextcord.ext import commands, tasks
 
 from libraries import emoji_literals
 from modules import emojis, log, queries, util
@@ -131,7 +131,9 @@ class Events(commands.Cog):
                 for emoji_name, value in self.emoji_usage_cache["unicode"][guild_id][
                     user_id
                 ].items():
-                    unicode_emoji_values.append((int(guild_id), int(user_id), emoji_name, value))
+                    unicode_emoji_values.append(
+                        (int(guild_id), int(user_id), emoji_name, value)
+                    )
 
         if unicode_emoji_values:
             sql_tasks.append(
@@ -150,9 +152,17 @@ class Events(commands.Cog):
         custom_emoji_values = []
         for guild_id in self.emoji_usage_cache["custom"]:
             for user_id in self.emoji_usage_cache["custom"][guild_id]:
-                for emoji_id, value in self.emoji_usage_cache["custom"][guild_id][user_id].items():
+                for emoji_id, value in self.emoji_usage_cache["custom"][guild_id][
+                    user_id
+                ].items():
                     custom_emoji_values.append(
-                        (int(guild_id), int(user_id), value["name"], emoji_id, value["uses"])
+                        (
+                            int(guild_id),
+                            int(user_id),
+                            value["name"],
+                            emoji_id,
+                            value["uses"],
+                        )
                     )
 
         if custom_emoji_values:
@@ -221,9 +231,10 @@ class Events(commands.Cog):
         self.current_status = new_status_id
 
         await self.bot.change_presence(
-            activity=discord.Activity(
-                type=discord.ActivityType(self.activities[status[0]]), name=status[1]()
-            )
+            status=nextcord.Status.online,
+            activity=nextcord.Activity(
+                type=nextcord.ActivityType(self.activities[status[0]]), name=status[1]()
+            ),
         )
 
     @commands.Cog.listener()
@@ -231,20 +242,24 @@ class Events(commands.Cog):
         """Called when the bot joins a new guild."""
         self.bot.cache.event_triggers["guild_join"] += 1
         blacklisted = await self.bot.db.execute(
-            "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
+            "SELECT reason FROM blacklisted_guild WHERE guild_id = %s",
+            guild.id,
+            one_value=True,
         )
         if blacklisted:
-            logger.info(f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}")
+            logger.info(
+                f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}"
+            )
             return await guild.leave()
 
         await self.bot.wait_until_ready()
         logger.info(f"New guild : {guild}")
-        content = discord.Embed(color=discord.Color.green())
+        content = nextcord.Embed(color=nextcord.Color.green())
         content.title = "New guild!"
         content.description = (
             f"Miso just joined **{guild}**\nWith **{guild.member_count-1}** members"
         )
-        content.set_thumbnail(url=guild.icon_url)
+        content.set_thumbnail(url=guild.icon.url)
         content.set_footer(text=f"#{guild.id}")
         content.timestamp = arrow.utcnow().datetime
         logchannel = self.bot.get_channel(self.guildlog)
@@ -262,12 +277,12 @@ class Events(commands.Cog):
 
         await self.bot.wait_until_ready()
         logger.info(f"Left guild {guild}")
-        content = discord.Embed(color=discord.Color.red())
+        content = nextcord.Embed(color=nextcord.Color.red())
         content.title = "Left guild!"
         content.description = (
             f"Miso just left **{guild}**\nWith **{guild.member_count-1}** members :("
         )
-        content.set_thumbnail(url=guild.icon_url)
+        content.set_thumbnail(url=guild.icon.url)
         content.set_footer(text=f"#{guild.id}")
         content.timestamp = arrow.utcnow().datetime
         logchannel = self.bot.get_channel(self.guildlog)
@@ -287,11 +302,11 @@ class Events(commands.Cog):
         if logging_channel_id:
             logging_channel = member.guild.get_channel(logging_channel_id)
             if logging_channel is not None:
-                embed = discord.Embed(color=discord.Color.green())
-                embed.set_author(name=str(member), icon_url=member.avatar_url)
+                embed = nextcord.Embed(color=nextcord.Color.green())
+                embed.set_author(name=str(member), icon_url=member.display_avatar.url)
                 try:
                     await logging_channel.send(embed=embed)
-                except discord.errors.Forbidden:
+                except nextcord.errors.Forbidden:
                     pass
 
         # add autoroles
@@ -302,7 +317,7 @@ class Events(commands.Cog):
                 continue
             try:
                 await member.add_roles(role)
-            except discord.errors.Forbidden:
+            except nextcord.errors.Forbidden:
                 pass
 
         # welcome message
@@ -318,9 +333,11 @@ class Events(commands.Cog):
                 if greeter_channel is not None:
                     try:
                         await greeter_channel.send(
-                            embed=util.create_welcome_embed(member, member.guild, message_format)
+                            embed=util.create_welcome_embed(
+                                member, member.guild, message_format
+                            )
                         )
-                    except discord.errors.Forbidden:
+                    except nextcord.errors.Forbidden:
                         pass
 
     @commands.Cog.listener()
@@ -339,13 +356,13 @@ class Events(commands.Cog):
             if channel is not None:
                 try:
                     await channel.send(
-                        embed=discord.Embed(
+                        embed=nextcord.Embed(
                             description=f":hammer: User banned **{user}** {user.mention}",
                             color=int("f4900c", 16),
                             timestamp=arrow.utcnow().datetime,
                         )
                     )
-                except discord.errors.Forbidden:
+                except nextcord.errors.Forbidden:
                     pass
 
     @commands.Cog.listener()
@@ -368,11 +385,11 @@ class Events(commands.Cog):
         if logging_channel_id:
             logging_channel = member.guild.get_channel(logging_channel_id)
             if logging_channel is not None:
-                embed = discord.Embed(color=discord.Color.red())
-                embed.set_author(name=str(member), icon_url=member.avatar_url)
+                embed = nextcord.Embed(color=nextcord.Color.red())
+                embed.set_author(name=str(member), icon_url=member.display_avatar.url)
                 try:
                     await logging_channel.send(embed=embed)
-                except discord.errors.Forbidden:
+                except nextcord.errors.Forbidden:
                     pass
 
         # goodbye message
@@ -391,9 +408,11 @@ class Events(commands.Cog):
 
                     try:
                         await channel.send(
-                            util.create_goodbye_message(member, member.guild, message_format)
+                            util.create_goodbye_message(
+                                member, member.guild, message_format
+                            )
                         )
-                    except discord.errors.Forbidden:
+                    except nextcord.errors.Forbidden:
                         pass
 
     @commands.Cog.listener()
@@ -440,7 +459,7 @@ class Events(commands.Cog):
                 if message.channel.id not in ignored_channels:
                     try:
                         await log_channel.send(embed=util.message_embed(message))
-                    except discord.errors.Forbidden:
+                    except nextcord.errors.Forbidden:
                         pass
 
     @commands.Cog.listener()
@@ -477,8 +496,12 @@ class Events(commands.Cog):
         if self.xp_cache.get(str(message.guild.id)) is None:
             self.xp_cache[str(message.guild.id)] = {}
         try:
-            self.xp_cache[str(message.guild.id)][str(message.author.id)]["xp"] += message_xp
-            self.xp_cache[str(message.guild.id)][str(message.author.id)]["messages"] += 1
+            self.xp_cache[str(message.guild.id)][str(message.author.id)][
+                "xp"
+            ] += message_xp
+            self.xp_cache[str(message.guild.id)][str(message.author.id)][
+                "messages"
+            ] += 1
         except KeyError:
             self.xp_cache[str(message.guild.id)][str(message.author.id)] = {
                 "xp": message_xp,
@@ -548,7 +571,7 @@ class Events(commands.Cog):
         if random.randint(0, 3) == 0 and "stfu" in message.content.lower():
             try:
                 await message.channel.send("no u")
-            except discord.errors.Forbidden:
+            except nextcord.errors.Forbidden:
                 pass
 
         stripped_content = message.content.lower().strip("!.?~ ")
@@ -557,14 +580,14 @@ class Events(commands.Cog):
         if stripped_content == "hi" and random.randint(0, 19) == 0:
             try:
                 await message.channel.send("hi")
-            except discord.errors.Forbidden:
+            except nextcord.errors.Forbidden:
                 pass
 
         # hello there
         elif stripped_content == "hello there" and random.randint(0, 3) == 0:
             try:
                 await message.channel.send("General Kenobi")
-            except discord.errors.Forbidden:
+            except nextcord.errors.Forbidden:
                 pass
 
         # git gud
@@ -590,7 +613,7 @@ class Events(commands.Cog):
                 msg = f"`git: '{gitcommand}' is not a git command. See 'git --help'.`"
                 try:
                     await message.channel.send(msg)
-                except discord.errors.Forbidden:
+                except nextcord.errors.Forbidden:
                     pass
 
     @commands.Cog.listener()
@@ -608,7 +631,9 @@ class Events(commands.Cog):
         if payload.channel_id in self.bot.cache.starboard_blacklisted_channels:
             return
 
-        starboard_settings = self.bot.cache.starboard_settings.get(str(payload.guild_id))
+        starboard_settings = self.bot.cache.starboard_settings.get(
+            str(payload.guild_id)
+        )
         if not starboard_settings:
             return
 
@@ -645,7 +670,7 @@ class Events(commands.Cog):
                 return
             try:
                 message = await message_channel.fetch_message(payload.message_id)
-            except (discord.errors.Forbidden, discord.errors.NotFound):
+            except (nextcord.errors.Forbidden, nextcord.errors.NotFound):
                 return
 
             reaction_count = 0
@@ -653,7 +678,7 @@ class Events(commands.Cog):
             for react in message.reactions:
                 if emoji_type == "custom":
                     if (
-                        isinstance(react.emoji, (discord.Emoji, discord.PartialEmoji))
+                        isinstance(react.emoji, (nextcord.Emoji, nextcord.PartialEmoji))
                         and react.emoji.id == payload.emoji.id
                     ):
                         reaction_count = react.count
@@ -677,20 +702,24 @@ class Events(commands.Cog):
                 one_value=True,
             )
             emoji_display = (
-                "⭐" if emoji_type == "custom" else emoji_literals.NAME_TO_UNICODE[emoji_name]
+                "⭐"
+                if emoji_type == "custom"
+                else emoji_literals.NAME_TO_UNICODE[emoji_name]
             )
 
             board_message = None
             if board_message_id:
                 try:
                     board_message = await board_channel.fetch_message(board_message_id)
-                except discord.errors.NotFound:
+                except nextcord.errors.NotFound:
                     pass
 
             if board_message is None:
                 # message is not on board yet, or it was deleted
-                content = discord.Embed(color=int("ffac33", 16))
-                content.set_author(name=f"{message.author}", icon_url=message.author.avatar_url)
+                content = nextcord.Embed(color=int("ffac33", 16))
+                content.set_author(
+                    name=f"{message.author}", icon_url=message.author.display_avatar.url
+                )
                 jump = f"\n\n[context]({message.jump_url})"
                 content.description = message.content[: 2048 - len(jump)] + jump
                 content.timestamp = message.created_at
@@ -713,11 +742,12 @@ class Events(commands.Cog):
                 )
                 log_channel = self.bot.get_channel(log_channel_id)
                 if log_channel is not None:
-                    content = discord.Embed(
+                    content = nextcord.Embed(
                         color=int("ffac33", 16), title="Message added to starboard"
                     )
                     content.add_field(
-                        name="Original message", value=f"[{message.id}]({message.jump_url})"
+                        name="Original message",
+                        value=f"[{message.id}]({message.jump_url})",
                     )
                     content.add_field(
                         name="Board message",

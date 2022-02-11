@@ -4,8 +4,8 @@ import random
 from operator import itemgetter
 
 import arrow
-import discord
-from discord.ext import commands
+import nextcord
+from nextcord.ext import commands
 
 from modules import exceptions, util
 
@@ -62,7 +62,9 @@ class Typings(commands.Cog):
                 f"Currently supported languages are:\n>>> {langs}"
             )
 
-        words_message = await ctx.reply(f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
+        words_message = await ctx.reply(
+            f"```\n{self.obfuscate(' '.join(wordlist))}\n```"
+        )
 
         def check(_message):
             return _message.author == ctx.author and _message.channel == ctx.channel
@@ -73,7 +75,9 @@ class Typings(commands.Cog):
             return await ctx.send(f"{ctx.author.mention} Too slow.")
 
         else:
-            wpm, accuracy, not_long_enough = calculate_entry(message, words_message, wordlist)
+            wpm, accuracy, not_long_enough = calculate_entry(
+                message, words_message, wordlist
+            )
             if self.anticheat(message) or wpm > 300:
                 return await message.reply("Stop cheating >:(")
 
@@ -111,7 +115,7 @@ class Typings(commands.Cog):
                 f"Currently supported languages are:\n>>> {langs}"
             )
 
-        content = discord.Embed(
+        content = nextcord.Embed(
             title=f":rocket: Starting a new typing race | {wordcount} words",
             color=int("55acee", 16),
         )
@@ -120,7 +124,9 @@ class Typings(commands.Cog):
             "React with :white_check_mark: to start the race."
         )
 
-        content.add_field(name="Participants", value=f"**{util.displayname(ctx.author)}**")
+        content.add_field(
+            name="Participants", value=f"**{util.displayname(ctx.author)}**"
+        )
         enter_message = await ctx.send(embed=content)
 
         note_emoji = "🗒"
@@ -142,12 +148,16 @@ class Typings(commands.Cog):
 
         while not race_in_progress:
             try:
-                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=120.0, check=check)
+                reaction, user = await ctx.bot.wait_for(
+                    "reaction_add", timeout=120.0, check=check
+                )
             except asyncio.TimeoutError:
                 try:
                     for emoji in [note_emoji, check_emoji]:
-                        asyncio.ensure_future(enter_message.remove_reaction(emoji, ctx.bot.user))
-                except (discord.errors.NotFound, discord.errors.Forbidden):
+                        asyncio.ensure_future(
+                            enter_message.remove_reaction(emoji, ctx.bot.user)
+                        )
+                except (nextcord.errors.NotFound, nextcord.errors.Forbidden):
                     pass
                 break
             else:
@@ -169,7 +179,7 @@ class Typings(commands.Cog):
                             try:
                                 await cant_race_alone.delete()
                                 await enter_message.remove_reaction(check_emoji, user)
-                            except discord.errors.Forbidden:
+                            except nextcord.errors.Forbidden:
                                 await ctx.send(
                                     "`error: i'm missing required discord permission [ manage messages ]`"
                                 )
@@ -194,7 +204,9 @@ class Typings(commands.Cog):
         await asyncio.sleep(1)
 
         await words_message.delete()
-        words_message = await ctx.send(f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
+        words_message = await ctx.send(
+            f"```\n{self.obfuscate(' '.join(wordlist))}\n```"
+        )
 
         tasks = []
         for player in players:
@@ -206,7 +218,9 @@ class Typings(commands.Cog):
 
         results = await asyncio.gather(*tasks)
 
-        content = discord.Embed(title=":checkered_flag: Race complete!", color=int("e1e8ed", 16))
+        content = nextcord.Embed(
+            title=":checkered_flag: Race complete!", color=int("e1e8ed", 16)
+        )
         rows = []
         values = []
         for i, (player, wpm, accuracy) in enumerate(
@@ -215,7 +229,11 @@ class Typings(commands.Cog):
             values.append((ctx.guild.id, player.id, 1, 1 if i == 1 else 0))
             rows.append(
                 f"{f'`#{i}`' if i > 1 else ':trophy:'} **{util.displayname(player)}** — "
-                + (f"**{int(wpm)} WPM / {int(accuracy)}% Accuracy**" if wpm != 0 else ":x:")
+                + (
+                    f"**{int(wpm)} WPM / {int(accuracy)}% Accuracy**"
+                    if wpm != 0
+                    else ":x:"
+                )
             )
 
         await self.bot.db.executemany(
@@ -238,12 +256,16 @@ class Typings(commands.Cog):
             return _message.author == player and _message.channel == ctx.channel
 
         try:
-            message = await self.bot.wait_for("message", timeout=300.0, check=progress_check)
+            message = await self.bot.wait_for(
+                "message", timeout=300.0, check=progress_check
+            )
         except asyncio.TimeoutError:
             await ctx.send(f"{player.mention} too slow!")
             return player, 0, 0
         else:
-            wpm, accuracy, not_long_enough = calculate_entry(message, words_message, wordlist)
+            wpm, accuracy, not_long_enough = calculate_entry(
+                message, words_message, wordlist
+            )
             if self.anticheat(message) or wpm > 300:
                 await message.reply("Stop cheating >:(")
                 return player, 0, 0
@@ -260,7 +282,7 @@ class Typings(commands.Cog):
             return player, wpm, accuracy
 
     @typing.command(name="history")
-    async def typing_history(self, ctx, member: discord.Member = None):
+    async def typing_history(self, ctx, member: nextcord.Member = None):
         """See your typing test history."""
         if member is None:
             member = ctx.author
@@ -278,7 +300,7 @@ class Typings(commands.Cog):
                 + " taken any typing tests yet!",
             )
 
-        content = discord.Embed(
+        content = nextcord.Embed(
             title=f":stopwatch: {util.displayname(member)} Typing test history",
             color=int("dd2e44", 16),
         )
@@ -295,15 +317,19 @@ class Typings(commands.Cog):
     @typing.command(name="cleardata")
     async def typing_clear(self, ctx):
         """Clear your typing data."""
-        content = discord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
-        content.description = (
-            "This action will delete *all* of your saved typing data and is **irreversible**."
+        content = nextcord.Embed(
+            title=":warning: Are you sure?", color=int("ffcc4d", 16)
         )
+        content.description = "This action will delete *all* of your saved typing data and is **irreversible**."
         msg = await ctx.send(embed=content)
 
         async def confirm():
-            await self.bot.db.execute("DELETE FROM typing_stats WHERE user_id = %s", ctx.author.id)
-            await self.bot.db.execute("DELETE FROM typing_race WHERE user_id = %s", ctx.author.id)
+            await self.bot.db.execute(
+                "DELETE FROM typing_stats WHERE user_id = %s", ctx.author.id
+            )
+            await self.bot.db.execute(
+                "DELETE FROM typing_race WHERE user_id = %s", ctx.author.id
+            )
             content.title = ":white_check_mark: Cleared your data"
             content.color = int("77b255", 16)
             content.description = ""
@@ -317,11 +343,13 @@ class Typings(commands.Cog):
 
         functions = {"✅": confirm, "❌": cancel}
         asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+            util.reaction_buttons(
+                ctx, msg, functions, only_author=True, single_use=True
+            )
         )
 
     @typing.command(name="stats")
-    async def typing_stats(self, ctx, user: discord.Member = None):
+    async def typing_stats(self, ctx, user: nextcord.Member = None):
         """See your typing statistics."""
         if user is None:
             user = ctx.author
@@ -344,7 +372,7 @@ class Typings(commands.Cog):
             )
 
         test_count, max_wpm, avg_wpm, avg_acc, race_count, win_count = data
-        content = discord.Embed(
+        content = nextcord.Embed(
             title=f":bar_chart: Typing stats for {user.name}", color=int("3b94d9", 16)
         )
         content.description = (

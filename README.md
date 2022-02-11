@@ -57,7 +57,7 @@ Invite to you server using this link!
 
 ### Deployment using docker
 
-First copy `.env.example` to `.env` and fill it with your own keys.
+First copy/rename `.env.example` to `.env` and fill it with your own keys.
 Everything else should be handled by the `docker-compose.yml`
 ```
 docker-compose up --build

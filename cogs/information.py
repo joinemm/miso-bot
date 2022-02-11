@@ -5,9 +5,9 @@ import time
 
 import aiohttp
 import arrow
-import discord
+import nextcord
 import psutil
-from discord.ext import commands
+from nextcord.ext import commands
 from numpy import nan
 
 from libraries import emoji_literals, plotter
@@ -24,11 +24,11 @@ class Information(commands.Cog):
     @commands.command()
     async def invite(self, ctx):
         """Invite Miso to your server!"""
-        url = discord.utils.oauth_url(
-            "500385855072894982", permissions=discord.Permissions(1074654407)
+        url = nextcord.utils.oauth_url(
+            "500385855072894982", permissions=nextcord.Permissions(1074654407)
         )
-        content = discord.Embed(title="Invite me to your server!")
-        content.set_thumbnail(url=self.bot.user.avatar_url)
+        content = nextcord.Embed(title="Invite me to your server!")
+        content.set_thumbnail(url=self.bot.user.display_avatar.url)
         content.add_field(
             name="Required permissions are selected automatically, don't touch them.",
             value=f"[Click here]({url})",
@@ -43,16 +43,23 @@ class Information(commands.Cog):
     @commands.command(aliases=["patreon", "kofi", "sponsor", "ko-fi"])
     async def donate(self, ctx):
         """Donate to keep the bot running smoothly!"""
-        content = discord.Embed(
-            title="Consider donating to help keep Miso Bot online!", colour=discord.Colour.orange()
+        content = nextcord.Embed(
+            title="Consider donating to help keep Miso Bot online!",
+            colour=nextcord.Colour.orange(),
         )
         content.add_field(
-            name="Github Sponsor", value="https://github.com/sponsors/joinemm", inline=False
+            name="Github Sponsor",
+            value="https://github.com/sponsors/joinemm",
+            inline=False,
         )
-        content.add_field(name="Patreon", value="https://www.patreon.com/joinemm", inline=False)
+        content.add_field(
+            name="Patreon", value="https://www.patreon.com/joinemm", inline=False
+        )
         content.add_field(name="Ko-Fi", value="https://ko-fi.com/joinemm", inline=False)
         content.add_field(name="Bitcoin", value="`1HDwoc5ith4goXmh6CAQC3TP6i1GAqanB1`")
-        content.set_footer(text="Donations will be used to pay for server and upkeep costs")
+        content.set_footer(
+            text="Donations will be used to pay for server and upkeep costs"
+        )
         await ctx.send(embed=content)
 
     @commands.command(aliases=["patrons", "supporters", "sponsors"])
@@ -64,7 +71,7 @@ class Information(commands.Cog):
             FROM donator LEFT OUTER JOIN donation_tier ON donation_tier=id
             """
         )
-        content = discord.Embed(
+        content = nextcord.Embed(
             title=":heart: Miso Bot supporters",
             color=int("dd2e44", 16),
             description=" | ".join(
@@ -98,7 +105,9 @@ class Information(commands.Cog):
                 content.add_field(inline=True, name=tier_name, value="\n".join(users))
 
         if former:
-            content.add_field(inline=False, name="Former donators", value=", ".join(former))
+            content.add_field(
+                inline=False, name="Former donators", value=", ".join(former)
+            )
 
         await ctx.send(embed=content)
 
@@ -106,21 +115,26 @@ class Information(commands.Cog):
     async def info(self, ctx):
         """Get information about the bot."""
         membercount = len(set(self.bot.get_all_members()))
-        content = discord.Embed(
-            title=f"Miso Bot | version {self.bot.version}", colour=discord.Colour.blue()
+        content = nextcord.Embed(
+            title=f"Miso Bot | version {self.bot.version}",
+            colour=nextcord.Colour.blue(),
         )
         owner = self.bot.get_user(self.bot.owner_id)
         content.description = (
-            f"Created by **{owner}** {owner.mention} using discord.py\n\n"
+            f"Created by **{owner}** {owner.mention} using nextcord.py\n\n"
             f"Use `{ctx.prefix}help` to get help on any commands, \n"
             f"or visit the website for more detailed instructions.\n\n"
             f"Currently in **{len(self.bot.guilds)}** servers across **{len(self.bot.latencies)}** shards,\n"
             f"totalling **{membercount}** unique users."
         )
-        content.set_thumbnail(url=self.bot.user.avatar_url)
+        content.set_thumbnail(url=self.bot.user.display_avatar.url)
         content.add_field(name="Website", value="https://misobot.xyz", inline=False)
-        content.add_field(name="Github", value="https://github.com/joinemm/miso-bot", inline=False)
-        content.add_field(name="Discord", value="https://discord.gg/RzDW3Ne", inline=False)
+        content.add_field(
+            name="Github", value="https://github.com/joinemm/miso-bot", inline=False
+        )
+        content.add_field(
+            name="Discord", value="https://discord.gg/RzDW3Ne", inline=False
+        )
 
         data = await get_commits("joinemm", "miso-bot")
         last_update = data[0]["commit"]["author"].get("date")
@@ -132,10 +146,12 @@ class Information(commands.Cog):
     async def ping(self, ctx):
         """Get the bot's ping."""
         test_message = await ctx.send(":ping_pong:")
-        cmd_lat = (test_message.created_at - ctx.message.created_at).total_seconds() * 1000
+        cmd_lat = (
+            test_message.created_at - ctx.message.created_at
+        ).total_seconds() * 1000
         discord_lat = self.bot.latency * 1000
-        content = discord.Embed(
-            colour=discord.Color.red(),
+        content = nextcord.Embed(
+            colour=nextcord.Color.red(),
             description=f"**Command response** `{cmd_lat}` ms\n"
             f"**Discord API latency** `{discord_lat:.1f}` ms",
         )
@@ -151,7 +167,7 @@ class Information(commands.Cog):
         memory_use = psutil.Process(pid).memory_info()[0]
 
         data = [
-            ("Version", self.bot.version),
+            ("Booted up in", util.stringfromtime(self.bot.boot_up_time)),
             ("Process uptime", util.stringfromtime(process_uptime, 2)),
             ("Process memory", f"{memory_use / math.pow(1024, 2):.2f}MB"),
             ("System uptime", util.stringfromtime(system_uptime, 2)),
@@ -159,7 +175,7 @@ class Information(commands.Cog):
             ("RAM Usage", f"{mem.percent}%"),
         ]
 
-        content = discord.Embed(
+        content = nextcord.Embed(
             title=":computer: System status",
             colour=int("5dadec", 16),
             description="\n".join(f"**{x[0]}** {x[1]}" for x in data),
@@ -169,7 +185,7 @@ class Information(commands.Cog):
     @commands.command(aliases=["shards"])
     async def shardinfo(self, ctx):
         """Get information about the current shards."""
-        content = discord.Embed(title=f"Running {len(self.bot.shards)} shards")
+        content = nextcord.Embed(title=f"Running {len(self.bot.shards)} shards")
         for shard in self.bot.shards.values():
             content.add_field(
                 name=f"Shard [`{shard.id}`]"
@@ -183,7 +199,7 @@ class Information(commands.Cog):
     async def changelog(self, ctx, author="joinemm", repo="miso-bot"):
         """Github commit history."""
         data = await get_commits(author, repo)
-        content = discord.Embed(color=discord.Color.from_rgb(46, 188, 79))
+        content = nextcord.Embed(color=nextcord.Color.from_rgb(46, 188, 79))
         content.set_author(
             name="Github commit history",
             icon_url=data[0]["author"]["avatar_url"],
@@ -216,7 +232,7 @@ class Information(commands.Cog):
         await util.page_switcher(ctx, pages)
 
     @commands.command()
-    async def emojistats(self, ctx, user: discord.Member = None, *args):
+    async def emojistats(self, ctx, user: nextcord.Member = None, *args):
         """See most used emojis on the server, optionally filtered by user."""
         global_user = False
         if "global" in [x.lower() for x in args] and user is not None:
@@ -284,9 +300,11 @@ class Information(commands.Cog):
         for i, (uses, emoji_name) in enumerate(
             sorted(all_emojis, key=lambda x: x[0], reverse=True), start=1
         ):
-            rows.append(f"`#{i:2}` {emoji_name} — **{uses}** Use" + ("s" if uses > 1 else ""))
+            rows.append(
+                f"`#{i:2}` {emoji_name} — **{uses}** Use" + ("s" if uses > 1 else "")
+            )
 
-        content = discord.Embed(
+        content = nextcord.Embed(
             title="Most used emojis"
             + (f" by {user.name}" if user is not None else "")
             + (" globally" if global_user else f" in {ctx.guild.name}"),
@@ -308,9 +326,9 @@ class Information(commands.Cog):
                 await self.commandstats_single(ctx, " ".join(args))
 
     @commandstats.command(name="server")
-    async def commandstats_server(self, ctx, user: discord.Member = None):
+    async def commandstats_server(self, ctx, user: nextcord.Member = None):
         """Most used commands in this server."""
-        content = discord.Embed(
+        content = nextcord.Embed(
             title=f":bar_chart: Most used commands in {ctx.guild.name}"
             + ("" if user is None else f" by {user}")
         )
@@ -349,10 +367,11 @@ class Information(commands.Cog):
             await ctx.send(embed=content)
 
     @commandstats.command(name="global")
-    async def commandstats_global(self, ctx, user: discord.Member = None):
+    async def commandstats_global(self, ctx, user: nextcord.Member = None):
         """Most used commands globally."""
-        content = discord.Embed(
-            title=":bar_chart: Most used commands" + ("" if user is None else f" by {user}")
+        content = nextcord.Embed(
+            title=":bar_chart: Most used commands"
+            + ("" if user is None else f" by {user}")
         )
         opt = []
         if user is not None:
@@ -390,9 +409,13 @@ class Information(commands.Cog):
         """Stats of a single command."""
         command = self.bot.get_command(command_name)
         if command is None:
-            raise exceptions.Info(f"Command `{ctx.prefix}{command_name}` does not exist!")
+            raise exceptions.Info(
+                f"Command `{ctx.prefix}{command_name}` does not exist!"
+            )
 
-        content = discord.Embed(title=f":bar_chart: `{ctx.prefix}{command.qualified_name}`")
+        content = nextcord.Embed(
+            title=f":bar_chart: `{ctx.prefix}{command.qualified_name}`"
+        )
 
         # set command name to be tuple of subcommands if this is a command group
         group = hasattr(command, "commands")
@@ -403,7 +426,11 @@ class Information(commands.Cog):
         else:
             command_name = command.qualified_name
 
-        total_uses, most_used_by_user_id, most_used_by_user_amount = await self.bot.db.execute(
+        (
+            total_uses,
+            most_used_by_user_id,
+            most_used_by_user_amount,
+        ) = await self.bot.db.execute(
             f"""
             SELECT SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
                 SELECT SUM(uses) as use_sum, user_id FROM command_usage
@@ -461,7 +488,9 @@ class Information(commands.Cog):
         # additional data for command groups
         if group:
             content.description = "Command Group"
-            subcommands_tuple = tuple([f"{command.name} {x.name}" for x in command.commands])
+            subcommands_tuple = tuple(
+                [f"{command.name} {x.name}" for x in command.commands]
+            )
             subcommand_usage = await self.bot.db.execute(
                 """
                 SELECT command_name, SUM(uses) FROM command_usage
@@ -487,11 +516,13 @@ class Information(commands.Cog):
         if guild is None:
             guild = ctx.guild
 
-        content = discord.Embed()
-        content.set_author(name=str(guild), url=guild.icon_url)
-        content.set_image(url=guild.icon_url_as(static_format="png"))
-        stats = await util.image_info_from_url(guild.icon_url)
-        color = await util.color_from_image_url(str(guild.icon_url_as(size=128, format="png")))
+        content = nextcord.Embed()
+        content.set_author(name=str(guild), url=guild.icon.url)
+        content.set_image(url=guild.icon.url.replace(static_format="png"))
+        stats = await util.image_info_from_url(guild.icon.url)
+        color = await util.color_from_image_url(
+            str(guild.icon.url.replace(size=128, format="png"))
+        )
         content.colour = int(color, 16)
         if stats is not None:
             content.set_footer(
@@ -503,7 +534,7 @@ class Information(commands.Cog):
     @commands.command()
     async def stats(self, ctx):
         """See bot stats."""
-        content = discord.Embed(
+        content = nextcord.Embed(
             title=":bar_chart: Events since last reboot",
             description="",
             color=int("5c913b", 16),
@@ -553,10 +584,10 @@ class Information(commands.Cog):
             frame.append(dt.datetime)
             patched_data.append(value)
 
-        plotter.time_series_graph(frame, patched_data, str(discord.Color.random()))
+        plotter.time_series_graph(frame, patched_data, str(nextcord.Color.random()))
         with open("downloads/graph.png", "rb") as img:
             await ctx.send(
-                file=discord.File(img),
+                file=nextcord.File(img),
             )
 
 

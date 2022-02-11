@@ -1,7 +1,7 @@
 import os
 
 import statcord
-from discord.ext import commands
+from nextcord.ext import commands
 
 
 class StatcordPost(commands.Cog):

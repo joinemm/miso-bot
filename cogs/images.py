@@ -1,7 +1,7 @@
 import os
 
-import discord
-from discord.ext import commands
+import nextcord
+from nextcord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 
 from modules import util
@@ -102,7 +102,7 @@ class Images(commands.Cog):
         self.bot = bot
         self.icon = "🖼️"
 
-    @commands.group(case_insensitive=True, enabled=False)
+    @commands.group(case_insensitive=True, enabled=True)
     async def meme(self, ctx):
         """Input text into images."""
         await util.command_group_help(ctx)
@@ -209,12 +209,14 @@ class Images(commands.Cog):
         await self.bot.loop.run_in_executor(
             None, lambda: image.write_box(*boxdimensions, color, text, angle=angle)
         )
-        await self.bot.loop.run_in_executor(None, lambda: image.write_watermark(wm_size, wm_color))
+        await self.bot.loop.run_in_executor(
+            None, lambda: image.write_watermark(wm_size, wm_color)
+        )
 
         save_location = f"downloads/{ctx.message.id}_output_{filename.split('/')[-1]}"
         image.save(save_location)
         with open(save_location, "rb") as img:
-            await ctx.send(file=discord.File(img))
+            await ctx.send(file=nextcord.File(img))
 
         os.remove(save_location)
 

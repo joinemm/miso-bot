@@ -3,9 +3,9 @@ import typing
 
 import arrow
 import bleach
-import discord
 import humanize
-from discord.ext import commands
+import nextcord
+from nextcord.ext import commands
 
 from libraries import plotter
 from modules import emojis, exceptions, queries, util
@@ -72,16 +72,18 @@ class User(commands.Cog):
         return f"#{int(pos)} / {total}"
 
     @commands.command(aliases=["dp", "av", "pfp"])
-    async def avatar(self, ctx, *, user: discord.User = None):
+    async def avatar(self, ctx, *, user: nextcord.User = None):
         """Get user's profile picture."""
         if user is None:
             user = ctx.author
 
-        content = discord.Embed()
-        content.set_author(name=str(user), url=user.avatar_url)
-        content.set_image(url=user.avatar_url_as(static_format="png"))
-        stats = await util.image_info_from_url(user.avatar_url)
-        color = await util.color_from_image_url(str(user.avatar_url_as(size=64, format="png")))
+        content = nextcord.Embed()
+        content.set_author(name=str(user), url=user.display_avatar.url)
+        content.set_image(url=user.display_avatar.replace(static_format="png").url)
+        stats = await util.image_info_from_url(user.display_avatar.url)
+        color = await util.color_from_image_url(
+            user.display_avatar.replace(size=64, format="png").url
+        )
         content.colour = int(color, 16)
         if stats is not None:
             content.set_footer(
@@ -92,41 +94,50 @@ class User(commands.Cog):
 
     @commands.command(aliases=["uinfo"])
     @commands.cooldown(3, 30, type=commands.BucketType.user)
-    async def userinfo(self, ctx, *, user: discord.User = None):
+    async def userinfo(self, ctx, *, user: nextcord.User = None):
         """Get information about discord user."""
         if user is None:
             user = ctx.author
         else:
             user = ctx.guild.get_member(user.id) or user
 
-        content = discord.Embed(
+        content = nextcord.Embed(
             title=f"{user.name}#{user.discriminator}{' :robot:' if user.bot else ''} | #{user.id}"
         )
-        content.set_thumbnail(url=user.avatar_url)
+        content.set_thumbnail(url=user.display_avatar.url)
 
-        if isinstance(user, discord.Member):
+        if isinstance(user, nextcord.Member):
             content.colour = user.color
             activity_display = util.activities_string(user.activities)
-            if user.is_on_mobile() and user.status is discord.Status.online:
+            if user.is_on_mobile() and user.status is nextcord.Status.online:
                 status_emoji = "mobile"
             else:
                 status_emoji = user.status.name
-            status_display = f"{emojis.Status[status_emoji].value} {user.status.name.capitalize()}"
+            status_display = (
+                f"{emojis.Status[status_emoji].value} {user.status.name.capitalize()}"
+            )
 
         else:
             activity_display = "Unavailable"
             status_display = "Unavailable"
             content.colour = int(
-                await util.color_from_image_url(str(user.avatar_url_as(size=64, format="png"))), 16
+                await util.color_from_image_url(
+                    user.display_avatar.replace(size=64, format="png").url
+                ),
+                16,
             )
 
         content.add_field(name="Status", value=status_display)
-        content.add_field(name="Badges", value="> " + " ".join(util.flags_to_badges(user)))
+        content.add_field(
+            name="Badges", value="> " + " ".join(util.flags_to_badges(user))
+        )
         content.add_field(name="Activity", value=activity_display)
         content.add_field(name="Mention", value=user.mention)
-        content.add_field(name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M"))
+        content.add_field(
+            name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M")
+        )
 
-        if isinstance(user, discord.Member):
+        if isinstance(user, nextcord.Member):
             content.colour = user.color
             content.add_field(
                 name="Joined server", value=user.joined_at.strftime("%d/%m/%Y %H:%M")
@@ -136,9 +147,12 @@ class User(commands.Cog):
             for member in ctx.guild.members:
                 if member.joined_at < user.joined_at:
                     member_number += 1
-            content.add_field(name="Member", value=f"#{member_number} / {len(ctx.guild.members)}")
             content.add_field(
-                name="Server rank", value=await self.get_rank(user, "user_activity", user.guild)
+                name="Member", value=f"#{member_number} / {len(ctx.guild.members)}"
+            )
+            content.add_field(
+                name="Server rank",
+                value=await self.get_rank(user, "user_activity", user.guild),
             )
 
             roles_length = 0
@@ -149,7 +163,9 @@ class User(commands.Cog):
             if role_string == "":
                 role_string = "None"
 
-            content.add_field(name="Roles", value=role_string, inline=(roles_length < 20))
+            content.add_field(
+                name="Roles", value=role_string, inline=(roles_length < 20)
+            )
 
         await ctx.send(embed=content)
 
@@ -171,9 +187,11 @@ class User(commands.Cog):
     @commands.command()
     async def members(self, ctx):
         """Show the newest members of this server."""
-        sorted_members = sorted(ctx.guild.members, key=lambda x: x.joined_at, reverse=True)
+        sorted_members = sorted(
+            ctx.guild.members, key=lambda x: x.joined_at, reverse=True
+        )
         membercount = len(sorted_members)
-        content = discord.Embed(title=f"{ctx.guild.name} members")
+        content = nextcord.Embed(title=f"{ctx.guild.name} members")
         rows = []
         for i, member in enumerate(sorted_members):
             jointime = member.joined_at.strftime("%y%m%d %H:%M")
@@ -191,21 +209,27 @@ class User(commands.Cog):
             if guild is None:
                 raise exceptions.Warning(f'Guild with id "{guild_id}" not found.')
 
-        image_small = str(guild.icon_url_as(format="png", size=64))
-        content = discord.Embed(
+        image_small = str(guild.icon.url.replace(format="png", size=64))
+        content = nextcord.Embed(
             title=f"**{guild.name}** | #{guild.id}",
             color=int(await util.color_from_image_url(image_small), 16),
         )
-        content.set_thumbnail(url=guild.icon_url)
+        content.set_thumbnail(url=guild.icon.url)
         content.add_field(name="Owner", value=str(guild.owner))
-        content.add_field(name="Region", value=f"{util.region_flag(guild.region)} {guild.region}")
-        content.add_field(name="Created at", value=guild.created_at.strftime("%d/%m/%Y %H:%M"))
+        content.add_field(
+            name="Region", value=f"{util.region_flag(guild.region)} {guild.region}"
+        )
+        content.add_field(
+            name="Created at", value=guild.created_at.strftime("%d/%m/%Y %H:%M")
+        )
         content.add_field(name="Members", value=str(guild.member_count))
         content.add_field(name="Roles", value=str(len(guild.roles)))
         content.add_field(name="Emojis", value=str(len(guild.emojis)))
         content.add_field(name="Boost level", value=guild.premium_tier)
         content.add_field(name="Boosts", value=guild.premium_subscription_count)
-        content.add_field(name="Filesize limit", value=humanize.naturalsize(guild.filesize_limit))
+        content.add_field(
+            name="Filesize limit", value=humanize.naturalsize(guild.filesize_limit)
+        )
         content.add_field(
             name="Channels",
             value=(
@@ -220,7 +244,7 @@ class User(commands.Cog):
     @commands.command(aliases=["roles"])
     async def roleslist(self, ctx):
         """List the roles of this server."""
-        content = discord.Embed(title=f"Roles in {ctx.message.guild.name}")
+        content = nextcord.Embed(title=f"Roles in {ctx.message.guild.name}")
         rows = []
         for role in reversed(ctx.message.guild.roles):
             rows.append(
@@ -231,7 +255,9 @@ class User(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command(aliases=["level"])
-    async def activity(self, ctx, user: typing.Optional[discord.Member] = None, scope=""):
+    async def activity(
+        self, ctx, user: typing.Optional[nextcord.Member] = None, scope=""
+    ):
         """See your hourly activity chart (GMT)."""
         if user is None:
             user = ctx.author
@@ -284,20 +310,20 @@ class User(commands.Cog):
         with open("downloads/graph.png", "rb") as img:
             await ctx.send(
                 f"`Hourly cumulative {'global' if is_global else 'server'} activity for {user}`",
-                file=discord.File(img),
+                file=nextcord.File(img),
             )
 
     @commands.command(aliases=["ranking"])
     @commands.cooldown(1, 30, type=commands.BucketType.member)
-    async def rank(self, ctx, user: discord.Member = None):
+    async def rank(self, ctx, user: nextcord.Member = None):
         """See your server activity ranking."""
         if user is None:
             user = ctx.author
 
-        content = discord.Embed(color=user.color)
+        content = nextcord.Embed(color=user.color)
         content.set_author(
             name=f"Server activity ranks for {util.displayname(user, escape=False)}",
-            icon_url=user.avatar_url,
+            icon_url=user.display_avatar.url,
         )
 
         textbox = ""
@@ -315,15 +341,15 @@ class User(commands.Cog):
 
     @commands.command(aliases=["globalranking", "grank"])
     @commands.cooldown(1, 60, type=commands.BucketType.member)
-    async def globalrank(self, ctx, user: discord.Member = None):
+    async def globalrank(self, ctx, user: nextcord.Member = None):
         """See your global activity ranking."""
         if user is None:
             user = ctx.author
 
-        content = discord.Embed(color=user.color)
+        content = nextcord.Embed(color=user.color)
         content.set_author(
             name=f"Global activity ranks for {util.displayname(user, escape=False)}",
-            icon_url=user.avatar_url,
+            icon_url=user.display_avatar.url,
         )
 
         textbox = ""
@@ -364,10 +390,10 @@ class User(commands.Cog):
 
             rows.append(f"`#{i}` {guild_name} — `{xp}` xp ({(xp/total_xp)*100:.1f}%)")
 
-        content = discord.Embed()
+        content = nextcord.Embed()
         content.set_author(
             name=f"{util.displayname(ctx.author, escape=False)} — {time} top servers",
-            icon_url=ctx.author.avatar_url,
+            icon_url=ctx.author.display_avatar.url,
         )
         content.set_footer(text=f"Total {len(rows)} servers")
         content.colour = ctx.author.color
@@ -403,13 +429,15 @@ class User(commands.Cog):
             else:
                 ranking = f"`#{i:2}`"
 
-            rows.append(f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy")
+            rows.append(
+                f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy"
+            )
             i += 1
 
         if not rows:
             raise exceptions.Info("Nobody has any fish yet!")
 
-        content = discord.Embed(
+        content = nextcord.Embed(
             title=f":fish: {'Global' if global_data else ctx.guild.name} fishy leaderboard",
             color=int("55acee", 16),
         )
@@ -464,7 +492,7 @@ class User(commands.Cog):
                 + f"**{xp}** XP, **{message_count}** message{'' if message_count == 1 else 's'}"
             )
 
-        content = discord.Embed(
+        content = nextcord.Embed(
             color=int("5c913b", 16),
             title=f":bar_chart: {'Global' if _global_ else ctx.guild.name} {time}levels leaderboard",
         )
@@ -510,8 +538,9 @@ class User(commands.Cog):
         if not rows:
             rows = ["No data."]
 
-        content = discord.Embed(
-            title=f":keyboard: {ctx.guild.name} WPM leaderboard", color=int("99aab5", 16)
+        content = nextcord.Embed(
+            title=f":keyboard: {ctx.guild.name} WPM leaderboard",
+            color=int("99aab5", 16),
         )
         await util.send_as_pages(ctx, content, rows)
 
@@ -538,8 +567,9 @@ class User(commands.Cog):
 
             rows.append(f"{ranking} **{util.displayname(user)}** — **{amount}** crowns")
 
-        content = discord.Embed(
-            color=int("ffcc4d", 16), title=f":crown: {ctx.guild.name} artist crowns leaderboard"
+        content = nextcord.Embed(
+            color=int("ffcc4d", 16),
+            title=f":crown: {ctx.guild.name} artist crowns leaderboard",
         )
         if not rows:
             rows = ["No data."]
@@ -547,7 +577,7 @@ class User(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
-    async def profile(self, ctx, user: discord.Member = None):
+    async def profile(self, ctx, user: nextcord.Member = None):
         """Your personal customizable user profile."""
         if user is None:
             user = ctx.author
@@ -680,7 +710,7 @@ class User(commands.Cog):
             "SIDEBAR_CLASS": "blur" if background_url != "" else "",
             "OVERLAY_CLASS": "overlay" if background_url != "" else "",
             "USER_COLOR": background_color,
-            "AVATAR_URL": user.avatar_url_as(size=128, format="png"),
+            "AVATAR_URL": user.display_avatar.replace(size=128, format="png").url,
             "USERNAME": user.name,
             "DISCRIMINATOR": f"#{user.discriminator}",
             "DESCRIPTION": description,
@@ -703,7 +733,9 @@ class User(commands.Cog):
             "imageFormat": "png",
         }
         buffer = await util.render_html(self.bot, payload)
-        await ctx.send(file=discord.File(fp=buffer, filename=f"profile_{user.name}.png"))
+        await ctx.send(
+            file=nextcord.File(fp=buffer, filename=f"profile_{user.name}.png")
+        )
 
     @commands.group()
     async def editprofile(self, ctx):
@@ -766,7 +798,9 @@ class User(commands.Cog):
         if value:
             await util.send_success(ctx, "Now showing activity graph on your profile.")
         else:
-            await util.send_success(ctx, "Activity graph on your profile is now hidden.")
+            await util.send_success(
+                ctx, "Activity graph on your profile is now hidden."
+            )
 
     @editprofile.command(name="color", aliases=["colour"])
     async def editprofile_color(self, ctx, color):
@@ -799,7 +833,7 @@ class User(commands.Cog):
         )
 
     @commands.command()
-    async def marry(self, ctx, user: discord.Member):
+    async def marry(self, ctx, user: nextcord.Member):
         """Marry someone."""
         if user == ctx.author:
             return await ctx.send("You cannot marry yourself...")
@@ -809,9 +843,13 @@ class User(commands.Cog):
             if ctx.author.id in el:
                 pair = list(el)
                 if ctx.author.id == pair[0]:
-                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(pair[1])
+                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(
+                        pair[1]
+                    )
                 else:
-                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(pair[0])
+                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(
+                        pair[0]
+                    )
                 return await ctx.send(
                     f":confused: You are already married to **{util.displayname(partner)}**! You must divorce before marrying someone else..."
                 )
@@ -829,7 +867,7 @@ class User(commands.Cog):
             )
             self.bot.cache.marriages.append({user.id, ctx.author.id})
             await ctx.send(
-                embed=discord.Embed(
+                embed=nextcord.Embed(
                     color=int("dd2e44", 16),
                     description=f":revolving_hearts: **{util.displayname(user)}** and **{util.displayname(ctx.author)}** are now married :wedding:",
                 )
@@ -842,7 +880,7 @@ class User(commands.Cog):
         else:
             self.proposals.add((ctx.author.id, user.id))
             await ctx.send(
-                embed=discord.Embed(
+                embed=nextcord.Embed(
                     color=int("f4abba", 16),
                     description=f":heartpulse: *You propose to **{util.displayname(user)}***",
                 )
@@ -858,14 +896,18 @@ class User(commands.Cog):
                 to_remove.append(el)
                 pair = list(el)
                 if ctx.author.id == pair[0]:
-                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(pair[1])
+                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(
+                        pair[1]
+                    )
                 else:
-                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(pair[0])
+                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(
+                        pair[0]
+                    )
 
         if partner == "":
             return await ctx.send(":thinking: You are not married!")
 
-        content = discord.Embed(
+        content = nextcord.Embed(
             description=f":broken_heart: Divorce **{util.displayname(partner)}**?",
             color=int("dd2e44", 16),
         )
@@ -880,7 +922,7 @@ class User(commands.Cog):
                 ctx.author.id,
             )
             await ctx.send(
-                embed=discord.Embed(
+                embed=nextcord.Embed(
                     color=int("ffcc4d", 16),
                     description=f":pensive: You and **{util.displayname(partner)}** are now divorced...",
                 )
@@ -891,7 +933,9 @@ class User(commands.Cog):
 
         functions = {"✅": confirm, "❌": cancel}
         asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+            util.reaction_buttons(
+                ctx, msg, functions, only_author=True, single_use=True
+            )
         )
 
     @commands.command()
@@ -916,7 +960,7 @@ class User(commands.Cog):
                 arrow.utcnow().timestamp - marriage_date.timestamp(), months=False
             )
             await ctx.send(
-                embed=discord.Embed(
+                embed=nextcord.Embed(
                     color=int("f4abba", 16),
                     description=f":wedding: You have been married to **{util.displayname(partner)}** for **{length}**",
                 )

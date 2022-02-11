@@ -1,8 +1,8 @@
 import random
 
-import discord
 import humanize
-from discord.ext import commands
+import nextcord
+from nextcord.ext import commands
 
 from modules import util
 
@@ -98,7 +98,9 @@ class Fishy(commands.Cog):
     # idk why this doesnt work but it gets stuck all the time
     # @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.cooldown(1, 60, type=commands.BucketType.user)
-    @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
+    @commands.command(
+        aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"]
+    )
     async def fishy(self, ctx, user=None):
         """Go fishing."""
         receiver = await util.get_member(ctx, user, fallback=ctx.author)
@@ -107,7 +109,9 @@ class Fishy(commands.Cog):
         cached_last_fishy = self.ts_lock.get(str(ctx.author.id))
         if cached_last_fishy is None:
             last_fishy = await self.bot.db.execute(
-                "SELECT last_fishy FROM fishy WHERE user_id = %s", ctx.author.id, one_value=True
+                "SELECT last_fishy FROM fishy WHERE user_id = %s",
+                ctx.author.id,
+                one_value=True,
             )
             # try again to fix race condition maybe
             cached_last_fishy = self.ts_lock.get(str(ctx.author.id))
@@ -118,7 +122,9 @@ class Fishy(commands.Cog):
         else:
             last_fishy = cached_last_fishy
         if last_fishy:
-            time_since_fishy = ctx.message.created_at.timestamp() - last_fishy.timestamp()
+            time_since_fishy = (
+                ctx.message.created_at.timestamp() - last_fishy.timestamp()
+            )
         else:
             time_since_fishy = self.COOLDOWN
 
@@ -169,15 +175,23 @@ class Fishy(commands.Cog):
     async def fishytimer(self, ctx):
         """Check your fishy timer without actually fishing."""
         last_fishy = await self.bot.db.execute(
-            "SELECT last_fishy FROM fishy WHERE user_id = %s", ctx.author.id, one_value=True
+            "SELECT last_fishy FROM fishy WHERE user_id = %s",
+            ctx.author.id,
+            one_value=True,
         )
         if last_fishy:
-            time_since_fishy = ctx.message.created_at.timestamp() - last_fishy.timestamp()
+            time_since_fishy = (
+                ctx.message.created_at.timestamp() - last_fishy.timestamp()
+            )
             if time_since_fishy < self.COOLDOWN:
                 remaining = self.COOLDOWN - time_since_fishy
                 wait_time = humanize.precisedelta(remaining)
-                clock_face = f":clock{int(util.map_to_range(remaining, 7200, 0, 1, 12))}:"
-                await ctx.send(f"{clock_face} You need to wait **{wait_time}** to fish again.")
+                clock_face = (
+                    f":clock{int(util.map_to_range(remaining, 7200, 0, 1, 12))}:"
+                )
+                await ctx.send(
+                    f"{clock_face} You need to wait **{wait_time}** to fish again."
+                )
             else:
                 await ctx.send(":sparkles: Good news! You can fish right now!")
         else:
@@ -218,7 +232,7 @@ class Fishy(commands.Cog):
             return await ctx.send("No data! Go fishing first.")
 
         total = sum(data[3:])
-        content = discord.Embed(
+        content = nextcord.Embed(
             title=f":fishing_pole_and_fish: {owner} fishy stats",
             color=int("55acee", 16),
             description="\n".join(

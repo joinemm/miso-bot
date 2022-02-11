@@ -6,3 +6,4 @@ sushii-image-server
 .github
 .vscode
 *.pyc
+venv

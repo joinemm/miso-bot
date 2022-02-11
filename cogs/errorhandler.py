@@ -1,8 +1,8 @@
 import asyncio
 import traceback
 
-import discord
-from discord.ext import commands
+import nextcord
+from nextcord.ext import commands
 
 from modules import emojis, exceptions, log, queries, util
 
@@ -43,30 +43,39 @@ class ErrorHander(commands.Cog):
             },
         }
 
-    async def send(self, ctx, level, message, help_footer=None, codeblock=False, **kwargs):
+    async def send(
+        self, ctx, level, message, help_footer=None, codeblock=False, **kwargs
+    ):
         """Send error message to chat."""
         settings = self.message_levels.get(level)
         if codeblock:
             message = f"`{message}`"
 
-        embed = discord.Embed(
-            color=settings["color"], description=f"{settings['description_prefix']} {message}"
+        embed = nextcord.Embed(
+            color=settings["color"],
+            description=f"{settings['description_prefix']} {message}",
         )
 
         help_footer = help_footer or settings["help_footer"]
         if help_footer:
-            embed.set_footer(text=f"Learn more: {ctx.prefix}help {ctx.command.qualified_name}")
+            embed.set_footer(
+                text=f"Learn more: {ctx.prefix}help {ctx.command.qualified_name}"
+            )
 
         try:
             await ctx.send(embed=embed, **kwargs)
-        except discord.errors.Forbidden:
+        except nextcord.errors.Forbidden:
             self.bot.logger.warning("Forbidden when trying to send error message embed")
 
     async def log_and_traceback(self, ctx, error):
         logger.error(f'Unhandled exception in command "{ctx.message.content}":')
-        exc = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+        exc = "".join(
+            traceback.format_exception(type(error), error, error.__traceback__)
+        )
         logger.error(exc)
-        await self.send(ctx, "error", f"{type(error).__name__}: {error}", codeblock=True)
+        await self.send(
+            ctx, "error", f"{type(error).__name__}: {error}", codeblock=True
+        )
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -113,24 +122,30 @@ class ErrorHander(commands.Cog):
                     "info",
                     "This command cannot be used in DM",
                 )
-            except (discord.HTTPException, discord.errors.Forbidden):
+            except (nextcord.HTTPException, nextcord.errors.Forbidden):
                 pass
 
         elif isinstance(error, commands.MissingPermissions):
             perms = ", ".join(f"**{x}**" for x in error.missing_perms)
-            await self.send(ctx, "warning", f"You require {perms} permission to use this command!")
+            await self.send(
+                ctx, "warning", f"You require {perms} permission to use this command!"
+            )
 
         elif isinstance(error, commands.BotMissingPermissions):
             perms = ", ".join(f"**{x}**" for x in error.missing_perms)
             await self.send(
-                ctx, "warning", f"Cannot execute command! Bot is missing permission {perms}"
+                ctx,
+                "warning",
+                f"Cannot execute command! Bot is missing permission {perms}",
             )
 
         elif isinstance(error, commands.errors.MaxConcurrencyReached):
             await ctx.send("Stop spamming! >:(")
 
         elif isinstance(error, commands.NoPrivateMessage):
-            await self.send(ctx, "info", "You cannot use this command in private messages!")
+            await self.send(
+                ctx, "info", "You cannot use this command in private messages!"
+            )
 
         elif isinstance(error, util.PatronCheckFailure):
             await self.send(
@@ -152,13 +167,13 @@ class ErrorHander(commands.Cog):
         elif isinstance(error, (commands.BadArgument)):
             await self.send(ctx, "warning", str(error), help_footer=True)
 
-        elif isinstance(error, discord.errors.Forbidden):
+        elif isinstance(error, nextcord.errors.Forbidden):
             try:
                 await self.send(ctx, "error", str(error), codeblock=True)
-            except discord.errors.Forbidden:
+            except nextcord.errors.Forbidden:
                 try:
                     await ctx.message.add_reaction("🙊")
-                except discord.errors.Forbidden:
+                except nextcord.errors.Forbidden:
                     await self.log_and_traceback(ctx, error)
 
         elif isinstance(error, exceptions.LastFMError):
@@ -199,7 +214,9 @@ class ErrorHander(commands.Cog):
                 ctx.guild.id,
                 one_value=True,
             )
-            await self.send(ctx, "error", error.message, delete_after=(5 if delete else None))
+            await self.send(
+                ctx, "error", error.message, delete_after=(5 if delete else None)
+            )
             if delete:
                 await asyncio.sleep(5)
                 await ctx.message.delete()

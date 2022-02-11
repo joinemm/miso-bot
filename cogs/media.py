@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import random
 import re
@@ -7,15 +6,18 @@ import re
 import aiohttp
 import arrow
 import async_cse
-import discord
+import nextcord
+import orjson
 import regex
 import tweepy
 from bs4 import BeautifulSoup
-from discord.ext import commands
+from nextcord.ext import commands
 from random_user_agent.user_agent import UserAgent
 from tweepy import OAuthHandler
 
-from modules import exceptions, util
+from modules import exceptions, log, util
+
+logger = log.get_logger(__name__)
 
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")
@@ -87,7 +89,7 @@ class Media(commands.Cog):
         if ggsoup.soup.find("div", {"class": "SummonerNotFoundLayout"}):
             raise exceptions.Warning("Summoner not found!")
 
-        content = discord.Embed()
+        content = nextcord.Embed()
         content.set_author(
             name=f"{ggsoup.text('span', 'Name')} [{region.upper()}]",
             icon_url=ggsoup.src("img", "ProfileImage"),
@@ -105,11 +107,14 @@ class Media(commands.Cog):
 
         content.add_field(
             name="Rank",
-            value=f"**{rank}**" + (f" {lp} **|** {wins_losses}" if rank != "Unranked" else ""),
+            value=f"**{rank}**"
+            + (f" {lp} **|** {wins_losses}" if rank != "Unranked" else ""),
             inline=False,
         )
 
-        rank_image = "https:" + ggsoup.soup.find("div", {"class": "Medal"}).find("img").get("src")
+        rank_image = "https:" + ggsoup.soup.find("div", {"class": "Medal"}).find(
+            "img"
+        ).get("src")
         content.set_thumbnail(url=rank_image)
         content.colour = int("5383e8", 16)
 
@@ -123,14 +128,20 @@ class Media(commands.Cog):
                 f"**{played_count.replace(' Played', '** Played')} **{name}** ({winrate})"
             )
 
-        content.add_field(name="Champions", value="\n".join(champions) if champions else "None")
+        content.add_field(
+            name="Champions", value="\n".join(champions) if champions else "None"
+        )
 
         match_history = []
         for match in ggsoup.soup.findAll("div", {"class": "GameItem"}):
             gametype = ggsoup.text("div", "GameType", match)
-            champion = match.find("div", {"class": "ChampionName"}).find("a").text.strip()
+            champion = (
+                match.find("div", {"class": "ChampionName"}).find("a").text.strip()
+            )
             win = match.get("data-game-result") == "win"
-            kda = "".join(ggsoup.text("div", "KDA", match.find("div", {"class": "KDA"})).split())
+            kda = "".join(
+                ggsoup.text("div", "KDA", match.find("div", {"class": "KDA"})).split()
+            )
             emoji = ":blue_square:" if win else ":red_square:"
             match_history.append(f"{emoji} **{gametype}** as **{champion}** `{kda}`")
 
@@ -150,7 +161,7 @@ class Media(commands.Cog):
 
         region = parsed_region
 
-        content = discord.Embed(title=f"{summoner_name} current game")
+        content = nextcord.Embed(title=f"{summoner_name} current game")
 
         ggsoup = GGSoup()
         await ggsoup.create(region, summoner_name, sub_url="spectator/")
@@ -203,7 +214,10 @@ class Media(commands.Cog):
 
         await util.paginate_list(
             ctx,
-            [f"https://youtube.com/watch?v={item['id']['videoId']}" for item in data.get("items")],
+            [
+                f"https://youtube.com/watch?v={item['id']['videoId']}"
+                for item in data.get("items")
+            ],
             use_locking=True,
             only_author=True,
             index_entries=True,
@@ -265,7 +279,7 @@ class Media(commands.Cog):
 
                 avatar_url = data["owner"]["profile_pic_url"]
                 username = data["owner"]["username"]
-                content = discord.Embed(color=random.choice(self.ig_colors))
+                content = nextcord.Embed(color=random.choice(self.ig_colors))
                 content.set_author(name=f"@{username}", icon_url=avatar_url, url=url)
 
                 if not medias:
@@ -288,10 +302,16 @@ class Media(commands.Cog):
                                 media_url = file.get("display_url")
                                 extension = "jpg"
 
-                            filename = f"{timestamp}-@{username}-{post_id}-{n}.{extension}"
+                            filename = (
+                                f"{timestamp}-@{username}-{post_id}-{n}.{extension}"
+                            )
                             async with session.get(media_url) as response:
                                 if (
-                                    int(response.headers.get("content-length", max_filesize + 1))
+                                    int(
+                                        response.headers.get(
+                                            "content-length", max_filesize + 1
+                                        )
+                                    )
                                     > max_filesize
                                 ):
                                     too_big = True
@@ -307,7 +327,7 @@ class Media(commands.Cog):
                                 caption += f"\n{media_url}"
                             else:
                                 with open(filename, "rb") as f:
-                                    files.append(discord.File(f))
+                                    files.append(nextcord.File(f))
 
                                 os.remove(filename)
 
@@ -316,7 +336,9 @@ class Media(commands.Cog):
                     # send as embeds
                     for n, medianode in enumerate(medias, start=1):
                         if n == len(medias):
-                            content.timestamp = arrow.get(data["taken_at_timestamp"]).datetime
+                            content.timestamp = arrow.get(
+                                data["taken_at_timestamp"]
+                            ).datetime
                         if medianode.get("is_video"):
                             await ctx.send(medianode.get("video_url"))
                         else:
@@ -327,7 +349,7 @@ class Media(commands.Cog):
         try:
             # delete discord automatic embed
             await ctx.message.edit(suppress=True)
-        except discord.Forbidden:
+        except nextcord.Forbidden:
             pass
 
     @commands.command(aliases=["twt"])
@@ -348,7 +370,10 @@ class Media(commands.Cog):
 
             try:
                 tweet = await ctx.bot.loop.run_in_executor(
-                    None, lambda: self.twitter_api.get_status(tweet_id, tweet_mode="extended")
+                    None,
+                    lambda: self.twitter_api.get_status(
+                        tweet_id, tweet_mode="extended"
+                    ),
                 )
 
             except Exception:
@@ -362,7 +387,9 @@ class Media(commands.Cog):
                 media = []
 
             if not media:
-                await ctx.send(f":warning: Could not find any images from tweet id `{tweet_id}`")
+                await ctx.send(
+                    f":warning: Could not find any images from tweet id `{tweet_id}`"
+                )
                 continue
 
             for i in range(len(media)):
@@ -381,7 +408,7 @@ class Media(commands.Cog):
                             media_url = video_urls[x]["url"]
                 media_files.append((media_url, video_url))
 
-            content = discord.Embed(colour=int(tweet.user.profile_link_color, 16))
+            content = nextcord.Embed(colour=int(tweet.user.profile_link_color, 16))
             content.set_author(
                 icon_url=tweet.user.profile_image_url,
                 name=f"@{tweet.user.screen_name}",
@@ -390,7 +417,9 @@ class Media(commands.Cog):
 
             if download:
                 # download file and rename, upload to discord
-                tweet_link = "https://" + tweet.full_text.split(" ")[-1].split("https://")[-1]
+                tweet_link = (
+                    "https://" + tweet.full_text.split(" ")[-1].split("https://")[-1]
+                )
                 async with aiohttp.ClientSession() as session:
                     timestamp = arrow.get(tweet.created_at).format("YYMMDD")
                     caption = (
@@ -406,15 +435,17 @@ class Media(commands.Cog):
                         else:
                             extension = "mp4"
 
-                        filename = (
-                            f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
-                        )
+                        filename = f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
                         too_big = False
                         max_filesize = 8388608  # discord has 8MB file size limit
                         url = media_url.replace(".jpg", "?format=jpg&name=orig")
                         async with session.get(url) as response:
                             if (
-                                int(response.headers.get("content-length", max_filesize + 1))
+                                int(
+                                    response.headers.get(
+                                        "content-length", max_filesize + 1
+                                    )
+                                )
                                 > max_filesize
                             ):
                                 too_big = True
@@ -430,7 +461,7 @@ class Media(commands.Cog):
                                 caption += f"\n{url}"
                             else:
                                 with open(filename, "rb") as f:
-                                    files.append(discord.File(f))
+                                    files.append(nextcord.File(f))
 
                                 os.remove(filename)
 
@@ -454,7 +485,7 @@ class Media(commands.Cog):
         try:
             # delete discord automatic embed
             await ctx.message.edit(suppress=True)
-        except discord.Forbidden:
+        except nextcord.Forbidden:
             pass
 
     @commands.command(aliases=["gif", "gfy"])
@@ -464,19 +495,24 @@ class Media(commands.Cog):
         async with aiohttp.ClientSession() as session:
             tasks = []
             if len(query.split(" ")) == 1:
-                tasks.append(extract_scripts(session, f"https://gfycat.com/gifs/tag/{query}"))
+                tasks.append(
+                    extract_scripts(session, f"https://gfycat.com/gifs/tag/{query}")
+                )
 
-            tasks.append(extract_scripts(session, f"https://gfycat.com/gifs/search/{query}"))
+            tasks.append(
+                extract_scripts(session, f"https://gfycat.com/gifs/search/{query}")
+            )
             scripts = sum(await asyncio.gather(*tasks), [])
 
         urls = []
         for script in scripts:
             try:
-                data = json.loads(script.contents[0])
+                data = orjson.loads(str(script.contents[0]))
+                logger.info(data)
                 for x in data["itemListElement"]:
                     if "url" in x:
                         urls.append(x["url"])
-            except json.JSONDecodeError:
+            except orjson.JSONDecodeError:
                 continue
 
         if not urls:
@@ -491,7 +527,9 @@ class Media(commands.Cog):
             return True
 
         buttons = {"❌": msg.delete, "🔁": randomize, "🔒": done}
-        asyncio.ensure_future(util.reaction_buttons(ctx, msg, buttons, only_author=True))
+        asyncio.ensure_future(
+            util.reaction_buttons(ctx, msg, buttons, only_author=True)
+        )
 
     @commands.command()
     async def melon(self, ctx, timeframe):
@@ -527,9 +565,11 @@ class Media(commands.Cog):
         #     util.escape_md(x.find("a").text)
         #     for x in soup.find_all("div", {"class": "ellipsis rank03"})
         # ]
-        image = soup.find("img", {"onerror": "WEBPOCIMG.defaultAlbumImg(this);"}).get("src")
+        image = soup.find("img", {"onerror": "WEBPOCIMG.defaultAlbumImg(this);"}).get(
+            "src"
+        )
 
-        content = discord.Embed(color=discord.Color.from_rgb(0, 205, 60))
+        content = nextcord.Embed(color=nextcord.Color.from_rgb(0, 205, 60))
         content.set_author(
             name=f"Melon top {len(song_titles)}"
             + ("" if timeframe == "" else f" - {timeframe.capitalize()}"),
@@ -579,7 +619,9 @@ class Media(commands.Cog):
     @commands.command(aliases=["img"])
     async def googleimages(self, ctx, *, query):
         """Search from google images."""
-        results = await self.google_client.search(query, safesearch=False, image_search=True)
+        results = await self.google_client.search(
+            query, safesearch=False, image_search=True
+        )
 
         await util.paginate_list(
             ctx,

@@ -49,7 +49,9 @@ services:
   bot:
     container_name: miso-bot
     build: .
-    command: python main.py dev
+    security_opt:
+      - seccomp:unconfined
+    command: python -O main.py dev
     restart: unless-stopped
     depends_on:
       - db

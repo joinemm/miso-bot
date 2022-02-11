@@ -1,18 +1,23 @@
+import logging
 import os
 import sys
 import traceback
 from time import time
 
-import discord
+import nextcord
 import uvloop
-from discord.ext import commands
-from dotenv import load_dotenv
+from nextcord.ext import commands
 
 from modules import cache, log, maria, util
 from modules.help import EmbedHelpCommand
 
+# from dotenv import load_dotenv
+
+
+logging.basicConfig(level=logging.INFO)
+
 uvloop.install()
-load_dotenv(verbose=True)
+# load_dotenv(verbose=True)
 logger = log.get_logger(__name__)
 
 DEV = "dev" in sys.argv
@@ -29,11 +34,13 @@ else:
 if maintainance_mode:
     logger.info("Maintainance mode is ON")
     prefix = prefix * 2
-    starting_activity = discord.Activity(
-        type=discord.ActivityType.playing, name="Maintainance mode"
+    starting_activity = nextcord.Activity(
+        type=nextcord.ActivityType.playing, name="Maintainance mode"
     )
 else:
-    starting_activity = discord.Activity(type=discord.ActivityType.playing, name="Booting up...")
+    starting_activity = nextcord.Activity(
+        type=nextcord.ActivityType.playing, name="Booting up..."
+    )
 
 
 class MisoBot(commands.AutoShardedBot):
@@ -42,10 +49,12 @@ class MisoBot(commands.AutoShardedBot):
         self.default_prefix = prefix
         self.logger = logger
         self.start_time = time()
-        self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
+        self.global_cd = commands.CooldownMapping.from_cooldown(
+            15, 60, commands.BucketType.member
+        )
         self.db = maria.MariaDB(self)
         self.cache = cache.Cache(self)
-        self.version = "4.0"
+        self.version = "5.0"
         self.extensions_loaded = False
 
     async def close(self):
@@ -64,10 +73,10 @@ bot = MisoBot(
     help_command=EmbedHelpCommand(),
     command_prefix=util.determine_prefix,
     case_insensitive=True,
-    allowed_mentions=discord.AllowedMentions(everyone=False),
+    allowed_mentions=nextcord.AllowedMentions(everyone=False),
     max_messages=20000,
-    heartbeat_timeout=60,
-    intents=discord.Intents(
+    heartbeat_timeout=180,
+    intents=nextcord.Intents(
         guilds=True,
         members=True,  # requires verification
         bans=True,
@@ -82,6 +91,7 @@ bot = MisoBot(
         typing=False,
     ),
     activity=starting_activity,
+    status=nextcord.Status.idle,
 )
 
 maintainance_extensions = [
@@ -124,7 +134,7 @@ async def before_any_command(ctx):
     ctx.timer = time()
     try:
         await ctx.trigger_typing()
-    except discord.errors.Forbidden:
+    except nextcord.errors.Forbidden:
         pass
 
 
@@ -152,6 +162,10 @@ async def cooldown_check(ctx):
 async def on_ready():
     if not bot.extensions_loaded:
         load_extensions()
+        bot.boot_up_time = time() - bot.start_time
+        logger.info(
+            f"Boot up process completed in {util.stringfromtime(bot.boot_up_time)}"
+        )
     latencies = bot.latencies
     logger.info(f"Loading complete | running {len(latencies)} shards")
     for shard_id, latency in latencies:
@@ -173,7 +187,11 @@ def load_extensions():
     logger.info("All extensions loaded successfully!")
 
 
-if __name__ == "__main__":
+def run():
     logger.info(f'Using default prefix "{prefix}"')
     bot.start_time = time()
     bot.run(TOKEN)
+
+
+if __name__ == "__main__":
+    run()

@@ -2,8 +2,8 @@ import re
 from decimal import Decimal
 
 import aiohttp
-import discord
-from discord.ext import commands
+import nextcord
+from nextcord.ext import commands
 
 from modules import emojis, exceptions, util
 
@@ -82,7 +82,9 @@ class Cryptocurrency(commands.Cog):
                 "height": 512,
                 "imageFormat": "png",
             }
-            async with session.post("http://localhost:3000/html", data=data) as response:
+            async with session.post(
+                "http://localhost:3000/html", data=data
+            ) as response:
                 with open("downloads/candlestick.png", "wb") as f:
                     while True:
                         block = await response.content.read(1024)
@@ -91,7 +93,7 @@ class Cryptocurrency(commands.Cog):
                         f.write(block)
 
         with open("downloads/candlestick.png", "rb") as f:
-            await ctx.send(file=discord.File(f))
+            await ctx.send(file=nextcord.File(f))
 
     @crypto.command()
     async def price(self, ctx, coin, pair="USDT"):
@@ -107,19 +109,22 @@ class Cryptocurrency(commands.Cog):
         if error:
             raise exceptions.Error(error)
 
-        content = discord.Embed(color=int("f3ba2e", 16))
+        content = nextcord.Embed(color=int("f3ba2e", 16))
         content.set_author(
             name=f"{data.get('symbol')} | Binance",
             icon_url=self.binance_icon,
             url=f"https://www.binance.com/en/trade/{data.get('symbol')}",
         )
         content.add_field(
-            name="Current price", value=f"{Decimal(data.get('lastPrice')).normalize():,f}"
+            name="Current price",
+            value=f"{Decimal(data.get('lastPrice')).normalize():,f}",
         )
         content.add_field(
             name="24h High", value=f"{Decimal(data.get('highPrice')).normalize():,f}"
         )
-        content.add_field(name="24h Low", value=f"{Decimal(data.get('lowPrice')).normalize():,f}")
+        content.add_field(
+            name="24h Low", value=f"{Decimal(data.get('lowPrice')).normalize():,f}"
+        )
         pricechange = Decimal(data.get("priceChange")).normalize()
         if pricechange > 0:
             direction = emojis.GREEN_UP

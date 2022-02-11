@@ -6,9 +6,9 @@ from time import time
 
 import aiohttp
 import arrow
-import discord
+import nextcord
 from bs4 import BeautifulSoup
-from discord.ext import commands, tasks
+from nextcord.ext import commands, tasks
 
 from modules import emojis, exceptions, log, queries, util
 
@@ -144,7 +144,7 @@ class Utility(commands.Cog):
                         f"Deleting reminder set for {date.format('DD/MM/YYYY HH:mm:ss')} for being over 6 hours late"
                     )
                 else:
-                    embed = discord.Embed(
+                    embed = nextcord.Embed(
                         color=int("d3a940", 16),
                         title=":alarm_clock: Reminder!",
                         description=content,
@@ -159,8 +159,10 @@ class Utility(commands.Cog):
                     try:
                         await user.send(embed=embed)
                         logger.info(f'Reminded {user} to "{content}"')
-                    except discord.errors.Forbidden:
-                        logger.warning(f"Unable to remind {user}, missing DM permissions!")
+                    except nextcord.errors.Forbidden:
+                        logger.warning(
+                            f"Unable to remind {user}, missing DM permissions!"
+                        )
             else:
                 logger.info(f"Deleted expired reminder by unknown user {user_id}")
 
@@ -179,9 +181,9 @@ class Utility(commands.Cog):
     async def on_command_error(self, ctx, error):
         """only for CommandNotFound."""
         error = getattr(error, "original", error)
-        if isinstance(error, commands.CommandNotFound) and ctx.message.content.startswith(
-            f"{ctx.prefix}!"
-        ):
+        if isinstance(
+            error, commands.CommandNotFound
+        ) and ctx.message.content.startswith(f"{ctx.prefix}!"):
             ctx.timer = time()
             ctx.iscallback = True
             ctx.command = self.bot.get_command("!")
@@ -222,7 +224,7 @@ class Utility(commands.Cog):
 
         try:
             await ctx.trigger_typing()
-        except discord.errors.Forbidden:
+        except nextcord.errors.Forbidden:
             pass
 
         command_logger.info(log.log_command(ctx))
@@ -266,7 +268,9 @@ class Utility(commands.Cog):
             )
 
         if seconds < 1:
-            raise exceptions.Info("You must give a valid time at least 1 second in the future!")
+            raise exceptions.Info(
+                "You must give a valid time at least 1 second in the future!"
+            )
 
         await self.bot.db.execute(
             """
@@ -283,7 +287,7 @@ class Utility(commands.Cog):
 
         self.cache_needs_refreshing = True
         await ctx.send(
-            embed=discord.Embed(
+            embed=nextcord.Embed(
                 color=int("ccd6dd", 16),
                 description=(
                     f":pencil: I'll message you on **{date.to('utc').format('DD/MM/YYYY HH:mm:ss')}"
@@ -330,7 +334,9 @@ class Utility(commands.Cog):
                     ctx.author.id,
                     saved_address,
                 )
-                return await util.send_success(ctx, f"Saved your location as `{saved_address}`")
+                return await util.send_success(
+                    ctx, f"Saved your location as `{saved_address}`"
+                )
             # use given string as temporary location
             location = address
 
@@ -378,10 +384,12 @@ class Utility(commands.Cog):
             f":map: [See on map](https://www.google.com/maps/search/?api=1&query={lat},{lon})",
         ]
 
-        content = discord.Embed(
+        content = nextcord.Embed(
             color=int("e1e8ed", 16), title=f":flag_{country}: {formatted_name}"
         )
-        content.add_field(name=f"{weather_icon} {summary}", value="\n".join(information_rows))
+        content.add_field(
+            name=f"{weather_icon} {summary}", value="\n".join(information_rows)
+        )
         content.set_footer(text=f"🕐 Local time {localtime}")
         await ctx.send(embed=content)
 
@@ -402,12 +410,15 @@ class Utility(commands.Cog):
                 fl = definition["fl"]
                 offensive = definition["meta"]["offensive"]
                 syns = definition["meta"]["syns"][0]
-                content = discord.Embed(color=int("d71921", 16))
+                content = nextcord.Embed(color=int("d71921", 16))
                 content.set_author(
-                    name=f"{base_word.capitalize()}, {fl}" + (" (offensive)" if offensive else ""),
+                    name=f"{base_word.capitalize()}, {fl}"
+                    + (" (offensive)" if offensive else ""),
                     icon_url=api_icon,
                 )
-                content.description = ",\n".join(x.capitalize() for x in definition["shortdef"])
+                content.description = ",\n".join(
+                    x.capitalize() for x in definition["shortdef"]
+                )
                 content.add_field(name="Synonyms", value=", ".join(syns))
                 pages.append(content)
 
@@ -417,7 +428,9 @@ class Utility(commands.Cog):
             if len(data) > 5:
                 data = data[:5]
             suggestions = ", ".join(f"`{x}`" for x in data)
-            await ctx.send(f'No definitions found for "{word}". Did you mean: {suggestions}?')
+            await ctx.send(
+                f'No definitions found for "{word}". Did you mean: {suggestions}?'
+            )
 
     @commands.command()
     async def define(self, ctx, *, word):
@@ -431,14 +444,18 @@ class Utility(commands.Cog):
         }
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{api_url}lemmas/en/{word}", headers=headers) as response:
+            async with session.get(
+                f"{api_url}lemmas/en/{word}", headers=headers
+            ) as response:
                 data = await response.json()
 
             # searched for word id, now use the word id to get definition
             all_entries = []
 
             if data.get("results"):
-                definitions_embed = discord.Embed(colour=discord.Colour.from_rgb(0, 189, 242))
+                definitions_embed = nextcord.Embed(
+                    colour=nextcord.Colour.from_rgb(0, 189, 242)
+                )
                 definitions_embed.description = ""
 
                 found_word = data["results"][0]["id"]
@@ -452,18 +469,30 @@ class Utility(commands.Cog):
                     name = data["results"][0]["word"]
 
                     for i in range(len(entry["entries"][0]["senses"])):
-                        for definition in entry["entries"][0]["senses"][i].get("definitions", []):
+                        for definition in entry["entries"][0]["senses"][i].get(
+                            "definitions", []
+                        ):
                             this_top_level_definition = f"\n**{i + 1}.** {definition}"
-                            if len(definitions_value + this_top_level_definition) > 1024:
+                            if (
+                                len(definitions_value + this_top_level_definition)
+                                > 1024
+                            ):
                                 break
                             definitions_value += this_top_level_definition
                             try:
-                                for y in range(len(entry["entries"][0]["senses"][i]["subsenses"])):
-                                    for subdef in entry["entries"][0]["senses"][i]["subsenses"][y][
-                                        "definitions"
-                                    ]:
-                                        this_definition = f"\n**└ {i + 1}.{y + 1}.** {subdef}"
-                                        if len(definitions_value + this_definition) > 1024:
+                                for y in range(
+                                    len(entry["entries"][0]["senses"][i]["subsenses"])
+                                ):
+                                    for subdef in entry["entries"][0]["senses"][i][
+                                        "subsenses"
+                                    ][y]["definitions"]:
+                                        this_definition = (
+                                            f"\n**└ {i + 1}.{y + 1}.** {subdef}"
+                                        )
+                                        if (
+                                            len(definitions_value + this_definition)
+                                            > 1024
+                                        ):
                                             break
                                         definitions_value += this_definition
 
@@ -488,12 +517,15 @@ class Utility(commands.Cog):
                     return await ctx.send(f"No definitions found for `{word}`")
 
                 definitions_embed.set_author(
-                    name=all_entries[0]["id"], icon_url="https://i.imgur.com/vDvSmF3.png"
+                    name=all_entries[0]["id"],
+                    icon_url="https://i.imgur.com/vDvSmF3.png",
                 )
 
                 for entry in all_entries:
                     definitions_embed.add_field(
-                        name=f"{entry['type']}", value=entry["definitions"], inline=False
+                        name=f"{entry['type']}",
+                        value=entry["definitions"],
+                        inline=False,
                     )
 
                 await ctx.send(embed=definitions_embed)
@@ -514,7 +546,7 @@ class Utility(commands.Cog):
                 definition = entry["definition"].replace("]", "**").replace("[", "**")
                 example = entry["example"].replace("]", "**").replace("[", "**")
                 timestamp = entry["written_on"]
-                content = discord.Embed(colour=discord.Colour.from_rgb(254, 78, 28))
+                content = nextcord.Embed(colour=nextcord.Colour.from_rgb(254, 78, 28))
                 content.description = f"{definition}"
 
                 if not example == "":
@@ -588,7 +620,9 @@ class Utility(commands.Cog):
                 }
 
                 async with session.post(url, headers=headers, data=params) as response:
-                    translation = (await response.json())["message"]["result"]["translatedText"]
+                    translation = (await response.json())["message"]["result"][
+                        "translatedText"
+                    ]
 
             else:
                 # use google
@@ -605,7 +639,9 @@ class Utility(commands.Cog):
                     data = await response.json()
 
                 try:
-                    translation = html.unescape(data["data"]["translations"][0]["translatedText"])
+                    translation = html.unescape(
+                        data["data"]["translations"][0]["translatedText"]
+                    )
                 except KeyError:
                     return await ctx.send("Sorry, I could not translate this :(")
 
@@ -667,7 +703,9 @@ class Utility(commands.Cog):
                     break
 
                 else:
-                    await message.edit(content="There was an error while creating your gif :(")
+                    await message.edit(
+                        content="There was an error while creating your gif :("
+                    )
                     break
 
                 await asyncio.sleep(i)
@@ -789,13 +827,13 @@ class Utility(commands.Cog):
             return f"${quote_data[s]}"
 
         if company_profile.get("name") is not None:
-            content = discord.Embed(
+            content = nextcord.Embed(
                 title=f"${company_profile['ticker']} | {company_profile['name']}"
             )
             content.set_thumbnail(url=company_profile.get("logo"))
             content.set_footer(text=company_profile["exchange"])
         else:
-            content = discord.Embed(title=f"${symbol}")
+            content = nextcord.Embed(title=f"${symbol}")
 
         content.add_field(
             name="Change",
@@ -808,7 +846,7 @@ class Utility(commands.Cog):
         content.add_field(name="High", value=getcur("h"))
         content.add_field(name="Low", value=getcur("l"))
 
-        content.colour = discord.Color.green() if gains else discord.Color.red()
+        content.colour = nextcord.Color.green() if gains else nextcord.Color.red()
         content.timestamp = arrow.get(quote_data["t"]).datetime
 
         await ctx.send(embed=content)
@@ -819,13 +857,15 @@ class Utility(commands.Cog):
         await util.command_group_help(ctx)
 
     @timezone.command(name="now")
-    async def tz_now(self, ctx, member: discord.Member = None):
+    async def tz_now(self, ctx, member: nextcord.Member = None):
         """Get current time."""
         if member is None:
             member = ctx.author
 
         tz_str = await self.bot.db.execute(
-            "SELECT timezone FROM user_settings WHERE user_id = %s", member.id, one_value=True
+            "SELECT timezone FROM user_settings WHERE user_id = %s",
+            member.id,
+            one_value=True,
         )
         if tz_str:
             dt = arrow.now(tz_str)
@@ -879,7 +919,7 @@ class Utility(commands.Cog):
     @timezone.command(name="list")
     async def tz_list(self, ctx):
         """List current time of all server members."""
-        content = discord.Embed(
+        content = nextcord.Embed(
             title=f":clock2: Current time in {ctx.guild}",
             color=int("3b88c3", 16),
         )
@@ -890,7 +930,9 @@ class Utility(commands.Cog):
             user_ids,
         )
         if not data:
-            raise exceptions.Warning("No one on this server has set their timezone yet!")
+            raise exceptions.Warning(
+                "No one on this server has set their timezone yet!"
+            )
 
         dt_data = []
         for user_id, tz_str in data:
