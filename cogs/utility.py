@@ -9,6 +9,7 @@ import arrow
 import nextcord
 from bs4 import BeautifulSoup
 from nextcord.ext import commands, tasks
+from nextcord.ext import util as nextcordutils
 
 from modules import emojis, exceptions, log, queries, util
 
@@ -119,7 +120,7 @@ class Utility(commands.Cog):
         if not self.reminder_list:
             return
 
-        now_ts = arrow.utcnow().timestamp
+        now_ts = nextcordutils.utcnow().timestamp()
         for (
             user_id,
             guild_id,
@@ -255,7 +256,7 @@ class Utility(commands.Cog):
         if pre == "on":
             # user inputs date
             date = arrow.get(reminder_time)
-            seconds = date.timestamp - now.timestamp
+            seconds = date.timestamp() - now.timestamp()
 
         elif pre == "in":
             # user inputs time delta

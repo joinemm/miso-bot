@@ -2197,8 +2197,8 @@ class LastFm(commands.Cog):
             week.append(
                 {
                     "dt": dt,
-                    "ts": dt.timestamp,
-                    "ts_to": dt.shift(days=+1, minutes=-1).timestamp,
+                    "ts": dt.timestamp(),
+                    "ts_to": dt.shift(days=+1, minutes=-1).timestamp(),
                     "day": dt.format("ddd, MMM Do"),
                     "scrobbles": 0,
                 }
@@ -2208,7 +2208,7 @@ class LastFm(commands.Cog):
             "method": "user.getrecenttracks",
             "user": ctx.username,
             "from": week[-1]["ts"],
-            "to": current_day_floor.shift(minutes=-1).timestamp,
+            "to": current_day_floor.shift(minutes=-1).timestamp(),
             "limit": 1000,
         }
         content = await self.api_request(params)
@@ -2333,7 +2333,7 @@ class LastFm(commands.Cog):
             {
                 "user": user,
                 "method": "user.getrecenttracks",
-                "from": limit_timestamp.timestamp,
+                "from": limit_timestamp.timestamp(),
                 "limit": 200,
             }
         )
@@ -2344,7 +2344,7 @@ class LastFm(commands.Cog):
                     {
                         "user": user,
                         "method": "user.getrecenttracks",
-                        "from": limit_timestamp.timestamp,
+                        "from": limit_timestamp.timestamp(),
                         "limit": 200,
                         "page": i,
                     }
@@ -2472,7 +2472,7 @@ class LastFm(commands.Cog):
                     if tracks[0].get("date"):
                         date = tracks[0]["date"]["uts"]
                     else:
-                        date = arrow.now().timestamp
+                        date = arrow.now().timestamp()
 
                     song = {
                         "artist": tracks[0]["artist"]["#text"],

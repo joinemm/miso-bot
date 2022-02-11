@@ -957,7 +957,7 @@ class User(commands.Cog):
                 partner = ctx.guild.get_member(data[0]) or self.bot.get_user(data[0])
             marriage_date = data[2]
             length = humanize.naturaldelta(
-                arrow.utcnow().timestamp - marriage_date.timestamp(), months=False
+                arrow.utcnow().timestamp() - marriage_date.timestamp(), months=False
             )
             await ctx.send(
                 embed=nextcord.Embed(

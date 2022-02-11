@@ -508,7 +508,6 @@ class Media(commands.Cog):
         for script in scripts:
             try:
                 data = orjson.loads(str(script.contents[0]))
-                logger.info(data)
                 for x in data["itemListElement"]:
                     if "url" in x:
                         urls.append(x["url"])

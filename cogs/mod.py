@@ -45,7 +45,7 @@ class Mod(commands.Cog):
         if not self.unmute_list:
             return
 
-        now_ts = arrow.utcnow().timestamp
+        now_ts = arrow.utcnow().timestamp()
         for (user_id, guild_id, channel_id, unmute_on) in self.unmute_list:
             unmute_ts = unmute_on.timestamp()
             if unmute_ts > now_ts:
