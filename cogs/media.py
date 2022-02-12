@@ -19,8 +19,6 @@ from modules import exceptions, log, util
 
 logger = log.get_logger(__name__)
 
-setattr(asyncio.sslproto._SSLProtocolTransport, "_start_tls_compatible", True)
-
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")
 IG_COOKIE = os.environ.get("IG_COOKIE")
@@ -216,12 +214,12 @@ class Media(commands.Cog):
         )
 
     @commands.command(aliases=["ig", "insta"])
-    async def instagram(self, ctx, *, links):
+    async def instagram(self, ctx, *links):
         """Get all the images from one or more instagram posts."""
         urls = []
         download = False
         for link in links:
-            if link.lower in ["-d", "--download"]:
+            if link.lower() in ["-d", "--download"]:
                 download = True
             else:
                 urls.append(link)
@@ -234,9 +232,21 @@ class Media(commands.Cog):
                     url = f"https://www.instagram.com/p/{url.strip('/').split('/')[0]}"
 
                 headers = {
-                    "User-Agent": self.user_agents.get_random_user_agent(),
-                    "X-IG-App-ID": "936619743392459",
+                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/94.0",  # self.user_agents.get_random_user_agent(),
                     "Cookie": self.ig_cookie,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                    "Accept-Language": "en,en-US;q=0.5",
+                    "Accept-Encoding": "gzip, deflate, br",
+                    "DNT": "1",
+                    "Connection": "keep-alive",
+                    "Sec-Fetch-Dest": "document",
+                    "Sec-Fetch-Mode": "navigate",
+                    "Sec-Fetch-Site": "cross-site",
+                    "Sec-Fetch-User": "?1",
+                    "Cache-Control": "max-age=0, no-cache",
+                    "TE": "trailers",
+                    "Upgrade-Insecure-Requests": "1",
+                    "Pragma": "no-cache",
                 }
                 post_id = url.split("/")[-1]
                 newurl = "https://www.instagram.com/graphql/query/"
@@ -341,12 +351,12 @@ class Media(commands.Cog):
             pass
 
     @commands.command(aliases=["twt"])
-    async def twitter(self, ctx, *, links):
+    async def twitter(self, ctx, *links):
         """Get all the images from one or more tweets."""
         urls = []
         download = False
         for link in links:
-            if link.lower in ["-d", "--download"]:
+            if link.lower() in ["-d", "--download"]:
                 download = True
             else:
                 urls.append(link)
