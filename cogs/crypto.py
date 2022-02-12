@@ -1,4 +1,3 @@
-import re
 from decimal import Decimal
 
 import aiohttp
@@ -71,27 +70,14 @@ class Cryptocurrency(commands.Cog):
             "DATA": ",".join(candle_data),
         }
 
-        def dictsub(m):
-            return str(replacements[m.group().strip("$")])
-
-        formatted_html = re.sub(r"\$(\S*)\$", dictsub, self.candlestick_chart_html)
-        async with aiohttp.ClientSession() as session:
-            data = {
-                "html": formatted_html,
-                "width": 720,
-                "height": 512,
-                "imageFormat": "png",
-            }
-            async with session.post("http://localhost:3000/html", data=data) as response:
-                with open("downloads/candlestick.png", "wb") as f:
-                    while True:
-                        block = await response.content.read(1024)
-                        if not block:
-                            break
-                        f.write(block)
-
-        with open("downloads/candlestick.png", "rb") as f:
-            await ctx.send(file=nextcord.File(f))
+        payload = {
+            "html": util.format_html(self.candlestick_chart_html, replacements),
+            "width": 720,
+            "height": 512,
+            "imageFormat": "png",
+        }
+        buffer = await util.render_html(self.bot, payload)
+        await ctx.send(file=nextcord.File(fp=buffer, filename=f"candlestick_{coin}_{pair}.png"))
 
     @crypto.command()
     async def price(self, ctx, coin, pair="USDT"):
