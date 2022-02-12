@@ -248,7 +248,7 @@ class Utility(commands.Cog):
         except ValueError:
             return await util.send_command_help(ctx)
 
-        now = arrow.nutcow()
+        now = arrow.utcnow()
 
         if pre == "on":
             # user inputs date
