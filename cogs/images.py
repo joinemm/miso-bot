@@ -209,9 +209,7 @@ class Images(commands.Cog):
         await self.bot.loop.run_in_executor(
             None, lambda: image.write_box(*boxdimensions, color, text, angle=angle)
         )
-        await self.bot.loop.run_in_executor(
-            None, lambda: image.write_watermark(wm_size, wm_color)
-        )
+        await self.bot.loop.run_in_executor(None, lambda: image.write_watermark(wm_size, wm_color))
 
         save_location = f"downloads/{ctx.message.id}_output_{filename.split('/')[-1]}"
         image.save(save_location)

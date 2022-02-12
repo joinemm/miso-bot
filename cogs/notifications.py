@@ -27,25 +27,15 @@ class Notifications(commands.Cog):
                 self.notifications_cache[str(guild_id)] = {}
 
             try:
-                self.notifications_cache[str(guild_id)][keyword.lower().strip()].append(
-                    user_id
-                )
+                self.notifications_cache[str(guild_id)][keyword.lower().strip()].append(user_id)
             except KeyError:
-                self.notifications_cache[str(guild_id)][keyword.lower().strip()] = [
-                    user_id
-                ]
+                self.notifications_cache[str(guild_id)][keyword.lower().strip()] = [user_id]
 
     async def send_notification(self, member, message, keywords, test=False):
         content = nextcord.Embed(color=message.author.color)
-        content.set_author(
-            name=f"{message.author}", icon_url=message.author.display_avatar.url
-        )
-        pattern = regex.compile(
-            self.keyword_regex, words=keywords, flags=regex.IGNORECASE
-        )
-        highlighted_text = regex.sub(
-            pattern, lambda x: f"**{x.group(0)}**", message.content
-        )
+        content.set_author(name=f"{message.author}", icon_url=message.author.display_avatar.url)
+        pattern = regex.compile(self.keyword_regex, words=keywords, flags=regex.IGNORECASE)
+        highlighted_text = regex.sub(pattern, lambda x: f"**{x.group(0)}**", message.content)
 
         content.description = highlighted_text[:2047]
         content.add_field(
@@ -59,9 +49,7 @@ class Notifications(commands.Cog):
 
         try:
             await member.send(embed=content)
-            self.bot.logger.info(
-                f"Sending notification for words {keywords} to {member}"
-            )
+            self.bot.logger.info(f"Sending notification for words {keywords} to {member}")
             if not test:
                 self.bot.cache.stats_notifications_sent += 1
                 for keyword in keywords:
@@ -76,9 +64,7 @@ class Notifications(commands.Cog):
                         keyword,
                     )
         except nextcord.errors.Forbidden:
-            self.bot.logger.warning(
-                f"Forbidden when trying to send a notification to {member}."
-            )
+            self.bot.logger.warning(f"Forbidden when trying to send a notification to {member}.")
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -133,13 +119,8 @@ class Notifications(commands.Cog):
 
         for user_id, users_words in users_keywords.items():
             member = message.guild.get_member(user_id)
-            if (
-                member is not None
-                and message.channel.permissions_for(member).read_messages
-            ):
-                asyncio.ensure_future(
-                    self.send_notification(member, message, users_words)
-                )
+            if member is not None and message.channel.permissions_for(member).read_messages:
+                asyncio.ensure_future(self.send_notification(member, message, users_words))
 
     @commands.group(case_insensitive=True, aliases=["noti", "notif"])
     async def notification(self, ctx):
@@ -185,9 +166,7 @@ class Notifications(commands.Cog):
                 f"New keyword notification for `{keyword}` set in **{ctx.guild.name}**",
             )
         except nextcord.errors.Forbidden:
-            raise exceptions.Warning(
-                "I was unable to send you a DM! Please change your settings."
-            )
+            raise exceptions.Warning("I was unable to send you a DM! Please change your settings.")
 
         await self.bot.db.execute(
             """
@@ -205,9 +184,7 @@ class Notifications(commands.Cog):
         except KeyError:
             self.notifications_cache[str(guild_id)][keyword] = [ctx.author.id]
 
-        await util.send_success(
-            ctx, f"New notification set! Check your DM {emojis.VIVISMIRK}"
-        )
+        await util.send_success(ctx, f"New notification set! Check your DM {emojis.VIVISMIRK}")
 
     @notification.command()
     async def remove(self, ctx, *, keyword):
@@ -238,9 +215,7 @@ class Notifications(commands.Cog):
                 f"The keyword notification for `{keyword}` that you set in **{ctx.guild.name}** has been removed.",
             )
         except nextcord.errors.Forbidden:
-            raise exceptions.Warning(
-                "I was unable to send you a DM! Please change your settings."
-            )
+            raise exceptions.Warning("I was unable to send you a DM! Please change your settings.")
 
         await self.bot.db.execute(
             """
@@ -253,9 +228,7 @@ class Notifications(commands.Cog):
 
         # remake notification cache
         await self.create_cache()
-        await util.send_success(
-            ctx, f"Removed a notification! Check your DM {emojis.VIVISMIRK}"
-        )
+        await util.send_success(ctx, f"Removed a notification! Check your DM {emojis.VIVISMIRK}")
 
     @notification.command()
     async def list(self, ctx):
@@ -281,21 +254,15 @@ class Notifications(commands.Cog):
             if guild is None:
                 guild = f"[Unknown server `{guild_id}`]"
 
-            rows.append(
-                f"**{guild}** : `{keyword}` - Triggered **{times_triggered}** times"
-            )
+            rows.append(f"**{guild}** : `{keyword}` - Triggered **{times_triggered}** times")
 
         try:
             await util.send_as_pages(ctx.author, content, rows, maxpages=1, maxrows=50)
         except nextcord.errors.Forbidden:
-            raise exceptions.Warning(
-                "I was unable to send you a DM! Please change your settings."
-            )
+            raise exceptions.Warning("I was unable to send you a DM! Please change your settings.")
 
         if ctx.guild is not None:
-            await util.send_success(
-                ctx, f"Notification list sent to your DM {emojis.VIVISMIRK}"
-            )
+            await util.send_success(ctx, f"Notification list sent to your DM {emojis.VIVISMIRK}")
 
     @notification.command()
     async def clear(self, ctx):
@@ -305,21 +272,15 @@ class Notifications(commands.Cog):
         """
         dm = ctx.guild is None
         if dm:
-            await self.bot.db.execute(
-                "DELETE FROM notification WHERE user_id = %s", ctx.author.id
-            )
-            await util.send_success(
-                ctx, "Cleared all of your notifications in all servers!"
-            )
+            await self.bot.db.execute("DELETE FROM notification WHERE user_id = %s", ctx.author.id)
+            await util.send_success(ctx, "Cleared all of your notifications in all servers!")
         else:
             await self.bot.db.execute(
                 "DELETE FROM notification WHERE user_id = %s AND guild_id = %s",
                 ctx.author.id,
                 ctx.guild.id,
             )
-            await util.send_success(
-                ctx, "Cleared all of your notifications in this server!"
-            )
+            await util.send_success(ctx, "Cleared all of your notifications in this server!")
 
         # remake notification cache
         await self.create_cache()
@@ -350,9 +311,7 @@ class Notifications(commands.Cog):
                 as_list=True,
             )
 
-            pattern = regex.compile(
-                self.keyword_regex, words=keywords, flags=regex.IGNORECASE
-            )
+            pattern = regex.compile(self.keyword_regex, words=keywords, flags=regex.IGNORECASE)
 
             finds = pattern.findall(message.content)
             if not finds:

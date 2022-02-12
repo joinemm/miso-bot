@@ -89,9 +89,7 @@ class Miscellaneous(commands.Cog):
         try:
             values = [int(x) for x in number_range.split("-")]
         except ValueError:
-            return await ctx.send(
-                ":warning: Please give a valid number range to choose from"
-            )
+            return await ctx.send(":warning: Please give a valid number range to choose from")
         if len(values) == 2:
             start, end = values
         else:
@@ -186,9 +184,7 @@ class Miscellaneous(commands.Cog):
             lovenums = newnums
 
         it = 0
-        maxit = (
-            100  # Maximum iterations allowed in below algorithm to attempt convergence
-        )
+        maxit = 100  # Maximum iterations allowed in below algorithm to attempt convergence
         maxlen = 100  # Maximum length of generated list allowed (some cases grow list infinitely)
         while len(lovenums) > 2 and it < maxit and len(lovenums) < maxlen:
             newnums = []
@@ -355,9 +351,7 @@ class Miscellaneous(commands.Cog):
         )
 
         content.add_field(name="Mood", value=data["mood"], inline=True)
-        content.add_field(
-            name="Compatibility", value=data["compatibility"], inline=True
-        )
+        content.add_field(name="Compatibility", value=data["compatibility"], inline=True)
         content.add_field(name="Color", value=data["color"], inline=True)
         content.add_field(name="Lucky number", value=data["lucky_number"], inline=True)
         content.add_field(name="Lucky time", value=data["lucky_time"], inline=True)
@@ -384,9 +378,7 @@ class Miscellaneous(commands.Cog):
             ctx.author.id,
             sign,
         )
-        await ctx.send(
-            f"Zodiac saved as **{sign.capitalize()}** {self.hs.get(sign)['emoji']}"
-        )
+        await ctx.send(f"Zodiac saved as **{sign.capitalize()}** {self.hs.get(sign)['emoji']}")
 
     @horoscope.command()
     async def list(self, ctx):
@@ -434,9 +426,7 @@ class Miscellaneous(commands.Cog):
                     colors.append("{:06x}".format(random.randint(0, 0xFFFFFF)))
                 continue
 
-            role_or_user = await util.get_member(ctx, source) or await util.get_role(
-                ctx, source
-            )
+            role_or_user = await util.get_member(ctx, source) or await util.get_role(ctx, source)
             if role_or_user is not None:
                 colors.append(str(role_or_user.color).strip("#"))
                 continue
@@ -457,9 +447,7 @@ class Miscellaneous(commands.Cog):
         if not colors:
             return await ctx.send("No valid colors to show")
 
-        content = nextcord.Embed(
-            colour=await util.get_color(ctx, "#" + colors[0].strip("#"))
-        )
+        content = nextcord.Embed(colour=await util.get_color(ctx, "#" + colors[0].strip("#")))
 
         if len(colors) > 50:
             await ctx.send("Maximum amount of colors is 50, ignoring rest...")
@@ -534,8 +522,7 @@ class Miscellaneous(commands.Cog):
 
         if isinstance(emoji, nextcord.Emoji):
             content.description = (
-                f"Added {arrow.get(emoji.created_at).format('D/M/YYYY')}\n"
-                f"**{emoji.guild}**"
+                f"Added {arrow.get(emoji.created_at).format('D/M/YYYY')}\n" f"**{emoji.guild}**"
             )
 
         content.set_footer(
@@ -559,9 +546,7 @@ class Miscellaneous(commands.Cog):
                 try:
                     await ctx.send(result)
                 except nextcord.errors.HTTPException:
-                    raise exceptions.Warning(
-                        "Your text when emojified is too long to send!"
-                    )
+                    raise exceptions.Warning("Your text when emojified is too long to send!")
 
 
 def setup(bot):

@@ -131,9 +131,7 @@ class Events(commands.Cog):
                 for emoji_name, value in self.emoji_usage_cache["unicode"][guild_id][
                     user_id
                 ].items():
-                    unicode_emoji_values.append(
-                        (int(guild_id), int(user_id), emoji_name, value)
-                    )
+                    unicode_emoji_values.append((int(guild_id), int(user_id), emoji_name, value))
 
         if unicode_emoji_values:
             sql_tasks.append(
@@ -152,9 +150,7 @@ class Events(commands.Cog):
         custom_emoji_values = []
         for guild_id in self.emoji_usage_cache["custom"]:
             for user_id in self.emoji_usage_cache["custom"][guild_id]:
-                for emoji_id, value in self.emoji_usage_cache["custom"][guild_id][
-                    user_id
-                ].items():
+                for emoji_id, value in self.emoji_usage_cache["custom"][guild_id][user_id].items():
                     custom_emoji_values.append(
                         (
                             int(guild_id),
@@ -247,9 +243,7 @@ class Events(commands.Cog):
             one_value=True,
         )
         if blacklisted:
-            logger.info(
-                f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}"
-            )
+            logger.info(f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}")
             return await guild.leave()
 
         await self.bot.wait_until_ready()
@@ -333,9 +327,7 @@ class Events(commands.Cog):
                 if greeter_channel is not None:
                     try:
                         await greeter_channel.send(
-                            embed=util.create_welcome_embed(
-                                member, member.guild, message_format
-                            )
+                            embed=util.create_welcome_embed(member, member.guild, message_format)
                         )
                     except nextcord.errors.Forbidden:
                         pass
@@ -408,9 +400,7 @@ class Events(commands.Cog):
 
                     try:
                         await channel.send(
-                            util.create_goodbye_message(
-                                member, member.guild, message_format
-                            )
+                            util.create_goodbye_message(member, member.guild, message_format)
                         )
                     except nextcord.errors.Forbidden:
                         pass
@@ -496,12 +486,8 @@ class Events(commands.Cog):
         if self.xp_cache.get(str(message.guild.id)) is None:
             self.xp_cache[str(message.guild.id)] = {}
         try:
-            self.xp_cache[str(message.guild.id)][str(message.author.id)][
-                "xp"
-            ] += message_xp
-            self.xp_cache[str(message.guild.id)][str(message.author.id)][
-                "messages"
-            ] += 1
+            self.xp_cache[str(message.guild.id)][str(message.author.id)]["xp"] += message_xp
+            self.xp_cache[str(message.guild.id)][str(message.author.id)]["messages"] += 1
         except KeyError:
             self.xp_cache[str(message.guild.id)][str(message.author.id)] = {
                 "xp": message_xp,
@@ -631,9 +617,7 @@ class Events(commands.Cog):
         if payload.channel_id in self.bot.cache.starboard_blacklisted_channels:
             return
 
-        starboard_settings = self.bot.cache.starboard_settings.get(
-            str(payload.guild_id)
-        )
+        starboard_settings = self.bot.cache.starboard_settings.get(str(payload.guild_id))
         if not starboard_settings:
             return
 
@@ -702,9 +686,7 @@ class Events(commands.Cog):
                 one_value=True,
             )
             emoji_display = (
-                "⭐"
-                if emoji_type == "custom"
-                else emoji_literals.NAME_TO_UNICODE[emoji_name]
+                "⭐" if emoji_type == "custom" else emoji_literals.NAME_TO_UNICODE[emoji_name]
             )
 
             board_message = None

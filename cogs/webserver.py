@@ -85,9 +85,7 @@ class WebServer(commands.Cog):
         return web.Response(text=f"{len(set(self.bot.get_all_members()))}")
 
     async def command_count(self, request):
-        count = await self.bot.db.execute(
-            "SELECT SUM(uses) FROM command_usage", one_value=True
-        )
+        count = await self.bot.db.execute("SELECT SUM(uses) FROM command_usage", one_value=True)
         return web.Response(text=f"{count}")
 
     async def website_statistics(self, request):
@@ -96,9 +94,7 @@ class WebServer(commands.Cog):
     @tasks.loop(minutes=1)
     async def cache_stats(self):
         self.cached["commands"] = int(
-            await self.bot.db.execute(
-                "SELECT SUM(uses) FROM command_usage", one_value=True
-            )
+            await self.bot.db.execute("SELECT SUM(uses) FROM command_usage", one_value=True)
         )
         self.cached["guilds"] = len(self.bot.guilds)
         self.cached["users"] = len(set(self.bot.get_all_members()))

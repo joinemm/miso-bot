@@ -44,9 +44,7 @@ def displayname(member, escape=True):
 
 async def send_success(ctx, message):
     await ctx.send(
-        embed=nextcord.Embed(
-            description=":white_check_mark: " + message, color=int("77b255", 16)
-        )
+        embed=nextcord.Embed(description=":white_check_mark: " + message, color=int("77b255", 16))
     )
 
 
@@ -60,10 +58,7 @@ async def determine_prefix(bot, message):
 
 async def is_blacklisted(ctx):
     """Check command invocation context for blacklist triggers."""
-    if (
-        ctx.guild is not None
-        and ctx.guild.id in ctx.bot.cache.blacklist["global"]["guild"]
-    ):
+    if ctx.guild is not None and ctx.guild.id in ctx.bot.cache.blacklist["global"]["guild"]:
         raise exceptions.BlacklistedGuild()
 
     if ctx.channel.id in ctx.bot.cache.blacklist["global"]["channel"]:
@@ -72,10 +67,7 @@ async def is_blacklisted(ctx):
     if ctx.author.id in ctx.bot.cache.blacklist["global"]["user"]:
         raise exceptions.BlacklistedUser()
 
-    if (
-        ctx.guild is not None
-        and ctx.bot.cache.blacklist.get(str(ctx.guild.id)) is not None
-    ):
+    if ctx.guild is not None and ctx.bot.cache.blacklist.get(str(ctx.guild.id)) is not None:
         if ctx.author.id in ctx.bot.cache.blacklist[str(ctx.guild.id)]["member"]:
             raise exceptions.BlacklistedMember()
 
@@ -163,9 +155,7 @@ async def send_as_pages(ctx, content, rows, maxrows=15, maxpages=10):
         await ctx.send(embed=pages[0])
 
 
-async def text_based_page_switcher(
-    ctx, pages, prefix="```", suffix="```", numbers=True
-):
+async def text_based_page_switcher(ctx, pages, prefix="```", suffix="```", numbers=True):
     """
     :param ctx    : Context
     :param pages  : List of strings
@@ -221,8 +211,7 @@ async def page_switcher(ctx, pages):
         if old_footer == nextcord.Embed.Empty:
             old_footer = None
         page.set_footer(
-            text=f"{i}/{len(pages.items)}"
-            + (f" | {old_footer}" if old_footer is not None else "")
+            text=f"{i}/{len(pages.items)}" + (f" | {old_footer}" if old_footer is not None else "")
         )
 
     msg = await ctx.send(embed=pages.current())
@@ -280,9 +269,7 @@ def create_pages(content, rows, maxrows=15, maxpages=10):
     return pages
 
 
-async def paginate_list(
-    ctx, items, use_locking=False, only_author=False, index_entries=True
-):
+async def paginate_list(ctx, items, use_locking=False, only_author=False, index_entries=True):
     pages = TwoWayIterator(items)
     if index_entries:
         msg = await ctx.send(f"`{pages.index + 1}.` {pages.current()}")
@@ -312,9 +299,7 @@ async def paginate_list(
     if use_locking:
         functions["🔒"] = done
 
-    asyncio.ensure_future(
-        reaction_buttons(ctx, msg, functions, only_author=only_author)
-    )
+    asyncio.ensure_future(reaction_buttons(ctx, msg, functions, only_author=only_author))
 
 
 async def reaction_buttons(
@@ -355,9 +340,7 @@ async def reaction_buttons(
 
     while True:
         try:
-            payload = await ctx.bot.wait_for(
-                "raw_reaction_add", timeout=timeout, check=check
-            )
+            payload = await ctx.bot.wait_for("raw_reaction_add", timeout=timeout, check=check)
 
         except asyncio.TimeoutError:
             break
@@ -392,9 +375,7 @@ def message_embed(message):
     :returns        : nextcord.Embed
     """
     content = nextcord.Embed()
-    content.set_author(
-        name=f"{message.author}", icon_url=message.author.display_avatar.url
-    )
+    content.set_author(name=f"{message.author}", icon_url=message.author.display_avatar.url)
     content.description = message.content
     content.set_footer(text=f"{message.guild.name} | #{message.channel.name}")
     content.timestamp = message.created_at
@@ -599,9 +580,7 @@ def escape_md(s):
     :param s : String to espace markdown from
     :return  : The escaped string
     """
-    transformations = {
-        regex.escape(c): "\\" + c for c in ("*", "`", "_", "~", "\\", "||")
-    }
+    transformations = {regex.escape(c): "\\" + c for c in ("*", "`", "_", "~", "\\", "||")}
 
     def replace(obj):
         return transformations.get(regex.escape(obj.group(0)), "")
@@ -792,11 +771,7 @@ def activities_string(activities, markdown=True, show_emoji=True):
         elif base_activity.type == nextcord.ActivityType.streaming:
             prefix = "Streaming"
 
-        message = (
-            prefix
-            + " "
-            + (f"**{base_activity.name}**" if markdown else base_activity.name)
-        )
+        message = prefix + " " + (f"**{base_activity.name}**" if markdown else base_activity.name)
 
     text = ""
     if emoji is not None and show_emoji:
@@ -850,13 +825,9 @@ async def render_html(bot, payload):
                     bot.cache.stats_html_rendered += 1
                     buffer = io.BytesIO(await response.read())
                     return buffer
-                raise exceptions.RendererError(
-                    f"{response.status} : {await response.text()}"
-                )
+                raise exceptions.RendererError(f"{response.status} : {await response.text()}")
         except aiohttp.client_exceptions.ClientConnectorError:
-            raise exceptions.RendererError(
-                "Unable to connect to the HTML Rendering server"
-            )
+            raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
 
 
 class TwoWayIterator:
