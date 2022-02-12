@@ -553,7 +553,7 @@ class Information(commands.Cog):
         start = max(now.shift(hours=-hours), first_data_ts)
         for dt in arrow.Arrow.span_range("minute", start, now.shift(minutes=-1)):
             dt = dt[0]
-            value = datadict.get(str(dt.timestamp()), nan)
+            value = datadict.get(str(dt.int_timestamp), nan)
             frame.append(dt.datetime)
             patched_data.append(value)
 
