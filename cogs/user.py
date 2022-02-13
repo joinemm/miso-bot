@@ -197,27 +197,38 @@ class User(commands.Cog):
             if guild is None:
                 raise exceptions.Warning(f'Guild with id "{guild_id}" not found.')
 
-        image_small = str(guild.icon.replace(format="png", size=64))
+        image_small = (
+            guild.icon.replace(format="png", size=64).url if guild.icon is not None else None
+        )
         content = nextcord.Embed(
             title=f"**{guild.name}** | #{guild.id}",
-            color=int(await util.color_from_image_url(image_small), 16),
+            color=int(await util.color_from_image_url(image_small), 16)
+            if image_small
+            else nextcord.Embed.Empty,
         )
-        content.set_thumbnail(url=guild.icon.url)
+        try:
+            content.set_thumbnail(url=guild.icon.url)
+        except AttributeError:
+            pass
+        content.description = guild.description
         content.add_field(name="Owner", value=str(guild.owner))
         content.add_field(name="Region", value=f"{util.region_flag(guild.region)} {guild.region}")
         content.add_field(name="Created at", value=guild.created_at.strftime("%d/%m/%Y %H:%M"))
         content.add_field(name="Members", value=str(guild.member_count))
         content.add_field(name="Roles", value=str(len(guild.roles)))
         content.add_field(name="Emojis", value=str(len(guild.emojis)))
-        content.add_field(name="Boost level", value=guild.premium_tier)
-        content.add_field(name="Boosts", value=guild.premium_subscription_count)
-        content.add_field(name="Filesize limit", value=humanize.naturalsize(guild.filesize_limit))
+        content.add_field(
+            name="Boosts",
+            value=f"{guild.premium_subscription_count} (level {guild.premium_tier})",
+        )
         content.add_field(
             name="Channels",
-            value=(
-                f"{len(guild.text_channels)} Text channels, "
-                f"{len(guild.voice_channels)} Voice channels"
-            ),
+            value=(f"{len(guild.text_channels)} Text, {len(guild.voice_channels)} Voice"),
+        )
+        content.add_field(name="Content filter", value=guild.explicit_content_filter.name)
+        content.add_field(
+            name="Features",
+            value=", ".join(guild.features) if guild.features else "None",
             inline=False,
         )
 

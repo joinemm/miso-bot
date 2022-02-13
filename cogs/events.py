@@ -253,7 +253,10 @@ class Events(commands.Cog):
         content.description = (
             f"Miso just joined **{guild}**\nWith **{guild.member_count-1}** members"
         )
-        content.set_thumbnail(url=guild.icon.url)
+        try:
+            content.set_thumbnail(url=guild.icon.url)
+        except AttributeError:
+            pass
         content.set_footer(text=f"#{guild.id}")
         content.timestamp = arrow.utcnow().datetime
         logchannel = self.bot.get_channel(self.guildlog)
@@ -276,7 +279,10 @@ class Events(commands.Cog):
         content.description = (
             f"Miso just left **{guild}**\nWith **{guild.member_count-1}** members :("
         )
-        content.set_thumbnail(url=guild.icon.url)
+        try:
+            content.set_thumbnail(url=guild.icon.url)
+        except AttributeError:
+            pass
         content.set_footer(text=f"#{guild.id}")
         content.timestamp = arrow.utcnow().datetime
         logchannel = self.bot.get_channel(self.guildlog)

@@ -147,7 +147,7 @@ async def cooldown_check(ctx):
     bucket = ctx.bot.global_cd.get_bucket(ctx.message)
     retry_after = bucket.update_rate_limit()
     if retry_after:
-        raise commands.CommandOnCooldown(bucket, retry_after)
+        raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.member)
     return True
 
 

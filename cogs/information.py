@@ -491,6 +491,9 @@ class Information(commands.Cog):
         if guild is None:
             guild = ctx.guild
 
+        if guild.icon is None:
+            raise exceptions.Warning("This server has no icon.")
+
         content = nextcord.Embed()
         content.set_author(name=str(guild), url=guild.icon.url)
         content.set_image(url=guild.icon.replace(static_format="png"))

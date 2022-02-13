@@ -43,7 +43,7 @@ class Notifications(commands.Cog):
         )
         content.set_footer(
             text=f"{message.guild.name} | #{message.channel.name}",
-            icon_url=message.guild.icon.url,
+            icon_url=getattr(message.guild.icon, "url", None),
         )
         content.timestamp = message.created_at
 
