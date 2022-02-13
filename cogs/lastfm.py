@@ -2243,7 +2243,6 @@ class LastFm(commands.Cog):
     async def custom_period(self, user, group_by, shift_hours=24):
         """Parse recent tracks to get custom duration data (24 hour)."""
         limit_timestamp = arrow.utcnow().shift(hours=-shift_hours)
-        logger.info(limit_timestamp)
         data = await self.api_request(
             {
                 "user": user,
@@ -2252,9 +2251,7 @@ class LastFm(commands.Cog):
                 "limit": 200,
             }
         )
-        logger.info(data)
         loops = int(data["recenttracks"]["@attr"]["totalPages"])
-        logger.info(f"{loops}pages")
         if loops > 1:
             for i in range(2, loops + 1):
                 newdata = await self.api_request(
