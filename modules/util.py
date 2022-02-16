@@ -730,57 +730,56 @@ def create_goodbye_message(user, guild, messageformat):
     return messageformat.format_map(substitutes)
 
 
-def activities_string(activities, markdown=True, show_emoji=True):
-    """Print user activity as it shows up on the sidebar."""
-    if not activities:
-        return None
+class UserActivity:
+    def __init__(self, activities):
+        self.emoji: nextcord.PartialEmoji = None
+        self.status_text: str = None
+        self.base: str = None
+        self.spotify: bool = False
 
-    custom_activity = None
-    base_activity = None
-    spotify_activity = None
-    for act in activities:
-        if isinstance(act, nextcord.CustomActivity):
-            custom_activity = act
-        elif isinstance(act, nextcord.BaseActivity):
-            base_activity = act
-        elif isinstance(act, nextcord.Spotify):
-            spotify_activity = act
-        else:
-            print(act)
-            return "Unknown activity"
+        if activities is None:
+            return
 
-    emoji = custom_activity.emoji if custom_activity else None
-    message = None
+        for activity in activities:
+            if isinstance(activity, nextcord.CustomActivity):
+                self.emoji = activity.emoji
+                self.status_text = activity.name
 
-    if message is None and spotify_activity is not None:
-        message = "Listening to " + ("**Spotify**" if markdown else "Spotify")
+            elif isinstance(activity, nextcord.BaseActivity):
+                if activity.type == nextcord.ActivityType.playing:
+                    prefix = "Playing"
+                elif activity.type == nextcord.ActivityType.streaming:
+                    prefix = "Streaming"
+                elif activity.type == nextcord.ActivityType.listening:
+                    prefix = "Listening"
+                elif activity.type == nextcord.ActivityType.watching:
+                    prefix = "Watching"
+                elif activity.type == nextcord.ActivityType.streaming:
+                    prefix = "Streaming"
 
-    if custom_activity:
-        emoji = custom_activity.emoji
-        message = custom_activity.name
+                self.base = prefix + " " + (f"**{activity.name}**")
 
-    if message is None and base_activity is not None:
-        if base_activity.type == nextcord.ActivityType.playing:
-            prefix = "Playing"
-        elif base_activity.type == nextcord.ActivityType.streaming:
-            prefix = "Streaming"
-        elif base_activity.type == nextcord.ActivityType.listening:
-            prefix = "Listening"
-        elif base_activity.type == nextcord.ActivityType.watching:
-            prefix = "Watching"
-        elif base_activity.type == nextcord.ActivityType.streaming:
-            prefix = "Streaming"
+            elif isinstance(activity, nextcord.Spotify):
+                self.spotify = True
 
-        message = prefix + " " + (f"**{base_activity.name}**" if markdown else base_activity.name)
+            else:
+                raise AttributeError(str(activity))
 
-    text = ""
-    if emoji is not None and show_emoji:
-        text += f"{emoji} "
+    def display(self):
+        """Print user activity as it shows up on the sidebar."""
+        result = ""
+        if self.emoji:
+            result += str(self.emoji)
+            result += " "
 
-    if message is not None:
-        text += message
+        if self.status_text:
+            result += self.status_text
+        elif self.base:
+            result += self.base
+        elif self.spotify:
+            result += "Listening to **Spotify**"
 
-    return text if text != "" else None
+        return result
 
 
 async def send_tasks_result_list(ctx, successful_operations, failed_operations):
