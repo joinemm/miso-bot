@@ -108,7 +108,7 @@ class User(commands.Cog):
 
         if isinstance(user, nextcord.Member):
             content.colour = user.color
-            activity_display = util.activities_string(user.activities)
+            activity_display = util.UserActivity(user.activities).display()
             if user.is_on_mobile() and user.status is nextcord.Status.online:
                 status_emoji = "mobile"
             else:
@@ -127,7 +127,7 @@ class User(commands.Cog):
 
         content.add_field(name="Status", value=status_display)
         content.add_field(name="Badges", value="> " + " ".join(util.flags_to_badges(user)))
-        content.add_field(name="Activity", value=activity_display)
+        content.add_field(name="Activity", value=activity_display or "None")
         content.add_field(name="Mention", value=user.mention)
         content.add_field(name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M"))
 
@@ -187,6 +187,38 @@ class User(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
+    @commands.command()
+    async def banner(self, ctx, *, user: nextcord.User = None):
+        """Get user's banner."""
+        if user is None:
+            user = ctx.author
+
+        # banners are not cached so an api call is required
+        user = await self.bot.fetch_user(user.id)
+
+        content = nextcord.Embed()
+
+        if not user.banner:
+            content.color = user.accent_color
+            content.description = f":art: Solid color `{user.accent_color}`"
+            content.set_author(name=f"{user} Banner", icon_url=user.display_avatar.url)
+            return await ctx.send(embed=content)
+
+        content.set_author(
+            name=f"{user} Banner", url=user.banner.url, icon_url=user.display_avatar.url
+        )
+
+        content.set_image(url=user.banner.url)
+        stats = await util.image_info_from_url(user.banner.url)
+        color = await util.color_from_image_url(user.banner.replace(size=64, format="png").url)
+        content.colour = int(color, 16)
+        if stats is not None:
+            content.set_footer(
+                text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
+            )
+
+        await ctx.send(embed=content)
+
     @commands.command(aliases=["sinfo", "guildinfo"])
     async def serverinfo(self, ctx, guild_id: int = None):
         """Get information about discord server."""
@@ -202,6 +234,9 @@ class User(commands.Cog):
             color = await util.color_from_image_url(guild.icon.replace(format="png", size=64).url)
             content.color = int(color, 16)
             content.set_thumbnail(url=guild.icon.url)
+
+        if guild.banner:
+            content.set_image(guild.banner.url)
 
         content.description = guild.description
         content.add_field(name="Owner", value=str(guild.owner))
