@@ -40,8 +40,8 @@ class Events(commands.Cog):
         """Start tasks."""
         await self.bot.wait_until_ready()
         self.status_loop.start()
-        # self.xp_loop.start()
-        # self.stats_loop.start()
+        self.xp_loop.start()
+        self.stats_loop.start()
 
     async def insert_stats(self):
         self.bot.logger.info("inserting usage stats")
@@ -191,7 +191,7 @@ class Events(commands.Cog):
             if ctx.guild is not None:
                 await queries.save_command_usage(ctx)
 
-    @tasks.loop(minutes=5.0)
+    @tasks.loop(minutes=1.0)
     async def xp_loop(self):
         try:
             await self.write_usage_data()
@@ -465,9 +465,6 @@ class Events(commands.Cog):
             return
         self.stats_messages += 1
         self.bot.cache.event_triggers["message"] += 1
-
-        # temp fix
-        return
 
         # ignore DMs
         if message.guild is None:

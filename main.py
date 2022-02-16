@@ -99,7 +99,7 @@ extensions = [
     "customcommands",
     "fishy",
     "information",
-    # "rolepicker",
+    "rolepicker",
     "mod",
     "owner",
     "notifications",
