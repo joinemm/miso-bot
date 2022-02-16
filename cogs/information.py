@@ -496,9 +496,9 @@ class Information(commands.Cog):
 
         content = nextcord.Embed()
         content.set_author(name=str(guild), url=guild.icon.url)
-        content.set_image(url=guild.icon.replace(static_format="png"))
+        content.set_image(url=guild.icon.url)
         stats = await util.image_info_from_url(guild.icon.url)
-        color = await util.color_from_image_url(str(guild.icon.replace(size=128, format="png")))
+        color = await util.color_from_image_url(str(guild.icon.replace(size=64, format="png")))
         content.colour = int(color, 16)
         if stats is not None:
             content.set_footer(

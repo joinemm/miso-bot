@@ -79,7 +79,7 @@ class User(commands.Cog):
 
         content = nextcord.Embed()
         content.set_author(name=str(user), url=user.display_avatar.url)
-        content.set_image(url=user.display_avatar.replace(static_format="png").url)
+        content.set_image(url=user.display_avatar.url)
         stats = await util.image_info_from_url(user.display_avatar.url)
         color = await util.color_from_image_url(
             user.display_avatar.replace(size=64, format="png").url
@@ -197,19 +197,12 @@ class User(commands.Cog):
             if guild is None:
                 raise exceptions.Warning(f'Guild with id "{guild_id}" not found.')
 
-        image_small = (
-            guild.icon.replace(format="png", size=64).url if guild.icon is not None else None
-        )
-        content = nextcord.Embed(
-            title=f"**{guild.name}** | #{guild.id}",
-            color=int(await util.color_from_image_url(image_small), 16)
-            if image_small
-            else nextcord.Embed.Empty,
-        )
-        try:
+        content = nextcord.Embed(title=f"**{guild.name}** | #{guild.id}")
+        if guild.icon:
+            color = await util.color_from_image_url(guild.icon.replace(format="png", size=64).url)
+            content.color = int(color, 16)
             content.set_thumbnail(url=guild.icon.url)
-        except AttributeError:
-            pass
+
         content.description = guild.description
         content.add_field(name="Owner", value=str(guild.owner))
         content.add_field(name="Region", value=f"{util.region_flag(guild.region)} {guild.region}")
