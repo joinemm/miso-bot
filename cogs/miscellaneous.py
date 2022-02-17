@@ -98,8 +98,8 @@ class Miscellaneous(commands.Cog):
         choice = random.randint(start, end)
         await ctx.send(f"Random range `{start}-{end}`\n> **{choice}**")
 
-    @commands.command()
-    async def ascii(self, ctx, *, text):
+    @commands.command(name="ascii")
+    async def ascii_text(self, ctx, *, text):
         """Turn text into fancy ascii art."""
         font = "small"
         async with aiohttp.ClientSession() as session:
@@ -365,8 +365,8 @@ class Miscellaneous(commands.Cog):
 
         await ctx.send(embed=content)
 
-    @horoscope.command()
-    async def set(self, ctx, sign):
+    @horoscope.command(name="set")
+    async def horoscope_set(self, ctx, sign):
         """Save your zodiac sign."""
         sign = sign.lower()
         if self.hs.get(sign) is None:
@@ -386,8 +386,8 @@ class Miscellaneous(commands.Cog):
         )
         await ctx.send(f"Zodiac saved as **{sign.capitalize()}** {self.hs.get(sign)['emoji']}")
 
-    @horoscope.command()
-    async def list(self, ctx):
+    @horoscope.command(name="list")
+    async def horoscope_list(self, ctx):
         """Get list of all zodiac signs."""
         content = nextcord.Embed(
             color=int("9266cc", 16),
