@@ -222,9 +222,35 @@ class User(commands.Cog):
 
         await ctx.send(embed=content)
 
+    @commands.command(aliases=["sbanner", "guildbanner"])
+    async def serverbanner(self, ctx):
+        """Get server's banner."""
+        guild = ctx.guild
+        content = nextcord.Embed()
+
+        if not guild.banner:
+            raise exceptions.Warning("This server has no banner")
+
+        content.set_author(
+            name=f"{guild} Banner",
+            url=guild.banner.url,
+            icon_url=guild.icon.url if guild.icon else None,
+        )
+
+        content.set_image(url=guild.banner.url)
+        stats = await util.image_info_from_url(guild.banner.url)
+        color = await util.color_from_image_url(guild.banner.replace(size=64, format="png").url)
+        content.colour = int(color, 16)
+        if stats is not None:
+            content.set_footer(
+                text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
+            )
+
+        await ctx.send(embed=content)
+
     @commands.command(aliases=["sinfo", "guildinfo"])
     async def serverinfo(self, ctx, guild_id: int = None):
-        """Get information about discord server."""
+        """Get various information on server."""
         if guild_id is None:
             guild = ctx.guild
         else:
