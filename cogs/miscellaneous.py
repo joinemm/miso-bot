@@ -114,18 +114,24 @@ class Miscellaneous(commands.Cog):
     async def eightball(self, ctx, *, question):
         """Ask a yes/no question."""
         choices = [
+            # yes
             "Yes, definitely",
             "Yes",
+            "Yass",
             "Most likely yes",
             "I think so, yes",
             "Absolutely!",
+            # indecisive
             "Maybe",
             "Perhaps",
             "Possibly",
+            # no
             "I don't think so",
             "No",
             "Most likely not",
             "Absolutely not!",
+            "In your dreams",
+            "Naur",
         ]
         answer = random.choice(choices)
         question = question + ("?" if not question.endswith("?") else "")
