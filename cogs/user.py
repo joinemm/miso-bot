@@ -199,6 +199,9 @@ class User(commands.Cog):
         content = nextcord.Embed()
 
         if not user.banner:
+            if not user.accent_color:
+                raise exceptions.Warning(f"**{user}** has not set banner or accent color.")
+
             content.color = user.accent_color
             content.description = f":art: Solid color `{user.accent_color}`"
             content.set_author(name=f"{user} Banner", icon_url=user.display_avatar.url)
@@ -236,7 +239,7 @@ class User(commands.Cog):
             content.set_thumbnail(url=guild.icon.url)
 
         if guild.banner:
-            content.set_image(guild.banner.url)
+            content.set_image(url=guild.banner.url)
 
         content.description = guild.description
         content.add_field(name="Owner", value=str(guild.owner))
