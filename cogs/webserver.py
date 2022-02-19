@@ -17,7 +17,7 @@ SSL_KEY = os.environ.get("WEBSERVER_SSL_KEY")
 
 
 class WebServer(commands.Cog):
-    """Internal web server for getting ping and checking uptime"""
+    """Internal web server to provice realtime statistics to the website."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -29,6 +29,7 @@ class WebServer(commands.Cog):
         self.app.router.add_route("GET", "/ping", self.ping_handler)
         self.app.router.add_route("GET", "/stats", self.website_statistics)
         self.app.router.add_route("GET", "/commands", self.command_count)
+        self.app.router.add_route("GET", "/documentation", self.command_list)
         # Configure default CORS settings.
         self.cors = aiohttp_cors.setup(
             self.app,
@@ -90,6 +91,61 @@ class WebServer(commands.Cog):
 
     async def website_statistics(self, request):
         return web.json_response(self.cached)
+
+    async def command_list(self, request):
+        result = await self.generate_command_list()
+        return web.json_response(result)
+
+    def get_command_structure(self, command):
+        if command.hidden or not command.enabled:
+            return None
+
+        subcommands = []
+        if hasattr(command, "commands"):
+            for subcommand in command.commands:
+                subcommand_structure = self.get_command_structure(subcommand)
+                if subcommand_structure:
+                    subcommands.append(subcommand_structure)
+
+        result = {
+            "name": command.name,
+            "usage": command.usage or command.signature,
+            "description": command.short_doc,
+            "subcommands": subcommands,
+        }
+
+        return result
+
+    async def generate_command_list(self):
+        ignored_cogs = ["Jishaku", "Owner"]
+        result = []
+        for cog in self.bot.cogs.values():
+            if cog.qualified_name in ignored_cogs:
+                continue
+
+            commands = cog.get_commands()
+            if not commands:
+                continue
+
+            command_list = []
+            for command in cog.walk_commands():
+                command_structure = self.get_command_structure(command)
+                if command_structure:
+                    command_list.append(command_structure)
+
+            if not command_list:
+                continue
+
+            cog_content = {
+                "name": cog.qualified_name,
+                "description": cog.description,
+                "icon": cog.getattr("icon", None),
+                "commands": command_list,
+            }
+
+            result.append(cog_content)
+
+        return result
 
     @tasks.loop(minutes=1)
     async def cache_stats(self):
