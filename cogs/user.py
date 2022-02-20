@@ -23,7 +23,7 @@ class User(commands.Cog):
             self.profile_html = file.read()
 
     async def get_rank(self, user, table="user_activity", guild=None):
-        """Get user's xp ranking from given table."""
+        """Get user's xp ranking from given table"""
         if guild is None:
             total, pos = (
                 await self.bot.db.execute(
@@ -73,7 +73,7 @@ class User(commands.Cog):
 
     @commands.command(aliases=["dp", "av", "pfp"])
     async def avatar(self, ctx, *, user: nextcord.User = None):
-        """Get user's profile picture."""
+        """Get user's profile picture"""
         if user is None:
             user = ctx.author
 
@@ -95,7 +95,7 @@ class User(commands.Cog):
     @commands.command(aliases=["uinfo"])
     @commands.cooldown(3, 30, type=commands.BucketType.user)
     async def userinfo(self, ctx, *, user: nextcord.User = None):
-        """Get information about discord user."""
+        """Get information about discord user"""
         if user is None:
             user = ctx.author
         else:
@@ -161,7 +161,7 @@ class User(commands.Cog):
 
     @commands.command()
     async def hug(self, ctx, *, huggable=None):
-        """Hug your friend."""
+        """Hug your friend"""
         emoji = emojis.random_hug()
 
         if huggable is not None:
@@ -176,7 +176,7 @@ class User(commands.Cog):
 
     @commands.command()
     async def members(self, ctx):
-        """Show the newest members of this server."""
+        """Show the newest members of this server"""
         sorted_members = sorted(ctx.guild.members, key=lambda x: x.joined_at, reverse=True)
         membercount = len(sorted_members)
         content = nextcord.Embed(title=f"{ctx.guild.name} members")
@@ -189,7 +189,7 @@ class User(commands.Cog):
 
     @commands.command()
     async def banner(self, ctx, *, user: nextcord.User = None):
-        """Get user's banner."""
+        """Get user's banner"""
         if user is None:
             user = ctx.author
 
@@ -224,7 +224,7 @@ class User(commands.Cog):
 
     @commands.command(aliases=["sbanner", "guildbanner"])
     async def serverbanner(self, ctx):
-        """Get server's banner."""
+        """Get server's banner"""
         guild = ctx.guild
         content = nextcord.Embed()
 
@@ -250,7 +250,7 @@ class User(commands.Cog):
 
     @commands.command(aliases=["sinfo", "guildinfo"])
     async def serverinfo(self, ctx, guild_id: int = None):
-        """Get various information on server."""
+        """Get various information on server"""
         if guild_id is None:
             guild = ctx.guild
         else:
@@ -293,7 +293,7 @@ class User(commands.Cog):
 
     @commands.command(aliases=["roles"])
     async def roleslist(self, ctx):
-        """List the roles of this server."""
+        """List the roles of this server"""
         content = nextcord.Embed(title=f"Roles in {ctx.message.guild.name}")
         rows = []
         for role in reversed(ctx.message.guild.roles):
@@ -306,7 +306,7 @@ class User(commands.Cog):
 
     @commands.command(aliases=["level"])
     async def activity(self, ctx, user: typing.Optional[nextcord.Member] = None, scope=""):
-        """See your hourly activity chart (GMT)."""
+        """See your hourly activity chart (GMT)"""
         if user is None:
             user = ctx.author
 
@@ -364,7 +364,7 @@ class User(commands.Cog):
     @commands.command(aliases=["ranking"])
     @commands.cooldown(1, 30, type=commands.BucketType.member)
     async def rank(self, ctx, user: nextcord.Member = None):
-        """See your server activity ranking."""
+        """See your server activity ranking"""
         if user is None:
             user = ctx.author
 
@@ -390,7 +390,7 @@ class User(commands.Cog):
     @commands.command(aliases=["globalranking", "grank"])
     @commands.cooldown(1, 60, type=commands.BucketType.member)
     async def globalrank(self, ctx, user: nextcord.Member = None):
-        """See your global activity ranking."""
+        """See your global activity ranking"""
         if user is None:
             user = ctx.author
 
@@ -415,7 +415,7 @@ class User(commands.Cog):
 
     @commands.command()
     async def topservers(self, ctx, timeframe=""):
-        """See your top servers by XP."""
+        """See your top servers by XP"""
         time, table = get_activity_table(timeframe)
         data = await self.bot.db.execute(
             f"""
@@ -449,12 +449,12 @@ class User(commands.Cog):
 
     @commands.group(case_insensitive=True, aliases=["lb"])
     async def leaderboard(self, ctx):
-        """Show various leaderboards."""
+        """Show various leaderboards"""
         await util.command_group_help(ctx)
 
     @leaderboard.command(name="fishy")
     async def leaderboard_fishy(self, ctx, scope=""):
-        """Fishy leaderboard."""
+        """Fishy leaderboard"""
         global_data = scope.lower() == "global"
         data = await self.bot.db.execute(
             "SELECT user_id, fishy_count FROM fishy ORDER BY fishy_count DESC"
@@ -491,7 +491,7 @@ class User(commands.Cog):
 
     @leaderboard.command(name="levels", aliases=["xp", "level"])
     async def leaderboard_levels(self, ctx, scope="", timeframe=""):
-        """Activity XP leaderboard."""
+        """Activity XP leaderboard"""
         _global_ = scope == "global"
         if timeframe == "":
             timeframe = scope
@@ -550,7 +550,7 @@ class User(commands.Cog):
 
     @leaderboard.command(name="wpm", aliases=["typing"])
     async def leaderboard_wpm(self, ctx, scope=""):
-        """Best typing speed high scores leaderboard."""
+        """Best typing speed high scores leaderboard"""
         _global_ = scope == "global"
 
         data = await self.bot.db.execute(
@@ -592,7 +592,7 @@ class User(commands.Cog):
 
     @leaderboard.command(name="crowns")
     async def leaderboard_crowns(self, ctx):
-        """Last.fm artist crowns leaderboard."""
+        """Last.fm artist crowns leaderboard"""
         data = await self.bot.db.execute(
             """
             SELECT user_id, COUNT(1) as amount FROM artist_crown
@@ -624,7 +624,7 @@ class User(commands.Cog):
 
     @commands.command()
     async def profile(self, ctx, user: nextcord.Member = None):
-        """Your personal customizable user profile."""
+        """Your personal customizable user profile"""
         if user is None:
             user = ctx.author
 
@@ -783,12 +783,12 @@ class User(commands.Cog):
 
     @commands.group()
     async def editprofile(self, ctx):
-        """Edit your profile."""
+        """Edit your profile"""
         await util.command_group_help(ctx)
 
     @editprofile.command(name="description", rest_is_raw=True)
     async def editprofile_description(self, ctx, *, text):
-        """Change the description on your profile."""
+        """Change the description on your profile"""
         if text.strip() == "":
             return await util.send_command_help(ctx)
 
@@ -812,7 +812,7 @@ class User(commands.Cog):
     @util.patrons_only()
     @editprofile.command(name="background")
     async def editprofile_background(self, ctx, url):
-        """Set a custom background image. Only works with direct link to image."""
+        """Set a custom background image. Only works with direct link to image"""
         await self.bot.db.execute(
             """
             INSERT INTO user_profile (user_id, background_url)
@@ -828,7 +828,7 @@ class User(commands.Cog):
     @util.patrons_only()
     @editprofile.command(name="graph")
     async def editprofile_graph(self, ctx, value: bool):
-        """Toggle whether to show activity graph on your profile or not."""
+        """Toggle whether to show activity graph on your profile or not"""
         await self.bot.db.execute(
             """
             INSERT INTO user_profile (user_id, show_graph)
@@ -876,7 +876,7 @@ class User(commands.Cog):
 
     @commands.command()
     async def marry(self, ctx, user: nextcord.Member):
-        """Marry someone."""
+        """Marry someone"""
         if user == ctx.author:
             return await ctx.send("You cannot marry yourself...")
         if {user.id, ctx.author.id} in self.bot.cache.marriages:
@@ -926,7 +926,7 @@ class User(commands.Cog):
 
     @commands.command()
     async def divorce(self, ctx):
-        """End your marriage."""
+        """End your marriage"""
         partner = ""
         to_remove = []
         for el in self.bot.cache.marriages:
@@ -972,7 +972,7 @@ class User(commands.Cog):
 
     @commands.command()
     async def marriage(self, ctx):
-        """Check your marriage status."""
+        """Check your marriage status"""
         data = await self.bot.db.execute(
             """
             SELECT first_user_id, second_user_id, marriage_date

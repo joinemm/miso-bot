@@ -10,19 +10,19 @@ logger = log.get_logger(__name__)
 
 
 class Owner(commands.Cog):
-    """Bot owner only"""
+    """Bot owner only, you shouldn't be able to see this"""
 
     def __init__(self, bot):
         self.bot = bot
         self.icon = "👑"
 
     async def cog_check(self, ctx):
-        """Check if command author is Owner."""
+        """Check if command author is Owner"""
         return await self.bot.is_owner(ctx.author)
 
     @commands.command(rest_is_raw=True)
     async def say(self, ctx, channel_id: int, *, message):
-        """Make the bot say something in a given channel."""
+        """Make the bot say something in a given channel"""
         channel = self.bot.get_channel(channel_id)
         guild = channel.guild
 
@@ -31,7 +31,7 @@ class Owner(commands.Cog):
 
     @commands.command()
     async def guilds(self, ctx):
-        """Show all connected guilds."""
+        """Show all connected guilds"""
         membercount = len(set(self.bot.get_all_members()))
         content = nextcord.Embed(
             title=f"Total **{len(self.bot.guilds)}** guilds, **{membercount}** unique users"
@@ -45,7 +45,7 @@ class Owner(commands.Cog):
 
     @commands.command()
     async def findguild(self, ctx, *, search_term):
-        """Find a guild by name."""
+        """Find a guild by name"""
         rows = []
         for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
             if search_term.lower() in guild.name.lower():
@@ -56,7 +56,7 @@ class Owner(commands.Cog):
 
     @commands.command()
     async def userguilds(self, ctx, user: nextcord.User):
-        """Get all guilds user is part of."""
+        """Get all guilds user is part of"""
         rows = []
         for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
             guildmember = guild.get_member(user.id)
@@ -68,19 +68,19 @@ class Owner(commands.Cog):
 
     @commands.command()
     async def logout(self, ctx):
-        """Shut down the bot."""
+        """Shut down the bot"""
         print("LOGGING OUT")
         await ctx.send("Shutting down... :electric_plug:")
         await self.bot.close()
 
     @commands.group(aliases=["patron"], case_insensitive=True)
     async def donator(self, ctx):
-        """Manage sponsors and donations."""
+        """Manage sponsors and donations"""
         await util.command_group_help(ctx)
 
     @donator.command(name="addsingle")
     async def donator_addsingle(self, ctx, user: nextcord.User, platform, amount: float, ts=None):
-        """Add a new single time donation."""
+        """Add a new single time donation"""
         if ts is None:
             ts = arrow.utcnow().datetime
         else:
@@ -102,7 +102,7 @@ class Owner(commands.Cog):
     async def donator_add(
         self, ctx, user: nextcord.User, username, platform, tier: int, since_ts=None
     ):
-        """Add a new monthly donator."""
+        """Add a new monthly donator"""
         if since_ts is None:
             since_ts = arrow.utcnow().datetime
         else:
@@ -123,13 +123,13 @@ class Owner(commands.Cog):
 
     @donator.command(name="remove")
     async def donator_remove(self, ctx, user: nextcord.User):
-        """Remove a donator."""
+        """Remove a donator"""
         await self.bot.db.execute("DELETE FROM donator WHERE user_id = %s", user.id)
         await util.send_success(ctx, f"Removed **{user}** from the donators list.")
 
     @donator.command(name="toggle")
     async def donator_toggle(self, ctx, user: nextcord.User):
-        """Toggle user's donator status."""
+        """Toggle user's donator status"""
         await self.bot.db.execute(
             "UPDATE donator SET currently_active = !currently_active WHERE user_id = %s",
             user.id,
@@ -138,7 +138,7 @@ class Owner(commands.Cog):
 
     @donator.command(name="tier")
     async def donator_tier(self, ctx, user: nextcord.User, new_tier: int):
-        """Change user's donation tier."""
+        """Change user's donation tier"""
         await self.bot.db.execute(
             "UPDATE donator SET donation_tier = %s WHERE user_id = %s",
             new_tier,
@@ -149,7 +149,7 @@ class Owner(commands.Cog):
     @commands.command(name="db", aliases=["dbe", "dbq"])
     @commands.is_owner()
     async def database_query(self, ctx, *, statement):
-        """Execute something against the local MariaDB instance."""
+        """Execute something against the local MariaDB instance"""
         data = await self.bot.db.execute(statement)
         try:
             if data:
@@ -190,7 +190,7 @@ class Owner(commands.Cog):
 
     @commands.command(aliases=["fmban"])
     async def fmflag(self, ctx, lastfm_username, *, reason):
-        """Flag LastFM account as a cheater."""
+        """Flag LastFM account as a cheater"""
         await self.bot.db.execute(
             "INSERT INTO lastfm_cheater VALUES(%s, %s, %s)",
             lastfm_username.lower(),
@@ -201,7 +201,7 @@ class Owner(commands.Cog):
 
     @commands.command(aliases=["fmunban"])
     async def fmunflag(self, ctx, lastfm_username):
-        """Remove cheater flag from an LastFM account."""
+        """Remove cheater flag from an LastFM account"""
         await self.bot.db.execute(
             "DELETE FROM lastfm_cheater WHERE lastfm_username = %s",
             lastfm_username.lower(),
@@ -210,7 +210,7 @@ class Owner(commands.Cog):
 
 
 def clean_codeblock(text):
-    """Remove codeblocks and empty lines, return lines."""
+    """Remove codeblocks and empty lines, return lines"""
     text = text.strip(" `")
     lines = text.split("\n")
     clean_lines = []

@@ -49,7 +49,7 @@ async def send_success(ctx, message):
 
 
 async def determine_prefix(bot, message):
-    """Get the prefix used in the invocation context."""
+    """Get the prefix used in the invocation context"""
     if message.guild:
         prefix = bot.cache.prefixes.get(str(message.guild.id), bot.default_prefix)
         return commands.when_mentioned_or(prefix)(bot, message)
@@ -57,7 +57,7 @@ async def determine_prefix(bot, message):
 
 
 async def is_blacklisted(ctx):
-    """Check command invocation context for blacklist triggers."""
+    """Check command invocation context for blacklist triggers"""
     if ctx.guild is not None and ctx.guild.id in ctx.bot.cache.blacklist["global"]["guild"]:
         raise exceptions.BlacklistedGuild()
 
@@ -81,7 +81,7 @@ async def is_blacklisted(ctx):
 
 
 def flags_to_badges(user):
-    """Get list of badge emojis from public user flags."""
+    """Get list of badge emojis from public user flags"""
     result = []
     for flag, value in iter(user.public_flags):
         if value:
@@ -92,7 +92,7 @@ def flags_to_badges(user):
 
 
 def region_flag(region: nextcord.VoiceRegion):
-    """Get the flag emoji representing a discord voice region."""
+    """Get the flag emoji representing a discord voice region"""
     if region in [
         nextcord.VoiceRegion.eu_central,
         nextcord.VoiceRegion.eu_west,
@@ -661,7 +661,7 @@ def find_custom_emojis(text):
 
 
 async def image_info_from_url(url):
-    """Return dictionary containing filesize, filetype and dimensions of an image."""
+    """Return dictionary containing filesize, filetype and dimensions of an image"""
     async with aiohttp.ClientSession() as session:
         async with session.get(str(url)) as response:
             filesize = int(response.headers.get("Content-Length")) / 1024
@@ -690,7 +690,7 @@ class OptionalSubstitute(dict):
 
 
 def create_welcome_embed(user, guild, messageformat):
-    """Creates and returns embed for welcome message."""
+    """Creates and returns embed for welcome message"""
     if messageformat is None:
         messageformat = "Welcome **{username}** {mention} to **{server}**"
 
@@ -713,7 +713,7 @@ def create_welcome_embed(user, guild, messageformat):
 
 
 def create_goodbye_message(user, guild, messageformat):
-    """Formats a goodbye message."""
+    """Formats a goodbye message"""
     if messageformat is None:
         messageformat = "Goodbye **{username}** {mention}"
 
@@ -766,7 +766,7 @@ class UserActivity:
                 raise AttributeError(str(activity))
 
     def display(self):
-        """Print user activity as it shows up on the sidebar."""
+        """Print user activity as it shows up on the sidebar"""
         result = ""
         if self.emoji:
             result += str(self.emoji)
@@ -830,7 +830,7 @@ async def render_html(bot, payload):
 
 
 class TwoWayIterator:
-    """Two way iterator class that is used as the backend for paging."""
+    """Two way iterator class that is used as the backend for paging"""
 
     def __init__(self, list_of_stuff):
         self.items = list_of_stuff

@@ -5,7 +5,6 @@ import re
 
 import aiohttp
 import arrow
-import async_cse
 import nextcord
 import orjson
 import regex
@@ -28,7 +27,6 @@ GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
 PROXY_URL = os.environ.get("PROXY_URL")
 PROXY_USER = os.environ.get("PROXY_USER")
 PROXY_PASS = os.environ.get("PROXY_PASS")
-GCS_DEVELOPER_KEY = os.environ.get("GOOGLE_KEY")
 
 
 class Media(commands.Cog):
@@ -38,7 +36,6 @@ class Media(commands.Cog):
         self.bot = bot
         self.icon = "🌐"
         self.twitter_api = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
-        self.google_client = async_cse.Search(GCS_DEVELOPER_KEY)
         self.ig_cookie = os.environ.get("IG_COOKIE")
         self.ig_query_hash = os.environ.get("IG_QUERY_HASH")
         self.ig_colors = [
@@ -71,14 +68,14 @@ class Media(commands.Cog):
         }
         self.user_agents = UserAgent()
 
-    @commands.group(aliases=["league"], case_insensitive=True)
+    @commands.group(aliases=["league"], case_insensitive=True, enabled=False)
     async def opgg(self, ctx):
-        """League of legends stats."""
+        """League of legends stats"""
         await util.command_group_help(ctx)
 
     @opgg.command()
     async def profile(self, ctx, region, *, summoner_name):
-        """See your op.gg profile."""
+        """See your op.gg profile"""
         parsed_region = self.regions.get(region.lower())
         if parsed_region is None:
             return await ctx.send(f":warning: Unknown region `{region}`")
@@ -147,7 +144,7 @@ class Media(commands.Cog):
 
     @opgg.command()
     async def nowplaying(self, ctx, region, *, summoner_name):
-        """Show your current game."""
+        """Show your current game"""
         parsed_region = self.regions.get(region.lower())
         if parsed_region is None:
             return await ctx.send(f":warning: Unknown region `{region}`")
@@ -186,7 +183,7 @@ class Media(commands.Cog):
 
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx, *, query):
-        """Search videos from youtube."""
+        """Search for videos from youtube"""
         url = "https://www.googleapis.com/youtube/v3/search"
         params = {
             "key": GOOGLE_API_KEY,
@@ -213,9 +210,9 @@ class Media(commands.Cog):
             index_entries=True,
         )
 
-    @commands.command(aliases=["ig", "insta"])
+    @commands.command(aliases=["ig", "insta"], usage="<links...> '-d'")
     async def instagram(self, ctx, *links):
-        """Get all the images from one or more instagram posts."""
+        """Retrieve images from one or more instagram posts"""
         urls = []
         download = False
         for link in links:
@@ -350,9 +347,9 @@ class Media(commands.Cog):
         except nextcord.Forbidden:
             pass
 
-    @commands.command(aliases=["twt"])
+    @commands.command(aliases=["twt"], usage="<links...> '-d'")
     async def twitter(self, ctx, *links):
-        """Get all the images from one or more tweets."""
+        """Retrieve images from one or more tweets"""
         urls = []
         download = False
         for link in links:
@@ -480,7 +477,7 @@ class Media(commands.Cog):
 
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx, *, query):
-        """Search for a random gif."""
+        """Search for a gfycat gif"""
         scripts = []
         async with aiohttp.ClientSession() as session:
             tasks = []
@@ -514,9 +511,9 @@ class Media(commands.Cog):
         buttons = {"❌": msg.delete, "🔁": randomize, "🔒": done}
         asyncio.ensure_future(util.reaction_buttons(ctx, msg, buttons, only_author=True))
 
-    @commands.command()
+    @commands.command(usage="<day | month | realtime | rising>")
     async def melon(self, ctx, timeframe):
-        """Melon music charts."""
+        """Melon music charts"""
         if timeframe not in ["day", "month"]:
             if timeframe == "realtime":
                 timeframe = ""
@@ -583,32 +580,6 @@ class Media(commands.Cog):
         else:
             location = f"https://xkcd.com/{comic_id}/"
         await ctx.send(location)
-
-    @commands.command()
-    async def google(self, ctx, *, query):
-        """Search from google."""
-        results = await self.google_client.search(query, safesearch=False)
-
-        await util.paginate_list(
-            ctx,
-            [f"**{result.title}**\n{result.url}" for result in results],
-            use_locking=True,
-            only_author=True,
-            index_entries=True,
-        )
-
-    @commands.command(aliases=["img"])
-    async def googleimages(self, ctx, *, query):
-        """Search from google images."""
-        results = await self.google_client.search(query, safesearch=False, image_search=True)
-
-        await util.paginate_list(
-            ctx,
-            [result.image_url for result in results],
-            use_locking=True,
-            only_author=True,
-            index_entries=False,
-        )
 
 
 def setup(bot):

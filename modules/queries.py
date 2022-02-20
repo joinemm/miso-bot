@@ -49,7 +49,7 @@ async def is_donator(ctx, user, unlock_tier=1):
 
 
 async def is_blacklisted(ctx):
-    """Check command invocation context for blacklist triggers."""
+    """Check command invocation context for blacklist triggers"""
     data = await ctx.bot.db.execute(
         """
         SELECT

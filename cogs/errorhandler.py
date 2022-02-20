@@ -44,7 +44,7 @@ class ErrorHander(commands.Cog):
         }
 
     async def send(self, ctx, level, message, help_footer=None, codeblock=False, **kwargs):
-        """Send error message to chat."""
+        """Send error message to chat"""
         settings = self.message_levels.get(level)
         if codeblock:
             message = f"`{message}`"
@@ -71,7 +71,7 @@ class ErrorHander(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        """The event triggered when an error is raised while invoking a command."""
+        """The event triggered when an error is raised while invoking a command"""
         # ignore if command has it's own error handler
         if hasattr(ctx.command, "on_error"):
             return

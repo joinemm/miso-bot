@@ -17,7 +17,7 @@ SSL_KEY = os.environ.get("WEBSERVER_SSL_KEY")
 
 
 class WebServer(commands.Cog):
-    """Internal web server to provice realtime statistics to the website."""
+    """Internal web server to provice realtime statistics to the website"""
 
     def __init__(self, bot):
         self.bot = bot

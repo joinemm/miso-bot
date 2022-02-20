@@ -35,12 +35,12 @@ class Typings(commands.Cog):
 
     @commands.group()
     async def typing(self, ctx):
-        """Test your typing speed."""
+        """Test your typing speed"""
         await util.command_group_help(ctx)
 
     @typing.command(name="test")
     async def typing_test(self, ctx, language=None, wordcount: int = 25):
-        """Take a typing test."""
+        """Take a typing test"""
         if language is None:
             language = wordcount
         try:
@@ -89,7 +89,7 @@ class Typings(commands.Cog):
 
     @typing.command(name="race")
     async def typing_race(self, ctx, language=None, wordcount: int = 25):
-        """Typing race against other people."""
+        """Challenge your friends into a typing race"""
         if language is None:
             language = wordcount
         try:
@@ -261,7 +261,7 @@ class Typings(commands.Cog):
 
     @typing.command(name="history")
     async def typing_history(self, ctx, member: nextcord.Member = None):
-        """See your typing test history."""
+        """See your typing test history"""
         if member is None:
             member = ctx.author
 
@@ -294,7 +294,7 @@ class Typings(commands.Cog):
 
     @typing.command(name="cleardata")
     async def typing_clear(self, ctx):
-        """Clear your typing data."""
+        """Clear your typing data"""
         content = nextcord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
         content.description = (
             "This action will delete *all* of your saved typing data and is **irreversible**."
@@ -322,7 +322,7 @@ class Typings(commands.Cog):
 
     @typing.command(name="stats")
     async def typing_stats(self, ctx, user: nextcord.Member = None):
-        """See your typing statistics."""
+        """See your typing statistics"""
         if user is None:
             user = ctx.author
 

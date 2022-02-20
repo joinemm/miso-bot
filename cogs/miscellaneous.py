@@ -78,9 +78,9 @@ class Miscellaneous(commands.Cog):
             },
         }
 
-    @commands.command(aliases=["random"])
+    @commands.command(aliases=["random"], usage="<n>-[m]")
     async def rng(self, ctx, *, number_range):
-        """Random number generator.
+        """Random number generator
 
         Usage:
             >rng <n>
@@ -100,7 +100,7 @@ class Miscellaneous(commands.Cog):
 
     @commands.command(name="ascii")
     async def ascii_text(self, ctx, *, text):
-        """Turn text into fancy ascii art."""
+        """Turn text into fancy ascii art"""
         font = "small"
         async with aiohttp.ClientSession() as session:
             async with session.get(
@@ -112,7 +112,7 @@ class Miscellaneous(commands.Cog):
 
     @commands.command(aliases=["8ball"])
     async def eightball(self, ctx, *, question):
-        """Ask a yes/no question."""
+        """Ask a yes/no question"""
         choices = [
             # yes
             "Yes, definitely",
@@ -242,7 +242,7 @@ class Miscellaneous(commands.Cog):
     @commands.command(aliases=["mc"])
     @commands.guild_only()
     async def minecraft(self, ctx, address=None, port=None):
-        """Get the status of a minecraft server."""
+        """Get the status of a minecraft server"""
         if address == "set":
             if port is None:
                 return await ctx.send(
@@ -312,23 +312,23 @@ class Miscellaneous(commands.Cog):
 
     @commands.command()
     async def clap(self, ctx, *sentence):
-        """Add a clap emoji between words."""
+        """Add a clap emoji between words"""
         await ctx.send(" 👏 ".join(sentence) + " 👏")
 
     @commands.group(aliases=["hs"])
     async def horoscope(self, ctx):
-        """Get your daily horoscope."""
+        """Get your daily horoscope"""
         if ctx.invoked_subcommand is None:
             await self.send_hs(ctx, "today")
 
     @horoscope.command(name="tomorrow")
     async def horoscope_tomorrow(self, ctx):
-        """Get tomorrow's horoscope."""
+        """Get tomorrow's horoscope"""
         await self.send_hs(ctx, "tomorrow")
 
     @horoscope.command(name="yesterday")
     async def horoscope_yesterday(self, ctx):
-        """Get yesterday's horoscope."""
+        """Get yesterday's horoscope"""
         await self.send_hs(ctx, "yesterday")
 
     async def send_hs(self, ctx, day):
@@ -367,7 +367,7 @@ class Miscellaneous(commands.Cog):
 
     @horoscope.command(name="set")
     async def horoscope_set(self, ctx, sign):
-        """Save your zodiac sign."""
+        """Save your zodiac sign"""
         sign = sign.lower()
         if self.hs.get(sign) is None:
             raise exceptions.Info(
@@ -388,7 +388,7 @@ class Miscellaneous(commands.Cog):
 
     @horoscope.command(name="list")
     async def horoscope_list(self, ctx):
-        """Get list of all zodiac signs."""
+        """Get list of all zodiac signs"""
         content = nextcord.Embed(
             color=int("9266cc", 16),
             title=":crystal_ball: Zodiac signs",
@@ -399,10 +399,10 @@ class Miscellaneous(commands.Cog):
         )
         return await ctx.send(embed=content)
 
-    @commands.command(aliases=["colour"])
+    @commands.command(aliases=["colour"], usage="<hex | @member | @role | 'random' | url> ...")
     async def color(self, ctx, *sources):
         """
-        Get colors.
+        Visualise colors
 
         Different color sources can be chained together to create patterns.
 
@@ -494,7 +494,8 @@ class Miscellaneous(commands.Cog):
 
     @commands.command(name="emoji", aliases=["emote"])
     async def big_emoji(self, ctx, emoji):
-        """Get source image and stats of emoji.
+        """
+        Get source image and stats of an emoji
 
         Will display additional info if Miso is in the server where the emoji is located in.
         Displaying who added the emoji requires Miso to have manage emojis permission!
@@ -538,7 +539,7 @@ class Miscellaneous(commands.Cog):
 
     @commands.command()
     async def emojify(self, ctx, *, text):
-        """Emojify your message."""
+        """Emojify your message"""
         request_data = {"density": 100, "input": text, "shouldFilterEmojis": False}
         async with aiohttp.ClientSession() as session:
             async with session.post(

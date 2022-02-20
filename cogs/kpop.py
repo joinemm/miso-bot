@@ -58,7 +58,7 @@ class Kpop(commands.Cog):
 
     @commands.group(case_insensitive=True)
     async def idol(self, ctx):
-        """Kpop idols database."""
+        """Kpop idols database"""
         await util.command_group_help(ctx)
 
     @idol.command()
@@ -88,7 +88,7 @@ class Kpop(commands.Cog):
 
     @idol.command()
     async def random(self, ctx, gender=None):
-        """Get a random kpop idol."""
+        """Get a random kpop idol"""
         gender = get_gender(gender)
 
         idol_id_list = await self.bot.db.execute(
@@ -177,7 +177,7 @@ class Kpop(commands.Cog):
 
     @commands.group(invoke_without_command=True)
     async def stan(self, ctx):
-        """Get a random kpop artist to stan."""
+        """Get a random kpop artist to stan"""
         if self.artist_list:
             await ctx.send(f"stan **{random.choice(self.artist_list)}**")
         else:
@@ -186,7 +186,7 @@ class Kpop(commands.Cog):
     @commands.is_owner()
     @stan.command(hidden=True)
     async def update(self, ctx):
-        """Update the artist database."""
+        """Update the artist database"""
         artist_list_new = set()
         urls_to_scrape = [
             "https://kprofiles.com/k-pop-girl-groups/",
@@ -230,9 +230,9 @@ class Kpop(commands.Cog):
         self.artist_list = artist_list_new
 
     @commands.is_owner()
-    @commands.command(name="rebuildkpopdb")
+    @commands.command(name="rebuildkpopdb", hidden=True)
     async def parse_kpop_sheets(self, groups: bool = True, idols: bool = True):
-        """Rebuild the kpop idol database."""
+        """Rebuild the kpop idol database"""
         if groups:
             await self.bot.db.execute("DELETE FROM kpop_group")
             with open("data/kpopdb_girlgroups.tsv") as tsv_file:

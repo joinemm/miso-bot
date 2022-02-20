@@ -3,7 +3,7 @@ from nextcord.ext import commands
 
 
 class EmbedHelpCommand(commands.HelpCommand):
-    """HelpCommand that utilizes embeds."""
+    """HelpCommand that utilizes embeds"""
 
     # Set the embed colour here
     COLOUR = int("ee84ca", 16)

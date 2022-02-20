@@ -37,7 +37,7 @@ class Events(commands.Cog):
         self.status_loop.cancel()
 
     async def start_tasks(self):
-        """Start tasks."""
+        """Start tasks"""
         await self.bot.wait_until_ready()
         self.status_loop.start()
         self.xp_loop.start()
@@ -183,7 +183,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx):
-        """Runs when any command is completed succesfully."""
+        """Runs when any command is completed succesfully"""
         # prevent double invocation for subcommands
         if ctx.invoked_subcommand is None:
             command_logger.info(log.log_command(ctx))
@@ -218,7 +218,7 @@ class Events(commands.Cog):
         logger.info("Starting status loop")
 
     async def next_status(self):
-        """switch to the next status message."""
+        """switch to the next status message"""
         new_status_id = self.current_status
         while new_status_id == self.current_status:
             new_status_id = random.randrange(0, len(self.statuses))
@@ -235,7 +235,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
-        """Called when the bot joins a new guild."""
+        """Called when the bot joins a new guild"""
         self.bot.cache.event_triggers["guild_join"] += 1
         blacklisted = await self.bot.db.execute(
             "SELECT reason FROM blacklisted_guild WHERE guild_id = %s",
@@ -264,7 +264,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
-        """Called when the bot leaves a guild."""
+        """Called when the bot leaves a guild"""
         self.bot.cache.event_triggers["guild_remove"] += 1
         # blacklisted = await self.bot.db.execute(
         #     "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
@@ -290,7 +290,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        """Called when a new member joins a guild."""
+        """Called when a new member joins a guild"""
         self.bot.cache.event_triggers["member_join"] += 1
         # log event
         await self.bot.wait_until_ready()
@@ -340,7 +340,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
-        """Called when user gets banned from a server."""
+        """Called when user gets banned from a server"""
         self.bot.cache.event_triggers["member_ban"] += 1
 
         await self.bot.wait_until_ready()
@@ -369,7 +369,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        """Called when member leaves a guild."""
+        """Called when member leaves a guild"""
         if not self.bot.is_ready():
             return
         self.bot.cache.event_triggers["member_remove"] += 1
@@ -413,7 +413,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_message_delete(self, payload):
-        """Listener that gets called when any message is deleted."""
+        """Listener that gets called when any message is deleted"""
         if not self.bot.is_ready():
             return
 
@@ -460,7 +460,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """Listener that gets called on every message."""
+        """Listener that gets called on every message"""
         if not self.bot.is_ready():
             return
         self.stats_messages += 1
@@ -555,7 +555,7 @@ class Events(commands.Cog):
             await self.easter_eggs(message)
 
     async def easter_eggs(self, message):
-        """Easter eggs handler."""
+        """Easter eggs handler"""
         # stfu
         if random.randint(0, 3) == 0 and "stfu" in message.content.lower():
             try:
@@ -607,7 +607,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        """Starboard event handler."""
+        """Starboard event handler"""
         if not self.bot.is_ready():
             return
 

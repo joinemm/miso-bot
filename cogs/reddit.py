@@ -41,12 +41,12 @@ class Reddit(commands.Cog):
 
     @commands.group(name="reddit")
     async def reddit(self, ctx):
-        """Reddit commands."""
+        """Get content from reddit"""
         await util.command_group_help(ctx)
 
     @reddit.command(name="random", aliases=["r"])
     async def reddit_random(self, ctx, subreddit, *, options):
-        """Get random post from given subreddit."""
+        """Get random post from given subreddit"""
         images = "-i" in options
         subreddit = await self.client.subreddit(subreddit.lower())
         try:
@@ -82,7 +82,7 @@ class Reddit(commands.Cog):
 
     @reddit.command(name="hot", aliases=["h"])
     async def reddit_hot(self, ctx, subreddit, number="1"):
-        """Get hot post from given subreddit."""
+        """Get hot post from given subreddit"""
         if not await self.check_n(ctx, number):
             return
 
@@ -93,7 +93,7 @@ class Reddit(commands.Cog):
 
     @reddit.command(name="controversial", aliases=["c"])
     async def reddit_controversial(self, ctx, subreddit, number="1", timespan="all"):
-        """Get controversial post from given subreddit."""
+        """Get controversial post from given subreddit"""
         timespan = await self.check_ts(ctx, timespan)
         if timespan is None or not await self.check_n(ctx, number):
             return
@@ -110,7 +110,7 @@ class Reddit(commands.Cog):
 
     @reddit.command(name="top", aliases=["t"])
     async def reddit_top(self, ctx, subreddit, number="1", timespan="all"):
-        """Get top post from given subreddit."""
+        """Get top post from given subreddit"""
         timespan = await self.check_ts(ctx, timespan)
         if timespan is None or not await self.check_n(ctx, number):
             return
@@ -127,7 +127,7 @@ class Reddit(commands.Cog):
 
     @reddit.command(name="new", aliases=["n"])
     async def reddit_new(self, ctx, subreddit, number="1"):
-        """Get new post from given subreddit."""
+        """Get new post from given subreddit"""
         if not await self.check_n(ctx, number):
             return
 
@@ -139,7 +139,7 @@ class Reddit(commands.Cog):
     # FUNCTIONS
 
     async def send_post(self, ctx, subreddit, post, footer=""):
-        """Checks for eligibility for sending submission and sends it."""
+        """Checks for eligibility for sending submission and sends it"""
         try:
             await subreddit.load()
         except asyncpraw.exceptions.NotFound as e:
@@ -158,7 +158,7 @@ class Reddit(commands.Cog):
             await ctx.send(message_content)
 
     async def render_submission(self, submission, censor=True):
-        """Turns reddit submission into a discord embed."""
+        """Turns reddit submission into a discord embed"""
         message_text = None
         content = nextcord.Embed()
         content.title = (
@@ -224,7 +224,7 @@ class Reddit(commands.Cog):
         return content, message_text
 
     async def check_ts(self, ctx, timespan):
-        """Validates timespan argument."""
+        """Validates timespan argument"""
         timespan = timespan.lower()
         if timespan not in self.timespans:
             await ctx.send(
@@ -234,7 +234,7 @@ class Reddit(commands.Cog):
         return timespan
 
     async def check_n(self, ctx, number):
-        """Validates number argument."""
+        """Validates number argument"""
         try:
             number = int(number)
         except ValueError:
@@ -248,7 +248,7 @@ class Reddit(commands.Cog):
 
 
 async def get_n_post(gen, n, ignore_sticky=True):
-    """Gets the n:th submission from given PRAW ListingGenerator."""
+    """Gets the n:th submission from given PRAW ListingGenerator"""
     n = int(n)
     i = 1
     try:
@@ -263,7 +263,7 @@ async def get_n_post(gen, n, ignore_sticky=True):
 
 
 def is_image_post(submission):
-    """is submission content embedable image."""
+    """is submission content embedable image"""
     return (not submission.is_self) and submission.url.endswith((".png", ".jpg", ".jpeg", ".gif"))
 
 
@@ -282,7 +282,7 @@ def self_embeds(url):
 
 
 def can_send_nsfw(ctx, content):
-    """Checks whether content is NSFW and if so whether it can be sent in current channel."""
+    """Checks whether content is NSFW and if so whether it can be sent in current channel"""
     if isinstance(content, asyncpraw.models.Submission):
         is_nsfw = content.over_18
     elif isinstance(content, asyncpraw.models.Subreddit):

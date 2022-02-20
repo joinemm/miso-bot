@@ -6,7 +6,7 @@ from modules import exceptions, queries, util
 
 
 class ChannelSetting(commands.TextChannelConverter):
-    """This enables removing a channel from the database in the same command that adds it."""
+    """This enables removing a channel from the database in the same command that adds it"""
 
     async def convert(self, ctx, argument):
         if argument.lower() in ["disable", "none", "delete", "remove"]:
@@ -15,7 +15,7 @@ class ChannelSetting(commands.TextChannelConverter):
 
 
 class Configuration(commands.Cog):
-    """Bot configuration"""
+    """Configure how the bot behaves"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -26,7 +26,7 @@ class Configuration(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def prefix(self, ctx, prefix):
         """
-        Set a custom command prefix for this server.
+        Set a custom command prefix for this server
 
         Usage:
             >prefix <text>
@@ -63,12 +63,12 @@ class Configuration(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def greeter(self, ctx):
-        """Configure the greeter/welcome message."""
+        """Set up welcome messages for new members"""
         await util.command_group_help(ctx)
 
     @greeter.command(name="toggle", aliases=["enabled"])
     async def greeter_toggle(self, ctx, value: bool):
-        """Enable or disable the greeter."""
+        """Enable or disable the greeter"""
         await queries.update_setting(ctx, "greeter_settings", "is_enabled", value)
         if value:
             await util.send_success(ctx, "Greeter is now **enabled**")
@@ -77,14 +77,15 @@ class Configuration(commands.Cog):
 
     @greeter.command(name="channel")
     async def greeter_channel(self, ctx, *, channel: nextcord.TextChannel):
-        """Set the greeter channel."""
+        """Set the greeter channel"""
         await queries.update_setting(ctx, "greeter_settings", "channel_id", channel.id)
         await util.send_success(ctx, f"Greeter channel is now {channel.mention}")
 
-    @greeter.command(name="message")
+    @greeter.command(name="message", usage="<message | default>")
     async def greeter_message(self, ctx, *, message):
         """
-        Change the greeter welcome message format.
+        Change the greeter welcome message format
+
         Use with "default" to reset to the default format.
         """
         if message.lower() == "default":
@@ -102,12 +103,12 @@ class Configuration(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def goodbyemessage(self, ctx):
-        """Configure the goodbye message."""
+        """Set up goodbye messages when members leave"""
         await util.command_group_help(ctx)
 
     @goodbyemessage.command(name="toggle", aliases=["enabled"])
     async def goodbye_toggle(self, ctx, value: bool):
-        """Enable or disable the goodbye messages."""
+        """Enable or disable the goodbye messages"""
         await queries.update_setting(ctx, "goodbye_settings", "is_enabled", value)
         if value:
             await util.send_success(ctx, "Goodbye messages are now **enabled**")
@@ -116,14 +117,15 @@ class Configuration(commands.Cog):
 
     @goodbyemessage.command(name="channel")
     async def goodbye_channel(self, ctx, *, channel: nextcord.TextChannel):
-        """Set the goodbye messages channel."""
+        """Set the goodbye message channel"""
         await queries.update_setting(ctx, "goodbye_settings", "channel_id", channel.id)
         await util.send_success(ctx, f"Goodbye messages channel is now {channel.mention}")
 
-    @goodbyemessage.command(name="message")
+    @goodbyemessage.command(name="message", usage="<message | default>")
     async def goodbye_message(self, ctx, *, message):
         """
-        Change the goodbye message format.
+        Change the goodbye message format
+
         Use with "default" to reset to the default format.
         """
         if message.lower() == "default":
@@ -140,13 +142,13 @@ class Configuration(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def logger(self, ctx):
-        """Configure the logging of various guild events."""
+        """Configure the logging of various guild events"""
         await util.command_group_help(ctx)
 
-    @logger.command(name="members")
+    @logger.command(name="members", usage="<channel | none>")
     async def logger_members(self, ctx, *, channel: ChannelSetting):
         """
-        Set channel for member leaves and joins logging.
+        Set channel for the membership log
 
         Set to \"none\" to disable.
         """
@@ -162,10 +164,10 @@ class Configuration(commands.Cog):
         else:
             await util.send_success(ctx, f"Member changes will now be logged to {channel.mention}")
 
-    @logger.command(name="bans")
+    @logger.command(name="bans", usage="<channel | none>")
     async def logger_bans(self, ctx, *, channel: ChannelSetting):
         """
-        Set channel where bans are announced.
+        Set channel where bans are logged
 
         Set to \"none\" to disable.
         """
@@ -183,13 +185,13 @@ class Configuration(commands.Cog):
 
     @logger.group(name="deleted")
     async def logger_deleted(self, ctx):
-        """Configure logging of deleted messages."""
+        """Configure logging of deleted messages"""
         await util.command_group_help(ctx)
 
-    @logger_deleted.command(name="channel")
+    @logger_deleted.command(name="channel", usage="<channel | none>")
     async def deleted_channel(self, ctx, *, channel: ChannelSetting):
         """
-        Set channel where deleted messages are logged.
+        Set channel for message log
 
         Set to \"none\" to disable.
         """
@@ -209,7 +211,7 @@ class Configuration(commands.Cog):
 
     @logger_deleted.command(name="ignore")
     async def deleted_ignore(self, ctx, *, channel: nextcord.TextChannel):
-        """Ignore channels from being logged in deleted messages."""
+        """Ignore a channel from being logged in message log"""
         await self.bot.db.execute(
             "INSERT IGNORE message_log_ignore (guild_id, channel_id) VALUES (%s, %s)",
             ctx.guild.id,
@@ -221,7 +223,7 @@ class Configuration(commands.Cog):
 
     @logger_deleted.command(name="unignore")
     async def deleted_unignore(self, ctx, *, channel: nextcord.TextChannel):
-        """Unignore channel from logging deleted messages."""
+        """Unignore a channel from being logged in message log"""
         await self.bot.db.execute(
             "DELETE FROM message_log_ignore WHERE guild_id = %s and channel_id = %s",
             ctx.guild.id,
@@ -236,7 +238,7 @@ class Configuration(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
     async def levelup(self, ctx, value: bool):
-        """Enable or disable levelup messages."""
+        """Enable or disable levelup messages"""
         await queries.update_setting(ctx, "guild_settings", "levelup_messages", value)
         self.bot.cache.levelupmessage[str(ctx.guild.id)] = value
         if value:
@@ -248,19 +250,19 @@ class Configuration(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def starboard(self, ctx):
-        """Configure the starboard."""
+        """Configure the starboard"""
         await util.command_group_help(ctx)
 
     @starboard.command(name="channel")
     async def starboard_channel(self, ctx, channel: nextcord.TextChannel):
-        """Set starboard channel."""
+        """Set the starboard channel"""
         await queries.update_setting(ctx, "starboard_settings", "channel_id", channel.id)
         await util.send_success(ctx, f"Starboard channel is now {channel.mention}")
         await self.bot.cache.cache_starboard_settings()
 
     @starboard.command(name="amount")
     async def starboard_amount(self, ctx, amount: int):
-        """Change the amount of reactions required to starboard a message."""
+        """Change the amount of reactions required to starboard a message"""
         await queries.update_setting(ctx, "starboard_settings", "reaction_count", amount)
         emoji_name, emoji_id, emoji_type = await self.bot.db.execute(
             """
@@ -283,7 +285,7 @@ class Configuration(commands.Cog):
 
     @starboard.command(name="toggle", aliases=["enabled"])
     async def starboard_toggle(self, ctx, value: bool):
-        """Enable or disable the starboard."""
+        """Enable or disable the starboard"""
         await queries.update_setting(ctx, "starboard_settings", "is_enabled", value)
         if value:
             await util.send_success(ctx, "Starboard is now **enabled**")
@@ -293,7 +295,7 @@ class Configuration(commands.Cog):
 
     @starboard.command(name="emoji")
     async def starboard_emoji(self, ctx, emoji):
-        """Change the emoji to use for starboard."""
+        """Change the emoji to use for starboard"""
         if emoji[0] == "<":
             # is custom emoji
             emoji_obj = await util.get_emoji(ctx, emoji)
@@ -340,9 +342,9 @@ class Configuration(commands.Cog):
             await util.send_success(ctx, f"Starboard emoji is now {emoji}")
         await self.bot.cache.cache_starboard_settings()
 
-    @starboard.command(name="log")
+    @starboard.command(name="log", usage="<channel | none>")
     async def starboard_log(self, ctx, channel: ChannelSetting):
-        """Set starboard logging channel to log starring events."""
+        """Set starboard logging channel to log starring events"""
         if channel is None:
             await queries.update_setting(ctx, "starboard_settings", "log_channel_id", None)
             await util.send_success(ctx, "Starboard log is now disabled")
@@ -353,7 +355,7 @@ class Configuration(commands.Cog):
 
     @starboard.command(name="blacklist")
     async def starboard_blacklist(self, ctx, channel: nextcord.TextChannel):
-        """Blacklist a channel from being counted for starboard."""
+        """Blacklist a channel from being counted for starboard"""
         await self.bot.db.execute(
             """
             INSERT INTO starboard_blacklist (guild_id, channel_id)
@@ -369,7 +371,7 @@ class Configuration(commands.Cog):
 
     @starboard.command(name="unblacklist")
     async def starboard_unblacklist(self, ctx, channel: nextcord.TextChannel):
-        """Unblacklist a channel from being counted for starboard."""
+        """Unblacklist a channel from being counted for starboard"""
         await self.bot.db.execute(
             """
             DELETE FROM starboard_blacklist WHERE guild_id = %s AND channel_id = %s
@@ -382,7 +384,7 @@ class Configuration(commands.Cog):
 
     @starboard.command(name="current")
     async def starboard_current(self, ctx):
-        """See current starboard config."""
+        """See the current starboard configuration"""
         starboard_settings = self.bot.cache.starboard_settings.get(str(ctx.guild.id))
         if not starboard_settings:
             raise exceptions.Warning("Nothing has been configured on this server yet!")
@@ -440,7 +442,7 @@ class Configuration(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def votechannel(self, ctx):
-        """Configure voting channels."""
+        """Configure voting channels"""
         await util.command_group_help(ctx)
 
     @votechannel.command(name="add")
@@ -478,7 +480,7 @@ class Configuration(commands.Cog):
 
     @votechannel.command(name="remove")
     async def votechannel_remove(self, ctx, *, channel: nextcord.TextChannel):
-        """Remove a voting channel."""
+        """Remove a voting channel"""
         await self.bot.db.execute(
             "DELETE FROM voting_channel WHERE guild_id = %s and channel_id = %s",
             ctx.guild.id,
@@ -489,7 +491,7 @@ class Configuration(commands.Cog):
 
     @votechannel.command(name="list")
     async def votechannel_list(self, ctx):
-        """List all current voting channels on this server."""
+        """List all current voting channels on this server"""
         channels = await self.bot.db.execute(
             """
             SELECT channel_id, voting_type FROM voting_channel WHERE guild_id = %s
@@ -512,7 +514,7 @@ class Configuration(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def muterole(self, ctx, *, role: nextcord.Role):
-        """Set the mute role."""
+        """Set the role given when muting people using the mute command"""
         await queries.update_setting(ctx, "guild_settings", "mute_role_id", role.id)
         await util.send_success(ctx, f"Muting someone now gives them the role {role.mention}")
 
@@ -520,12 +522,12 @@ class Configuration(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def autorole(self, ctx):
-        """Configure roles to be given automatically to any new members."""
+        """Configure roles to be given automatically to any new members"""
         await util.command_group_help(ctx)
 
     @autorole.command(name="add")
     async def autorole_add(self, ctx, *, role: nextcord.Role):
-        """Add an autorole."""
+        """Add an autorole"""
         await self.bot.db.execute(
             "INSERT IGNORE autorole (guild_id, role_id) VALUES (%s, %s)",
             ctx.guild.id,
@@ -535,7 +537,7 @@ class Configuration(commands.Cog):
 
     @autorole.command(name="remove")
     async def autorole_remove(self, ctx, *, role):
-        """Remove an autorole."""
+        """Remove an autorole"""
         existing_role = await util.get_role(ctx, role)
         if existing_role is None:
             role_id = int(role)
@@ -551,7 +553,7 @@ class Configuration(commands.Cog):
 
     @autorole.command(name="list")
     async def autorole_list(self, ctx):
-        """List all current autoroles on this server."""
+        """List current autoroles"""
         roles = await self.bot.db.execute(
             "SELECT role_id FROM autorole WHERE guild_id = %s",
             ctx.guild.id,
@@ -573,7 +575,7 @@ class Configuration(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
     async def autoresponses(self, ctx, value: bool):
-        """Disable or enable automatic responses to certain message content such as hi or stfu."""
+        """Disable or enable automatic responses to certain message content"""
         await queries.update_setting(ctx, "guild_settings", "autoresponses", value)
         self.bot.cache.autoresponse[str(ctx.guild.id)] = value
         if value:
@@ -583,13 +585,13 @@ class Configuration(commands.Cog):
 
     @commands.group()
     async def blacklist(self, ctx):
-        """Restrict command usage."""
+        """Restrict command usage"""
         await util.command_group_help(ctx)
 
     @blacklist.command(name="delete")
     @commands.has_permissions(manage_guild=True)
     async def blacklist_delete(self, ctx, value: bool):
-        """Toggle whether delete messages on blacklist trigger."""
+        """Toggle whether to delete the message on blacklist trigger"""
         await queries.update_setting(ctx, "guild_settings", "delete_blacklisted_usage", value)
         if value:
             await util.send_success(ctx, "Now deleting messages that trigger any blacklists.")
@@ -599,7 +601,7 @@ class Configuration(commands.Cog):
     @blacklist.command(name="show")
     @commands.has_permissions(manage_guild=True)
     async def blacklist_show(self, ctx):
-        """Show everything that's currently blacklisted."""
+        """Show everything that's currently blacklisted"""
         content = nextcord.Embed(
             title=f":scroll: {ctx.guild.name} Blacklist", color=int("ffd983", 16)
         )
@@ -664,7 +666,7 @@ class Configuration(commands.Cog):
     @blacklist.command(name="channel")
     @commands.has_permissions(manage_guild=True)
     async def blacklist_channel(self, ctx, *channels):
-        """Blacklist a channel."""
+        """Blacklist a channel"""
         successes = []
         fails = []
         for channel_arg in channels:
@@ -691,7 +693,7 @@ class Configuration(commands.Cog):
     @blacklist.command(name="member")
     @commands.has_permissions(manage_guild=True)
     async def blacklist_member(self, ctx, *members):
-        """Blacklist member of this server."""
+        """Blacklist a member of this server"""
         successes = []
         fails = []
         for member_arg in members:
@@ -728,7 +730,7 @@ class Configuration(commands.Cog):
     @blacklist.command(name="command")
     @commands.has_permissions(manage_guild=True)
     async def blacklist_command(self, ctx, *, command):
-        """Blacklist a command."""
+        """Blacklist a command"""
         cmd = self.bot.get_command(command)
         if cmd is None:
             raise exceptions.Warning(f"Command `{ctx.prefix}{command}` not found.")
@@ -749,20 +751,20 @@ class Configuration(commands.Cog):
             ctx, f"`{ctx.prefix}{cmd}` is now a blacklisted command on this server."
         )
 
-    @blacklist.command(name="global")
+    @blacklist.command(name="global", hidden=True)
     @commands.is_owner()
     async def blacklist_global(self, ctx, user: nextcord.User, *, reason):
-        """Blacklist someone globally from Miso Bot."""
+        """Blacklist someone globally from Miso Bot"""
         await self.bot.db.execute(
             "INSERT IGNORE blacklisted_user VALUES (%s, %s)", user.id, reason
         )
         self.bot.cache.blacklist["global"]["user"].add(user.id)
         await util.send_success(ctx, f"**{user}** can no longer use Miso Bot!")
 
-    @blacklist.command(name="guild")
+    @blacklist.command(name="guild", hidden=True)
     @commands.is_owner()
     async def blacklist_guild(self, ctx, guild_id: int, *, reason):
-        """Blacklist a guild from adding or using Miso Bot."""
+        """Blacklist a guild from adding or using Miso Bot"""
         guild = self.bot.get_guild(guild_id)
         if guild is None:
             raise exceptions.Warning(f"Cannot find guild with id `{guild_id}`")
@@ -774,15 +776,15 @@ class Configuration(commands.Cog):
         await guild.leave()
         await util.send_success(ctx, f"**{guild}** can no longer use Miso Bot!")
 
-    @commands.group(aliases=["whitelist"])
+    @commands.group(aliases=["unblacklist"])
     async def unblacklist(self, ctx):
-        """Reverse blacklisting."""
+        """Reverse blacklisting"""
         await util.command_group_help(ctx)
 
     @unblacklist.command(name="channel")
     @commands.has_permissions(manage_guild=True)
-    async def whitelist_channel(self, ctx, *channels):
-        """Whitelist a channel."""
+    async def unblacklist_channel(self, ctx, *channels):
+        """Unblacklist a channel"""
         successes = []
         fails = []
         for channel_arg in channels:
@@ -803,8 +805,8 @@ class Configuration(commands.Cog):
 
     @unblacklist.command(name="member")
     @commands.has_permissions(manage_guild=True)
-    async def whitelist_member(self, ctx, *members):
-        """Whitelist a member of this server."""
+    async def unblacklist_member(self, ctx, *members):
+        """Unblacklist a member of this server"""
         successes = []
         fails = []
         for member_arg in members:
@@ -825,8 +827,8 @@ class Configuration(commands.Cog):
 
     @unblacklist.command(name="command")
     @commands.has_permissions(manage_guild=True)
-    async def whitelist_command(self, ctx, *, command):
-        """Whitelist a command."""
+    async def unblacklist_command(self, ctx, *, command):
+        """Unblacklist a command"""
         cmd = self.bot.get_command(command)
         if cmd is None:
             raise exceptions.Warning(f"Command `{ctx.prefix}{command}` not found.")
@@ -839,18 +841,18 @@ class Configuration(commands.Cog):
         self.bot.cache.blacklist[str(ctx.guild.id)]["command"].discard(cmd.qualified_name.lower())
         await util.send_success(ctx, f"`{ctx.prefix}{cmd}` is no longer blacklisted.")
 
-    @unblacklist.command(name="global")
+    @unblacklist.command(name="global", hidden=True)
     @commands.is_owner()
-    async def whitelist_global(self, ctx, *, user: nextcord.User):
-        """Whitelist someone globally."""
+    async def unblacklist_global(self, ctx, *, user: nextcord.User):
+        """Unblacklist someone globally"""
         await self.bot.db.execute("DELETE FROM blacklisted_user WHERE user_id = %s", user.id)
         self.bot.cache.blacklist["global"]["user"].discard(user.id)
         await util.send_success(ctx, f"**{user}** can now use Miso Bot again!")
 
-    @unblacklist.command(name="guild")
+    @unblacklist.command(name="guild", hidden=True)
     @commands.is_owner()
-    async def whitelist_guild(self, ctx, guild_id: int):
-        """Whitelist a guild."""
+    async def Unblacklist_guild(self, ctx, guild_id: int):
+        """unblacklist a guild"""
         await self.bot.db.execute("DELETE FROM blacklisted_guild WHERE guild_id = %s", guild_id)
         self.bot.cache.blacklist["global"]["guild"].discard(guild_id)
         await util.send_success(ctx, f"Guild with id `{guild_id}` can use Miso Bot again!")

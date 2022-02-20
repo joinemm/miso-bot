@@ -68,7 +68,7 @@ class Notifications(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """Notification message handler."""
+        """Notification message handler"""
         # make sure bot cache is ready
         if not self.bot.is_ready():
             return
@@ -124,12 +124,12 @@ class Notifications(commands.Cog):
 
     @commands.group(case_insensitive=True, aliases=["noti", "notif"])
     async def notification(self, ctx):
-        """Add keyword notifications on this server."""
+        """Manage your keyword notifications on this server"""
         await util.command_group_help(ctx)
 
     @notification.command()
     async def add(self, ctx, *, keyword):
-        """Add a notification."""
+        """Add a notification keyword"""
         if ctx.guild is None:
             raise exceptions.Warning(
                 "Global notifications have been removed for performance reasons."
@@ -188,7 +188,7 @@ class Notifications(commands.Cog):
 
     @notification.command()
     async def remove(self, ctx, *, keyword):
-        """Remove notification."""
+        """Remove a notification keyword"""
         if ctx.guild is None:
             raise exceptions.Warning(
                 "Please use this in the guild you want to remove notifications from."
@@ -232,7 +232,7 @@ class Notifications(commands.Cog):
 
     @notification.command()
     async def list(self, ctx):
-        """List your current notifications."""
+        """List your current notifications"""
         words = await self.bot.db.execute(
             """
             SELECT guild_id, keyword, times_triggered FROM notification WHERE user_id = %s ORDER BY keyword
@@ -267,7 +267,7 @@ class Notifications(commands.Cog):
     @notification.command()
     async def clear(self, ctx):
         """
-        Clears all your notifications on this server.
+        Clears all your notifications on this server
         Use in DMs to clear every server.
         """
         dm = ctx.guild is None
@@ -288,7 +288,7 @@ class Notifications(commands.Cog):
     @notification.command()
     async def test(self, ctx, message: nextcord.Message = None):
         """
-        Test if Miso can send you a notification.
+        Test if Miso can send you a notification
         If supplied with a message id, will check if you would have been notified by it.
         """
         if message is None:

@@ -99,10 +99,10 @@ class Fishy(commands.Cog):
     # @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.cooldown(1, 60, type=commands.BucketType.user)
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
-    async def fishy(self, ctx, user=None):
-        """Go fishing."""
-        receiver = await util.get_member(ctx, user, fallback=ctx.author)
-        gift = receiver is not None and receiver is not ctx.author
+    async def fishy(self, ctx, user: nextcord.Member = None):
+        """Go fishing"""
+        receiver = user or ctx.author
+        gift = receiver is not ctx.author
 
         cached_last_fishy = self.ts_lock.get(str(ctx.author.id))
         if cached_last_fishy is None:
@@ -169,7 +169,7 @@ class Fishy(commands.Cog):
 
     @commands.command(aliases=["fintimer", "fisytimer", "foshytimer", "ft"])
     async def fishytimer(self, ctx):
-        """Check your fishy timer without actually fishing."""
+        """Check your fishy timer"""
         last_fishy = await self.bot.db.execute(
             "SELECT last_fishy FROM fishy WHERE user_id = %s",
             ctx.author.id,
@@ -189,7 +189,7 @@ class Fishy(commands.Cog):
 
     @commands.command(aliases=["finstats", "fisystats", "foshystats", "fs"])
     async def fishystats(self, ctx, user=None):
-        """See fishing statistics."""
+        """See fishing statistics"""
         globaldata = user == "global"
         if not globaldata:
             user = await util.get_user(ctx, user, fallback=ctx.author)

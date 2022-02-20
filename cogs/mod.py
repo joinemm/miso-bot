@@ -99,12 +99,13 @@ class Mod(commands.Cog):
             )
             self.cache_needs_refreshing = True
 
-    @commands.command(aliases=["clean"])
+    @commands.command(aliases=["clean"], usage="<amount> [@mentions...]")
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
     async def purge(self, ctx, amount: int):
         """
-        Delete some amount of messages in current channel.
+        Delete given amount of messages in the current channel
+
         Optionally if users are mentioned, only messages by those users are deleted.
 
         Usage:
@@ -137,8 +138,8 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(moderate_members=True)
-    async def timeout(self, ctx, member: nextcord.Member, *, duration=None):
-        """Timeout user. Pass 'remove' as the duration to remove."""
+    async def timeout(self, ctx, member: nextcord.Member, *, duration="1 hour"):
+        """Timeout user. Pass 'remove' as the duration to remove"""
         if member.timeout is not None:
             seconds = member.timeout.timestamp() - arrow.now().int_timestamp
             if duration and duration.strip().lower() == "remove":
@@ -149,10 +150,7 @@ class Mod(commands.Cog):
                     f"{member.mention} is already timed out (**{util.stringfromtime(seconds)}** remaining)",
                 )
 
-        if duration is not None:
-            seconds = util.timefromstring(duration)
-        else:
-            seconds = 5 * 60
+        seconds = util.timefromstring(duration)
 
         await member.edit(timeout=arrow.now().shift(seconds=+seconds).datetime)
         await util.send_success(
@@ -163,7 +161,7 @@ class Mod(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def mute(self, ctx, member: nextcord.Member, *, duration=None):
-        """Mute user."""
+        """Mute user"""
         mute_role_id = await self.bot.db.execute(
             """
             SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
@@ -228,7 +226,7 @@ class Mod(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def unmute(self, ctx, member: nextcord.Member):
-        """Unmute user."""
+        """Unmute user"""
         mute_role_id = await self.bot.db.execute(
             """
             SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
@@ -259,7 +257,7 @@ class Mod(commands.Cog):
 
     @commands.command()
     async def inspect(self, ctx, *ids: int):
-        """Get users from list of ids."""
+        """Resolve user ids into usernames"""
         if len(ids) > 25:
             raise exceptions.Warning("Only 25 at a time please!")
         rows = []
@@ -285,7 +283,7 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.has_permissions(ban_members=True)
     async def fastban(self, ctx, *discord_users):
-        """Ban user(s) without confirmation box."""
+        """Ban user(s) without confirmation box"""
         if not discord_users:
             return await util.send_command_help(ctx)
 
@@ -325,7 +323,7 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, *discord_users):
-        """Ban user(s)."""
+        """Ban user(s)"""
         if not discord_users:
             return await util.send_command_help(ctx)
 

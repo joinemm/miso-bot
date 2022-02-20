@@ -104,24 +104,24 @@ class Images(commands.Cog):
 
     @commands.group(case_insensitive=True, enabled=True)
     async def meme(self, ctx):
-        """Input text into images."""
+        """Input text into images"""
         await util.command_group_help(ctx)
 
     @meme.command()
     async def olivia(self, ctx, *, text):
-        """Olivia hye has something to say."""
+        """Olivia hye has something to say"""
         filename = "images/hye.jpg"
         await self.image_sender(ctx, filename, (206, 480, 530, 400), text, angle=2)
 
     @meme.command()
     async def yyxy(self, ctx, *, text):
-        """YYXY has something to say."""
+        """YYXY has something to say"""
         filename = "images/yyxy.png"
         await self.image_sender(ctx, filename, (500, 92, 315, 467), text, angle=1)
 
     @meme.command()
     async def haseul(self, ctx, *, text):
-        """Haseul has something to say."""
+        """Haseul has something to say"""
         filename = "images/haseul.jpg"
         await self.image_sender(
             ctx,
@@ -135,7 +135,7 @@ class Images(commands.Cog):
 
     @meme.command()
     async def trump(self, ctx, *, text):
-        """Donald Trump has signed a new order."""
+        """Donald Trump has signed a new order"""
         filename = "images/trump.jpg"
         await self.image_sender(
             ctx, filename, (761, 579, 406, 600), text, wm_color=(255, 255, 255, 255)
@@ -143,7 +143,7 @@ class Images(commands.Cog):
 
     @meme.command()
     async def jihyo(self, ctx, *, text):
-        """Jihyo has something to say."""
+        """Jihyo has something to say"""
         filename = "images/jihyo.jpg"
         await self.image_sender(
             ctx,
@@ -156,7 +156,7 @@ class Images(commands.Cog):
 
     @meme.command()
     async def dubu(self, ctx, *, text):
-        """Dahyun has something to say."""
+        """Dahyun has something to say"""
         filename = "images/dubu.jpg"
         await self.image_sender(
             ctx,
@@ -169,7 +169,7 @@ class Images(commands.Cog):
 
     @meme.command(aliases=["chae"])
     async def chaeyoung(self, ctx, *, text):
-        """Chae has something to say."""
+        """Chae has something to say"""
         filename = "images/chae.jpg"
         await self.image_sender(
             ctx,
@@ -182,7 +182,7 @@ class Images(commands.Cog):
 
     @meme.command()
     async def nayeon(self, ctx, *, text):
-        """Nayeon has something to say."""
+        """Nayeon has something to say"""
         filename = "images/nayeon.jpg"
         await self.image_sender(
             ctx,

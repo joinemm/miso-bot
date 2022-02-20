@@ -177,7 +177,7 @@ class Utility(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        """only for CommandNotFound."""
+        """only for CommandNotFound"""
         error = getattr(error, "original", error)
         if isinstance(error, commands.CommandNotFound) and ctx.message.content.startswith(
             f"{ctx.prefix}!"
@@ -205,11 +205,10 @@ class Utility(commands.Cog):
                 content = response.url
         await ctx.send(content)
 
-    @commands.command(name="!")
+    @commands.command(name="!", usage="<bang> <query...>")
     async def bang(self, ctx):
         """
-        DuckDuckGo bangs.
-        For list of all bangs please visit https://duckduckgo.com/bang
+        DuckDuckGo bangs https://duckduckgo.com/bang
 
         Usage:
             >!<bang> <query...>
@@ -234,7 +233,7 @@ class Utility(commands.Cog):
         except ValueError:
             await ctx.send("Please provide a query to search")
 
-    @commands.command()
+    @commands.command(usage="<'in' | 'on'> <time | YYYY/MM/DD [HH:mm:ss]> to <something>")
     async def remindme(self, ctx, pre, *, arguments):
         """
         Set a reminder
@@ -292,7 +291,7 @@ class Utility(commands.Cog):
             )
         )
 
-    @commands.command()
+    @commands.command(usage="['save'] <location>")
     async def weather(self, ctx, *, address=None):
         """
         Get weather of given location.
@@ -387,7 +386,7 @@ class Utility(commands.Cog):
 
     @commands.command(aliases=["synonyms", "synonym"])
     async def thesaurus(self, ctx, *, word):
-        """Get synonyms for a word."""
+        """Get synonyms for a word"""
         url = f"https://www.dictionaryapi.com/api/v3/references/thesaurus/json/{word}"
         params = {"key": THESAURUS_KEY}
         async with aiohttp.ClientSession() as session:
@@ -421,7 +420,7 @@ class Utility(commands.Cog):
 
     @commands.command()
     async def define(self, ctx, *, word):
-        """Search for a definition from oxford dictionary."""
+        """Get Oxford Dictionary definitions for a word"""
         api_url = "https://od-api.oxforddictionaries.com/api/v2/"
 
         headers = {
@@ -505,7 +504,7 @@ class Utility(commands.Cog):
 
     @commands.command()
     async def urban(self, ctx, *, word):
-        """Search for a definition from urban dictionary."""
+        """Get Urban Dictionary definitions for a word"""
         url = "https://api.urbandictionary.com/v0/define"
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params={"term": word}) as response:
@@ -540,10 +539,10 @@ class Utility(commands.Cog):
         else:
             await ctx.send(f"No definitions found for `{word}`")
 
-    @commands.command(aliases=["tr", "trans"])
+    @commands.command(aliases=["tr", "trans"], usage="[source_lang]/[target_lang] <text>")
     async def translate(self, ctx, *, text):
         """
-        Naver/Google translator.
+        Papago and Google translator
 
         You can specify language pairs or let them be automatically detected.
         Default target language is english.
@@ -614,9 +613,9 @@ class Utility(commands.Cog):
 
         await ctx.send(f"`{source}->{target}` {translation}")
 
-    @commands.command(aliases=["q", "question"])
+    @commands.command(aliases=["wolf", "w"])
     async def wolfram(self, ctx, *, query):
-        """Ask something from wolfram alpha."""
+        """Ask something from wolfram alpha"""
         url = "http://api.wolframalpha.com/v1/result"
         params = {
             "appid": WOLFRAM_APPID,
@@ -635,7 +634,7 @@ class Utility(commands.Cog):
 
     @commands.command()
     async def creategif(self, ctx, media_url):
-        """Create a gfycat gif from video url."""
+        """Create a gfycat gif from video url"""
         starttimer = time()
         async with aiohttp.ClientSession() as session:
             auth_headers = await gfycat_oauth(session)
@@ -678,7 +677,7 @@ class Utility(commands.Cog):
 
     @commands.command()
     async def streamable(self, ctx, media_url):
-        """Create a streamable video from media/twitter/ig url."""
+        """Create a streamable video from media/twitter/ig url"""
         starttimer = time()
 
         url = "https://api.streamable.com/import"
@@ -731,7 +730,7 @@ class Utility(commands.Cog):
     @commands.command()
     async def stock(self, ctx, *, symbol):
         """
-        Get price data for the US stock market.
+        Get price data for the US stock market
 
         Usage:
             >stock $<symbol>
@@ -818,12 +817,12 @@ class Utility(commands.Cog):
 
     @commands.group(aliases=["tz", "timezones"])
     async def timezone(self, ctx):
-        """Timezone commands."""
+        """See the current time for your friends across the globe"""
         await util.command_group_help(ctx)
 
     @timezone.command(name="now")
     async def tz_now(self, ctx, member: nextcord.Member = None):
-        """Get current time."""
+        """Get current time for a member"""
         if member is None:
             member = ctx.author
 
@@ -841,7 +840,7 @@ class Utility(commands.Cog):
     @timezone.command(name="set")
     async def tz_set(self, ctx, your_timezone):
         """
-        Set your timezone.
+        Set your timezone
         Give timezone as a tz database name (case sensitive):
         https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
@@ -869,7 +868,7 @@ class Utility(commands.Cog):
 
     @timezone.command(name="unset")
     async def tz_unset(self, ctx):
-        """Unset your timezone."""
+        """Unset your timezone"""
         await ctx.bot.db.execute(
             """
             INSERT INTO user_settings (user_id, timezone)
@@ -883,7 +882,7 @@ class Utility(commands.Cog):
 
     @timezone.command(name="list")
     async def tz_list(self, ctx):
-        """List current time of all server members."""
+        """List current time of all server members who have it saved"""
         content = nextcord.Embed(
             title=f":clock2: Current time in {ctx.guild}",
             color=int("3b88c3", 16),
