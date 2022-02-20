@@ -51,14 +51,14 @@ services:
     build: .
     security_opt:
       - seccomp:unconfined
-    command: python -O main.py dev
+    command: python -O main.py
     restart: unless-stopped
     depends_on:
       - db
     networks:
       - botnet
     ports:
-      - '6969:6969'
+      - '443:443'
     env_file:
       - .env
     environment:
