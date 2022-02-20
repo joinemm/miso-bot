@@ -7,6 +7,7 @@ aiosignal==1.2.0
 aiosqlite==0.17.0
 arrow==1.2.2
 astunparse==1.6.3
+async-cse==0.3.0
 async-generator==1.10
 async-timeout==4.0.2
 asyncio-extras==1.3.2
