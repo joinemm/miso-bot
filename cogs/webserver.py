@@ -128,7 +128,7 @@ class WebServer(commands.Cog):
                 continue
 
             command_list = []
-            for command in cog.walk_commands():
+            for command in commands:
                 command_structure = self.get_command_structure(command)
                 if command_structure:
                     command_list.append(command_structure)
