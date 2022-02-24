@@ -139,7 +139,7 @@ class WebServer(commands.Cog):
             cog_content = {
                 "name": cog.qualified_name,
                 "description": cog.description,
-                "icon": cog.getattr("icon", None),
+                "icon": getattr(cog, "icon", None),
                 "commands": command_list,
             }
 

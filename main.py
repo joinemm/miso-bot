@@ -1,4 +1,3 @@
-import logging
 import os
 import sys
 import traceback
@@ -14,7 +13,6 @@ from modules.help import EmbedHelpCommand
 
 uvloop.install()
 load_dotenv()
-logging.basicConfig(level=logging.INFO)
 logger = log.get_logger(__name__)
 
 DEV = "dev" in sys.argv

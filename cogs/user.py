@@ -161,7 +161,7 @@ class User(commands.Cog):
 
     @commands.command()
     async def hug(self, ctx, *, huggable=None):
-        """Hug your friend"""
+        """Hug your friends"""
         emoji = emojis.random_hug()
 
         if huggable is not None:
@@ -550,7 +550,7 @@ class User(commands.Cog):
 
     @leaderboard.command(name="wpm", aliases=["typing"])
     async def leaderboard_wpm(self, ctx, scope=""):
-        """Best typing speed high scores leaderboard"""
+        """Typing speed leaderboard"""
         _global_ = scope == "global"
 
         data = await self.bot.db.execute(

@@ -68,7 +68,7 @@ class LastFm(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.icon = emojis.LASTFM
+        self.icon = "🎵"
         self.lastfm_red = "b90000"
         self.cover_base_urls = [
             "https://lastfm.freetls.fastly.net/i/u/34s/{0}",

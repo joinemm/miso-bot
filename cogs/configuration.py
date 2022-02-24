@@ -776,7 +776,7 @@ class Configuration(commands.Cog):
         await guild.leave()
         await util.send_success(ctx, f"**{guild}** can no longer use Miso Bot!")
 
-    @commands.group(aliases=["unblacklist"])
+    @commands.group(aliases=["whitelist"])
     async def unblacklist(self, ctx):
         """Reverse blacklisting"""
         await util.command_group_help(ctx)
