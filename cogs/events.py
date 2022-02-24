@@ -6,7 +6,7 @@ import nextcord
 from nextcord.ext import commands, tasks
 
 from libraries import emoji_literals
-from modules import emojis, log, queries, util
+from modules import log, queries, util
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
@@ -40,8 +40,8 @@ class Events(commands.Cog):
         """Start tasks"""
         await self.bot.wait_until_ready()
         self.status_loop.start()
-        self.xp_loop.start()
-        self.stats_loop.start()
+        # self.xp_loop.start()
+        # self.stats_loop.start()
 
     async def insert_stats(self):
         self.bot.logger.info("inserting usage stats")
@@ -470,19 +470,17 @@ class Events(commands.Cog):
         if message.guild is None:
             return
 
-        if message.channel.id in self.bot.cache.votechannels:
-            # votechannels
-            votechannel_type = await self.bot.db.execute(
-                "SELECT voting_type FROM voting_channel WHERE channel_id = %s",
-                message.channel.id,
-                one_value=True,
-            )
-            if votechannel_type == "rating":
-                for e in ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]:
-                    await message.add_reaction(e)
-            elif votechannel_type == "voting":
-                await message.add_reaction(emojis.UPVOTE)
-                await message.add_reaction(emojis.DOWNVOTE)
+        # if bot account, ignore everything after this
+        if message.author.bot:
+            return
+
+        autoresponses = self.bot.cache.autoresponse.get(str(message.guild.id), True)
+
+        if autoresponses:
+            await self.easter_eggs(message)
+
+        # temp fix
+        return
 
         # xp gain
         message_xp = util.xp_from_message(message)
@@ -497,12 +495,6 @@ class Events(commands.Cog):
                 "messages": 1,
                 "bot": message.author.bot,
             }
-
-        # if bot account, ignore everything after this
-        if message.author.bot:
-            return
-
-        autoresponses = self.bot.cache.autoresponse.get(str(message.guild.id), True)
 
         # log emojis
         if self.bot.cache.log_emoji:
@@ -550,9 +542,6 @@ class Events(commands.Cog):
                     self.emoji_usage_cache["custom"][str(message.guild.id)][
                         str(message.author.id)
                     ][str(emoji_id)] = {"uses": 1, "name": emoji_name}
-
-        if autoresponses:
-            await self.easter_eggs(message)
 
     async def easter_eggs(self, message):
         """Easter eggs handler"""
