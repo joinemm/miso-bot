@@ -127,8 +127,8 @@ class Notifications(commands.Cog):
         """Manage your keyword notifications on this server"""
         await util.command_group_help(ctx)
 
-    @notification.command()
-    async def add(self, ctx, *, keyword):
+    @notification.command(name="add")
+    async def notification_add(self, ctx, *, keyword):
         """Add a notification keyword"""
         if ctx.guild is None:
             raise exceptions.Warning(
@@ -145,7 +145,10 @@ class Notifications(commands.Cog):
                 f"You can only have a maximum of **30** notifications. You have **{amount}**"
             )
 
-        await ctx.message.delete()
+        try:
+            await ctx.message.delete()
+        except (nextcord.Forbidden, nextcord.NotFound):
+            pass
         guild_id = ctx.guild.id
         keyword = keyword.lower().strip()
 
@@ -186,15 +189,18 @@ class Notifications(commands.Cog):
 
         await util.send_success(ctx, f"New notification set! Check your DM {emojis.VIVISMIRK}")
 
-    @notification.command()
-    async def remove(self, ctx, *, keyword):
+    @notification.command(name="remove")
+    async def notification_remove(self, ctx, *, keyword):
         """Remove a notification keyword"""
         if ctx.guild is None:
             raise exceptions.Warning(
                 "Please use this in the guild you want to remove notifications from."
             )
 
-        await ctx.message.delete()
+        try:
+            await ctx.message.delete()
+        except (nextcord.Forbidden, nextcord.NotFound):
+            pass
         guild_id = ctx.guild.id
         keyword = keyword.lower().strip()
 
@@ -230,8 +236,8 @@ class Notifications(commands.Cog):
         await self.create_cache()
         await util.send_success(ctx, f"Removed a notification! Check your DM {emojis.VIVISMIRK}")
 
-    @notification.command()
-    async def list(self, ctx):
+    @notification.command(name="list")
+    async def notification_list(self, ctx):
         """List your current notifications"""
         words = await self.bot.db.execute(
             """
@@ -264,8 +270,8 @@ class Notifications(commands.Cog):
         if ctx.guild is not None:
             await util.send_success(ctx, f"Notification list sent to your DM {emojis.VIVISMIRK}")
 
-    @notification.command()
-    async def clear(self, ctx):
+    @notification.command(name="clear")
+    async def notification_clear(self, ctx):
         """
         Clears all your notifications on this server
         Use in DMs to clear every server.
@@ -285,8 +291,8 @@ class Notifications(commands.Cog):
         # remake notification cache
         await self.create_cache()
 
-    @notification.command()
-    async def test(self, ctx, message: nextcord.Message = None):
+    @notification.command(name="test")
+    async def notification_test(self, ctx, message: nextcord.Message = None):
         """
         Test if Miso can send you a notification
         If supplied with a message id, will check if you would have been notified by it.

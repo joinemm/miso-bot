@@ -344,7 +344,7 @@ class Media(commands.Cog):
         try:
             # delete discord automatic embed
             await ctx.message.edit(suppress=True)
-        except nextcord.Forbidden:
+        except (nextcord.Forbidden, nextcord.NotFound):
             pass
 
     @commands.command(aliases=["twt"], usage="<links...> '-d'")
@@ -472,7 +472,7 @@ class Media(commands.Cog):
         try:
             # delete discord automatic embed
             await ctx.message.edit(suppress=True)
-        except nextcord.Forbidden:
+        except (nextcord.Forbidden, nextcord.NotFound):
             pass
 
     @commands.command(aliases=["gif", "gfy"])

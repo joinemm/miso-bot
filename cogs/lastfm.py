@@ -80,9 +80,9 @@ class LastFm(commands.Cog):
         with open("html/fm_chart.min.html", "r", encoding="utf-8") as file:
             self.chart_html = file.read().replace("\n", "")
 
-    @commands.group(case_insensitive=True)
+    @commands.group(case_insensitive=True, aliases=["lastfm"])
     async def fm(self, ctx):
-        """Interact with LastFM using your account"""
+        """Interact with LastFM using your linked account"""
         await username_to_ctx(ctx)
 
         if ctx.invoked_subcommand is None:
