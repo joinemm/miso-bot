@@ -269,25 +269,27 @@ class User(commands.Cog):
 
         content.description = guild.description
         content.add_field(name="Owner", value=str(guild.owner))
-        content.add_field(name="Region", value=f"{util.region_flag(guild.region)} {guild.region}")
-        content.add_field(name="Created at", value=guild.created_at.strftime("%d/%m/%Y %H:%M"))
-        content.add_field(name="Members", value=str(guild.member_count))
-        content.add_field(name="Roles", value=str(len(guild.roles)))
-        content.add_field(name="Emojis", value=str(len(guild.emojis)))
         content.add_field(
             name="Boosts",
             value=f"{guild.premium_subscription_count} (level {guild.premium_tier})",
         )
+        content.add_field(name="Members", value=str(guild.member_count))
         content.add_field(
             name="Channels",
             value=(f"{len(guild.text_channels)} Text, {len(guild.voice_channels)} Voice"),
         )
-        content.add_field(name="Content filter", value=guild.explicit_content_filter.name)
-        content.add_field(
-            name="Features",
-            value=", ".join(guild.features) if guild.features else "None",
-            inline=False,
-        )
+        content.add_field(name="Roles", value=str(len(guild.roles)))
+        content.add_field(name="Threads", value=str(len(guild.threads)))
+        content.add_field(name="NSFW filter", value=guild.explicit_content_filter.name)
+        content.add_field(name="Emojis", value=f"{len(guild.emojis)} / {guild.emoji_limit}")
+        content.add_field(name="Stickers", value=f"{len(guild.stickers)} / {guild.sticker_limit}")
+        content.add_field(name="Created at", value=guild.created_at.strftime("%d/%m/%Y %H:%M"))
+        if guild.features:
+            content.add_field(
+                name="Features",
+                value=" ".join(f"`{feature}`" for feature in guild.features),
+                inline=False,
+            )
 
         await ctx.send(embed=content)
 
