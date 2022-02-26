@@ -118,11 +118,11 @@ class ErrorHander(commands.Cog):
                 pass
 
         elif isinstance(error, commands.MissingPermissions):
-            perms = ", ".join(f"**{x}**" for x in error.missing_permissions)
+            perms = ", ".join(f"`{x}`" for x in error.missing_permissions)
             await self.send(ctx, "warning", f"You require {perms} permission to use this command!")
 
         elif isinstance(error, commands.BotMissingPermissions):
-            perms = ", ".join(f"**{x}**" for x in error.missing_permissions)
+            perms = ", ".join(f"`{x}`" for x in error.missing_permissions)
             await self.send(
                 ctx,
                 "warning",

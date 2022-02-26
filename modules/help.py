@@ -15,7 +15,9 @@ class EmbedHelpCommand(commands.HelpCommand):
         this_cmd = ""
         if hasattr(c, "commands"):
             for subc in c.commands:
-                this_cmd += f"\n{' '*depth}└ **{subc.name}**"
+                if depth > 1 or this_cmd:
+                    this_cmd += "\n"
+                this_cmd += f"{' '*depth}└ **{subc.name}**"
                 # + (
                 #     f"\n{' '*(depth+1)}{subc.short_doc}" if subc.short_doc is not None else "-"
                 # )
