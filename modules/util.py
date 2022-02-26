@@ -85,7 +85,10 @@ def flags_to_badges(user):
     result = []
     for flag, value in iter(user.public_flags):
         if value:
-            result.append(emojis.Badge[flag].value)
+            try:
+                result.append(emojis.Badge[flag].value)
+            except KeyError:
+                pass
     if isinstance(user, nextcord.Member) and user.premium_since is not None:
         result.append(emojis.Badge["boosting"].value)
     return result or ["-"]
