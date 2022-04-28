@@ -215,6 +215,8 @@ class Media(commands.Cog):
         """Retrieve images from one or more instagram posts"""
         urls = []
         download = False
+        if len(links) > 5:
+            raise exceptions.Warning("Only 5 links at a time please!")
         for link in links:
             if link.lower() in ["-d", "--download"]:
                 download = True
@@ -352,6 +354,8 @@ class Media(commands.Cog):
         """Retrieve images from one or more tweets"""
         urls = []
         download = False
+        if len(links) > 5:
+            raise exceptions.Warning("Only 5 links at a time please!")
         for link in links:
             if link.lower() in ["-d", "--download"]:
                 download = True
