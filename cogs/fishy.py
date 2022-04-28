@@ -99,7 +99,7 @@ class Fishy(commands.Cog):
     # @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.cooldown(1, 60, type=commands.BucketType.user)
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
-    async def fishy(self, ctx, user: nextcord.Member = None):
+    async def fishy(self, ctx: commands.Context, user: nextcord.Member = None):
         """Go fishing"""
         receiver = user or ctx.author
         gift = receiver is not ctx.author
@@ -168,7 +168,7 @@ class Fishy(commands.Cog):
             )
 
     @commands.command(aliases=["fintimer", "fisytimer", "foshytimer", "ft"])
-    async def fishytimer(self, ctx):
+    async def fishytimer(self, ctx: commands.Context):
         """Check your fishy timer"""
         last_fishy = await self.bot.db.execute(
             "SELECT last_fishy FROM fishy WHERE user_id = %s",
@@ -188,7 +188,7 @@ class Fishy(commands.Cog):
             await ctx.send(":thinking: You have never fished...?")
 
     @commands.command(aliases=["finstats", "fisystats", "foshystats", "fs"])
-    async def fishystats(self, ctx, user=None):
+    async def fishystats(self, ctx: commands.Context, user=None):
         """See fishing statistics"""
         globaldata = user == "global"
         if not globaldata:
@@ -249,7 +249,7 @@ class Fishy(commands.Cog):
         )
         await ctx.send(embed=content)
 
-    async def fish_common(self, ctx, user, gift):
+    async def fish_common(self, ctx: commands.Context, user, gift):
         amount = random.randint(1, 29)
         if amount == 1:
             await ctx.send(
@@ -265,7 +265,7 @@ class Fishy(commands.Cog):
             )
         return amount
 
-    async def fish_uncommon(self, ctx, user, gift):
+    async def fish_uncommon(self, ctx: commands.Context, user, gift):
         amount = random.randint(30, 99)
         await ctx.send(
             "**Caught an uncommon fish"
@@ -274,7 +274,7 @@ class Fishy(commands.Cog):
         )
         return amount
 
-    async def fish_rare(self, ctx, user, gift):
+    async def fish_rare(self, ctx: commands.Context, user, gift):
         amount = random.randint(100, 399)
         await ctx.send(
             ":star: **Caught a super rare fish"
@@ -284,7 +284,7 @@ class Fishy(commands.Cog):
         )
         return amount
 
-    async def fish_legendary(self, ctx, user, gift):
+    async def fish_legendary(self, ctx: commands.Context, user, gift):
         amount = random.randint(400, 750)
         await ctx.send(
             ":star2: **Caught a *legendary* fish"
@@ -294,7 +294,7 @@ class Fishy(commands.Cog):
         )
         return amount
 
-    async def trash(self, ctx, user, gift):
+    async def trash(self, ctx: commands.Context, user, gift):
         icon = random.choice(self.TRASH_ICONS)
         await ctx.send(
             f"Caught **trash{'!' if not gift else ''}** {icon}"

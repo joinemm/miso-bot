@@ -16,12 +16,12 @@ class Owner(commands.Cog):
         self.bot = bot
         self.icon = "👑"
 
-    async def cog_check(self, ctx):
+    async def cog_check(self, ctx: commands.Context):
         """Check if command author is Owner"""
         return await self.bot.is_owner(ctx.author)
 
     @commands.command(rest_is_raw=True)
-    async def say(self, ctx, channel_id: int, *, message):
+    async def say(self, ctx: commands.Context, channel_id: int, *, message):
         """Make the bot say something in a given channel"""
         channel = self.bot.get_channel(channel_id)
         guild = channel.guild
@@ -30,7 +30,7 @@ class Owner(commands.Cog):
         await channel.send(message)
 
     @commands.command()
-    async def guilds(self, ctx):
+    async def guilds(self, ctx: commands.Context):
         """Show all connected guilds"""
         membercount = len(set(self.bot.get_all_members()))
         content = nextcord.Embed(
@@ -44,7 +44,7 @@ class Owner(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
-    async def findguild(self, ctx, *, search_term):
+    async def findguild(self, ctx: commands.Context, *, search_term):
         """Find a guild by name"""
         rows = []
         for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
@@ -55,7 +55,7 @@ class Owner(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
-    async def userguilds(self, ctx, user: nextcord.User):
+    async def userguilds(self, ctx: commands.Context, user: nextcord.User):
         """Get all guilds user is part of"""
         rows = []
         for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
@@ -67,19 +67,21 @@ class Owner(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
-    async def logout(self, ctx):
+    async def logout(self, ctx: commands.Context):
         """Shut down the bot"""
         print("LOGGING OUT")
         await ctx.send("Shutting down... :electric_plug:")
         await self.bot.close()
 
     @commands.group(aliases=["patron"], case_insensitive=True)
-    async def donator(self, ctx):
+    async def donator(self, ctx: commands.Context):
         """Manage sponsors and donations"""
         await util.command_group_help(ctx)
 
     @donator.command(name="addsingle")
-    async def donator_addsingle(self, ctx, user: nextcord.User, platform, amount: float, ts=None):
+    async def donator_addsingle(
+        self, ctx: commands.Context, user: nextcord.User, platform, amount: float, ts=None
+    ):
         """Add a new single time donation"""
         if ts is None:
             ts = arrow.utcnow().datetime
@@ -122,13 +124,13 @@ class Owner(commands.Cog):
         )
 
     @donator.command(name="remove")
-    async def donator_remove(self, ctx, user: nextcord.User):
+    async def donator_remove(self, ctx: commands.Context, user: nextcord.User):
         """Remove a donator"""
         await self.bot.db.execute("DELETE FROM donator WHERE user_id = %s", user.id)
         await util.send_success(ctx, f"Removed **{user}** from the donators list.")
 
     @donator.command(name="toggle")
-    async def donator_toggle(self, ctx, user: nextcord.User):
+    async def donator_toggle(self, ctx: commands.Context, user: nextcord.User):
         """Toggle user's donator status"""
         await self.bot.db.execute(
             "UPDATE donator SET currently_active = !currently_active WHERE user_id = %s",
@@ -137,7 +139,7 @@ class Owner(commands.Cog):
         await util.send_success(ctx, f"**{user}** donator status changed.")
 
     @donator.command(name="tier")
-    async def donator_tier(self, ctx, user: nextcord.User, new_tier: int):
+    async def donator_tier(self, ctx: commands.Context, user: nextcord.User, new_tier: int):
         """Change user's donation tier"""
         await self.bot.db.execute(
             "UPDATE donator SET donation_tier = %s WHERE user_id = %s",
@@ -148,7 +150,7 @@ class Owner(commands.Cog):
 
     @commands.command(name="db", aliases=["dbe", "dbq"])
     @commands.is_owner()
-    async def database_query(self, ctx, *, statement):
+    async def database_query(self, ctx: commands.Context, *, statement):
         """Execute something against the local MariaDB instance"""
         data = await self.bot.db.execute(statement)
         try:
@@ -189,7 +191,7 @@ class Owner(commands.Cog):
             asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions))
 
     @commands.command(aliases=["fmban"])
-    async def fmflag(self, ctx, lastfm_username, *, reason):
+    async def fmflag(self, ctx: commands.Context, lastfm_username, *, reason):
         """Flag LastFM account as a cheater"""
         await self.bot.db.execute(
             "INSERT INTO lastfm_cheater VALUES(%s, %s, %s)",
@@ -200,7 +202,7 @@ class Owner(commands.Cog):
         await util.send_success(ctx, f"Flagged LastFM profile `{lastfm_username}` as a cheater.")
 
     @commands.command(aliases=["fmunban"])
-    async def fmunflag(self, ctx, lastfm_username):
+    async def fmunflag(self, ctx: commands.Context, lastfm_username):
         """Remove cheater flag from an LastFM account"""
         await self.bot.db.execute(
             "DELETE FROM lastfm_cheater WHERE lastfm_username = %s",

@@ -16,12 +16,12 @@ class Rolepicker(commands.Cog):
     @commands.group(case_insensitive=True)
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
-    async def rolepicker(self, ctx):
+    async def rolepicker(self, ctx: commands.Context):
         """Manage the rolepicker"""
         await util.command_group_help(ctx)
 
     @rolepicker.command(name="add")
-    async def rolepicker_add(self, ctx, role: nextcord.Role, *, name):
+    async def rolepicker_add(self, ctx: commands.Context, role: nextcord.Role, *, name):
         """Add a role to the rolepicker"""
         await self.bot.db.execute(
             """
@@ -40,7 +40,7 @@ class Rolepicker(commands.Cog):
         )
 
     @rolepicker.command(name="remove")
-    async def rolepicker_remove(self, ctx, *, name):
+    async def rolepicker_remove(self, ctx: commands.Context, *, name):
         """Remove a role from the rolepicker"""
         role_id = await self.bot.db.execute(
             """
@@ -66,7 +66,7 @@ class Rolepicker(commands.Cog):
         )
 
     @rolepicker.command(name="channel")
-    async def rolepicker_channel(self, ctx, channel: nextcord.TextChannel):
+    async def rolepicker_channel(self, ctx: commands.Context, channel: nextcord.TextChannel):
         """Set the channel you want to add and remove roles in"""
         await queries.update_setting(ctx, "rolepicker_settings", "channel_id", channel.id)
         self.bot.cache.rolepickers.add(channel.id)
@@ -77,7 +77,7 @@ class Rolepicker(commands.Cog):
         )
 
     @rolepicker.command(name="list")
-    async def rolepicker_list(self, ctx):
+    async def rolepicker_list(self, ctx: commands.Context):
         """List all the roles currently available for picking"""
         data = await self.bot.db.execute(
             """
@@ -101,7 +101,7 @@ class Rolepicker(commands.Cog):
             await ctx.send(embed=content)
 
     @rolepicker.command(name="enabled")
-    async def rolepicker_enabled(self, ctx, value: bool):
+    async def rolepicker_enabled(self, ctx: commands.Context, value: bool):
         """Enable or disable the rolepicker"""
         await queries.update_setting(ctx, "rolepicker_settings", "is_enabled", value)
         await util.send_success(ctx, f"Rolepicker is now **{'enabled' if value else 'disabled'}**")

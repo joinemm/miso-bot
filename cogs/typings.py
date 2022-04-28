@@ -34,12 +34,12 @@ class Typings(commands.Cog):
         return remainder != ""
 
     @commands.group()
-    async def typing(self, ctx):
+    async def typing(self, ctx: commands.Context):
         """Test your typing speed"""
         await util.command_group_help(ctx)
 
     @typing.command(name="test")
-    async def typing_test(self, ctx, language=None, wordcount: int = 25):
+    async def typing_test(self, ctx: commands.Context, language=None, wordcount: int = 25):
         """Take a typing test"""
         if language is None:
             language = wordcount
@@ -88,7 +88,7 @@ class Typings(commands.Cog):
                 )
 
     @typing.command(name="race")
-    async def typing_race(self, ctx, language=None, wordcount: int = 25):
+    async def typing_race(self, ctx: commands.Context, language=None, wordcount: int = 25):
         """Challenge your friends into a typing race"""
         if language is None:
             language = wordcount
@@ -260,7 +260,7 @@ class Typings(commands.Cog):
             return player, wpm, accuracy
 
     @typing.command(name="history")
-    async def typing_history(self, ctx, member: nextcord.Member = None):
+    async def typing_history(self, ctx: commands.Context, member: nextcord.Member = None):
         """See your typing test history"""
         if member is None:
             member = ctx.author
@@ -293,7 +293,7 @@ class Typings(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @typing.command(name="cleardata")
-    async def typing_clear(self, ctx):
+    async def typing_clear(self, ctx: commands.Context):
         """Clear your typing data"""
         content = nextcord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
         content.description = (
@@ -321,7 +321,7 @@ class Typings(commands.Cog):
         )
 
     @typing.command(name="stats")
-    async def typing_stats(self, ctx, user: nextcord.Member = None):
+    async def typing_stats(self, ctx: commands.Context, user: nextcord.Member = None):
         """See your typing statistics"""
         if user is None:
             user = ctx.author

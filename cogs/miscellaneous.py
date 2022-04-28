@@ -79,7 +79,7 @@ class Miscellaneous(commands.Cog):
         }
 
     @commands.command(aliases=["random"], usage="<n>-[m]")
-    async def rng(self, ctx, *, number_range):
+    async def rng(self, ctx: commands.Context, *, number_range):
         """Random number generator
 
         Usage:
@@ -99,7 +99,7 @@ class Miscellaneous(commands.Cog):
         await ctx.send(f"Random range `{start}-{end}`\n> **{choice}**")
 
     @commands.command(name="ascii")
-    async def ascii_text(self, ctx, *, text):
+    async def ascii_text(self, ctx: commands.Context, *, text):
         """Turn text into fancy ascii art"""
         font = "small"
         async with aiohttp.ClientSession() as session:
@@ -111,7 +111,7 @@ class Miscellaneous(commands.Cog):
         await ctx.send(f"```\n{content}\n```")
 
     @commands.command(aliases=["8ball"])
-    async def eightball(self, ctx, *, question):
+    async def eightball(self, ctx: commands.Context, *, question):
         """Ask a yes/no question"""
         choices = [
             # yes
@@ -138,7 +138,7 @@ class Miscellaneous(commands.Cog):
         await ctx.send(f"> {question}\n**{answer}**")
 
     @commands.command()
-    async def choose(self, ctx, *, choices):
+    async def choose(self, ctx: commands.Context, *, choices):
         """Choose from given options.
 
         Usage:
@@ -153,7 +153,7 @@ class Miscellaneous(commands.Cog):
         await ctx.send(f"I choose **{choice}**")
 
     @commands.command()
-    async def ship(self, ctx, *, names):
+    async def ship(self, ctx: commands.Context, *, names):
         """Ship two names and get your chance for succesful love.
 
         Usage:
@@ -241,7 +241,7 @@ class Miscellaneous(commands.Cog):
 
     @commands.command(aliases=["mc"])
     @commands.guild_only()
-    async def minecraft(self, ctx, address=None, port=None):
+    async def minecraft(self, ctx: commands.Context, address=None, port=None):
         """Get the status of a minecraft server"""
         if address == "set":
             if port is None:
@@ -311,27 +311,27 @@ class Miscellaneous(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def clap(self, ctx, *sentence):
+    async def clap(self, ctx: commands.Context, *sentence):
         """Add a clap emoji between words"""
         await ctx.send(" 👏 ".join(sentence) + " 👏")
 
     @commands.group(aliases=["hs"])
-    async def horoscope(self, ctx):
+    async def horoscope(self, ctx: commands.Context):
         """Get your daily horoscope"""
         if ctx.invoked_subcommand is None:
             await self.send_hs(ctx, "today")
 
     @horoscope.command(name="tomorrow")
-    async def horoscope_tomorrow(self, ctx):
+    async def horoscope_tomorrow(self, ctx: commands.Context):
         """Get tomorrow's horoscope"""
         await self.send_hs(ctx, "tomorrow")
 
     @horoscope.command(name="yesterday")
-    async def horoscope_yesterday(self, ctx):
+    async def horoscope_yesterday(self, ctx: commands.Context):
         """Get yesterday's horoscope"""
         await self.send_hs(ctx, "yesterday")
 
-    async def send_hs(self, ctx, day):
+    async def send_hs(self, ctx: commands.Context, day):
         sunsign = await self.bot.db.execute(
             "SELECT sunsign FROM user_settings WHERE user_id = %s",
             ctx.author.id,
@@ -366,7 +366,7 @@ class Miscellaneous(commands.Cog):
         await ctx.send(embed=content)
 
     @horoscope.command(name="set")
-    async def horoscope_set(self, ctx, sign):
+    async def horoscope_set(self, ctx: commands.Context, sign):
         """Save your zodiac sign"""
         sign = sign.lower()
         if self.hs.get(sign) is None:
@@ -387,7 +387,7 @@ class Miscellaneous(commands.Cog):
         await ctx.send(f"Zodiac saved as **{sign.capitalize()}** {self.hs.get(sign)['emoji']}")
 
     @horoscope.command(name="list")
-    async def horoscope_list(self, ctx):
+    async def horoscope_list(self, ctx: commands.Context):
         """Get list of all zodiac signs"""
         content = nextcord.Embed(
             color=int("9266cc", 16),
@@ -400,7 +400,7 @@ class Miscellaneous(commands.Cog):
         return await ctx.send(embed=content)
 
     @commands.command(aliases=["colour"], usage="<hex | @member | @role | 'random' | url> ...")
-    async def color(self, ctx, *sources):
+    async def color(self, ctx: commands.Context, *sources):
         """
         Visualise colors
 
@@ -493,7 +493,7 @@ class Miscellaneous(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(name="emoji", aliases=["emote"])
-    async def big_emoji(self, ctx, emoji):
+    async def big_emoji(self, ctx: commands.Context, emoji):
         """
         Get source image and stats of an emoji
 
@@ -538,7 +538,7 @@ class Miscellaneous(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def emojify(self, ctx, *, text):
+    async def emojify(self, ctx: commands.Context, *, text):
         """Emojify your message"""
         request_data = {"density": 100, "input": text, "shouldFilterEmojis": False}
         async with aiohttp.ClientSession() as session:

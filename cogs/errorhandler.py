@@ -43,7 +43,9 @@ class ErrorHander(commands.Cog):
             },
         }
 
-    async def send(self, ctx, level, message, help_footer=None, codeblock=False, **kwargs):
+    async def send(
+        self, ctx: commands.Context, level, message, help_footer=None, codeblock=False, **kwargs
+    ):
         """Send error message to chat"""
         settings = self.message_levels.get(level)
         if codeblock:
@@ -63,14 +65,14 @@ class ErrorHander(commands.Cog):
         except nextcord.errors.Forbidden:
             self.bot.logger.warning("Forbidden when trying to send error message embed")
 
-    async def log_and_traceback(self, ctx, error):
+    async def log_and_traceback(self, ctx: commands.Context, error):
         logger.error(f'Unhandled exception in command "{ctx.message.content}":')
         exc = "".join(traceback.format_exception(type(error), error, error.__traceback__))
         logger.error(exc)
         await self.send(ctx, "error", f"{type(error).__name__}: {error}", codeblock=True)
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
+    async def on_command_error(self, ctx: commands.Context, error):
         """The event triggered when an error is raised while invoking a command"""
         # ignore if command has it's own error handler
         if hasattr(ctx.command, "on_error"):

@@ -102,7 +102,7 @@ class Mod(commands.Cog):
     @commands.command(aliases=["clean"], usage="<amount> [@mentions...]")
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
-    async def purge(self, ctx, amount: int):
+    async def purge(self, ctx: commands.Context, amount: int):
         """
         Delete given amount of messages in the current channel
 
@@ -138,7 +138,7 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(moderate_members=True)
-    async def timeout(self, ctx, member: nextcord.Member, *, duration="1 hour"):
+    async def timeout(self, ctx: commands.Context, member: nextcord.Member, *, duration="1 hour"):
         """Timeout user. Pass 'remove' as the duration to remove"""
         if member.timeout is not None:
             seconds = member.timeout.timestamp() - arrow.now().int_timestamp
@@ -160,7 +160,7 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
-    async def mute(self, ctx, member: nextcord.Member, *, duration=None):
+    async def mute(self, ctx: commands.Context, member: nextcord.Member, *, duration=None):
         """Mute user"""
         mute_role_id = await self.bot.db.execute(
             """
@@ -225,7 +225,7 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
-    async def unmute(self, ctx, member: nextcord.Member):
+    async def unmute(self, ctx: commands.Context, member: nextcord.Member):
         """Unmute user"""
         mute_role_id = await self.bot.db.execute(
             """
@@ -256,7 +256,7 @@ class Mod(commands.Cog):
         self.cache_needs_refreshing = True
 
     @commands.command()
-    async def inspect(self, ctx, *ids: int):
+    async def inspect(self, ctx: commands.Context, *ids: int):
         """Resolve user ids into usernames"""
         if len(ids) > 25:
             raise exceptions.Warning("Only 25 at a time please!")
@@ -282,7 +282,7 @@ class Mod(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(ban_members=True)
-    async def fastban(self, ctx, *discord_users):
+    async def fastban(self, ctx: commands.Context, *discord_users):
         """Ban user(s) without confirmation box"""
         if not discord_users:
             return await util.send_command_help(ctx)
@@ -322,7 +322,7 @@ class Mod(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(ban_members=True)
-    async def ban(self, ctx, *discord_users):
+    async def ban(self, ctx: commands.Context, *discord_users):
         """Ban user(s)"""
         if not discord_users:
             return await util.send_command_help(ctx)
@@ -373,7 +373,7 @@ class Mod(commands.Cog):
                     )
                 )
 
-    async def send_ban_confirmation(self, ctx, user):
+    async def send_ban_confirmation(self, ctx: commands.Context, user):
         content = nextcord.Embed(title=":hammer: Ban user?", color=int("f4900c", 16))
         content.description = f"{user.mention}\n**{user.name}#{user.discriminator}**\n{user.id}"
         msg = await ctx.send(embed=content)

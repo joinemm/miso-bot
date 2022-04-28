@@ -59,7 +59,7 @@ class CustomCommands(commands.Cog, name="Commands"):
 
         return command_list
 
-    async def can_add_commands(self, ctx):
+    async def can_add_commands(self, ctx: commands.Context):
         """Checks if guild is restricting command adding and whether the current user can add commands"""
         if not ctx.author.guild_permissions.manage_guild and await self.bot.db.execute(
             "SELECT restrict_custom_commands FROM guild_settings WHERE guild_id = %s",
@@ -71,7 +71,7 @@ class CustomCommands(commands.Cog, name="Commands"):
         return True
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
+    async def on_command_error(self, ctx: commands.Context, error):
         """Check for custom commands on CommandNotFound"""
         # no custom commands in DMs
         if ctx.guild is None:
@@ -104,12 +104,12 @@ class CustomCommands(commands.Cog, name="Commands"):
 
     @commands.group(aliases=["cmd"])
     @commands.guild_only()
-    async def command(self, ctx):
+    async def command(self, ctx: commands.Context):
         """Manage server specific custom commmands"""
         await util.command_group_help(ctx)
 
     @command.command()
-    async def add(self, ctx, name, *, response):
+    async def add(self, ctx: commands.Context, name, *, response):
         """Add a new custom command"""
         if not await self.can_add_commands(ctx):
             raise commands.MissingPermissions(["manage_server"])
@@ -140,7 +140,7 @@ class CustomCommands(commands.Cog, name="Commands"):
         )
 
     @command.command(name="remove")
-    async def command_remove(self, ctx, name):
+    async def command_remove(self, ctx: commands.Context, name):
         """Remove a custom command"""
         owner_id = await self.bot.db.execute(
             "SELECT added_by FROM custom_command WHERE command_trigger = %s AND guild_id = %s",
@@ -169,7 +169,7 @@ class CustomCommands(commands.Cog, name="Commands"):
         await util.send_success(ctx, f"Custom command `{ctx.prefix}{name}` has been deleted")
 
     @command.command(name="search")
-    async def command_search(self, ctx, name):
+    async def command_search(self, ctx: commands.Context, name):
         """Search for a command"""
         content = nextcord.Embed()
 
@@ -191,7 +191,7 @@ class CustomCommands(commands.Cog, name="Commands"):
             await ctx.send("**Found nothing!**")
 
     @command.command(name="list")
-    async def command_list(self, ctx):
+    async def command_list(self, ctx: commands.Context):
         """List all commands on this server"""
         rows = []
         for command in await self.custom_command_list(ctx.guild.id):
@@ -205,7 +205,7 @@ class CustomCommands(commands.Cog, name="Commands"):
 
     @command.command(name="restrict")
     @commands.has_permissions(manage_guild=True)
-    async def command_restrict(self, ctx, value: bool):
+    async def command_restrict(self, ctx: commands.Context, value: bool):
         """Restrict command management to only people with manage_server permission"""
         await queries.update_setting(ctx, "guild_settings", "restrict_custom_commands", value)
         if value:
@@ -220,7 +220,7 @@ class CustomCommands(commands.Cog, name="Commands"):
 
     @command.command(name="clear")
     @commands.has_permissions(manage_guild=True)
-    async def command_clear(self, ctx):
+    async def command_clear(self, ctx: commands.Context):
         """Delete all custom commands on this server"""
         count = (
             await self.bot.db.execute(

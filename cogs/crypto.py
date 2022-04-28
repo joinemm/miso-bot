@@ -35,12 +35,14 @@ class Cryptocurrency(commands.Cog):
         ]
 
     @commands.group()
-    async def crypto(self, ctx):
+    async def crypto(self, ctx: commands.Context):
         """Cryptocurrency price data"""
         await util.command_group_help(ctx)
 
     @crypto.command()
-    async def chart(self, ctx, coin, pair="USDT", interval="1h", limit: int = 50):
+    async def chart(
+        self, ctx: commands.Context, coin, pair="USDT", interval="1h", limit: int = 50
+    ):
         """Generates candlestick chart for a given cryptocurrency pair"""
         if interval not in self.binance_intervals:
             raise exceptions.Error("Invalid interval.")
@@ -80,7 +82,7 @@ class Cryptocurrency(commands.Cog):
         await ctx.send(file=nextcord.File(fp=buffer, filename=f"candlestick_{coin}_{pair}.png"))
 
     @crypto.command()
-    async def price(self, ctx, coin, pair="USDT"):
+    async def price(self, ctx: commands.Context, coin, pair="USDT"):
         """See the current price and 24h statistics of cryptocurrency pair"""
         symbol = (coin + pair).upper()
         url = "https://api.binance.com/api/v3/ticker/24hr"

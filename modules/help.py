@@ -106,7 +106,7 @@ class EmbedHelpCommand(commands.HelpCommand):
 
         await self.get_destination().send(embed=embed)
 
-    async def group_help_brief(self, ctx, group):
+    async def group_help_brief(self, ctx: commands.Context, group):
         embed = nextcord.Embed(colour=self.COLOUR)
         embed.description = "`" + ctx.prefix + group.qualified_name
         embed.description += f" [{' | '.join(c.name for c in group.commands)}]`"

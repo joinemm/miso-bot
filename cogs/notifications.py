@@ -123,12 +123,12 @@ class Notifications(commands.Cog):
                 asyncio.ensure_future(self.send_notification(member, message, users_words))
 
     @commands.group(case_insensitive=True, aliases=["noti", "notif"])
-    async def notification(self, ctx):
+    async def notification(self, ctx: commands.Context):
         """Manage your keyword notifications on this server"""
         await util.command_group_help(ctx)
 
     @notification.command(name="add")
-    async def notification_add(self, ctx, *, keyword):
+    async def notification_add(self, ctx: commands.Context, *, keyword):
         """Add a notification keyword"""
         if ctx.guild is None:
             raise exceptions.Warning(
@@ -190,7 +190,7 @@ class Notifications(commands.Cog):
         await util.send_success(ctx, f"New notification set! Check your DM {emojis.VIVISMIRK}")
 
     @notification.command(name="remove")
-    async def notification_remove(self, ctx, *, keyword):
+    async def notification_remove(self, ctx: commands.Context, *, keyword):
         """Remove a notification keyword"""
         if ctx.guild is None:
             raise exceptions.Warning(
@@ -237,7 +237,7 @@ class Notifications(commands.Cog):
         await util.send_success(ctx, f"Removed a notification! Check your DM {emojis.VIVISMIRK}")
 
     @notification.command(name="list")
-    async def notification_list(self, ctx):
+    async def notification_list(self, ctx: commands.Context):
         """List your current notifications"""
         words = await self.bot.db.execute(
             """
@@ -271,7 +271,7 @@ class Notifications(commands.Cog):
             await util.send_success(ctx, f"Notification list sent to your DM {emojis.VIVISMIRK}")
 
     @notification.command(name="clear")
-    async def notification_clear(self, ctx):
+    async def notification_clear(self, ctx: commands.Context):
         """
         Clears all your notifications on this server
         Use in DMs to clear every server.
@@ -292,7 +292,7 @@ class Notifications(commands.Cog):
         await self.create_cache()
 
     @notification.command(name="test")
-    async def notification_test(self, ctx, message: nextcord.Message = None):
+    async def notification_test(self, ctx: commands.Context, message: nextcord.Message = None):
         """
         Test if Miso can send you a notification
         If supplied with a message id, will check if you would have been notified by it.

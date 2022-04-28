@@ -57,12 +57,12 @@ class Kpop(commands.Cog):
         return ""
 
     @commands.group(case_insensitive=True)
-    async def idol(self, ctx):
+    async def idol(self, ctx: commands.Context):
         """Kpop idols database"""
         await util.command_group_help(ctx)
 
     @idol.command()
-    async def birthdays(self, ctx, month: int, day: int):
+    async def birthdays(self, ctx: commands.Context, month: int, day: int):
         dt = datetime.date(month=month, day=day, year=2020)
         idol_data = await self.bot.db.execute(
             """
@@ -87,7 +87,7 @@ class Kpop(commands.Cog):
             await util.send_as_pages(ctx, content, rows)
 
     @idol.command()
-    async def random(self, ctx, gender=None):
+    async def random(self, ctx: commands.Context, gender=None):
         """Get a random kpop idol"""
         gender = get_gender(gender)
 
@@ -102,7 +102,7 @@ class Kpop(commands.Cog):
         chosen_id = random.choice(idol_id_list)
         await self.send_idol(ctx, chosen_id)
 
-    async def send_idol(self, ctx, idol_id):
+    async def send_idol(self, ctx: commands.Context, idol_id):
         idol_data = await self.bot.db.execute(
             """
             SELECT idol_id, full_name, stage_name, korean_name, korean_stage_name,
@@ -176,7 +176,7 @@ class Kpop(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.group(invoke_without_command=True)
-    async def stan(self, ctx):
+    async def stan(self, ctx: commands.Context):
         """Get a random kpop artist to stan"""
         if self.artist_list:
             await ctx.send(f"stan **{random.choice(self.artist_list)}**")
@@ -185,7 +185,7 @@ class Kpop(commands.Cog):
 
     @commands.is_owner()
     @stan.command(hidden=True)
-    async def update(self, ctx):
+    async def update(self, ctx: commands.Context):
         """Update the artist database"""
         artist_list_new = set()
         urls_to_scrape = [

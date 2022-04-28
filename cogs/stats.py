@@ -12,7 +12,7 @@ class StatcordPost(commands.Cog):
         self.api.start_loop()
 
     @commands.Cog.listener()
-    async def on_command(self, ctx):
+    async def on_command(self, ctx: commands.Context):
         self.api.command_run(ctx)
 
 

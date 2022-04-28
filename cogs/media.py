@@ -69,12 +69,12 @@ class Media(commands.Cog):
         self.user_agents = UserAgent()
 
     @commands.group(aliases=["league"], case_insensitive=True, enabled=False)
-    async def opgg(self, ctx):
+    async def opgg(self, ctx: commands.Context):
         """League of legends stats"""
         await util.command_group_help(ctx)
 
     @opgg.command()
-    async def profile(self, ctx, region, *, summoner_name):
+    async def profile(self, ctx: commands.Context, region, *, summoner_name):
         """See your op.gg profile"""
         parsed_region = self.regions.get(region.lower())
         if parsed_region is None:
@@ -143,7 +143,7 @@ class Media(commands.Cog):
         await ctx.send(embed=content)
 
     @opgg.command()
-    async def nowplaying(self, ctx, region, *, summoner_name):
+    async def nowplaying(self, ctx: commands.Context, region, *, summoner_name):
         """Show your current game"""
         parsed_region = self.regions.get(region.lower())
         if parsed_region is None:
@@ -182,7 +182,7 @@ class Media(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["yt"])
-    async def youtube(self, ctx, *, query):
+    async def youtube(self, ctx: commands.Context, *, query):
         """Search for videos from youtube"""
         url = "https://www.googleapis.com/youtube/v3/search"
         params = {
@@ -211,7 +211,7 @@ class Media(commands.Cog):
         )
 
     @commands.command(aliases=["ig", "insta"], usage="<links...> '-d'")
-    async def instagram(self, ctx, *links):
+    async def instagram(self, ctx: commands.Context, *links):
         """Retrieve images from one or more instagram posts"""
         urls = []
         download = False
@@ -348,7 +348,7 @@ class Media(commands.Cog):
             pass
 
     @commands.command(aliases=["twt"], usage="<links...> '-d'")
-    async def twitter(self, ctx, *links):
+    async def twitter(self, ctx: commands.Context, *links):
         """Retrieve images from one or more tweets"""
         urls = []
         download = False
@@ -476,7 +476,7 @@ class Media(commands.Cog):
             pass
 
     @commands.command(aliases=["gif", "gfy"])
-    async def gfycat(self, ctx, *, query):
+    async def gfycat(self, ctx: commands.Context, *, query):
         """Search for a gfycat gif"""
         scripts = []
         async with aiohttp.ClientSession() as session:
@@ -512,7 +512,7 @@ class Media(commands.Cog):
         asyncio.ensure_future(util.reaction_buttons(ctx, msg, buttons, only_author=True))
 
     @commands.command(usage="<day | month | realtime | rising>")
-    async def melon(self, ctx, timeframe):
+    async def melon(self, ctx: commands.Context, timeframe):
         """Melon music charts"""
         if timeframe not in ["day", "month"]:
             if timeframe == "realtime":
@@ -564,7 +564,7 @@ class Media(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
-    async def xkcd(self, ctx, comic_id=None):
+    async def xkcd(self, ctx: commands.Context, comic_id=None):
         """Get a random xkcd comic"""
         if comic_id is None:
             async with aiohttp.ClientSession() as session:

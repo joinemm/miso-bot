@@ -22,7 +22,7 @@ class Information(commands.Cog):
         self.icon = "ℹ️"
 
     @commands.command()
-    async def invite(self, ctx):
+    async def invite(self, ctx: commands.Context):
         """Invite Miso to your server!"""
         url = nextcord.utils.oauth_url(
             "500385855072894982", permissions=nextcord.Permissions(1074654407)
@@ -36,12 +36,12 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def github(self, ctx):
+    async def github(self, ctx: commands.Context):
         """See the bot's source code"""
         await ctx.send("https://github.com/joinemm/miso-bot")
 
     @commands.command(aliases=["patreon", "kofi", "sponsor", "ko-fi"])
-    async def donate(self, ctx):
+    async def donate(self, ctx: commands.Context):
         """Donate to keep the bot running!"""
         content = nextcord.Embed(
             title="Consider donating to help keep Miso Bot online!",
@@ -59,7 +59,7 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["patrons", "supporters", "sponsors"])
-    async def donators(self, ctx):
+    async def donators(self, ctx: commands.Context):
         """See all of the people who have donated"""
         patrons = await self.bot.db.execute(
             """
@@ -106,7 +106,7 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(name="info")
-    async def info(self, ctx):
+    async def info(self, ctx: commands.Context):
         """Get information about the bot"""
         membercount = len(set(self.bot.get_all_members()))
         content = nextcord.Embed(
@@ -133,7 +133,7 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def ping(self, ctx):
+    async def ping(self, ctx: commands.Context):
         """Get the bot's ping"""
         test_message = await ctx.send(":ping_pong:")
         cmd_lat = (test_message.created_at - ctx.message.created_at).total_seconds() * 1000
@@ -146,7 +146,7 @@ class Information(commands.Cog):
         await test_message.edit(content="", embed=content)
 
     @commands.command(aliases=["status"])
-    async def system(self, ctx):
+    async def system(self, ctx: commands.Context):
         """Get status of the host system"""
         process_uptime = time.time() - self.bot.start_time
         system_uptime = time.time() - psutil.boot_time()
@@ -171,7 +171,7 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["shards"])
-    async def shardinfo(self, ctx):
+    async def shardinfo(self, ctx: commands.Context):
         """Get information about the current shards"""
         content = nextcord.Embed(title=f"Running {len(self.bot.shards)} shards")
         for shard in self.bot.shards.values():
@@ -184,7 +184,7 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def changelog(self, ctx, author="joinemm", repo="miso-bot"):
+    async def changelog(self, ctx: commands.Context, author="joinemm", repo="miso-bot"):
         """See github commit history"""
         data = await get_commits(author, repo)
         content = nextcord.Embed(color=nextcord.Color.from_rgb(46, 188, 79))
@@ -220,7 +220,7 @@ class Information(commands.Cog):
         await util.page_switcher(ctx, pages)
 
     @commands.command()
-    async def emojistats(self, ctx, user: nextcord.Member = None, *args):
+    async def emojistats(self, ctx: commands.Context, user: nextcord.Member = None, *args):
         """See most used emojis on the server, optionally filtered by user"""
         global_user = False
         if "global" in [x.lower() for x in args] and user is not None:
@@ -299,7 +299,7 @@ class Information(commands.Cog):
         await util.send_as_pages(ctx, content, rows, maxrows=15)
 
     @commands.group(usage="[command]")
-    async def commandstats(self, ctx):
+    async def commandstats(self, ctx: commands.Context):
         """See command usage statistics"""
         if ctx.invoked_subcommand is None:
             args = ctx.message.content.split()[1:]
@@ -309,7 +309,7 @@ class Information(commands.Cog):
                 await self.commandstats_single(ctx, " ".join(args))
 
     @commandstats.command(name="server")
-    async def commandstats_server(self, ctx, user: nextcord.Member = None):
+    async def commandstats_server(self, ctx: commands.Context, user: nextcord.Member = None):
         """Most used commands in this server"""
         content = nextcord.Embed(
             title=f":bar_chart: Most used commands in {ctx.guild.name}"
@@ -350,7 +350,7 @@ class Information(commands.Cog):
             await ctx.send(embed=content)
 
     @commandstats.command(name="global")
-    async def commandstats_global(self, ctx, user: nextcord.Member = None):
+    async def commandstats_global(self, ctx: commands.Context, user: nextcord.Member = None):
         """Most used commands globally"""
         content = nextcord.Embed(
             title=":bar_chart: Most used commands" + ("" if user is None else f" by {user}")
@@ -387,7 +387,7 @@ class Information(commands.Cog):
             content.description = "No data :("
             await ctx.send(embed=content)
 
-    async def commandstats_single(self, ctx, command_name):
+    async def commandstats_single(self, ctx: commands.Context, command_name):
         """Stats of a single command"""
         command = self.bot.get_command(command_name)
         if command is None:
@@ -481,7 +481,7 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["serverdp", "sdp", "guildicon"])
-    async def servericon(self, ctx, guild: int = None):
+    async def servericon(self, ctx: commands.Context, guild: int = None):
         """Get the icon of the server"""
         if guild is not None:
             guild = self.bot.get_guild(guild)
@@ -505,7 +505,7 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(hidden=True)
-    async def stats(self, ctx):
+    async def stats(self, ctx: commands.Context):
         """See bot stats"""
         content = nextcord.Embed(
             title=":bar_chart: Events since last reboot",
@@ -517,7 +517,7 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(hidden=True)
-    async def statsgraph(self, ctx, stat, hours: int = 24):
+    async def statsgraph(self, ctx: commands.Context, stat, hours: int = 24):
         """Show various stat graphs"""
         stat = stat.lower()
         available = [

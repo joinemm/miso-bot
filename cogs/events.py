@@ -182,7 +182,7 @@ class Events(commands.Cog):
             )
 
     @commands.Cog.listener()
-    async def on_command_completion(self, ctx):
+    async def on_command_completion(self, ctx: commands.Context):
         """Runs when any command is completed succesfully"""
         # prevent double invocation for subcommands
         if ctx.invoked_subcommand is None:

@@ -40,12 +40,12 @@ class Reddit(commands.Cog):
     # COMMANDS
 
     @commands.group(name="reddit")
-    async def reddit(self, ctx):
+    async def reddit(self, ctx: commands.Context):
         """Get content from reddit"""
         await util.command_group_help(ctx)
 
     @reddit.command(name="random", aliases=["r"])
-    async def reddit_random(self, ctx, subreddit, *, options):
+    async def reddit_random(self, ctx: commands.Context, subreddit, *, options):
         """Get random post from given subreddit"""
         images = "-i" in options
         subreddit = await self.client.subreddit(subreddit.lower())
@@ -81,7 +81,7 @@ class Reddit(commands.Cog):
         await self.send_post(ctx, subreddit, post, f"Random post from r/{subreddit}")
 
     @reddit.command(name="hot", aliases=["h"])
-    async def reddit_hot(self, ctx, subreddit, number="1"):
+    async def reddit_hot(self, ctx: commands.Context, subreddit, number="1"):
         """Get hot post from given subreddit"""
         if not await self.check_n(ctx, number):
             return
@@ -92,7 +92,9 @@ class Reddit(commands.Cog):
         await self.send_post(ctx, subreddit, post, f"#{number} hottest post from r/{subreddit}")
 
     @reddit.command(name="controversial", aliases=["c"])
-    async def reddit_controversial(self, ctx, subreddit, number="1", timespan="all"):
+    async def reddit_controversial(
+        self, ctx: commands.Context, subreddit, number="1", timespan="all"
+    ):
         """Get controversial post from given subreddit"""
         timespan = await self.check_ts(ctx, timespan)
         if timespan is None or not await self.check_n(ctx, number):
@@ -109,7 +111,7 @@ class Reddit(commands.Cog):
         )
 
     @reddit.command(name="top", aliases=["t"])
-    async def reddit_top(self, ctx, subreddit, number="1", timespan="all"):
+    async def reddit_top(self, ctx: commands.Context, subreddit, number="1", timespan="all"):
         """Get top post from given subreddit"""
         timespan = await self.check_ts(ctx, timespan)
         if timespan is None or not await self.check_n(ctx, number):
@@ -126,7 +128,7 @@ class Reddit(commands.Cog):
         )
 
     @reddit.command(name="new", aliases=["n"])
-    async def reddit_new(self, ctx, subreddit, number="1"):
+    async def reddit_new(self, ctx: commands.Context, subreddit, number="1"):
         """Get new post from given subreddit"""
         if not await self.check_n(ctx, number):
             return
@@ -138,7 +140,7 @@ class Reddit(commands.Cog):
 
     # FUNCTIONS
 
-    async def send_post(self, ctx, subreddit, post, footer=""):
+    async def send_post(self, ctx: commands.Context, subreddit, post, footer=""):
         """Checks for eligibility for sending submission and sends it"""
         try:
             await subreddit.load()
@@ -223,7 +225,7 @@ class Reddit(commands.Cog):
         content.description += suffix
         return content, message_text
 
-    async def check_ts(self, ctx, timespan):
+    async def check_ts(self, ctx: commands.Context, timespan):
         """Validates timespan argument"""
         timespan = timespan.lower()
         if timespan not in self.timespans:
@@ -233,7 +235,7 @@ class Reddit(commands.Cog):
             return None
         return timespan
 
-    async def check_n(self, ctx, number):
+    async def check_n(self, ctx: commands.Context, number):
         """Validates number argument"""
         try:
             number = int(number)

@@ -81,7 +81,7 @@ class LastFm(commands.Cog):
             self.chart_html = file.read().replace("\n", "")
 
     @commands.group(case_insensitive=True, aliases=["lastfm"])
-    async def fm(self, ctx):
+    async def fm(self, ctx: commands.Context):
         """Interact with LastFM using your linked account"""
         await username_to_ctx(ctx)
 
@@ -89,7 +89,7 @@ class LastFm(commands.Cog):
             await util.command_group_help(ctx)
 
     @fm.command()
-    async def set(self, ctx, username):
+    async def set(self, ctx: commands.Context, username):
         """Save your Last.fm username"""
         if ctx.foreign_target:
             raise exceptions.Warning("You cannot set Last.fm username for someone else!")
@@ -114,7 +114,7 @@ class LastFm(commands.Cog):
         )
 
     @fm.command()
-    async def unset(self, ctx):
+    async def unset(self, ctx: commands.Context):
         """Unlink your Last.fm"""
         if ctx.foreign_target:
             raise exceptions.Warning("You cannot unset someone else's Last.fm username!")
@@ -132,12 +132,12 @@ class LastFm(commands.Cog):
         await ctx.send(":broken_heart: Removed your Last.fm username from the database")
 
     @fm.command()
-    async def profile(self, ctx):
+    async def profile(self, ctx: commands.Context):
         """See your Last.fm profile"""
         await ctx.send(embed=await self.get_userinfo_embed(ctx.username))
 
     @fm.command(aliases=["yt"])
-    async def youtube(self, ctx):
+    async def youtube(self, ctx: commands.Context):
         """See your current song on youtube"""
         data = await self.api_request(
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
@@ -176,12 +176,12 @@ class LastFm(commands.Cog):
         await ctx.send(f"**{username} — {state}** :cd:\n{video_url}")
 
     @fm.group()
-    async def voting(self, ctx):
+    async def voting(self, ctx: commands.Context):
         """Configure nowplaying voting reactions"""
         await util.command_group_help(ctx)
 
     @voting.command(name="enabled")
-    async def voting_enabled(self, ctx, value: bool):
+    async def voting_enabled(self, ctx: commands.Context, value: bool):
         """Toggle whether the voting is enabled for you or not"""
         await self.bot.db.execute(
             """
@@ -200,7 +200,7 @@ class LastFm(commands.Cog):
 
     @voting.command(name="upvote")
     @util.patrons_only()
-    async def voting_upvote(self, ctx, emoji):
+    async def voting_upvote(self, ctx: commands.Context, emoji):
         """Set the upvote emoji"""
         await ctx.message.add_reaction(emoji)
         await self.bot.db.execute(
@@ -217,7 +217,7 @@ class LastFm(commands.Cog):
 
     @voting.command(name="downvote")
     @util.patrons_only()
-    async def voting_downvote(self, ctx, emoji):
+    async def voting_downvote(self, ctx: commands.Context, emoji):
         """Set the downvote emoji"""
         await ctx.message.add_reaction(emoji)
         await self.bot.db.execute(
@@ -233,7 +233,7 @@ class LastFm(commands.Cog):
         await util.send_success(ctx, f"Your downvote reaction emoji is now {emoji}")
 
     @fm.command(aliases=["np", "no"])
-    async def nowplaying(self, ctx):
+    async def nowplaying(self, ctx: commands.Context):
         """See your currently playing song"""
         data = await self.api_request(
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
@@ -306,7 +306,7 @@ class LastFm(commands.Cog):
                 await message.add_reaction(downvote or "👎")
 
     @fm.command(aliases=["ta"], usage="[timeframe] [amount]")
-    async def topartists(self, ctx, *args):
+    async def topartists(self, ctx: commands.Context, *args):
         """See your most listened to artists"""
         arguments = parse_arguments(args)
         if arguments["period"] == "today":
@@ -347,7 +347,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @fm.command(aliases=["talb"], usage="[timeframe] [amount]")
-    async def topalbums(self, ctx, *args):
+    async def topalbums(self, ctx: commands.Context, *args):
         """See your most listened to albums"""
         arguments = parse_arguments(args)
         if arguments["period"] == "today":
@@ -391,7 +391,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @fm.command(aliases=["tt"], usage="[timeframe] [amount]")
-    async def toptracks(self, ctx, *args):
+    async def toptracks(self, ctx: commands.Context, *args):
         """See your most listened to tracks"""
         arguments = parse_arguments(args)
         if arguments["period"] == "today":
@@ -437,7 +437,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @fm.command(aliases=["recents", "re"])
-    async def recent(self, ctx, size: int = 15):
+    async def recent(self, ctx: commands.Context, size: int = 15):
         """Get your recently listened to tracks"""
         size = abs(size)
         data = await self.api_request(
@@ -469,7 +469,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @fm.command(usage="[timeframe] <toptracks | topartists | topalbums> <artist>")
-    async def artist(self, ctx, timeframe, datatype, *, artistname=""):
+    async def artist(self, ctx: commands.Context, timeframe, datatype, *, artistname=""):
         """
         Artist specific data.
 
@@ -541,7 +541,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @fm.command(name="cover")
-    async def cover(self, ctx):
+    async def cover(self, ctx: commands.Context):
         """See the full album cover of your current song"""
         data = await self.api_request(
             {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
@@ -561,7 +561,7 @@ class LastFm(commands.Cog):
                 )
 
     @fm.command(name="album")
-    async def album(self, ctx, *, album):
+    async def album(self, ctx: commands.Context, *, album):
         """Get your top tracks from an album"""
         period = "overall"
         if album is None:
@@ -621,7 +621,7 @@ class LastFm(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    async def album_top_tracks(self, ctx, period, artistname, albumname):
+    async def album_top_tracks(self, ctx: commands.Context, period, artistname, albumname):
         """Scrape the top tracks of given album from lastfm library page"""
         artistname = urllib.parse.quote_plus(artistname)
         albumname = urllib.parse.quote_plus(albumname)
@@ -652,7 +652,7 @@ class LastFm(commands.Cog):
 
             return album, all_results
 
-    async def artist_top(self, ctx, period, artistname, datatype):
+    async def artist_top(self, ctx: commands.Context, period, artistname, datatype):
         """Scrape either top tracks or top albums from lastfm library page"""
         artistname = urllib.parse.quote_plus(artistname)
         async with aiohttp.ClientSession() as session:
@@ -679,7 +679,7 @@ class LastFm(commands.Cog):
 
             return artist, all_results
 
-    async def artist_overview(self, ctx, period, artistname):
+    async def artist_overview(self, ctx: commands.Context, period, artistname):
         """Overall artist view"""
         albums = []
         tracks = []
@@ -843,7 +843,7 @@ class LastFm(commands.Cog):
         return topalbums
 
     @fm.command(aliases=["colourchart"])
-    async def colorchart(self, ctx, colour, size="3x3"):
+    async def colorchart(self, ctx: commands.Context, colour, size="3x3"):
         """
         Collage based on colors.
 
@@ -1017,7 +1017,7 @@ class LastFm(commands.Cog):
             await warn.delete()
 
     @fm.command(aliases=["collage"], usage="[album | artist] [timeframe] [size] 'notitle'")
-    async def chart(self, ctx, *args):
+    async def chart(self, ctx: commands.Context, *args):
         """
         Collage of your top albums or artists
 
@@ -1114,7 +1114,7 @@ class LastFm(commands.Cog):
 
         return await util.render_html(self.bot, payload)
 
-    async def server_lastfm_usernames(self, ctx, filter_cheaters=False):
+    async def server_lastfm_usernames(self, ctx: commands.Context, filter_cheaters=False):
         guild_user_ids = [user.id for user in ctx.guild.members]
         data = await self.bot.db.execute(
             """
@@ -1134,14 +1134,14 @@ class LastFm(commands.Cog):
     @commands.guild_only()
     @is_small_server()
     @commands.cooldown(2, 60, type=commands.BucketType.user)
-    async def server(self, ctx):
+    async def server(self, ctx: commands.Context):
         """Server wide Last.Fm statistics"""
         await util.command_group_help(ctx)
 
     @server.command(
         name="chart", aliases=["collage"], usage="[album | artist] [timeframe] [size] 'notitle'"
     )
-    async def server_chart(self, ctx, *args):
+    async def server_chart(self, ctx: commands.Context, *args):
         """
         Collage of the server's top albums or artists
 
@@ -1241,7 +1241,7 @@ class LastFm(commands.Cog):
         )
 
     @server.command(name="nowplaying", aliases=["np"])
-    async def server_nowplaying(self, ctx):
+    async def server_nowplaying(self, ctx: commands.Context):
         """What this server is currently listening to"""
         listeners = []
         tasks = []
@@ -1292,7 +1292,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @server.command(name="recent", aliases=["re"])
-    async def server_recent(self, ctx):
+    async def server_recent(self, ctx: commands.Context):
         """What this server has recently listened to"""
         listeners = []
         tasks = []
@@ -1346,7 +1346,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @server.command(name="topartists", aliases=["ta"], usage="[timeframe]")
-    async def server_topartists(self, ctx, *args):
+    async def server_topartists(self, ctx: commands.Context, *args):
         """Combined top artists of server members"""
         artist_map = {}
         tasks = []
@@ -1404,7 +1404,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @server.command(name="topalbums", aliases=["talb"], usage="[timeframe]")
-    async def server_topalbums(self, ctx, *args):
+    async def server_topalbums(self, ctx: commands.Context, *args):
         """Combined top albums of server members"""
         album_map = {}
         tasks = []
@@ -1461,7 +1461,7 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @server.command(name="toptracks", aliases=["tt"], usage="[timeframe]")
-    async def server_toptracks(self, ctx, *args):
+    async def server_toptracks(self, ctx: commands.Context, *args):
         """Combined top tracks of server members"""
         track_map = {}
         tasks = []
@@ -1557,7 +1557,7 @@ class LastFm(commands.Cog):
     @commands.guild_only()
     @is_small_server()
     @commands.cooldown(2, 60, type=commands.BucketType.user)
-    async def whoknows(self, ctx, *, artistname):
+    async def whoknows(self, ctx: commands.Context, *, artistname):
         """
         Who has listened to a given artist the most.
 
@@ -1653,7 +1653,7 @@ class LastFm(commands.Cog):
     @commands.guild_only()
     @is_small_server()
     @commands.cooldown(2, 60, type=commands.BucketType.user)
-    async def whoknowstrack(self, ctx, *, track):
+    async def whoknowstrack(self, ctx: commands.Context, *, track):
         """
         Who has listened to a given song the most.
 
@@ -1729,7 +1729,7 @@ class LastFm(commands.Cog):
     @commands.guild_only()
     @is_small_server()
     @commands.cooldown(2, 60, type=commands.BucketType.user)
-    async def whoknowsalbum(self, ctx, *, album):
+    async def whoknowsalbum(self, ctx: commands.Context, *, album):
         """
         Who has listened to a given album the most.
 
@@ -1804,7 +1804,7 @@ class LastFm(commands.Cog):
     @commands.command()
     @is_small_server()
     @commands.guild_only()
-    async def crowns(self, ctx, *, user: nextcord.Member = None):
+    async def crowns(self, ctx: commands.Context, *, user: nextcord.Member = None):
         """See your current artist crowns on this server"""
         if user is None:
             user = ctx.author
@@ -1839,7 +1839,7 @@ class LastFm(commands.Cog):
 
     @util.patrons_only()
     @commands.command(usage="<song> 'np'")
-    async def lyrics(self, ctx, *, query):
+    async def lyrics(self, ctx: commands.Context, *, query):
         """Search for song lyrics"""
         if query.lower() == "np":
             npd = await self.getnowplaying(ctx)
@@ -1964,7 +1964,7 @@ class LastFm(commands.Cog):
 
         return content
 
-    async def listening_report(self, ctx, timeframe):
+    async def listening_report(self, ctx: commands.Context, timeframe):
         current_day_floor = arrow.utcnow().floor("day")
         week = []
         # for i in range(7, 0, -1):
@@ -2255,7 +2255,7 @@ class LastFm(commands.Cog):
 
         return song, ref
 
-    async def getnowplaying(self, ctx):
+    async def getnowplaying(self, ctx: commands.Context):
         await username_to_ctx(ctx)
         playing = {"artist": None, "album": None, "track": None}
 

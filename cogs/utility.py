@@ -176,7 +176,7 @@ class Utility(commands.Cog):
             self.cache_needs_refreshing = True
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
+    async def on_command_error(self, ctx: commands.Context, error):
         """only for CommandNotFound"""
         error = getattr(error, "original", error)
         if isinstance(error, commands.CommandNotFound) and ctx.message.content.startswith(
@@ -187,7 +187,7 @@ class Utility(commands.Cog):
             ctx.command = self.bot.get_command("!")
             await ctx.command.callback(self, ctx)
 
-    async def resolve_bang(self, ctx, bang, args):
+    async def resolve_bang(self, ctx: commands.Context, bang, args):
         async with aiohttp.ClientSession() as session:
             params = {"q": "!" + bang + " " + args, "format": "json", "no_redirect": 1}
             url = "https://api.duckduckgo.com"
@@ -206,7 +206,7 @@ class Utility(commands.Cog):
         await ctx.send(content)
 
     @commands.command(name="!", usage="<bang> <query...>")
-    async def bang(self, ctx):
+    async def bang(self, ctx: commands.Context):
         """
         DuckDuckGo bangs https://duckduckgo.com/bang
 
@@ -234,7 +234,7 @@ class Utility(commands.Cog):
             await ctx.send("Please provide a query to search")
 
     @commands.command(usage="<'in' | 'on'> <time | YYYY/MM/DD [HH:mm:ss]> to <something>")
-    async def remindme(self, ctx, pre, *, arguments):
+    async def remindme(self, ctx: commands.Context, pre, *, arguments):
         """
         Set a reminder
 
@@ -243,7 +243,7 @@ class Utility(commands.Cog):
             >remindme on <YYYY/MM/DD> [HH:mm:ss] to <something>
         """
         try:
-            reminder_time, content = arguments.split(" to ")
+            reminder_time, content = arguments.split(" to ", 1)
         except ValueError:
             return await util.send_command_help(ctx)
 
@@ -292,7 +292,7 @@ class Utility(commands.Cog):
         )
 
     @commands.command(usage="['save'] <location>")
-    async def weather(self, ctx, *, address=None):
+    async def weather(self, ctx: commands.Context, *, address=None):
         """
         Get weather of given location.
 
@@ -385,7 +385,7 @@ class Utility(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["synonyms", "synonym"])
-    async def thesaurus(self, ctx, *, word):
+    async def thesaurus(self, ctx: commands.Context, *, word):
         """Get synonyms for a word"""
         url = f"https://www.dictionaryapi.com/api/v3/references/thesaurus/json/{word}"
         params = {"key": THESAURUS_KEY}
@@ -419,7 +419,7 @@ class Utility(commands.Cog):
             await ctx.send(f'No definitions found for "{word}". Did you mean: {suggestions}?')
 
     @commands.command()
-    async def define(self, ctx, *, word):
+    async def define(self, ctx: commands.Context, *, word):
         """Get Oxford Dictionary definitions for a word"""
         api_url = "https://od-api.oxforddictionaries.com/api/v2/"
 
@@ -503,7 +503,7 @@ class Utility(commands.Cog):
                 await ctx.send(f"```ERROR: {data['error']}```")
 
     @commands.command()
-    async def urban(self, ctx, *, word):
+    async def urban(self, ctx: commands.Context, *, word):
         """Get Urban Dictionary definitions for a word"""
         url = "https://api.urbandictionary.com/v0/define"
         async with aiohttp.ClientSession() as session:
@@ -540,7 +540,7 @@ class Utility(commands.Cog):
             await ctx.send(f"No definitions found for `{word}`")
 
     @commands.command(aliases=["tr", "trans"], usage="[source_lang]/[target_lang] <text>")
-    async def translate(self, ctx, *, text):
+    async def translate(self, ctx: commands.Context, *, text):
         """
         Papago and Google translator
 
@@ -614,7 +614,7 @@ class Utility(commands.Cog):
         await ctx.send(f"`{source}->{target}` {translation}")
 
     @commands.command(aliases=["wolf", "w"])
-    async def wolfram(self, ctx, *, query):
+    async def wolfram(self, ctx: commands.Context, *, query):
         """Ask something from wolfram alpha"""
         url = "http://api.wolframalpha.com/v1/result"
         params = {
@@ -633,7 +633,7 @@ class Utility(commands.Cog):
                     await ctx.send(":shrug:")
 
     @commands.command()
-    async def creategif(self, ctx, media_url):
+    async def creategif(self, ctx: commands.Context, media_url):
         """Create a gfycat gif from video url"""
         starttimer = time()
         async with aiohttp.ClientSession() as session:
@@ -676,7 +676,7 @@ class Utility(commands.Cog):
                 i += 1
 
     @commands.command()
-    async def streamable(self, ctx, media_url):
+    async def streamable(self, ctx: commands.Context, media_url):
         """Create a streamable video from media/twitter/ig url"""
         starttimer = time()
 
@@ -728,7 +728,7 @@ class Utility(commands.Cog):
                     i += 1
 
     @commands.command()
-    async def stock(self, ctx, *, symbol):
+    async def stock(self, ctx: commands.Context, *, symbol):
         """
         Get price data for the US stock market
 
@@ -816,12 +816,12 @@ class Utility(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.group(aliases=["tz", "timezones"])
-    async def timezone(self, ctx):
+    async def timezone(self, ctx: commands.Context):
         """See the current time for your friends across the globe"""
         await util.command_group_help(ctx)
 
     @timezone.command(name="now")
-    async def tz_now(self, ctx, member: nextcord.Member = None):
+    async def tz_now(self, ctx: commands.Context, member: nextcord.Member = None):
         """Get current time for a member"""
         if member is None:
             member = ctx.author
@@ -838,7 +838,7 @@ class Utility(commands.Cog):
             raise exceptions.Warning(f"{member} has not set their timezone yet!")
 
     @timezone.command(name="set")
-    async def tz_set(self, ctx, your_timezone):
+    async def tz_set(self, ctx: commands.Context, your_timezone):
         """
         Set your timezone
         Give timezone as a tz database name (case sensitive):
@@ -867,7 +867,7 @@ class Utility(commands.Cog):
         )
 
     @timezone.command(name="unset")
-    async def tz_unset(self, ctx):
+    async def tz_unset(self, ctx: commands.Context):
         """Unset your timezone"""
         await ctx.bot.db.execute(
             """
@@ -881,7 +881,7 @@ class Utility(commands.Cog):
         await util.send_success(ctx, "Your timezone is no longer saved.")
 
     @timezone.command(name="list")
-    async def tz_list(self, ctx):
+    async def tz_list(self, ctx: commands.Context):
         """List current time of all server members who have it saved"""
         content = nextcord.Embed(
             title=f":clock2: Current time in {ctx.guild}",
