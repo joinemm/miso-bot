@@ -72,3 +72,4 @@ urllib3==1.26.8
 uvloop==0.16.0
 webencodings==0.5.1
 yarl==1.7.2
+pre-commit==2.18.1

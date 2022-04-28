@@ -1,0 +1,26 @@
+repos:
+  - repo: https://github.com/ambv/black
+    rev: 22.3.0
+    hooks:
+      - id: black
+        args: [--line-length=99]
+        language_version: python3.10.4
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 4.0.1
+    hooks:
+      - id: flake8
+
+  # isort
+  - repo: local
+    hooks:
+      - id: isort
+        name: isort
+        entry: isort
+        require_serial: true
+        language: python
+        language_version: python3
+        types_or: [cython, pyi, python]
+        args: ['--filter-files']
+        minimum_pre_commit_version: '2.9.2'
+        additional_dependencies: ['isort==5.10.1']
