@@ -832,6 +832,11 @@ async def render_html(bot, payload):
             raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
 
 
+def ordinal(n):
+    """Return number with ordinal suffix eg. 1st, 2nd, 3rd, 4th..."""
+    return str(n) + {1: "st", 2: "nd", 3: "rd"}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
+
+
 class TwoWayIterator:
     """Two way iterator class that is used as the backend for paging"""
 
