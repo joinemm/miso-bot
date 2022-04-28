@@ -136,6 +136,49 @@ class LastFm(commands.Cog):
         """See your Last.fm profile"""
         await ctx.send(embed=await self.get_userinfo_embed(ctx.username))
 
+    @fm.command()
+    async def milestone(self, ctx: commands.Context, n: int):
+        """See what your n:th scrobble was"""
+        n_display = util.ordinal(n)
+        if n < 1:
+            raise exceptions.Warning(
+                "Please give a number between 1 and your total amount of listened tracks."
+            )
+        per_page = 100
+        pre_data = await self.api_request(
+            {"user": ctx.username, "method": "user.getrecenttracks", "limit": per_page}
+        )
+        total = int(pre_data["recenttracks"]["@attr"]["total"])
+        if n > total:
+            raise exceptions.Warning(
+                f"You have only listened to **{total}** tracks! Unable to show {n_display} track"
+            )
+
+        remainder = total % per_page
+        total_pages = int(pre_data["recenttracks"]["@attr"]["totalPages"])
+        if n > remainder:
+            n = n - remainder
+            containing_page = total_pages - math.ceil(n / per_page)
+        else:
+            containing_page = total_pages
+
+        final_data = await self.api_request(
+            {
+                "user": ctx.username,
+                "method": "user.getrecenttracks",
+                "limit": per_page,
+                "page": containing_page,
+            }
+        )
+
+        # if user is playing something, the current nowplaying song will be appended to the list at index 101
+        # cap to 100 first items after reversing to remove it
+        tracks = list(reversed(final_data["recenttracks"]["track"]))[:100]
+        nth_track = tracks[(n % 100) - 1]
+        await ctx.send(
+            f"Your {n_display} scrobble was ***{nth_track['name']}*** by **{nth_track['artist']['#text']}**"
+        )
+
     @fm.command(aliases=["yt"])
     async def youtube(self, ctx: commands.Context):
         """See your current song on youtube"""
