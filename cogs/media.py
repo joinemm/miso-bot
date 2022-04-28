@@ -222,7 +222,7 @@ class Media(commands.Cog):
                 urls.append(link)
         async with aiohttp.ClientSession() as session:
             for url in urls:
-                result = regex.findall("/(p|reel)/(.*?)(/|\\Z)", url)
+                result = regex.findall("/(p|reel|tv)/(.*?)(/|\\Z)", url)
                 if result:
                     url = f"https://www.instagram.com/p/{result[0][1]}"
                 else:
