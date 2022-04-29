@@ -78,10 +78,11 @@ class Information(commands.Cog):
                 ]
             ),
         )
+
         current = []
-        former = []
+        # former = []
         for user_id, is_active, amount, donating_since in sorted(
-            patrons, key=lambda x: x[3], reverse=False
+            patrons, key=lambda x: x[2], reverse=True
         ):
             user = self.bot.get_user(user_id)
             if user is None:
@@ -89,17 +90,17 @@ class Information(commands.Cog):
 
             if is_active:
                 current.append(
-                    f"**${int(amount)}** by **{user}** (*{humanize.naturaldelta(datetime.now() - donating_since)}*)"
+                    f"**${int(amount)}** by **{user}** (*for {humanize.naturaldelta(datetime.now() - donating_since)}*)"
                 )
 
-            else:
-                former.append(f"{user}")
+            # else:
+            #     former.append(f"{user}")
 
         if current:
-            content.add_field(name="Monthly donators", value="\n".join(current))
+            content.description += "\n\n" + ("\n".join(current))
 
-        if former:
-            content.add_field(name="Former donators", value=", ".join(former))
+        # if former:
+        #     content.add_field(name="Former donators", value=", ".join(former))
 
         await ctx.send(embed=content)
 
@@ -177,6 +178,7 @@ class Information(commands.Cog):
             emoji = emojis.Status["offline"] if shard.is_closed() else emojis.Status["online"]
             shards.append(
                 f"{emoji.value} **Shard `{shard.id}`** - `{shard.latency * 1000:.2f}` ms"
+                + (" :point_left:" if ctx.guild.shard_id == shard.id else "")
             )
 
         content.description = "\n".join(shards)
