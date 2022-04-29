@@ -61,6 +61,7 @@ class MisoBot(commands.AutoShardedBot):
 
 bot = MisoBot(
     owner_id=133311691852218378,
+    client_id=500385855072894982,
     help_command=EmbedHelpCommand(),
     command_prefix=util.determine_prefix,
     case_insensitive=True,

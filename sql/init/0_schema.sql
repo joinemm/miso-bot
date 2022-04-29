@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS donator (
     total_donated FLOAT DEFAULT 0.0,
     donating_since DATETIME,
     currently_active BOOLEAN DEFAULT 1,
+    amount INT NOT NULL,
     PRIMARY KEY (user_id, platform),
     FOREIGN KEY (donation_tier) REFERENCES donation_tier (id)
 );

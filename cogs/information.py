@@ -2,16 +2,18 @@ import copy
 import math
 import os
 import time
+from datetime import datetime
 
 import aiohttp
 import arrow
+import humanize
 import nextcord
 import psutil
 from nextcord.ext import commands
 from numpy import nan
 
 from libraries import emoji_literals, plotter
-from modules import exceptions, util
+from modules import emojis, exceptions, util
 
 
 class Information(commands.Cog):
@@ -24,15 +26,10 @@ class Information(commands.Cog):
     @commands.command()
     async def invite(self, ctx: commands.Context):
         """Invite Miso to your server!"""
-        url = nextcord.utils.oauth_url(
-            "500385855072894982", permissions=nextcord.Permissions(1074654407)
-        )
+        url = nextcord.utils.oauth_url(self.bot.client_id, permissions=nextcord.Permissions(8))
         content = nextcord.Embed(title="Invite me to your server!")
         content.set_thumbnail(url=self.bot.user.display_avatar.url)
-        content.add_field(
-            name="Required permissions are selected automatically, don't touch them.",
-            value=f"[Click here]({url})",
-        )
+        content.description = f"[Click here]({url})"
         await ctx.send(embed=content)
 
     @commands.command()
@@ -48,23 +45,26 @@ class Information(commands.Cog):
             colour=nextcord.Colour.orange(),
         )
         content.add_field(
-            name="Github Sponsor",
+            name="Github Sponsor (0 fees!)",
             value="https://github.com/sponsors/joinemm",
             inline=False,
         )
-        content.add_field(name="Patreon", value="https://www.patreon.com/joinemm", inline=False)
-        content.add_field(name="Ko-Fi", value="https://ko-fi.com/joinemm", inline=False)
-        content.add_field(name="Bitcoin", value="`1HDwoc5ith4goXmh6CAQC3TP6i1GAqanB1`")
+        content.add_field(name="Ko-fi (0 fees!)", value="https://ko-fi.com/joinemm", inline=False)
+        content.add_field(
+            name="Patreon (15% fees :thumbsdown:)",
+            value="https://www.patreon.com/joinemm",
+            inline=False,
+        )
         content.set_footer(text="Donations will be used to pay for server and upkeep costs")
         await ctx.send(embed=content)
 
     @commands.command(aliases=["patrons", "supporters", "sponsors"])
     async def donators(self, ctx: commands.Context):
-        """See all of the people who have donated"""
+        """See who is donating!"""
         patrons = await self.bot.db.execute(
             """
-            SELECT user_id, currently_active, emoji, donation_tier, amount
-            FROM donator LEFT OUTER JOIN donation_tier ON donation_tier=id
+            SELECT user_id, currently_active, amount, donating_since
+            FROM donator
             """
         )
         content = nextcord.Embed(
@@ -73,15 +73,14 @@ class Information(commands.Cog):
             description=" | ".join(
                 [
                     "[github](https://github.com/sponsors/joinemm)",
+                    "[ko-fi](https://ko-fi.com/joinemm)",
                     "[patreon](https://patreon.com/joinemm)",
-                    "[kofi](https://ko-fi.com/joinemm)",
-                    "[paypal](https://paypal.me/joinemm)",
                 ]
             ),
         )
-        current = {}
+        current = []
         former = []
-        for user_id, is_active, emoji, _tier, amount in sorted(
+        for user_id, is_active, amount, donating_since in sorted(
             patrons, key=lambda x: x[3], reverse=False
         ):
             user = self.bot.get_user(user_id)
@@ -89,19 +88,18 @@ class Information(commands.Cog):
                 continue
 
             if is_active:
-                try:
-                    current[f"{emoji} ${int(amount)} Tier"].append(f"{user}")
-                except KeyError:
-                    current[f"{emoji} ${int(amount)} Tier"] = [f"{user}"]
+                current.append(
+                    f"**${int(amount)}** by **{user}** (*{humanize.naturaldelta(datetime.now() - donating_since)}*)"
+                )
+
             else:
                 former.append(f"{user}")
 
         if current:
-            for tier_name, users in current.items():
-                content.add_field(inline=True, name=tier_name, value="\n".join(users))
+            content.add_field(name="Monthly donators", value="\n".join(current))
 
         if former:
-            content.add_field(inline=False, name="Former donators", value=", ".join(former))
+            content.add_field(name="Former donators", value=", ".join(former))
 
         await ctx.send(embed=content)
 
@@ -111,7 +109,7 @@ class Information(commands.Cog):
         membercount = len(set(self.bot.get_all_members()))
         content = nextcord.Embed(
             title=f"Miso Bot | version {self.bot.version}",
-            colour=nextcord.Colour.blue(),
+            colour=int("E46A92", 16),
         )
         owner = self.bot.get_user(self.bot.owner_id)
         content.description = (
@@ -155,7 +153,7 @@ class Information(commands.Cog):
         memory_use = psutil.Process(pid).memory_info()[0]
 
         data = [
-            ("Booted up in", util.stringfromtime(self.bot.boot_up_time)),
+            ("Bot booted up in", util.stringfromtime(self.bot.boot_up_time)),
             ("Process uptime", util.stringfromtime(process_uptime, 2)),
             ("Process memory", f"{memory_use / math.pow(1024, 2):.2f}MB"),
             ("System uptime", util.stringfromtime(system_uptime, 2)),
@@ -174,13 +172,14 @@ class Information(commands.Cog):
     async def shardinfo(self, ctx: commands.Context):
         """Get information about the current shards"""
         content = nextcord.Embed(title=f"Running {len(self.bot.shards)} shards")
+        shards = []
         for shard in self.bot.shards.values():
-            content.add_field(
-                name=f"Shard [`{shard.id}`]"
-                + (" :point_left:" if ctx.guild.shard_id == shard.id else ""),
-                value=f"```Connected: {not shard.is_closed()}\nHeartbeat: {shard.latency * 1000:.2f} ms```",
+            emoji = emojis.Status["offline"] if shard.is_closed() else emojis.Status["online"]
+            shards.append(
+                f"{emoji.value} **Shard `{shard.id}`** - `{shard.latency * 1000:.2f}` ms"
             )
 
+        content.description = "\n".join(shards)
         await ctx.send(embed=content)
 
     @commands.command()

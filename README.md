@@ -51,7 +51,7 @@ A discord bot with almost 100 commands and features, including but not limited t
 
 Invite to you server using this link!
 
-<https://discordapp.com/oauth2/authorize?client_id=500385855072894982&scope=bot&permissions=1074654407>
+<https://discord.com/oauth2/authorize?client_id=500385855072894982&permissions=8&scope=bot>
 
 ---
 

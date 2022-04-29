@@ -102,7 +102,7 @@ class Owner(commands.Cog):
 
     @donator.command(name="add")
     async def donator_add(
-        self, ctx, user: nextcord.User, username, platform, tier: int, since_ts=None
+        self, ctx, user: nextcord.User, username, platform, tier: int, amount: int, since_ts=None
     ):
         """Add a new monthly donator"""
         if since_ts is None:
@@ -111,16 +111,20 @@ class Owner(commands.Cog):
             since_ts = arrow.get(since_ts).datetime
 
         await self.bot.db.execute(
-            "INSERT INTO donator (user_id, platform, external_username, donation_tier, donating_since) VALUES (%s, %s, %s, %s, %s)",
+            """
+            INSERT INTO donator (user_id, platform, external_username, donation_tier, donating_since, amount)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
             user.id,
             platform,
             username,
             tier,
             since_ts,
+            amount,
         )
         await util.send_success(
             ctx,
-            f"**{user}** is now a **Tier {tier}** donator on **{platform}** as *{username}*",
+            f"Added tier {tier} ${amount} donation by **{user}** on {platform} ({username})",
         )
 
     @donator.command(name="remove")
