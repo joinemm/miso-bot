@@ -220,6 +220,45 @@ class Information(commands.Cog):
         await util.page_switcher(ctx, pages)
 
     @commands.command()
+    async def roleinfo(self, ctx: commands.Context, *, role: nextcord.Role):
+        """Get information about a role"""
+        content = nextcord.Embed(title=f"@{role.name} | #{role.id}")
+
+        content.colour = role.color
+
+        if isinstance(role.icon, nextcord.Asset):
+            content.set_thumbnail(role.icon.url)
+        elif isinstance(role.icon, str):
+            content.title = f"{role.icon} @{role.name} | #{role.id}"
+
+        content.add_field(name="Color", value=str(role.color).upper())
+        content.add_field(name="Member count", value=len(role.members))
+        content.add_field(name="Created at", value=role.created_at.strftime("%d/%m/%Y %H:%M"))
+        content.add_field(name="Hoisted", value=str(role.hoist))
+        content.add_field(name="Mentionable", value=role.mentionable)
+        content.add_field(name="Mention", value=role.mention)
+        if role.managed:
+            if role.tags.is_bot_managed():
+                manager = ctx.guild.get_member(role.tags.bot_id)
+            elif role.tags.is_integration():
+                manager = ctx.guild.get_member(role.tags.integration_id)
+            elif role.tags.is_premium_subscriber():
+                manager = "Server boosting"
+            else:
+                manager = "UNKNOWN"
+            content.add_field(name="Managed by", value=manager)
+
+        perms = []
+        for perm, allow in iter(role.permissions):
+            if allow:
+                perms.append(f"`{perm.upper()}`")
+
+        if perms:
+            content.add_field(name="Allowed permissions", value=" ".join(perms), inline=False)
+
+        await ctx.send(embed=content)
+
+    @commands.command()
     async def emojistats(self, ctx: commands.Context, user: nextcord.Member = None, *args):
         """See most used emojis on the server, optionally filtered by user"""
         global_user = False
