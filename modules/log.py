@@ -12,7 +12,7 @@ def get_logger(logger_name):
     fmt = logging.Formatter(
         fmt="{asctime} | {levelname:7} {name:>17} > {message}",
         style="{",
-        datafmt="%Y-%m-%d %H:%M:%S",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
     handler = logging.StreamHandler()
     handler.setFormatter(fmt)
@@ -28,7 +28,11 @@ def get_command_logger():
 
     # logger not created yet, assign options
     logger.setLevel(level=logging.INFO)
-    fmt = logging.Formatter(fmt="{asctime} | {message}", style="{")
+    fmt = logging.Formatter(
+        fmt="{asctime} | {message}",
+        style="{",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
     handler = logging.StreamHandler()
     handler.setFormatter(fmt)
     logger.addHandler(handler)
