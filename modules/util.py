@@ -785,7 +785,7 @@ class UserActivity:
         return result
 
 
-async def send_tasks_result_list(ctx, successful_operations, failed_operations):
+async def send_tasks_result_list(ctx, successful_operations, failed_operations, title=None):
     content = nextcord.Embed(
         color=(int("77b255", 16) if successful_operations else int("dd2e44", 16))
     )
@@ -796,6 +796,8 @@ async def send_tasks_result_list(ctx, successful_operations, failed_operations):
         rows.append(f":x: {op}")
 
     content.description = "\n".join(rows)
+    if title:
+        content.title = title
     await ctx.send(embed=content)
 
 

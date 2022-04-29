@@ -137,6 +137,25 @@ class Mod(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
+    @commands.has_permissions(manage_roles=True)
+    async def giverole(
+        self, ctx: commands.Context, role: nextcord.Role, members: commands.Greedy[nextcord.Member]
+    ):
+        """Give a role to multiple people"""
+        success = []
+        failure = []
+        for member in members:
+            try:
+                await member.add_roles(role)
+                success.append(str(member))
+            except Exception as e:
+                failure.append(f"`{e}`")
+        await util.send_tasks_result_list(
+            ctx, success, failure, f"Adding @{role} to {len(members)} members..."
+        )
+
+    @commands.command()
+    @commands.guild_only()
     @commands.has_permissions(moderate_members=True)
     async def timeout(self, ctx: commands.Context, member: nextcord.Member, *, duration="1 hour"):
         """Timeout user. Pass 'remove' as the duration to remove"""
