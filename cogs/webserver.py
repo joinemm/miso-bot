@@ -30,6 +30,7 @@ class WebServer(commands.Cog):
         self.app.router.add_route("GET", "/stats", self.website_statistics)
         self.app.router.add_route("GET", "/commands", self.command_count)
         self.app.router.add_route("GET", "/documentation", self.command_list)
+        self.app.router.add_route("GET", "/donators", self.donator_list)
         # Configure default CORS settings.
         self.cors = aiohttp_cors.setup(
             self.app,
@@ -75,6 +76,21 @@ class WebServer(commands.Cog):
 
     async def index(self, request):
         return web.Response(text="Hi I'm Miso Bot!")
+
+    async def donator_list(self, request):
+        donators = []
+        data = await self.bot.db.execute(
+            """
+            SELECT user_id, amount
+            FROM donator WHERE currently_active = 1
+            """
+        )
+        for user_id, amount in sorted(data, key=lambda x: x[1], reverse=True):
+            user = self.bot.get_user(user_id)
+            donators.append(
+                {"name": user.name, "avatar": user.display_avatar.url, "amount": amount}
+            )
+        return web.json_response(donators)
 
     async def ping_handler(self, request):
         return web.Response(text=f"{self.bot.latency*1000}")
