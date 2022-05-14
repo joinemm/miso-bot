@@ -38,7 +38,7 @@ class Information(commands.Cog):
 
     @commands.command()
     async def invite(self, ctx):
-        """Invite Miso to your server!"""
+        """Invite MONDAY to your server!"""
         url = discord.utils.oauth_url(
             "500385855072894982", permissions=discord.Permissions(1074654407)
         )
@@ -53,13 +53,13 @@ class Information(commands.Cog):
     @commands.command()
     async def github(self, ctx):
         """See the source code."""
-        await ctx.send("https://github.com/joinemm/miso-bot")
+        await ctx.send("https://github.com/joinemm/MONDAY-bot")
 
     @commands.command(aliases=["patreon", "kofi", "sponsor", "ko-fi"])
     async def donate(self, ctx):
         """Donate to keep the bot running smoothly!"""
         content = discord.Embed(
-            title="Consider donating to help keep Miso Bot online!", colour=discord.Colour.orange()
+            title="Consider donating to help keep MONDAY Bot online!", colour=discord.Colour.orange()
         )
         content.add_field(
             name="Github Sponsor", value="https://github.com/sponsors/joinemm", inline=False
@@ -136,7 +136,7 @@ class Information(commands.Cog):
         """Get information about the bot."""
         membercount = len(set(self.bot.get_all_members()))
         content = discord.Embed(
-            title=f"Miso Bot | version {self.bot.version}", colour=discord.Colour.blue()
+            title=f"MONDAY Bot | version {self.bot.version}", colour=discord.Colour.blue()
         )
         owner = self.bot.get_user(self.bot.owner_id)
         content.description = (
@@ -147,11 +147,11 @@ class Information(commands.Cog):
             f"totalling **{membercount}** unique users."
         )
         content.set_thumbnail(url=self.bot.user.avatar_url)
-        content.add_field(name="Website", value="https://misobot.xyz", inline=False)
-        content.add_field(name="Github", value="https://github.com/joinemm/miso-bot", inline=False)
+        content.add_field(name="Website", value="https://MONDAYbot.xyz", inline=False)
+        content.add_field(name="Github", value="https://github.com/joinemm/MONDAY-bot", inline=False)
         content.add_field(name="Discord", value="https://discord.gg/RzDW3Ne", inline=False)
 
-        data = await get_commits("joinemm", "miso-bot")
+        data = await get_commits("joinemm", "MONDAY-bot")
         last_update = data[0]["commit"]["author"].get("date")
         content.set_footer(text=f"Latest update: {arrow.get(last_update).humanize()}")
 
@@ -209,7 +209,7 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def changelog(self, ctx, author="joinemm", repo="miso-bot"):
+    async def changelog(self, ctx, author="joinemm", repo="MONDAY-bot"):
         """Github commit history."""
         data = await get_commits(author, repo)
         content = discord.Embed(color=discord.Color.from_rgb(46, 188, 79))

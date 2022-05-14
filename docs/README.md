@@ -48,7 +48,7 @@ Statistics about emoji usage.
 > \>emojistats [user]    
 > \>emojistats global [user]
 
-Get Miso invite link.
+Get MONDAY invite link.
 
 > \>invite
 
@@ -321,7 +321,7 @@ Shows your server activity graph per hour, along with your xp and level informat
 
 > \>activity [user]
 
-Shows your top servers with miso bot.
+Shows your top servers with MONDAY bot.
 
 > \>topservers
 
@@ -433,7 +433,7 @@ Ask something from wolfram alpha.
 
 > \>wolfram <query...>
 
-Set a reminder, and Miso will remind you!
+Set a reminder, and MONDAY will remind you!
 
 > \>remindme in <some time\> to <something\>    
 > \>remindme on <YYYY/MM/DD\> [HH:mm:ss] to <something\>

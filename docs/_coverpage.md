@@ -1,6 +1,6 @@
 ![logo](assets/icon.png)
 
-# Miso bot <small>5.5</small>
+# MONDAY bot <small>5.5</small>
 
 - 100+ commands
 - Twitter, Instagram, Last.fm, Gfycat, Melon

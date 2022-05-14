@@ -42,7 +42,7 @@ class Blacklist(commands.CommandError):
 
 class BlacklistedUser(Blacklist):
     def __init__(self):
-        self.message = "You have been blacklisted from using Miso Bot"
+        self.message = "You have been blacklisted from using MONDAY Bot"
 
 
 class BlacklistedMember(Blacklist):
@@ -52,7 +52,7 @@ class BlacklistedMember(Blacklist):
 
 class BlacklistedGuild(Blacklist):
     def __init__(self):
-        self.message = "This server is blacklisted from using Miso Bot"
+        self.message = "This server is blacklisted from using MONDAY Bot"
 
 
 class BlacklistedCommand(Blacklist):

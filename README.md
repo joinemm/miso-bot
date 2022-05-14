@@ -1,8 +1,8 @@
-# Miso Bot
+# MONDAY Bot
 
-![GitHub top language](https://img.shields.io/github/languages/top/joinemm/miso-bot?color=green)
+![GitHub top language](https://img.shields.io/github/languages/top/joinemm/MONDAY-bot?color=green)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/84479f7c0f4c44a6aa2ba435e0215436)](https://app.codacy.com/manual/joinemm/miso-bot?utm_source=github.com&utm_medium=referral&utm_content=joinemm/miso-bot&utm_campaign=Badge_Grade_Dashboard)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/84479f7c0f4c44a6aa2ba435e0215436)](https://app.codacy.com/manual/joinemm/MONDAY-bot?utm_source=github.com&utm_medium=referral&utm_content=joinemm/MONDAY-bot&utm_campaign=Badge_Grade_Dashboard)
 [![Discord](https://img.shields.io/discord/652904322706833409.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/RzDW3Ne)
 [![Patreon](https://img.shields.io/badge/Patreon-donate-orange.svg)](https://www.patreon.com/joinemm)
 
@@ -46,7 +46,7 @@ A discord bot with almost 100 commands and features, including but not limited t
 -   OPGG
 -   Cryptocurrency data
 
-...and much more. Visit <https://misobot.xyz> for more detailed overview of the features.
+...and much more. Visit <https://MONDAYbot.xyz> for more detailed overview of the features.
 
 ---
 
@@ -63,8 +63,8 @@ The python dependencies are managed using [poetry](https://python-poetry.org/).
 ```
 sudo apt-get install python3 python3-pip mariadb-server
 sudo mysql_secure_installation
-git clone --recurse-submodules https://github.com/joinemm/miso-bot.git
-cd miso-bot
+git clone --recurse-submodules https://github.com/joinemm/MONDAY-bot.git
+cd MONDAY-bot
 poetry install
 cp polls.yaml.example polls.yaml
 cp .env.example .env
@@ -75,9 +75,9 @@ sudo mysql
 ```
 > mysql commands (replace user and password with your own preferred values)
 ```
-CREATE DATABASE misobot;
-GRANT ALL ON misobot.* TO 'miso'@'localhost' IDENTIFIED BY 'password' WITH GRANT OPTION;
-connect misobot;
+CREATE DATABASE MONDAYbot;
+GRANT ALL ON MONDAYbot.* TO 'MONDAY'@'localhost' IDENTIFIED BY 'password' WITH GRANT OPTION;
+connect MONDAYbot;
 source sql/schema.sql
 source sql/kpop_schema.sql
 source sql/staticdata.sql

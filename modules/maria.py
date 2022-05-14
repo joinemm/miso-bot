@@ -29,11 +29,11 @@ class MariaDB:
 
     async def initialize_pool(self):
         cred = {
-            "db": os.environ.get("MISOBOT_DB_NAME"),
+            "db": os.environ.get("MONDAYBOT_DB_NAME"),
             "host": "localhost",
             "port": 3306,
-            "user": os.environ.get("MISOBOT_DB_USER"),
-            "password": os.environ.get("MISOBOT_DB_PASSWORD"),
+            "user": os.environ.get("MONDAYBOT_DB_USER"),
+            "password": os.environ.get("MONDAYBOT_DB_PASSWORD"),
         }
         logger.info(
             f"Connecting to database {cred['db']} on {cred['host']}:{cred['port']} as {cred['user']}"

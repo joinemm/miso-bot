@@ -259,7 +259,7 @@ class Notifications(commands.Cog):
 
     @notification.command()
     async def test(self, ctx):
-        """Test if Miso can send you a notification."""
+        """Test if MONDAY can send you a notification."""
         try:
             await self.send_notification(ctx.author, ctx.message)
             await ctx.send(":ok_hand:")

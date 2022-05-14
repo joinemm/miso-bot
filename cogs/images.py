@@ -21,7 +21,7 @@ class ImageObject:
 
     def write_watermark(self, size, color):
         font = ImageFont.truetype(self.font, size)
-        self.draw.text((5, 5), "Created with Miso Bot", font=font, fill=color)
+        self.draw.text((5, 5), "Created with MONDAY Bot", font=font, fill=color)
 
     def write_box(self, x, y, width, height, color, text, angle=0):
         font_size = 300

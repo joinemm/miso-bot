@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "miso-bot"
+name = "MONDAY-bot"
 version = "4.0.0"
 description = "Discord bot with too many features"
 authors = ["Joinemm <joonas@rautiola.co>"]

@@ -420,17 +420,17 @@ class Mod(commands.Cog):
     @blacklist.command(name="global")
     @commands.is_owner()
     async def blacklist_global(self, ctx, user: discord.User, *, reason):
-        """Blacklist someone globally from Miso Bot."""
+        """Blacklist someone globally from MONDAY Bot."""
         await self.bot.db.execute(
             "INSERT IGNORE blacklisted_user VALUES (%s, %s)", user.id, reason
         )
         self.bot.cache.blacklist["global"]["user"].add(user.id)
-        await util.send_success(ctx, f"**{user}** can no longer use Miso Bot!")
+        await util.send_success(ctx, f"**{user}** can no longer use MONDAY Bot!")
 
     @blacklist.command(name="guild")
     @commands.is_owner()
     async def blacklist_guild(self, ctx, guild_id: int, *, reason):
-        """Blacklist a guild from adding or using Miso Bot."""
+        """Blacklist a guild from adding or using MONDAY Bot."""
         guild = self.bot.get_guild(guild_id)
         if guild is None:
             raise exceptions.Warning(f"Cannot find guild with id `{guild_id}`")
@@ -440,7 +440,7 @@ class Mod(commands.Cog):
         )
         self.bot.cache.blacklist["global"]["guild"].add(guild_id)
         await guild.leave()
-        await util.send_success(ctx, f"**{guild}** can no longer use Miso Bot!")
+        await util.send_success(ctx, f"**{guild}** can no longer use MONDAY Bot!")
 
     @commands.group()
     @commands.has_permissions(administrator=True)
@@ -491,7 +491,7 @@ class Mod(commands.Cog):
         """Whitelist someone globally."""
         await self.bot.db.execute("DELETE FROM blacklisted_user WHERE user_id = %s", user.id)
         self.bot.cache.blacklist["global"]["user"].discard(user.id)
-        await util.send_success(ctx, f"**{user}** can now use Miso Bot again!")
+        await util.send_success(ctx, f"**{user}** can now use MONDAY Bot again!")
 
     @whitelist.command(name="guild")
     @commands.is_owner()
@@ -499,7 +499,7 @@ class Mod(commands.Cog):
         """Whitelist a guild."""
         await self.bot.db.execute("DELETE FROM blacklisted_guild WHERE guild_id = %s", guild_id)
         self.bot.cache.blacklist["global"]["guild"].discard(guild_id)
-        await util.send_success(ctx, f"Guild with id `{guild_id}` can use Miso Bot again!")
+        await util.send_success(ctx, f"Guild with id `{guild_id}` can use MONDAY Bot again!")
 
 
 def setup(bot):

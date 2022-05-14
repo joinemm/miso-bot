@@ -6,7 +6,7 @@ import sys
 import time
 import requests
 import discord
-from bot import MisoBotCluster
+from bot import MONDAYBotCluster
 from modules.help import EmbedHelpCommand
 from modules.log import get_logger
 from dotenv import load_dotenv
@@ -26,10 +26,10 @@ log = get_logger("Cluster#Launcher")
 
 if DEV:
     log.info("Developer mode is ON")
-    TOKEN = os.environ["MISO_BOT_TOKEN_BETA"]
+    TOKEN = os.environ["MONDAY_BOT_TOKEN_BETA"]
     prefix = "<"
 else:
-    TOKEN = os.environ["MISO_BOT_TOKEN"]
+    TOKEN = os.environ["MONDAY_BOT_TOKEN"]
     prefix = ">"
 
 if maintainance_mode:
@@ -123,7 +123,7 @@ class Launcher:
             "https://discordapp.com/api/v7/gateway/bot",
             headers={
                 "Authorization": "Bot " + TOKEN,
-                "User-Agent": "MisoBot/4.0 Python/3.9 aiohttp/3.6.1",
+                "User-Agent": "MONDAYBot/4.0 Python/3.9 aiohttp/3.6.1",
             },
         )
         data.raise_for_status()
@@ -277,7 +277,7 @@ class Cluster:
         stdout, stdin = multiprocessing.Pipe()
         kw = self.kwargs
         kw["pipe"] = stdin
-        self.process = multiprocessing.Process(target=MisoBotCluster, kwargs=kw, daemon=True)
+        self.process = multiprocessing.Process(target=MONDAYBotCluster, kwargs=kw, daemon=True)
         self.process.start()
         self.log.info(f"Process started with PID {self.process.pid}")
 

@@ -31,7 +31,7 @@ class Reddit(commands.Cog):
             "year": "yearly",
         }
         self.client = asyncpraw.Reddit(
-            client_id=CLIENT_ID, client_secret=CLIENT_SECRET, user_agent="discord:miso_bot"
+            client_id=CLIENT_ID, client_secret=CLIENT_SECRET, user_agent="discord:MONDAY_bot"
         )
 
     # COMMANDS

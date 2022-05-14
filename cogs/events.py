@@ -21,7 +21,7 @@ class Events(commands.Cog):
         self.statuses = [
             ("watching", lambda: f"{len(self.bot.guilds)} servers"),
             ("listening", lambda: f"{len(set(self.bot.get_all_members()))} users"),
-            ("playing", lambda: "misobot.xyz"),
+            ("playing", lambda: "MONDAYbot.xyz"),
         ]
         self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
         self.xp_cache = {}
@@ -188,7 +188,7 @@ class Events(commands.Cog):
         content = discord.Embed(color=discord.Color.green())
         content.title = "New guild!"
         content.description = (
-            f"Miso just joined **{guild}**\nWith **{guild.member_count-1}** members"
+            f"MONDAY just joined **{guild}**\nWith **{guild.member_count-1}** members"
         )
         content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")
@@ -209,7 +209,7 @@ class Events(commands.Cog):
         content = discord.Embed(color=discord.Color.red())
         content.title = "Left guild!"
         content.description = (
-            f"Miso just left **{guild}**\nWith **{guild.member_count-1}** members :("
+            f"MONDAY just left **{guild}**\nWith **{guild.member_count-1}** members :("
         )
         content.set_thumbnail(url=guild.icon_url)
         content.set_footer(text=f"#{guild.id}")

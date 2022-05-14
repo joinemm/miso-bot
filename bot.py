@@ -15,7 +15,7 @@ from modules import util, maria, cache
 uvloop.install()
 
 
-class MisoBotCluster(commands.AutoShardedBot):
+class MONDAYBotCluster(commands.AutoShardedBot):
     def __init__(self, **kwargs):
         # clustering stuff
         self.pipe = kwargs.pop("pipe")

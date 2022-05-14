@@ -486,8 +486,8 @@ class Miscellaneous(commands.Cog):
     async def big_emoji(self, ctx, emoji):
         """Get source image and stats of emoji.
 
-        Will display additional info if Miso is in the server where the emoji is located in.
-        Displaying who added the emoji requires Miso to have manage emojis permission!
+        Will display additional info if MONDAY is in the server where the emoji is located in.
+        Displaying who added the emoji requires MONDAY to have manage emojis permission!
 
         Usage:
             >emoji :emoji:

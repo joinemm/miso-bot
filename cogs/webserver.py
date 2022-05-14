@@ -32,7 +32,7 @@ class WebServer(commands.Cog):
             logger.warning(e)
 
     async def index(self, request):
-        return web.Response(text="Hi I'm Miso Bot!")
+        return web.Response(text="Hi I'm MONDAY Bot!")
 
     async def ping_handler(self, request):
         return web.Response(text=f"{self.bot.latency*1000}")
