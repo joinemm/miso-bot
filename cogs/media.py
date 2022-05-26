@@ -233,7 +233,7 @@ class Media(commands.Cog):
                 headers = {
                     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/94.0",  # self.user_agents.get_random_user_agent(),
                     "Cookie": self.ig_cookie,
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                    "Accept": "application/json",
                     "Accept-Language": "en,en-US;q=0.5",
                     "Accept-Encoding": "gzip, deflate, br",
                     "DNT": "1",
@@ -265,14 +265,20 @@ class Media(commands.Cog):
                 ) as response:
                     try:
                         data = await response.json()
-                        data = data["data"]["shortcode_media"]
-                    except (aiohttp.ContentTypeError, KeyError):
+                    except aiohttp.ContentTypeError:
                         raise exceptions.Error(
-                            "Instagram has blocked me from accessing their content. Please try again later."
+                            "The Instagram login cookie has expired, please ask my developer to reauthenticate"
+                        )
+                    logger.info(data)
+                    try:
+                        data = data["data"]["shortcode_media"]
+                    except KeyError:
+                        raise exceptions.Error(
+                            f"Unexpected graphql response format, something went wrong.\n```json\n{str(data)[:2000]}```"
                         )
 
                 if data is None:
-                    await ctx.send(f":warning: Invalid instagram URL `{url}`")
+                    await ctx.send(f":warning: No content found in Instagram URL `{url}`")
                     continue
 
                 medias = []
