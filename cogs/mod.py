@@ -299,45 +299,39 @@ class Mod(commands.Cog):
         )
         await util.send_as_pages(ctx, content, rows, maxrows=25)
 
-    @commands.command()
+    @commands.command(aliases=["massban"])
     @commands.has_permissions(ban_members=True)
     async def fastban(self, ctx: commands.Context, *discord_users):
-        """Ban user(s) without confirmation box"""
+        """Ban many users without confirmation"""
         if not discord_users:
             return await util.send_command_help(ctx)
 
+        success = []
+        failure = []
         for discord_user in discord_users:
             user = await util.get_user(ctx, discord_user)
             if user is None:
                 try:
                     user = await self.bot.fetch_user(int(discord_user))
                 except (ValueError, nextcord.NotFound):
-                    await ctx.send(
-                        embed=nextcord.Embed(
-                            description=f":warning: Invalid user or id `{discord_user}`",
-                            color=int("be1931", 16),
-                        )
-                    )
+                    failure.append(f"`{discord_user}` Invalid user or id")
                     continue
 
             if user.id == 133311691852218378:
-                return await ctx.send("no.")
+                failure.append(f"`{user}` I won't ban this user :)")
+                continue
 
             try:
                 await ctx.guild.ban(user, delete_message_days=0)
             except nextcord.errors.Forbidden:
-                await ctx.send(
-                    embed=nextcord.Embed(
-                        description=f":no_entry: It seems I don't have the permission to ban **{user}**",
-                        color=int("be1931", 16),
-                    )
-                )
+                failure.append(f"`{user}` No permission to ban")
+
             else:
-                await ctx.send(
-                    embed=nextcord.Embed(
-                        description=f":hammer: Banned `{user}`", color=int("f4900c", 16)
-                    )
-                )
+                success.append(f"`{user}` Banned :hammer:")
+
+        await util.send_tasks_result_list(
+            ctx, success, failure, f":hammer: Attempting to ban {len(discord_users)} users..."
+        )
 
     @commands.command()
     @commands.has_permissions(ban_members=True)
@@ -345,6 +339,11 @@ class Mod(commands.Cog):
         """Ban user(s)"""
         if not discord_users:
             return await util.send_command_help(ctx)
+
+        if len(discord_users) > 4:
+            raise exceptions.Info(
+                f"It seems you are trying to ban a lot of users at once.\nPlease use `{ctx.prefix}massban ...` instead"
+            )
 
         for discord_user in discord_users:
             user = await util.get_member(ctx, discord_user)
@@ -414,6 +413,55 @@ class Mod(commands.Cog):
         functions = {"✅": confirm_ban, "❌": cancel_ban}
         asyncio.ensure_future(
             util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+        )
+
+    @commands.command()
+    @commands.has_permissions(ban_members=True)
+    async def unban(self, ctx: commands.Context, *discord_users):
+        """Unban user(s)"""
+        if not discord_users:
+            return await util.send_command_help(ctx)
+
+        if len(discord_users) == 1:
+            user = await util.get_user(ctx, discord_users[0])
+            if user is None:
+                try:
+                    user = await self.bot.fetch_user(int(user))
+                except (ValueError, nextcord.NotFound):
+                    raise exceptions.Error(f"Invalid user or id `{user}`")
+            try:
+                await ctx.guild.unban(user)
+            except nextcord.errors.Forbidden:
+                raise exceptions.Error(
+                    f"It seems I don't have the permission to unban **{user}** {user.mention}"
+                )
+            except nextcord.errors.NotFound:
+                raise exceptions.Warning(f"Unable to unban. **{user}** is not banned")
+            else:
+                return await util.send_success(ctx, f"Unbanned **{user}** {user.mention}")
+
+        success = []
+        failure = []
+        for discord_user in discord_users:
+            user = await util.get_user(ctx, discord_user)
+            if user is None:
+                try:
+                    user = await self.bot.fetch_user(int(discord_user))
+                except (ValueError, nextcord.NotFound):
+                    failure.append(f"`{discord_user}` Invalid user or id")
+                    continue
+
+            try:
+                await ctx.guild.unban(user)
+            except nextcord.errors.Forbidden:
+                failure.append(f"`{user}` No permission to unban")
+            except nextcord.errors.NotFound:
+                failure.append(f"`{user}` is not banned")
+            else:
+                success.append(f"`{user}` Unbanned")
+
+        await util.send_tasks_result_list(
+            ctx, success, failure, f":memo: Attempting to unban {len(discord_users)} users..."
         )
 
 
