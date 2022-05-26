@@ -114,7 +114,7 @@ class Information(commands.Cog):
         )
         owner = self.bot.get_user(self.bot.owner_id)
         content.description = (
-            f"Created by **{owner}** {owner.mention} using nextcord.py\n\n"
+            f"Created by **{owner}** {owner.mention} using nextcord {nextcord.__version__}\n\n"
             f"Use `{ctx.prefix}help` to get help on any commands, \n"
             f"or visit the website for more detailed instructions.\n\n"
             f"Currently in **{len(self.bot.guilds)}** servers across **{len(self.bot.latencies)}** shards,\n"
