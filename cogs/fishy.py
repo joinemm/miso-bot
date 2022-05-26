@@ -98,7 +98,7 @@ class Fishy(commands.Cog):
     # idk why this doesnt work but it gets stuck all the time
     # @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.cooldown(1, 5, type=commands.BucketType.user)
-    @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin"])
+    @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin", "fush"])
     async def fishy(self, ctx: commands.Context, user: nextcord.Member = None):
         """Go fishing"""
         receiver = user or ctx.author
