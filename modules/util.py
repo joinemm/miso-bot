@@ -842,19 +842,26 @@ def ordinal(n):
 class TwoWayIterator:
     """Two way iterator class that is used as the backend for paging"""
 
-    def __init__(self, list_of_stuff):
+    def __init__(self, list_of_stuff, loop=False):
         self.items = list_of_stuff
+        self.loop = loop
         self.index = 0
 
     def next(self):
         if self.index == len(self.items) - 1:
-            return None
+            if self.loop:
+                self.index = -1
+            else:
+                return None
         self.index += 1
         return self.items[self.index]
 
     def previous(self):
         if self.index == 0:
-            return None
+            if self.loop:
+                self.index = len(self.items)
+            else:
+                return None
         self.index -= 1
         return self.items[self.index]
 

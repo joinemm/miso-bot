@@ -77,20 +77,44 @@ class User(commands.Cog):
         if user is None:
             user = ctx.author
 
-        content = nextcord.Embed()
-        content.set_author(name=str(user), url=user.display_avatar.url)
-        content.set_image(url=user.display_avatar.url)
-        stats = await util.image_info_from_url(user.display_avatar.url)
-        color = await util.color_from_image_url(
-            user.display_avatar.replace(size=64, format="png").url
-        )
-        content.colour = int(color, 16)
-        if stats is not None:
-            content.set_footer(
-                text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
-            )
+        assets = []
+        member = ctx.guild.get_member(user.id)
+        if member and member.guild_avatar:
+            assets.append((member.guild_avatar, "Server avatar"))
+        if user.avatar:
+            assets.append((user.avatar, "Avatar"))
+        else:
+            assets.append((user.default_avatar, "Default avatar"))
 
-        await ctx.send(embed=content)
+        pages = []
+
+        asset: nextcord.Asset
+        for asset, description in assets:
+            content = nextcord.Embed()
+            content.set_author(name=f"{user} / {description}", url=asset.url)
+            content.set_image(url=asset.url)
+            stats = await util.image_info_from_url(asset.url)
+            color = await util.color_from_image_url(asset.replace(size=64, format="png").url)
+            content.colour = int(color, 16)
+            if stats is not None:
+                content.set_footer(
+                    text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
+                )
+            pages.append(content)
+
+        if len(pages) == 1:
+            return await ctx.send(embed=pages[0])
+
+        pages = util.TwoWayIterator(pages, loop=True)
+        msg = await ctx.send(embed=pages.current())
+
+        async def switch():
+            content = pages.next()
+            await msg.edit(embed=content)
+
+        functions = {"↔️": switch}
+
+        await util.reaction_buttons(ctx, msg, functions)
 
     @commands.command(aliases=["uinfo"])
     @commands.cooldown(3, 30, type=commands.BucketType.user)
