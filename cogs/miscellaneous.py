@@ -528,9 +528,14 @@ class Miscellaneous(commands.Cog):
         content.set_footer(text=f"Type: {stats['filetype']}")
 
         if isinstance(emoji, nextcord.Emoji):
-            content.description = (
-                f"Added {arrow.get(emoji.created_at).format('D/M/YYYY')}\n" f"**{emoji.guild}**"
-            )
+            emoji = await emoji.guild.fetch_emoji(emoji.id)
+            desc = [f"Uploaded {arrow.get(emoji.created_at).format('D/M/YYYY')}"]
+            if emoji.user:
+                desc.append(f"by **{emoji.user}**")
+            if ctx.guild != emoji.guild:
+                desc.append(f"in **{emoji.guild}**")
+
+            content.description = "\n".join(desc)
 
         content.set_footer(
             text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
