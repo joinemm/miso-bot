@@ -269,7 +269,6 @@ class Media(commands.Cog):
                         raise exceptions.Error(
                             "The Instagram login cookie has expired, please ask my developer to reauthenticate"
                         )
-                    logger.info(data)
                     try:
                         data = data["data"]["shortcode_media"]
                     except KeyError:
