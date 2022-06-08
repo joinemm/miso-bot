@@ -1,4 +1,5 @@
 import asyncio
+import io
 import os
 import random
 import re
@@ -9,12 +10,12 @@ import nextcord
 import orjson
 import regex
 import tweepy
+import yarl
 from bs4 import BeautifulSoup
 from nextcord.ext import commands
-from random_user_agent.user_agent import UserAgent
 from tweepy import OAuthHandler
 
-from modules import exceptions, log, util
+from modules import exceptions, instagram, log, util
 
 logger = log.get_logger(__name__)
 
@@ -27,6 +28,7 @@ GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
 PROXY_URL = os.environ.get("PROXY_URL")
 PROXY_USER = os.environ.get("PROXY_USER")
 PROXY_PASS = os.environ.get("PROXY_PASS")
+IG_COOKIE = os.environ.get("IG_COOKIE")
 
 
 class Media(commands.Cog):
@@ -36,8 +38,7 @@ class Media(commands.Cog):
         self.bot = bot
         self.icon = "🌐"
         self.twitter_api = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
-        self.ig_cookie = os.environ.get("IG_COOKIE")
-        self.ig_query_hash = os.environ.get("IG_QUERY_HASH")
+        self.ig = instagram.Instagram(IG_COOKIE, True, PROXY_URL, PROXY_USER, PROXY_PASS)
         self.ig_colors = [
             int("405de6", 16),
             int("5851db", 16),
@@ -66,7 +67,6 @@ class Media(commands.Cog):
             "turkey": "tr",
             "tr": "tr",
         }
-        self.user_agents = UserAgent()
 
     @commands.group(aliases=["league"], case_insensitive=True, enabled=False)
     async def opgg(self, ctx: commands.Context):
@@ -215,141 +215,86 @@ class Media(commands.Cog):
         """Retrieve images from one or more instagram posts"""
         urls = []
         download = False
-        if len(links) > 5:
-            raise exceptions.Warning("Only 5 links at a time please!")
+
         for link in links:
             if link.lower() in ["-d", "--download"]:
                 download = True
             else:
                 urls.append(link)
-        async with aiohttp.ClientSession() as session:
-            for url in urls:
-                result = regex.findall("/(p|reel|tv)/(.*?)(/|\\Z)", url)
-                if result:
-                    url = f"https://www.instagram.com/p/{result[0][1]}"
-                else:
-                    url = f"https://www.instagram.com/p/{url.strip('/').split('/')[0]}"
 
-                headers = {
-                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/94.0",  # self.user_agents.get_random_user_agent(),
-                    "Cookie": self.ig_cookie,
-                    "Accept": "application/json",
-                    "Accept-Language": "en,en-US;q=0.5",
-                    "Accept-Encoding": "gzip, deflate, br",
-                    "DNT": "1",
-                    "Connection": "keep-alive",
-                    "Sec-Fetch-Dest": "document",
-                    "Sec-Fetch-Mode": "navigate",
-                    "Sec-Fetch-Site": "cross-site",
-                    "Sec-Fetch-User": "?1",
-                    "Cache-Control": "max-age=0, no-cache",
-                    "TE": "trailers",
-                    "Upgrade-Insecure-Requests": "1",
-                    "Pragma": "no-cache",
-                }
-                post_id = url.split("/")[-1]
-                newurl = "https://www.instagram.com/graphql/query/"
-                params = {
-                    "query_hash": self.ig_query_hash,
-                    "variables": '{"shortcode":"'
-                    + post_id
-                    + '","child_comment_count":3,"fetch_comment_count":40,"parent_comment_count":24,"has_threaded_comments":true}',
-                }
+        if len(urls) > 5:
+            raise exceptions.Warning("Only 5 links at a time please!")
 
-                if PROXY_USER or PROXY_PASS:
-                    proxy_auth = aiohttp.BasicAuth(PROXY_USER, PROXY_PASS)
-                else:
-                    proxy_auth = None
-                async with session.get(
-                    newurl, params=params, headers=headers, proxy=PROXY_URL, proxy_auth=proxy_auth
-                ) as response:
-                    try:
-                        data = await response.json()
-                    except aiohttp.ContentTypeError:
-                        raise exceptions.Error(
-                            "The Instagram login cookie has expired, please ask my developer to reauthenticate"
-                        )
-                    try:
-                        data = data["data"]["shortcode_media"]
-                    except KeyError:
-                        raise exceptions.Error(
-                            f"Unexpected graphql response format, something went wrong.\n```json\n{str(data)[:2000]}```"
-                        )
+        for post_url in urls:
+            result = regex.findall("/(p|reel|tv)/(.*?)(/|\\Z)", post_url)
+            if result:
+                shortcode = result[0][1]
+            else:
+                shortcode = post_url.strip("/").split("/")[0]
 
-                if data is None:
-                    await ctx.send(f":warning: No content found in Instagram URL `{url}`")
-                    continue
+            post_url = f"https://www.instagram.com/p/{shortcode}"
+            try:
+                post = await self.ig.extract(shortcode)
+            except instagram.ExpiredCookie:
+                raise exceptions.Error(
+                    "The Instagram login cookie has expired, please ask my developer to reauthenticate!"
+                )
+            except instagram.InstagramError as e:
+                raise exceptions.Error(e.message)
 
-                medias = []
-                try:
-                    for x in data["edge_sidecar_to_children"]["edges"]:
-                        medias.append(x["node"])
-                except KeyError:
-                    medias.append(data)
+            if download:
+                # send as files
+                caption = "\n".join(
+                    [
+                        f":bust_in_silhouette: **@{post.user.username}**",
+                        f":calendar: <t:{post.timestamp}:d>",
+                        f":link: <{post_url}>",
+                    ]
+                )
+                files = []
+                # discord normally has 8MB file size limit, but 50MB in boosted guilds
+                max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
+                async with aiohttp.ClientSession() as session:
+                    for n, media in enumerate(post.media, start=1):
+                        ext = "mp4" if media.media_type == instagram.MediaType.VIDEO else "jpg"
+                        dateformat = arrow.get(post.timestamp).format("YYMMDD")
+                        filename = f"{dateformat}-@{post.user.username}-{shortcode}-{n}.{ext}"
 
-                avatar_url = data["owner"]["profile_pic_url"]
-                username = data["owner"]["username"]
+                        # The url params are unescaped by aiohttp's built-in yarl
+                        # This causes problems with the hash-based request signing that instagram uses
+                        # Thankfully you can plug your own yarl.URL into session.get(), with encoded=True
+                        async with session.get(yarl.URL(media.url, encoded=True)) as response:
+                            logger.info(media.url)
+                            if (
+                                int(response.headers.get("content-length", max_filesize + 1))
+                                > max_filesize
+                            ):
+                                caption += f"\n{media.url}"
+                            else:
+                                buffer = io.BytesIO(await response.read())
+                                files.append(nextcord.File(fp=buffer, filename=filename))
+
+                # send files to discord
+                await ctx.send(caption, files=files)
+
+            else:
+                # send as embeds
                 content = nextcord.Embed(color=random.choice(self.ig_colors))
-                content.set_author(name=f"@{username}", icon_url=avatar_url, url=url)
+                content.set_author(
+                    name=f"@{post.user.username}", icon_url=post.user.avatar_url, url=post_url
+                )
+                for n, media in enumerate(post.media, start=1):
+                    if n == len(post.media):
+                        content.timestamp = arrow.get(post.timestamp).datetime
+                    if media.media_type == instagram.MediaType.VIDEO:
+                        await ctx.send(media.url)
+                    else:
+                        content.set_image(url=media.url)
+                        await ctx.send(embed=content)
+                    content._author = None
 
-                if not medias:
-                    await ctx.send(f":warning: Could not find any media from `{url}`")
-                    continue
-
-                if download:
-                    # send as files
-                    timestamp = arrow.get(data["taken_at_timestamp"]).format("YYMMDD")
-                    caption = f":bust_in_silhouette: **@{username}**\n:calendar: {timestamp}\n:link: <{url}>"
-                    files = []
-                    max_filesize = 8388608  # discord has 8MB file size limit
-                    async with aiohttp.ClientSession() as session:
-                        for n, file in enumerate(medias, start=1):
-                            too_big = False
-                            if file.get("is_video"):
-                                media_url = file.get("video_url")
-                                extension = "mp4"
-                            else:
-                                media_url = file.get("display_url")
-                                extension = "jpg"
-
-                            filename = f"{timestamp}-@{username}-{post_id}-{n}.{extension}"
-                            async with session.get(media_url) as response:
-                                if (
-                                    int(response.headers.get("content-length", max_filesize + 1))
-                                    > max_filesize
-                                ):
-                                    too_big = True
-                                else:
-                                    with open(filename, "wb") as f:
-                                        while True:
-                                            block = await response.content.read(1024)
-                                            if not block:
-                                                break
-                                            f.write(block)
-
-                            if too_big:
-                                caption += f"\n{media_url}"
-                            else:
-                                with open(filename, "rb") as f:
-                                    files.append(nextcord.File(f))
-
-                                os.remove(filename)
-
-                    await ctx.send(caption, files=files)
-                else:
-                    # send as embeds
-                    for n, medianode in enumerate(medias, start=1):
-                        if n == len(medias):
-                            content.timestamp = arrow.get(data["taken_at_timestamp"]).datetime
-                        if medianode.get("is_video"):
-                            await ctx.send(medianode.get("video_url"))
-                        else:
-                            content.set_image(url=medianode.get("display_url"))
-                            await ctx.send(embed=content)
-                        content._author = None
-
+        # finally delete discord automatic embed
         try:
-            # delete discord automatic embed
             await ctx.message.edit(suppress=True)
         except (nextcord.Forbidden, nextcord.NotFound):
             pass
@@ -625,3 +570,35 @@ class GGSoup:
             source = self.soup
         a = source.find(obj, {"class": classname})
         return "https:" + a.get("src") if a else a
+
+
+class InstagramIdCodec:
+    ENCODING_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+
+    @staticmethod
+    def encode(num, alphabet=ENCODING_CHARS):
+        """Covert a numeric value to a shortcode."""
+        num = int(num)
+        if num == 0:
+            return alphabet[0]
+        arr = []
+        base = len(alphabet)
+        while num:
+            rem = num % base
+            num //= base
+            arr.append(alphabet[rem])
+        arr.reverse()
+        return "".join(arr)
+
+    @staticmethod
+    def decode(shortcode, alphabet=ENCODING_CHARS):
+        """Covert a shortcode to a numeric value."""
+        base = len(alphabet)
+        strlen = len(shortcode)
+        num = 0
+        idx = 0
+        for char in shortcode:
+            power = strlen - (idx + 1)
+            num += alphabet.index(char) * (base**power)
+            idx += 1
+        return num
