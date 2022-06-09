@@ -320,7 +320,7 @@ class Media(commands.Cog):
             try:
                 tweet = await ctx.bot.loop.run_in_executor(
                     None,
-                    lambda: self.twitter_api.get_status(tweet_id, tweet_mode="extended"),
+                    lambda: self.twitter_api.get_status(str(tweet_id), tweet_mode="extended"),
                 )
 
             except Exception:

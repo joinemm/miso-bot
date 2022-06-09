@@ -223,7 +223,7 @@ class Mod(commands.Cog):
         )
 
         if seconds is not None:
-            unmute_on = arrow.now().shift(seconds=+seconds).datetime
+            unmute_on = arrow.now().shift(seconds=seconds).datetime
         else:
             unmute_on = None
 

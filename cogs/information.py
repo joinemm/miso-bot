@@ -228,7 +228,7 @@ class Information(commands.Cog):
         content.colour = role.color
 
         if isinstance(role.icon, nextcord.Asset):
-            content.set_thumbnail(role.icon.url)
+            content.set_thumbnail(url=role.icon.url)
         elif isinstance(role.icon, str):
             content.title = f"{role.icon} @{role.name} | #{role.id}"
 
