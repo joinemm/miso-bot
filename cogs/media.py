@@ -337,20 +337,21 @@ class Media(commands.Cog):
                 await ctx.send(f":warning: Could not find any images from tweet id `{tweet_id}`")
                 continue
 
-            for i in range(len(media)):
-                media_url = media[i]["media_url"]
+            for resource in media:
+                media_url = resource["media_url"]
                 video_url = None
-                if not media[i]["type"] == "photo":
-                    video_urls = media[i]["video_info"]["variants"]
+                if not resource["type"] == "photo":
+                    video_variants = resource["video_info"]["variants"]
                     largest_rate = -1
-                    for x in range(len(video_urls)):
+                    for video in video_variants:
                         if (
-                            video_urls[x]["content_type"] == "video/mp4"
-                            and video_urls[x]["bitrate"] > largest_rate
+                            video["content_type"] == "video/mp4"
+                            and video["bitrate"] > largest_rate
                         ):
-                            largest_rate = video_urls[x]["bitrate"]
-                            video_url = video_urls[x]["url"]
-                            media_url = video_urls[x]["url"]
+                            largest_rate = video["bitrate"]
+                            video_url = video["url"]
+                            media_url = video["url"]
+
                 media_files.append((media_url, video_url))
 
             content = nextcord.Embed(colour=int(tweet.user.profile_link_color, 16))
