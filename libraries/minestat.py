@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 # -------------------------------
-# Modified by joinemm on 28/03/19
+# Modified by Joinemm
 
 import socket
 from datetime import datetime
@@ -27,11 +27,6 @@ class MineStat:
     NUM_FIELDS = 6  # number of values expected from server
     NUM_FIELDS_BETA = 3  # number of values expected from a 1.8b/1.3 server
     DEFAULT_TIMEOUT = 5  # default TCP timeout in seconds
-
-    def enum(**enums):
-        return type("Enum", (), enums)
-
-    Retval = enum(SUCCESS=0, CONNFAIL=-1, TIMEOUT=-2, UNKNOWN=-3)
 
     def __init__(self, address, port, timeout=DEFAULT_TIMEOUT):
         self.address = address
