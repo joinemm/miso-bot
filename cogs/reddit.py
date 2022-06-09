@@ -159,7 +159,8 @@ class Reddit(commands.Cog):
         if message_content is not None:
             await ctx.send(message_content)
 
-    async def render_submission(self, submission, censor=True):
+    @staticmethod
+    async def render_submission(submission, censor=True):
         """Turns reddit submission into a discord embed"""
         message_text = None
         content = nextcord.Embed()
@@ -235,7 +236,8 @@ class Reddit(commands.Cog):
             return None
         return timespan
 
-    async def check_n(self, ctx: commands.Context, number):
+    @staticmethod
+    async def check_n(ctx: commands.Context, number):
         """Validates number argument"""
         try:
             number = int(number)

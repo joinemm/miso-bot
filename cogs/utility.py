@@ -187,7 +187,8 @@ class Utility(commands.Cog):
             ctx.command = self.bot.get_command("!")
             await ctx.command.callback(self, ctx)
 
-    async def resolve_bang(self, ctx: commands.Context, bang, args):
+    @staticmethod
+    async def resolve_bang(ctx: commands.Context, bang, args):
         async with aiohttp.ClientSession() as session:
             params = {"q": "!" + bang + " " + args, "format": "json", "no_redirect": 1}
             url = "https://api.duckduckgo.com"

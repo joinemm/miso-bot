@@ -391,7 +391,8 @@ class Mod(commands.Cog):
                     )
                 )
 
-    async def send_ban_confirmation(self, ctx: commands.Context, user):
+    @staticmethod
+    async def send_ban_confirmation(ctx: commands.Context, user):
         content = nextcord.Embed(title=":hammer: Ban user?", color=int("f4900c", 16))
         content.description = f"{user.mention}\n**{user.name}#{user.discriminator}**\n{user.id}"
         msg = await ctx.send(embed=content)

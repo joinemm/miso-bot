@@ -664,7 +664,8 @@ class LastFm(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    async def album_top_tracks(self, ctx: commands.Context, period, artistname, albumname):
+    @staticmethod
+    async def album_top_tracks(ctx: commands.Context, period, artistname, albumname):
         """Scrape the top tracks of given album from lastfm library page"""
         artistname = urllib.parse.quote_plus(artistname)
         albumname = urllib.parse.quote_plus(albumname)
@@ -695,7 +696,8 @@ class LastFm(commands.Cog):
 
             return album, all_results
 
-    async def artist_top(self, ctx: commands.Context, period, artistname, datatype):
+    @staticmethod
+    async def artist_top(ctx: commands.Context, period, artistname, datatype):
         """Scrape either top tracks or top albums from lastfm library page"""
         artistname = urllib.parse.quote_plus(artistname)
         async with aiohttp.ClientSession() as session:

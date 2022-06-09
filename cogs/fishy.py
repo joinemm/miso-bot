@@ -249,7 +249,8 @@ class Fishy(commands.Cog):
         )
         await ctx.send(embed=content)
 
-    async def fish_common(self, ctx: commands.Context, user, gift):
+    @staticmethod
+    async def fish_common(ctx: commands.Context, user, gift):
         amount = random.randint(1, 29)
         if amount == 1:
             await ctx.send(
@@ -265,7 +266,8 @@ class Fishy(commands.Cog):
             )
         return amount
 
-    async def fish_uncommon(self, ctx: commands.Context, user, gift):
+    @staticmethod
+    async def fish_uncommon(ctx: commands.Context, user, gift):
         amount = random.randint(30, 99)
         await ctx.send(
             "**Caught an uncommon fish"
@@ -274,7 +276,8 @@ class Fishy(commands.Cog):
         )
         return amount
 
-    async def fish_rare(self, ctx: commands.Context, user, gift):
+    @staticmethod
+    async def fish_rare(ctx: commands.Context, user, gift):
         amount = random.randint(100, 399)
         await ctx.send(
             ":star: **Caught a super rare fish"
@@ -284,7 +287,8 @@ class Fishy(commands.Cog):
         )
         return amount
 
-    async def fish_legendary(self, ctx: commands.Context, user, gift):
+    @staticmethod
+    async def fish_legendary(ctx: commands.Context, user, gift):
         amount = random.randint(400, 750)
         await ctx.send(
             ":star2: **Caught a *legendary* fish"

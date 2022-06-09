@@ -543,7 +543,8 @@ class Events(commands.Cog):
                         str(message.author.id)
                     ][str(emoji_id)] = {"uses": 1, "name": emoji_name}
 
-    async def easter_eggs(self, message):
+    @staticmethod
+    async def easter_eggs(message):
         """Easter eggs handler"""
         # stfu
         if random.randint(0, 3) == 0 and "stfu" in message.content.lower():

@@ -74,7 +74,8 @@ class WebServer(commands.Cog):
             except OSError as e:
                 logger.warning(e)
 
-    async def index(self, request):
+    @staticmethod
+    async def index(request):
         return web.Response(text="Hi I'm Miso Bot!")
 
     async def donator_list(self, request):
