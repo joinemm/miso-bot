@@ -6,20 +6,20 @@ This document entails the privacy policy and agreement that you accept when addi
 
 Any data intentionally submitted by an user as part of normal command usage. This data is not collected automatically. When providing data in this way, you forego any rights to the content of the data provided.
 
-* Timezones, Horoscopes, Location and other user specific settings
-* Usernames for external services such as Last.Fm
-* Server configurations
-* Reminder contents, notification keywords
-* Custom command names and response contents
-* Minecraft server IP address
-* Typing test history
-* Saved urls or other text content
+-   Timezones, Horoscopes, Location and other user specific settings
+-   Usernames for external services such as Last.Fm
+-   Server configurations
+-   Reminder contents, notification keywords
+-   Custom command names and response contents
+-   Minecraft server IP address
+-   Typing test history
+-   Saved urls or other text content
 
 ## Data collected automatically
 
-* Emoji usage
-* Server activity based on amount of words typed (message content is NOT saved)
-* Message content may be sent to another user's DM in case they have a notification for a word included in the message. Such DM will only be sent would the user be able to see your message through normal means within the discord client, and respects any channel permission settings.
+-   Emoji usage
+-   Server activity based on amount of words typed (message content is NOT saved)
+-   Message content may be sent to another user's DM in case they have a notification for a word included in the message. Such DM will only be sent would the user be able to see your message through normal means within the discord client, and respects any channel permission settings.
 
 ## Data Storage
 

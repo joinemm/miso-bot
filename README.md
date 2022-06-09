@@ -6,7 +6,7 @@
 [![Discord](https://img.shields.io/discord/652904322706833409.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/RzDW3Ne)
 [![Patreon](https://img.shields.io/badge/Patreon-donate-orange.svg)](https://www.patreon.com/joinemm)
 
----
+* * *
 
 A discord bot with almost 100 commands and features, including but not limited to:
 
@@ -47,18 +47,17 @@ A discord bot with almost 100 commands and features, including but not limited t
 
 ...and much more. Visit <https://misobot.xyz> for more detailed overview of the features.
 
----
+* * *
 
 Invite to you server using this link!
 
 <https://discord.com/oauth2/authorize?client_id=500385855072894982&permissions=8&scope=bot>
 
----
+* * *
 
 ### Deployment using docker
 
 First copy/rename `.env.example` to `.env` and fill it with your own keys.
 Everything else should be handled by the `docker-compose.yml`
-```
-docker-compose up --build
-```
+
+    docker-compose up --build
