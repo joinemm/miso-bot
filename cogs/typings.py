@@ -126,8 +126,7 @@ class Typings(commands.Cog):
         note_emoji = "🗒"
         check_emoji = "✅"
 
-        players = set()
-        players.add(ctx.author)
+        players = {ctx.author}
         race_in_progress = False
 
         await enter_message.add_reaction(note_emoji)
