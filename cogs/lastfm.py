@@ -2280,9 +2280,11 @@ class LastFm(commands.Cog):
                 tracks = data["recenttracks"]["track"]
                 if tracks:
                     nowplaying = False
-                    if tracks[0].get("@attr"):
-                        if tracks[0]["@attr"].get("nowplaying"):
-                            nowplaying = True
+                    if (
+                        tracks[0].get("@attr")
+                        and tracks[0]["@attr"].get("nowplaying")
+                    ):
+                        nowplaying = True
 
                     if tracks[0].get("date"):
                         date = tracks[0]["date"]["uts"]
