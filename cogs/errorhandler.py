@@ -96,17 +96,17 @@ class ErrorHander(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             return await util.send_command_help(ctx)
 
-        if isinstance(error, exceptions.Info):
+        if isinstance(error, exceptions.CommandInfo):
             command_logger.info(log.log_command(ctx, extra=error))
             return await self.send(ctx, "info", str(error), error.kwargs)
-        if isinstance(error, exceptions.Warning):
+        if isinstance(error, exceptions.CommandWarning):
             command_logger.warning(log.log_command(ctx, extra=error))
             return await self.send(ctx, "warning", str(error), error.kwargs)
         command_logger.error(
             f'{type(error).__name__:25} > {ctx.guild} : {ctx.author} "{ctx.message.content}" > {error}'
         )
 
-        if isinstance(error, exceptions.Error):
+        if isinstance(error, exceptions.CommandError):
             return await self.send(ctx, "error", str(error), error.kwargs)
 
         if isinstance(error, commands.NoPrivateMessage):

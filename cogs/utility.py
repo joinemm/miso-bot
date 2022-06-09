@@ -266,7 +266,9 @@ class Utility(commands.Cog):
             )
 
         if seconds < 1:
-            raise exceptions.Info("You must give a valid time at least 1 second in the future!")
+            raise exceptions.CommandInfo(
+                "You must give a valid time at least 1 second in the future!"
+            )
 
         await self.bot.db.execute(
             """
@@ -343,7 +345,7 @@ class Utility(commands.Cog):
             try:
                 geocode_data = geocode_data["results"][0]
             except IndexError:
-                raise exceptions.Warning("Could not find that location!")
+                raise exceptions.CommandWarning("Could not find that location!")
 
             formatted_name = geocode_data["formatted_address"]
             lat = geocode_data["geometry"]["location"]["lat"]
@@ -555,7 +557,7 @@ class Utility(commands.Cog):
             >translate xx/ <sentence>
         """
         if len(text) > 1000:
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 "Sorry, the maximum length of text i can translate is 1000 characters!"
             )
 
@@ -647,7 +649,7 @@ class Utility(commands.Cog):
             try:
                 gfyname = data["gfyname"]
             except KeyError:
-                raise exceptions.Warning("Unable to create gif from this link!")
+                raise exceptions.CommandWarning("Unable to create gif from this link!")
 
             message = await ctx.send(f"Encoding {emojis.LOADING}")
 
@@ -836,7 +838,7 @@ class Utility(commands.Cog):
             dt = arrow.now(tz_str)
             await ctx.send(f":clock2: **{dt.format('MMM Do HH:mm')}**")
         else:
-            raise exceptions.Warning(f"{member} has not set their timezone yet!")
+            raise exceptions.CommandWarning(f"{member} has not set their timezone yet!")
 
     @timezone.command(name="set")
     async def tz_set(self, ctx: commands.Context, your_timezone):
@@ -851,7 +853,7 @@ class Utility(commands.Cog):
         try:
             ts = arrow.now(your_timezone)
         except arrow.ParserError as e:
-            raise exceptions.Warning(str(e), help_footer=True)
+            raise exceptions.CommandWarning(str(e), help_footer=True)
         await ctx.bot.db.execute(
             """
             INSERT INTO user_settings (user_id, timezone)
@@ -895,7 +897,7 @@ class Utility(commands.Cog):
             user_ids,
         )
         if not data:
-            raise exceptions.Warning("No one on this server has set their timezone yet!")
+            raise exceptions.CommandWarning("No one on this server has set their timezone yet!")
 
         dt_data = []
         for user_id, tz_str in data:

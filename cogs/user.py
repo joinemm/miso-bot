@@ -224,7 +224,7 @@ class User(commands.Cog):
 
         if not user.banner:
             if not user.accent_color:
-                raise exceptions.Warning(f"**{user}** has not set banner or accent color.")
+                raise exceptions.CommandWarning(f"**{user}** has not set banner or accent color.")
 
             content.color = user.accent_color
             content.description = f":art: Solid color `{user.accent_color}`"
@@ -253,7 +253,7 @@ class User(commands.Cog):
         content = nextcord.Embed()
 
         if not guild.banner:
-            raise exceptions.Warning("This server has no banner")
+            raise exceptions.CommandWarning("This server has no banner")
 
         content.set_author(
             name=f"{guild} Banner",
@@ -280,7 +280,7 @@ class User(commands.Cog):
         else:
             guild = self.bot.get_guild(guild_id)
             if guild is None:
-                raise exceptions.Warning(f'Guild with id "{guild_id}" not found.')
+                raise exceptions.CommandWarning(f'Guild with id "{guild_id}" not found.')
 
         content = nextcord.Embed(title=f"**{guild.name}** | #{guild.id}")
         if guild.icon:
@@ -509,7 +509,7 @@ class User(commands.Cog):
             i += 1
 
         if not rows:
-            raise exceptions.Info("Nobody has any fish yet!")
+            raise exceptions.CommandInfo("Nobody has any fish yet!")
 
         content = nextcord.Embed(
             title=f":fish: {'Global' if global_data else ctx.guild.name} fishy leaderboard",
@@ -821,7 +821,7 @@ class User(commands.Cog):
             return await util.send_command_help(ctx)
 
         if len(text) > 500:
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 f"Description cannot be more than 500 characters ({len(text)})"
             )
 
@@ -884,7 +884,7 @@ class User(commands.Cog):
             color = "#" + color.strip("#")
             color_hex = await util.get_color(ctx, color)
             if color_hex is None:
-                raise exceptions.Warning(f"Invalid color {color}")
+                raise exceptions.CommandWarning(f"Invalid color {color}")
 
             color_value = str(color_hex).strip("#")
 

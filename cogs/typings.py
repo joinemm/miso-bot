@@ -272,7 +272,7 @@ class Typings(commands.Cog):
             member.id,
         )
         if not data:
-            raise exceptions.Info(
+            raise exceptions.CommandInfo(
                 ("You haven't" if member is ctx.author else f"**{member.name}** hasn't")
                 + " taken any typing tests yet!",
             )
@@ -337,7 +337,7 @@ class Typings(commands.Cog):
             one_row=True,
         )
         if not data:
-            raise exceptions.Info(
+            raise exceptions.CommandInfo(
                 ("You haven't" if user is ctx.author else f"**{user.name}** hasn't")
                 + " taken any typing tests yet!",
             )

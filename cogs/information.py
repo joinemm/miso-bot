@@ -431,7 +431,7 @@ class Information(commands.Cog):
         """Stats of a single command"""
         command = self.bot.get_command(command_name)
         if command is None:
-            raise exceptions.Info(f"Command `{ctx.prefix}{command_name}` does not exist!")
+            raise exceptions.CommandInfo(f"Command `{ctx.prefix}{command_name}` does not exist!")
 
         content = nextcord.Embed(title=f":bar_chart: `{ctx.prefix}{command.qualified_name}`")
 
@@ -529,7 +529,7 @@ class Information(commands.Cog):
             guild = ctx.guild
 
         if guild.icon is None:
-            raise exceptions.Warning("This server has no icon.")
+            raise exceptions.CommandWarning("This server has no icon.")
 
         content = nextcord.Embed()
         content.set_author(name=str(guild), url=guild.icon.url)
@@ -571,7 +571,7 @@ class Information(commands.Cog):
             "html_rendered",
         ]
         if stat not in available:
-            raise exceptions.Warning(f"Available stats: {', '.join(available)}")
+            raise exceptions.CommandWarning(f"Available stats: {', '.join(available)}")
 
         data = await self.bot.db.execute(
             f"""

@@ -92,11 +92,11 @@ class LastFm(commands.Cog):
     async def set(self, ctx: commands.Context, username):
         """Save your Last.fm username"""
         if ctx.foreign_target:
-            raise exceptions.Warning("You cannot set Last.fm username for someone else!")
+            raise exceptions.CommandWarning("You cannot set Last.fm username for someone else!")
 
         content = await self.get_userinfo_embed(username)
         if content is None:
-            raise exceptions.Warning(f"Last.fm profile `{username}` was not found")
+            raise exceptions.CommandWarning(f"Last.fm profile `{username}` was not found")
 
         await self.bot.db.execute(
             """
@@ -117,7 +117,7 @@ class LastFm(commands.Cog):
     async def unset(self, ctx: commands.Context):
         """Unlink your Last.fm"""
         if ctx.foreign_target:
-            raise exceptions.Warning("You cannot unset someone else's Last.fm username!")
+            raise exceptions.CommandWarning("You cannot unset someone else's Last.fm username!")
 
         await self.bot.db.execute(
             """
@@ -141,7 +141,7 @@ class LastFm(commands.Cog):
         """See what your n:th scrobble was"""
         n_display = util.ordinal(n)
         if n < 1:
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 "Please give a number between 1 and your total amount of listened tracks."
             )
         per_page = 100
@@ -150,7 +150,7 @@ class LastFm(commands.Cog):
         )
         total = int(pre_data["recenttracks"]["@attr"]["total"])
         if n > total:
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 f"You have only listened to **{total}** tracks! Unable to show {n_display} track"
             )
 
@@ -189,7 +189,7 @@ class LastFm(commands.Cog):
         tracks = data["recenttracks"]["track"]
 
         if not tracks:
-            raise exceptions.Info("You have not listened to anything yet!")
+            raise exceptions.CommandInfo("You have not listened to anything yet!")
 
         username = data["recenttracks"]["@attr"]["user"]
         artist = tracks[0]["artist"]["#text"]
@@ -285,7 +285,7 @@ class LastFm(commands.Cog):
         tracks = data["recenttracks"]["track"]
 
         if not tracks:
-            raise exceptions.Info("You have not listened to anything yet!")
+            raise exceptions.CommandInfo("You have not listened to anything yet!")
 
         artist = tracks[0]["artist"]["#text"]
         album = tracks[0]["album"]["#text"]
@@ -367,7 +367,7 @@ class LastFm(commands.Cog):
         artists = data["topartists"]["artist"][: arguments["amount"]]
 
         if not artists:
-            raise exceptions.Info("You have not listened to anything yet!")
+            raise exceptions.CommandInfo("You have not listened to anything yet!")
 
         rows = []
         for i, artist in enumerate(artists, start=1):
@@ -408,7 +408,7 @@ class LastFm(commands.Cog):
         albums = data["topalbums"]["album"][: arguments["amount"]]
 
         if not albums:
-            raise exceptions.Info("You have not listened to anything yet!")
+            raise exceptions.CommandInfo("You have not listened to anything yet!")
 
         rows = []
         for i, album in enumerate(albums, start=1):
@@ -452,7 +452,7 @@ class LastFm(commands.Cog):
         tracks = data["toptracks"]["track"][: arguments["amount"]]
 
         if not tracks:
-            raise exceptions.Info("You have not listened to anything yet!")
+            raise exceptions.CommandInfo("You have not listened to anything yet!")
 
         rows = []
         for i, track in enumerate(tracks, start=1):
@@ -490,7 +490,7 @@ class LastFm(commands.Cog):
         tracks = data["recenttracks"]["track"][:size]
 
         if not tracks:
-            raise exceptions.Info("You have not listened to anything yet!")
+            raise exceptions.CommandInfo("You have not listened to anything yet!")
 
         rows = []
         for track in tracks:
@@ -531,7 +531,7 @@ class LastFm(commands.Cog):
         if artistname.lower() == "np":
             artistname = (await self.getnowplaying(ctx))["artist"]
             if artistname is None:
-                raise exceptions.Warning("Could not get currently playing artist!")
+                raise exceptions.CommandWarning("Could not get currently playing artist!")
 
         if artistname == "":
             return await ctx.send("Missing artist name!")
@@ -616,14 +616,14 @@ class LastFm(commands.Cog):
             albumname = npd["album"]
             artistname = npd["artist"]
             if None in [albumname, artistname]:
-                raise exceptions.Warning("Could not get currently playing album!")
+                raise exceptions.CommandWarning("Could not get currently playing album!")
         else:
             try:
                 albumname, artistname = [x.strip() for x in album.split("|")]
                 if "" in (albumname, artistname):
                     raise ValueError
             except ValueError:
-                raise exceptions.Warning("Incorrect format! use `album | artist`")
+                raise exceptions.CommandWarning("Incorrect format! use `album | artist`")
 
         album, data = await self.album_top_tracks(ctx, period, artistname, albumname)
         if album is None or not data:
@@ -905,7 +905,7 @@ class LastFm(commands.Cog):
                 colour = nextcord.Color(value=int(colour.strip("#"), 16))
                 query_color = colour.to_rgb()
             except ValueError:
-                raise exceptions.Warning(f"`{colour}` is not a valid hex colour")
+                raise exceptions.CommandWarning(f"`{colour}` is not a valid hex colour")
 
             dim = size.split("x")
             width = int(dim[0])
@@ -915,7 +915,7 @@ class LastFm(commands.Cog):
                 height = abs(int(dim[0]))
 
             if width + height > max_size:
-                raise exceptions.Info(
+                raise exceptions.CommandInfo(
                     f"Size is too big! Chart `width` + `height` total must not exceed `{max_size}`"
                 )
         else:
@@ -934,7 +934,7 @@ class LastFm(commands.Cog):
             albums.add(album_art_id)
 
         if not albums:
-            raise exceptions.Error("There was an unknown error while getting your albums!")
+            raise exceptions.CommandError("There was an unknown error while getting your albums!")
 
         to_fetch = []
         albumcolors = await self.bot.db.execute(
@@ -1071,7 +1071,7 @@ class LastFm(commands.Cog):
         """
         arguments = parse_chart_arguments(args)
         if arguments["width"] + arguments["height"] > 30:
-            raise exceptions.Info(
+            raise exceptions.CommandInfo(
                 "Size is too big! Chart `width` + `height` total must not exceed `30`"
             )
 
@@ -1195,7 +1195,7 @@ class LastFm(commands.Cog):
         """
         arguments = parse_chart_arguments(args)
         if arguments["width"] + arguments["height"] > 30:
-            raise exceptions.Info(
+            raise exceptions.CommandInfo(
                 "Size is too big! Chart `width` + `height` total must not exceed `30`"
             )
 
@@ -1614,7 +1614,7 @@ class LastFm(commands.Cog):
         if artistname.lower() == "np":
             artistname = (await self.getnowplaying(ctx))["artist"]
             if artistname is None:
-                raise exceptions.Warning("Could not get currently playing artist!")
+                raise exceptions.CommandWarning("Could not get currently playing artist!")
 
         listeners = []
         tasks = []
@@ -1712,14 +1712,14 @@ class LastFm(commands.Cog):
             trackname = npd["track"]
             artistname = npd["artist"]
             if None in [trackname, artistname]:
-                raise exceptions.Warning("Could not get currently playing track!")
+                raise exceptions.CommandWarning("Could not get currently playing track!")
         else:
             try:
                 trackname, artistname = [x.strip() for x in track.split("|")]
                 if "" in (trackname, artistname):
                     raise ValueError
             except ValueError:
-                raise exceptions.Warning("Incorrect format! use `track | artist`")
+                raise exceptions.CommandWarning("Incorrect format! use `track | artist`")
 
         listeners = []
         tasks = []
@@ -1788,14 +1788,14 @@ class LastFm(commands.Cog):
             albumname = npd["album"]
             artistname = npd["artist"]
             if None in [albumname, artistname]:
-                raise exceptions.Warning("Could not get currently playing album!")
+                raise exceptions.CommandWarning("Could not get currently playing album!")
         else:
             try:
                 albumname, artistname = [x.strip() for x in album.split("|")]
                 if "" in (albumname, artistname):
                     raise ValueError
             except ValueError:
-                raise exceptions.Warning("Incorrect format! use `album | artist`")
+                raise exceptions.CommandWarning("Incorrect format! use `album | artist`")
 
         listeners = []
         tasks = []
@@ -1904,7 +1904,7 @@ class LastFm(commands.Cog):
                 data = await response.json()
 
         if data["status"] != "success":
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 f"Something went wrong! `error {data['error']['error_code']}: {data['error']['error_message']}`"
             )
 
@@ -2280,10 +2280,7 @@ class LastFm(commands.Cog):
                 tracks = data["recenttracks"]["track"]
                 if tracks:
                     nowplaying = False
-                    if (
-                        tracks[0].get("@attr")
-                        and tracks[0]["@attr"].get("nowplaying")
-                    ):
+                    if tracks[0].get("@attr") and tracks[0]["@attr"].get("nowplaying"):
                         nowplaying = True
 
                     if tracks[0].get("date"):
@@ -2607,7 +2604,7 @@ async def username_to_ctx(ctx):
         else:
             msg = f"{ctx.usertarget.mention} has not saved their lastfm username!"
 
-        raise exceptions.Warning(msg)
+        raise exceptions.CommandWarning(msg)
 
 
 def remove_mentions(text):

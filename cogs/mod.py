@@ -112,7 +112,7 @@ class Mod(commands.Cog):
             >purge <amount> [mentions...]
         """
         if amount > 100:
-            raise exceptions.Warning("You cannot delete more than 100 messages at a time.")
+            raise exceptions.CommandWarning("You cannot delete more than 100 messages at a time.")
 
         await ctx.message.delete()
 
@@ -126,7 +126,9 @@ class Mod(commands.Cog):
             try:
                 await ctx.channel.delete_messages(deleted)
             except nextcord.errors.HTTPException:
-                raise exceptions.Error("You can only delete messages that are under 14 days old.")
+                raise exceptions.CommandError(
+                    "You can only delete messages that are under 14 days old."
+                )
         else:
             deleted = await ctx.channel.purge(limit=amount)
 
@@ -165,7 +167,7 @@ class Mod(commands.Cog):
                 await member.edit(timeout=None)
                 return await util.send_success(ctx, f"Removed timeout from {member.mention}")
             else:
-                raise exceptions.Info(
+                raise exceptions.CommandInfo(
                     f"{member.mention} is already timed out (**{util.stringfromtime(seconds)}** remaining)",
                 )
 
@@ -190,7 +192,7 @@ class Mod(commands.Cog):
         )
         mute_role = ctx.guild.get_role(mute_role_id)
         if not mute_role:
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 "Mute role for this server has been deleted or is not set, "
                 f"please use `{ctx.prefix}muterole <role>` to set it."
             )
@@ -203,18 +205,20 @@ class Mod(commands.Cog):
             seconds = util.timefromstring(duration)
 
             if seconds is None or seconds == 0:
-                raise exceptions.Warning(f'Invalid mute duration "{duration}"')
+                raise exceptions.CommandWarning(f'Invalid mute duration "{duration}"')
 
             if seconds < 60:
-                raise exceptions.Info("The minimum duration of a mute is **1 minute**")
+                raise exceptions.CommandInfo("The minimum duration of a mute is **1 minute**")
 
             if seconds > 604800:
-                raise exceptions.Info("The maximum duration of a mute is **1 week**")
+                raise exceptions.CommandInfo("The maximum duration of a mute is **1 week**")
 
         try:
             await member.add_roles(mute_role)
         except nextcord.errors.Forbidden:
-            raise exceptions.Error(f"It seems I don't have permission to mute {member.mention}")
+            raise exceptions.CommandError(
+                f"It seems I don't have permission to mute {member.mention}"
+            )
 
         await util.send_success(
             ctx,
@@ -255,14 +259,16 @@ class Mod(commands.Cog):
         )
         mute_role = ctx.guild.get_role(mute_role_id)
         if not mute_role:
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 "Mute role for this server has been deleted or is not set, "
                 f"please use `{ctx.prefix}muterole <role>` to set it."
             )
         try:
             await member.remove_roles(mute_role)
         except nextcord.errors.Forbidden:
-            raise exceptions.Error(f"It seems I don't have permission to unmute {member.mention}")
+            raise exceptions.CommandError(
+                f"It seems I don't have permission to unmute {member.mention}"
+            )
 
         await util.send_success(ctx, f"Unmuted {member.mention}")
         await self.bot.db.execute(
@@ -278,7 +284,7 @@ class Mod(commands.Cog):
     async def inspect(self, ctx: commands.Context, *ids: int):
         """Resolve user ids into usernames"""
         if len(ids) > 25:
-            raise exceptions.Warning("Only 25 at a time please!")
+            raise exceptions.CommandWarning("Only 25 at a time please!")
         rows = []
         for user_id in ids:
             user = self.bot.get_user(user_id)
@@ -341,7 +347,7 @@ class Mod(commands.Cog):
             return await util.send_command_help(ctx)
 
         if len(discord_users) > 4:
-            raise exceptions.Info(
+            raise exceptions.CommandInfo(
                 f"It seems you are trying to ban a lot of users at once.\nPlease use `{ctx.prefix}massban ...` instead"
             )
 
@@ -429,15 +435,15 @@ class Mod(commands.Cog):
                 try:
                     user = await self.bot.fetch_user(int(user))
                 except (ValueError, nextcord.NotFound):
-                    raise exceptions.Error(f"Invalid user or id `{user}`")
+                    raise exceptions.CommandError(f"Invalid user or id `{user}`")
             try:
                 await ctx.guild.unban(user)
             except nextcord.errors.Forbidden:
-                raise exceptions.Error(
+                raise exceptions.CommandError(
                     f"It seems I don't have the permission to unban **{user}** {user.mention}"
                 )
             except nextcord.errors.NotFound:
-                raise exceptions.Warning(f"Unable to unban. **{user}** is not banned")
+                raise exceptions.CommandWarning(f"Unable to unban. **{user}** is not banned")
             else:
                 return await util.send_success(ctx, f"Unbanned **{user}** {user.mention}")
 

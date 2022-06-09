@@ -97,7 +97,7 @@ class Kpop(commands.Cog):
             as_list=True,
         )
         if not idol_id_list:
-            raise exceptions.Error("Looks like there are no idols in the database!")
+            raise exceptions.CommandError("Looks like there are no idols in the database!")
 
         chosen_id = random.choice(idol_id_list)
         await self.send_idol(ctx, chosen_id)
@@ -114,7 +114,7 @@ class Kpop(commands.Cog):
             one_row=True,
         )
         if not idol_data:
-            raise exceptions.Error("There was an error getting idol data.")
+            raise exceptions.CommandError("There was an error getting idol data.")
 
         (
             idol_id,
@@ -181,7 +181,7 @@ class Kpop(commands.Cog):
         if self.artist_list:
             await ctx.send(f"stan **{random.choice(self.artist_list)}**")
         else:
-            raise exceptions.Warning("Artist list is empty :thinking:")
+            raise exceptions.CommandWarning("Artist list is empty :thinking:")
 
     @commands.is_owner()
     @stan.command(hidden=True)

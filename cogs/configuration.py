@@ -33,13 +33,13 @@ class Configuration(commands.Cog):
             >prefix \"<text with spaces>\"
         """
         if prefix.strip() == "":
-            raise exceptions.Warning("Prefix cannot be empty.")
+            raise exceptions.CommandWarning("Prefix cannot be empty.")
 
         if prefix.startswith(" "):
-            raise exceptions.Warning("Prefix cannot start with a space.")
+            raise exceptions.CommandWarning("Prefix cannot start with a space.")
 
         if len(prefix) > 32:
-            raise exceptions.Warning("Prefix cannot be over 32 characters.")
+            raise exceptions.CommandWarning("Prefix cannot be over 32 characters.")
 
         prefix = prefix.lstrip()
         await self.bot.db.execute(
@@ -300,7 +300,7 @@ class Configuration(commands.Cog):
             # is custom emoji
             emoji_obj = await util.get_emoji(ctx, emoji)
             if emoji_obj is None:
-                raise exceptions.Warning("I don't know this emoji!")
+                raise exceptions.CommandWarning("I don't know this emoji!")
 
             await self.bot.db.execute(
                 """
@@ -323,7 +323,7 @@ class Configuration(commands.Cog):
             # unicode emoji
             emoji_name = emoji_literals.UNICODE_TO_NAME.get(emoji)
             if emoji_name is None:
-                raise exceptions.Warning("I don't know this emoji!")
+                raise exceptions.CommandWarning("I don't know this emoji!")
 
             await self.bot.db.execute(
                 """
@@ -387,7 +387,7 @@ class Configuration(commands.Cog):
         """See the current starboard configuration"""
         starboard_settings = self.bot.cache.starboard_settings.get(str(ctx.guild.id))
         if not starboard_settings:
-            raise exceptions.Warning("Nothing has been configured on this server yet!")
+            raise exceptions.CommandWarning("Nothing has been configured on this server yet!")
 
         (
             is_enabled,
@@ -462,7 +462,9 @@ class Configuration(commands.Cog):
         elif reaction_type.lower() in ["vote", "voting"]:
             channel_type = "voting"
         else:
-            raise exceptions.Warning(f"Unknown reaction type `{reaction_type}`", help_footer=True)
+            raise exceptions.CommandWarning(
+                f"Unknown reaction type `{reaction_type}`", help_footer=True
+            )
 
         await self.bot.db.execute(
             """
@@ -501,7 +503,7 @@ class Configuration(commands.Cog):
             ctx.guild.id,
         )
         if not channels:
-            raise exceptions.Info("There are no voting channels on this server yet!")
+            raise exceptions.CommandInfo("There are no voting channels on this server yet!")
 
         rows = []
         for channel_id, voting_type in channels:
@@ -735,7 +737,7 @@ class Configuration(commands.Cog):
         """Blacklist a command"""
         cmd = self.bot.get_command(command)
         if cmd is None:
-            raise exceptions.Warning(f"Command `{ctx.prefix}{command}` not found.")
+            raise exceptions.CommandWarning(f"Command `{ctx.prefix}{command}` not found.")
 
         await self.bot.db.execute(
             "INSERT IGNORE blacklisted_command VALUES (%s, %s)",
@@ -769,7 +771,7 @@ class Configuration(commands.Cog):
         """Blacklist a guild from adding or using Miso Bot"""
         guild = self.bot.get_guild(guild_id)
         if guild is None:
-            raise exceptions.Warning(f"Cannot find guild with id `{guild_id}`")
+            raise exceptions.CommandWarning(f"Cannot find guild with id `{guild_id}`")
 
         await self.bot.db.execute(
             "INSERT IGNORE blacklisted_guild VALUES (%s, %s)", guild.id, reason
@@ -833,7 +835,7 @@ class Configuration(commands.Cog):
         """Unblacklist a command"""
         cmd = self.bot.get_command(command)
         if cmd is None:
-            raise exceptions.Warning(f"Command `{ctx.prefix}{command}` not found.")
+            raise exceptions.CommandWarning(f"Command `{ctx.prefix}{command}` not found.")
 
         await self.bot.db.execute(
             "DELETE FROM blacklisted_command WHERE guild_id = %s AND command_name = %s",

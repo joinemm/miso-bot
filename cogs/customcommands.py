@@ -115,14 +115,14 @@ class CustomCommands(commands.Cog, name="Commands"):
             raise commands.MissingPermissions(["manage_server"])
 
         if name in self.bot_command_list():
-            raise exceptions.Warning(f"`{ctx.prefix}{name}` is already a built in command!")
+            raise exceptions.CommandWarning(f"`{ctx.prefix}{name}` is already a built in command!")
         if await self.bot.db.execute(
             "SELECT content FROM custom_command WHERE guild_id = %s AND command_trigger = %s",
             ctx.guild.id,
             name,
             one_value=True,
         ):
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 f"Custom command `{ctx.prefix}{name}` already exists on this server!"
             )
 
@@ -149,7 +149,7 @@ class CustomCommands(commands.Cog, name="Commands"):
             one_value=True,
         )
         if not owner_id:
-            raise exceptions.Warning(f"Custom command `{ctx.prefix}{name}` does not exist")
+            raise exceptions.CommandWarning(f"Custom command `{ctx.prefix}{name}` does not exist")
 
         owner = ctx.guild.get_member(owner_id)
         if (
@@ -157,7 +157,7 @@ class CustomCommands(commands.Cog, name="Commands"):
             and owner != ctx.author
             and not ctx.author.guild_permissions.manage_guild
         ):
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 f"`{ctx.prefix}{name}` can only be removed by **{owner}** unless you have `manage_server` permission."
             )
 
@@ -201,7 +201,7 @@ class CustomCommands(commands.Cog, name="Commands"):
             content = nextcord.Embed(title=f"{ctx.guild.name} custom commands")
             await util.send_as_pages(ctx, content, rows)
         else:
-            raise exceptions.Info("No custom commands have been added on this server yet")
+            raise exceptions.CommandInfo("No custom commands have been added on this server yet")
 
     @command.command(name="restrict")
     @commands.has_permissions(manage_guild=True)
@@ -231,7 +231,7 @@ class CustomCommands(commands.Cog, name="Commands"):
             or 0
         )
         if count < 1:
-            raise exceptions.Warning("This server has no custom commands yet!")
+            raise exceptions.CommandWarning("This server has no custom commands yet!")
 
         content = nextcord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
         content.description = f"This action will delete all **{count}** custom commands on this server and is **irreversible**."

@@ -1,19 +1,19 @@
 from nextcord.ext import commands
 
 
-class Info(commands.CommandError):
+class CommandInfo(commands.CommandError):
     def __init__(self, message, **kwargs):
         super().__init__(message)
         self.kwargs = kwargs
 
 
-class Warning(commands.CommandError):
+class CommandWarning(commands.CommandError):
     def __init__(self, message, **kwargs):
         super().__init__(message)
         self.kwargs = kwargs
 
 
-class Error(commands.CommandError):
+class CommandError(commands.CommandError):
     def __init__(self, message, **kwargs):
         super().__init__(message)
         self.kwargs = kwargs

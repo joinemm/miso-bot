@@ -86,7 +86,7 @@ class Media(commands.Cog):
         await ggsoup.create(region, summoner_name)
 
         if ggsoup.soup.find("div", {"class": "SummonerNotFoundLayout"}):
-            raise exceptions.Warning("Summoner not found!")
+            raise exceptions.CommandWarning("Summoner not found!")
 
         content = nextcord.Embed()
         content.set_author(
@@ -158,7 +158,7 @@ class Media(commands.Cog):
 
         error = ggsoup.soup.find("div", {"class": "SpectatorError"})
         if error:
-            raise exceptions.Warning(error.find("h2").text)
+            raise exceptions.CommandWarning(error.find("h2").text)
 
         blue_team = ggsoup.soup.find("table", {"class": "Team-100"})
         red_team = ggsoup.soup.find("table", {"class": "Team-200"})
@@ -195,7 +195,7 @@ class Media(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
                 if response.status == 403:
-                    raise exceptions.Error("Daily youtube api quota reached.")
+                    raise exceptions.CommandError("Daily youtube api quota reached.")
 
                 data = await response.json()
 
@@ -223,7 +223,7 @@ class Media(commands.Cog):
                 urls.append(link)
 
         if len(urls) > 5:
-            raise exceptions.Warning("Only 5 links at a time please!")
+            raise exceptions.CommandWarning("Only 5 links at a time please!")
 
         for post_url in urls:
             result = regex.findall("/(p|reel|tv)/(.*?)(/|\\Z)", post_url)
@@ -236,11 +236,11 @@ class Media(commands.Cog):
             try:
                 post = await self.ig.extract(shortcode)
             except instagram.ExpiredCookie:
-                raise exceptions.Error(
+                raise exceptions.CommandError(
                     "The Instagram login cookie has expired, please ask my developer to reauthenticate!"
                 )
             except instagram.InstagramError as e:
-                raise exceptions.Error(e.message)
+                raise exceptions.CommandError(e.message)
 
             if download:
                 # send as files
@@ -305,7 +305,7 @@ class Media(commands.Cog):
         urls = []
         download = False
         if len(links) > 5:
-            raise exceptions.Warning("Only 5 links at a time please!")
+            raise exceptions.CommandWarning("Only 5 links at a time please!")
         for link in links:
             if link.lower() in ["-d", "--download"]:
                 download = True
@@ -474,7 +474,7 @@ class Media(commands.Cog):
             elif timeframe == "rising":
                 timeframe = "rise"
             else:
-                raise exceptions.Info(
+                raise exceptions.CommandInfo(
                     "Available timeframes: `[ day | month | realtime | rising ]`"
                 )
 

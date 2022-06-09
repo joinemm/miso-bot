@@ -51,7 +51,9 @@ class Rolepicker(commands.Cog):
             one_value=True,
         )
         if not role_id:
-            raise exceptions.Warning(f"Could not find role with the name `{name}` in the picker.")
+            raise exceptions.CommandWarning(
+                f"Could not find role with the name `{name}` in the picker."
+            )
 
         await self.bot.db.execute(
             """

@@ -131,7 +131,7 @@ class Notifications(commands.Cog):
     async def notification_add(self, ctx: commands.Context, *, keyword):
         """Add a notification keyword"""
         if ctx.guild is None:
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 "Global notifications have been removed for performance reasons."
             )
 
@@ -141,7 +141,7 @@ class Notifications(commands.Cog):
             one_value=True,
         )
         if amount and amount >= 30:
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 f"You can only have a maximum of **30** notifications. You have **{amount}**"
             )
 
@@ -161,7 +161,7 @@ class Notifications(commands.Cog):
             keyword,
         )
         if check:
-            raise exceptions.Warning("You already have this notification!")
+            raise exceptions.CommandWarning("You already have this notification!")
 
         try:
             await util.send_success(
@@ -169,7 +169,9 @@ class Notifications(commands.Cog):
                 f"New keyword notification for `{keyword}` set in **{ctx.guild.name}**",
             )
         except nextcord.errors.Forbidden:
-            raise exceptions.Warning("I was unable to send you a DM! Please change your settings.")
+            raise exceptions.CommandWarning(
+                "I was unable to send you a DM! Please change your settings."
+            )
 
         await self.bot.db.execute(
             """
@@ -193,7 +195,7 @@ class Notifications(commands.Cog):
     async def notification_remove(self, ctx: commands.Context, *, keyword):
         """Remove a notification keyword"""
         if ctx.guild is None:
-            raise exceptions.Warning(
+            raise exceptions.CommandWarning(
                 "Please use this in the guild you want to remove notifications from."
             )
 
@@ -213,7 +215,7 @@ class Notifications(commands.Cog):
             keyword,
         )
         if not check:
-            raise exceptions.Warning("You don't have such notification!")
+            raise exceptions.CommandWarning("You don't have such notification!")
 
         try:
             await util.send_success(
@@ -221,7 +223,9 @@ class Notifications(commands.Cog):
                 f"The keyword notification for `{keyword}` that you set in **{ctx.guild.name}** has been removed.",
             )
         except nextcord.errors.Forbidden:
-            raise exceptions.Warning("I was unable to send you a DM! Please change your settings.")
+            raise exceptions.CommandWarning(
+                "I was unable to send you a DM! Please change your settings."
+            )
 
         await self.bot.db.execute(
             """
@@ -247,7 +251,7 @@ class Notifications(commands.Cog):
         )
 
         if not words:
-            raise exceptions.Info("You have not set any notifications yet!")
+            raise exceptions.CommandInfo("You have not set any notifications yet!")
 
         content = nextcord.Embed(
             title=f":love_letter: You have {len(words)} notifications",
@@ -265,7 +269,9 @@ class Notifications(commands.Cog):
         try:
             await util.send_as_pages(ctx.author, content, rows, maxpages=1, maxrows=50)
         except nextcord.errors.Forbidden:
-            raise exceptions.Warning("I was unable to send you a DM! Please change your settings.")
+            raise exceptions.CommandWarning(
+                "I was unable to send you a DM! Please change your settings."
+            )
 
         if ctx.guild is not None:
             await util.send_success(ctx, f"Notification list sent to your DM {emojis.VIVISMIRK}")
@@ -304,12 +310,12 @@ class Notifications(commands.Cog):
                 )
                 await ctx.send(":ok_hand: Check your DM")
             except nextcord.errors.Forbidden:
-                raise exceptions.Warning(
+                raise exceptions.CommandWarning(
                     "I was unable to send you a DM! Please check your privacy settings."
                 )
         else:
             if ctx.author not in message.channel.members:
-                raise exceptions.Error("You cannot see this message.")
+                raise exceptions.CommandError("You cannot see this message.")
 
             keywords = await self.bot.db.execute(
                 "SELECT keyword FROM notification WHERE user_id = %s",

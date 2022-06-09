@@ -45,10 +45,10 @@ class Cryptocurrency(commands.Cog):
     ):
         """Generates candlestick chart for a given cryptocurrency pair"""
         if interval not in self.binance_intervals:
-            raise exceptions.Error("Invalid interval.")
+            raise exceptions.CommandError("Invalid interval.")
 
         if limit > 100:
-            raise exceptions.Error("Limit must be 100 or less.")
+            raise exceptions.CommandError("Limit must be 100 or less.")
 
         symbol = (coin + pair).upper()
         async with aiohttp.ClientSession() as session:
@@ -58,7 +58,7 @@ class Cryptocurrency(commands.Cog):
                 data = await response.json()
 
         if isinstance(data, dict):
-            raise exceptions.Error(data.get("msg"))
+            raise exceptions.CommandError(data.get("msg"))
 
         candle_data = []
         for ticker in data:
@@ -93,7 +93,7 @@ class Cryptocurrency(commands.Cog):
 
         error = data.get("msg")
         if error:
-            raise exceptions.Error(error)
+            raise exceptions.CommandError(error)
 
         content = nextcord.Embed(color=int("f3ba2e", 16))
         content.set_author(

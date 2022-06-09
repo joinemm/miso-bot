@@ -281,7 +281,7 @@ class Miscellaneous(commands.Cog):
                 one_row=True,
             )
             if not data:
-                raise exceptions.Info(
+                raise exceptions.CommandInfo(
                     "No default Minecraft server saved for this discord server!"
                     f"Use `{ctx.prefix}minecraft set` to save one or"
                     f"`{ctx.prefix}minecraft <address> <port>` to see any server"
@@ -338,7 +338,7 @@ class Miscellaneous(commands.Cog):
             one_value=True,
         )
         if not sunsign or sunsign is None:
-            raise exceptions.Info(
+            raise exceptions.CommandInfo(
                 "Please save your zodiac sign using `>horoscope set <sign>`\n"
                 "Use `>horoscope list` if you don't know which one you are."
             )
@@ -370,7 +370,7 @@ class Miscellaneous(commands.Cog):
         """Save your zodiac sign"""
         sign = sign.lower()
         if self.hs.get(sign) is None:
-            raise exceptions.Info(
+            raise exceptions.CommandInfo(
                 f"`{sign}` is not a valid zodiac! Use `>horoscope list` for a list of zodiacs."
             )
 
@@ -506,7 +506,7 @@ class Miscellaneous(commands.Cog):
         if emoji[0] == "<":
             emoji = await util.get_emoji(ctx, emoji)
             if emoji is None:
-                raise exceptions.Warning("I don't know this emoji!")
+                raise exceptions.CommandWarning("I don't know this emoji!")
 
             emoji_url = emoji.url
             emoji_name = emoji.name
@@ -514,7 +514,7 @@ class Miscellaneous(commands.Cog):
             # unicode emoji
             emoji_name = emoji_literals.UNICODE_TO_NAME.get(emoji)
             if emoji_name is None:
-                raise exceptions.Warning("I don't know this emoji!")
+                raise exceptions.CommandWarning("I don't know this emoji!")
 
             codepoint = "-".join(
                 f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE.get(emoji_name)
@@ -558,7 +558,9 @@ class Miscellaneous(commands.Cog):
                 try:
                     await ctx.send(result)
                 except nextcord.errors.HTTPException:
-                    raise exceptions.Warning("Your text when emojified is too long to send!")
+                    raise exceptions.CommandWarning(
+                        "Your text when emojified is too long to send!"
+                    )
 
 
 def setup(bot):
