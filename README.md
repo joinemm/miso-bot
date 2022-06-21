@@ -53,3 +53,7 @@ First copy/rename `.env.example` to `.env` and fill it with your own keys.
 Everything else should be handled by the `docker-compose.yml`
 
     $ docker-compose up --build
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=joinemm/miso-bot&type=Date)](https://star-history.com/#joinemm/miso-bot&Date)
