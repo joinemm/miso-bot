@@ -74,8 +74,11 @@ class InstagramIdCodec:
 
 
 class Instagram:
-    def __init__(self, cookie, use_proxy=False, proxy_url=None, proxy_user=None, proxy_pass=None):
+    def __init__(
+        self, session, cookie, use_proxy=False, proxy_url=None, proxy_user=None, proxy_pass=None
+    ):
         self.cookie = cookie
+        self.session = session
         if use_proxy:
             self.proxy = proxy_url
             self.proxy_auth = aiohttp.BasicAuth(proxy_user, proxy_pass)
@@ -86,52 +89,51 @@ class Instagram:
     async def extract(self, shortcode: str) -> IgPost:
         """Extract all media from given Instagram post"""
         real_media_id = InstagramIdCodec.decode(shortcode)
-        async with aiohttp.ClientSession() as session:
-            headers = {
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:98.0) Gecko/20100101 Firefox/98.0",
-                "Cookie": self.cookie,
-                "X-IG-App-ID": "936619743392459",
-            }
-            url = f"https://i.instagram.com/api/v1/media/{real_media_id}/info/"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:98.0) Gecko/20100101 Firefox/98.0",
+            "Cookie": self.cookie,
+            "X-IG-App-ID": "936619743392459",
+        }
+        url = f"https://i.instagram.com/api/v1/media/{real_media_id}/info/"
 
-            async with session.get(
-                url,
-                headers=headers,
-                proxy=self.proxy,
-                proxy_auth=self.proxy_auth,
-            ) as response:
-                try:
-                    data = await response.json()
-                except aiohttp.ContentTypeError:
-                    raise ExpiredCookie
+        async with self.session.get(
+            url,
+            headers=headers,
+            proxy=self.proxy,
+            proxy_auth=self.proxy_auth,
+        ) as response:
+            try:
+                data = await response.json()
+            except aiohttp.ContentTypeError:
+                raise ExpiredCookie
 
-                try:
-                    data = data["items"][0]
-                except KeyError:
-                    raise InstagramError(data["message"])
+            try:
+                data = data["items"][0]
+            except KeyError:
+                raise InstagramError(data["message"])
 
-                resources = []
-                media = []
+            resources = []
+            media = []
 
-                media_type = MediaType(int(data["media_type"]))
-                if media_type == MediaType.ALBUM:
-                    for carousel_media in data["carousel_media"]:
-                        resources.append(carousel_media)
-                else:
-                    resources = [data]
+            media_type = MediaType(int(data["media_type"]))
+            if media_type == MediaType.ALBUM:
+                for carousel_media in data["carousel_media"]:
+                    resources.append(carousel_media)
+            else:
+                resources = [data]
 
-                for resource in resources:
-                    resource_media_type = MediaType(int(resource["media_type"]))
-                    if resource_media_type == MediaType.PHOTO:
-                        res = resource["image_versions2"]["candidates"][0]
-                        media.append(IgMedia(resource_media_type, res["url"]))
-                    elif resource_media_type == MediaType.VIDEO:
-                        res = resource["video_versions"][0]
-                        media.append(IgMedia(resource_media_type, res["url"]))
+            for resource in resources:
+                resource_media_type = MediaType(int(resource["media_type"]))
+                if resource_media_type == MediaType.PHOTO:
+                    res = resource["image_versions2"]["candidates"][0]
+                    media.append(IgMedia(resource_media_type, res["url"]))
+                elif resource_media_type == MediaType.VIDEO:
+                    res = resource["video_versions"][0]
+                    media.append(IgMedia(resource_media_type, res["url"]))
 
-                timestamp = data["taken_at"]
-                user = IgUser(data["user"]["username"], data["user"]["profile_pic_url"])
-                return IgPost(user, media, timestamp)
+            timestamp = data["taken_at"]
+            user = IgUser(data["user"]["username"], data["user"]["profile_pic_url"])
+            return IgPost(user, media, timestamp)
 
     async def test(self):
         """Test that every kind of post works"""

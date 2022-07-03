@@ -1,6 +1,7 @@
 import traceback
 from time import time
 
+import aiohttp
 from discord import Activity, ActivityType, AllowedMentions, Intents, Status
 from discord.errors import Forbidden
 from discord.ext import commands
@@ -56,6 +57,7 @@ class MisoBot(commands.AutoShardedBot):
         self.register_hooks()
 
     async def setup_hook(self):
+        self.session = aiohttp.ClientSession()
         await self.db.initialize_pool()
         await self.cache.initialize_settings_cache()
         await self.load_all_extensions()
@@ -84,6 +86,7 @@ class MisoBot(commands.AutoShardedBot):
     async def close(self):
         """Overrides built-in close()"""
         await self.db.cleanup()
+        await self.session.close()
         await super().close()
 
     async def on_message(self, message):

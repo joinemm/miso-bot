@@ -93,8 +93,10 @@ class User(commands.Cog):
             content = discord.Embed()
             content.set_author(name=f"{user} / {description}", url=asset.url)
             content.set_image(url=asset.url)
-            stats = await util.image_info_from_url(asset.url)
-            color = await util.color_from_image_url(asset.replace(size=64, format="png").url)
+            stats = await util.image_info_from_url(self.bot.session, asset.url)
+            color = await util.color_from_image_url(
+                self.bot.session, asset.replace(size=64, format="png").url
+            )
             content.colour = int(color, 16)
             if stats is not None:
                 content.set_footer(
@@ -144,7 +146,7 @@ class User(commands.Cog):
             status_display = "Unavailable"
             content.colour = int(
                 await util.color_from_image_url(
-                    user.display_avatar.replace(size=64, format="png").url
+                    self.bot.session, user.display_avatar.replace(size=64, format="png").url
                 ),
                 16,
             )
@@ -236,8 +238,10 @@ class User(commands.Cog):
         )
 
         content.set_image(url=user.banner.url)
-        stats = await util.image_info_from_url(user.banner.url)
-        color = await util.color_from_image_url(user.banner.replace(size=64, format="png").url)
+        stats = await util.image_info_from_url(self.bot.session, user.banner.url)
+        color = await util.color_from_image_url(
+            self.bot.session, user.banner.replace(size=64, format="png").url
+        )
         content.colour = int(color, 16)
         if stats is not None:
             content.set_footer(
@@ -262,8 +266,10 @@ class User(commands.Cog):
         )
 
         content.set_image(url=guild.banner.url)
-        stats = await util.image_info_from_url(guild.banner.url)
-        color = await util.color_from_image_url(guild.banner.replace(size=64, format="png").url)
+        stats = await util.image_info_from_url(self.bot.session, guild.banner.url)
+        color = await util.color_from_image_url(
+            self.bot.session, guild.banner.replace(size=64, format="png").url
+        )
         content.colour = int(color, 16)
         if stats is not None:
             content.set_footer(
@@ -284,7 +290,9 @@ class User(commands.Cog):
 
         content = discord.Embed(title=f"**{guild.name}** | #{guild.id}")
         if guild.icon:
-            color = await util.color_from_image_url(guild.icon.replace(format="png", size=64).url)
+            color = await util.color_from_image_url(
+                self.bot.session, guild.icon.replace(format="png", size=64).url
+            )
             content.color = int(color, 16)
             content.set_thumbnail(url=guild.icon.url)
 

@@ -45,7 +45,7 @@ class Notifications(commands.Cog):
         )
         content.set_footer(
             text=f"{message.guild.name} | #{message.channel.name}",
-            icon_url=getattr(message.guild.icon, "url", discord.Embed.Empty),
+            icon_url=getattr(message.guild.icon, "url", None),
         )
         content.timestamp = message.created_at
 

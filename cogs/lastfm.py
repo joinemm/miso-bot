@@ -209,9 +209,8 @@ class LastFm(commands.Cog):
             "key": GOOGLE_API_KEY,
         }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                data = await response.json()
+        async with self.bot.session.get(url, params=params) as response:
+            data = await response.json()
 
         video_id = data["items"][0]["id"]["videoId"]
         video_url = f"https://youtube.com/watch?v={video_id}"
@@ -595,13 +594,12 @@ class LastFm(commands.Cog):
         artist_name = data["recenttracks"]["track"][0]["artist"]["#text"]
         album_name = data["recenttracks"]["track"][0]["album"]["#text"]
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(big_image_url) as response:
-                buffer = io.BytesIO(await response.read())
-                await ctx.send(
-                    f"**{artist_name} — {album_name}**",
-                    file=discord.File(fp=buffer, filename=image_hash + ".jpg"),
-                )
+        async with self.bot.session.get(big_image_url) as response:
+            buffer = io.BytesIO(await response.read())
+            await ctx.send(
+                f"**{artist_name} — {album_name}**",
+                file=discord.File(fp=buffer, filename=image_hash + ".jpg"),
+            )
 
     @fm.command(name="album")
     async def album(self, ctx: commands.Context, *, album):
@@ -664,65 +662,61 @@ class LastFm(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    @staticmethod
-    async def album_top_tracks(ctx: commands.Context, period, artistname, albumname):
+    async def album_top_tracks(self, ctx: commands.Context, period, artistname, albumname):
         """Scrape the top tracks of given album from lastfm library page"""
         artistname = urllib.parse.quote_plus(artistname)
         albumname = urllib.parse.quote_plus(albumname)
-        async with aiohttp.ClientSession() as session:
-            url = (
-                f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
-                f"{albumname}?date_preset={period_http_format(period)}"
-            )
-            data = await fetch(session, url, handling="text")
-            if data is None:
-                raise exceptions.LastFMError(404, "Album page not found")
+        url = (
+            f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
+            f"{albumname}?date_preset={period_http_format(period)}"
+        )
+        data = await fetch(self.bot.session, url, handling="text")
+        if data is None:
+            raise exceptions.LastFMError(404, "Album page not found")
 
-            soup = BeautifulSoup(data, "html.parser")
+        soup = BeautifulSoup(data, "html.parser")
 
-            album = {
-                "image_url": soup.find("header", {"class": "library-header"})
-                .find("img")
-                .get("src")
-                .replace("64s", "300s"),
-                "formatted_name": soup.find("h2", {"class": "library-header-title"}).text.strip(),
-                "artist": soup.find("header", {"class": "library-header"})
-                .find("a", {"class": "text-colour-link"})
-                .text.strip(),
-            }
+        album = {
+            "image_url": soup.find("header", {"class": "library-header"})
+            .find("img")
+            .get("src")
+            .replace("64s", "300s"),
+            "formatted_name": soup.find("h2", {"class": "library-header-title"}).text.strip(),
+            "artist": soup.find("header", {"class": "library-header"})
+            .find("a", {"class": "text-colour-link"})
+            .text.strip(),
+        }
 
-            all_results = get_list_contents(soup)
-            all_results += await get_additional_pages(session, soup, url)
+        all_results = get_list_contents(soup)
+        all_results += await get_additional_pages(self.bot.session, soup, url)
 
-            return album, all_results
+        return album, all_results
 
-    @staticmethod
-    async def artist_top(ctx: commands.Context, period, artistname, datatype):
+    async def artist_top(self, ctx: commands.Context, period, artistname, datatype):
         """Scrape either top tracks or top albums from lastfm library page"""
         artistname = urllib.parse.quote_plus(artistname)
-        async with aiohttp.ClientSession() as session:
-            url = (
-                f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
-                f"+{datatype}?date_preset={period_http_format(period)}"
-            )
-            data = await fetch(session, url, handling="text")
-            if data is None:
-                raise exceptions.LastFMError(404, "Artist page not found")
+        url = (
+            f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
+            f"+{datatype}?date_preset={period_http_format(period)}"
+        )
+        data = await fetch(self.bot.session, url, handling="text")
+        if data is None:
+            raise exceptions.LastFMError(404, "Artist page not found")
 
-            soup = BeautifulSoup(data, "html.parser")
+        soup = BeautifulSoup(data, "html.parser")
 
-            artist = {
-                "image_url": soup.find("span", {"class": "library-header-image"})
-                .find("img")
-                .get("src")
-                .replace("avatar70s", "avatar300s"),
-                "formatted_name": soup.find("a", {"class": "library-header-crumb"}).text.strip(),
-            }
+        artist = {
+            "image_url": soup.find("span", {"class": "library-header-image"})
+            .find("img")
+            .get("src")
+            .replace("avatar70s", "avatar300s"),
+            "formatted_name": soup.find("a", {"class": "library-header-crumb"}).text.strip(),
+        }
 
-            all_results = get_list_contents(soup)
-            all_results += await get_additional_pages(session, soup, url)
+        all_results = get_list_contents(soup)
+        all_results += await get_additional_pages(self.bot.session, soup, url)
 
-            return artist, all_results
+        return artist, all_results
 
     async def artist_overview(self, ctx: commands.Context, period, artistname):
         """Overall artist view"""
@@ -730,47 +724,44 @@ class LastFm(commands.Cog):
         tracks = []
         metadata = [None, None, None]
         artistinfo = await self.api_request({"method": "artist.getInfo", "artist": artistname})
-        async with aiohttp.ClientSession() as session:
-            url = (
-                f"https://last.fm/user/{ctx.username}/library/music/"
-                f"{urllib.parse.quote_plus(artistname)}"
-                f"?date_preset={period_http_format(period)}"
+        url = (
+            f"https://last.fm/user/{ctx.username}/library/music/"
+            f"{urllib.parse.quote_plus(artistname)}"
+            f"?date_preset={period_http_format(period)}"
+        )
+        data = await fetch(self.bot.session, url, handling="text")
+        if data is None:
+            raise exceptions.LastFMError(404, "Artist page not found")
+
+        soup = BeautifulSoup(data, "html.parser")
+        try:
+            albumsdiv, tracksdiv, _ = soup.findAll("tbody", {"data-playlisting-add-entries": ""})
+
+        except ValueError:
+            artistname = util.escape_md(artistname)
+            if period == "overall":
+                return await ctx.send(f"You have never listened to **{artistname}**!")
+            return await ctx.send(
+                f"You have not listened to **{artistname}** in the past {period}s!"
             )
-            data = await fetch(session, url, handling="text")
-            if data is None:
-                raise exceptions.LastFMError(404, "Artist page not found")
 
-            soup = BeautifulSoup(data, "html.parser")
-            try:
-                albumsdiv, tracksdiv, _ = soup.findAll(
-                    "tbody", {"data-playlisting-add-entries": ""}
+        for container, destination in zip([albumsdiv, tracksdiv], [albums, tracks]):
+            items = container.findAll("tr", {"class": "chartlist-row"})
+            for item in items:
+                name = item.find("td", {"class": "chartlist-name"}).find("a").get("title")
+                playcount = (
+                    item.find("span", {"class": "chartlist-count-bar-value"})
+                    .text.replace("scrobbles", "")
+                    .replace("scrobble", "")
+                    .strip()
                 )
+                destination.append((name, int(playcount.replace(",", ""))))
 
-            except ValueError:
-                artistname = util.escape_md(artistname)
-                if period == "overall":
-                    return await ctx.send(f"You have never listened to **{artistname}**!")
-                return await ctx.send(
-                    f"You have not listened to **{artistname}** in the past {period}s!"
-                )
-
-            for container, destination in zip([albumsdiv, tracksdiv], [albums, tracks]):
-                items = container.findAll("tr", {"class": "chartlist-row"})
-                for item in items:
-                    name = item.find("td", {"class": "chartlist-name"}).find("a").get("title")
-                    playcount = (
-                        item.find("span", {"class": "chartlist-count-bar-value"})
-                        .text.replace("scrobbles", "")
-                        .replace("scrobble", "")
-                        .strip()
-                    )
-                    destination.append((name, int(playcount.replace(",", ""))))
-
-            metadata_list = soup.find("ul", {"class": "metadata-list"})
-            for i, metadata_item in enumerate(
-                metadata_list.findAll("p", {"class": "metadata-display"})
-            ):
-                metadata[i] = int(metadata_item.text.replace(",", ""))
+        metadata_list = soup.find("ul", {"class": "metadata-list"})
+        for i, metadata_item in enumerate(
+            metadata_list.findAll("p", {"class": "metadata-display"})
+        ):
+            metadata[i] = int(metadata_item.text.replace(",", ""))
 
         artist = {
             "image_url": soup.find("span", {"class": "library-header-image"})
@@ -948,101 +939,100 @@ class LastFm(commands.Cog):
             albumcolors_dict[image_hash] = (r, g, b)
         warn = None
 
-        async with aiohttp.ClientSession() as session:
-            for image_id in albums:
-                color = albumcolors_dict.get(image_id)
-                if color is None:
-                    to_fetch.append(image_id)
-                else:
-                    album_color_nodes.append(AlbumColorNode(color, image_id))
+        for image_id in albums:
+            color = albumcolors_dict.get(image_id)
+            if color is None:
+                to_fetch.append(image_id)
+            else:
+                album_color_nodes.append(AlbumColorNode(color, image_id))
 
-            if to_fetch:
-                to_cache = []
-                tasks = []
-                for image_id in to_fetch:
-                    tasks.append(self.fetch_color(session, image_id))
+        if to_fetch:
+            to_cache = []
+            tasks = []
+            for image_id in to_fetch:
+                tasks.append(self.fetch_color(self.bot.session, image_id))
 
-                if len(tasks) > 500:
-                    warn = await ctx.send(
-                        ":exclamation:Your library includes over 500 uncached album colours, "
-                        f"this might take a while {emojis.LOADING}"
-                    )
-
-                colordata = await asyncio.gather(*tasks)
-                for colortuple in colordata:
-                    if colortuple is None:
-                        continue
-                    image_hash, r, g, b, hexcolor = colortuple
-                    to_cache.append((image_hash, r, g, b, hexcolor))
-                    album_color_nodes.append(AlbumColorNode((r, g, b), image_hash))
-
-                await self.bot.db.executemany(
-                    "INSERT IGNORE image_color_cache (image_hash, r, g, b, hex) VALUES (%s, %s, %s, %s, %s)",
-                    to_cache,
+            if len(tasks) > 500:
+                warn = await ctx.send(
+                    ":exclamation:Your library includes over 500 uncached album colours, "
+                    f"this might take a while {emojis.LOADING}"
                 )
 
-            if rainbow:
-                if diagonal:
-                    rainbow_colors = [
-                        (255, 79, 0),
-                        (255, 33, 0),
-                        (217, 29, 82),
-                        (151, 27, 147),
-                        (81, 35, 205),
-                        (0, 48, 255),
-                        (0, 147, 147),
-                        (0, 249, 0),
-                        (203, 250, 0),
-                        (255, 251, 0),
-                        (255, 200, 0),
-                        (255, 148, 0),
-                    ]
-                else:
-                    rainbow_colors = [
-                        (255, 0, 0),  # red
-                        (255, 127, 0),  # orange
-                        (255, 255, 0),  # yellow
-                        (0, 255, 0),  # green
-                        (0, 0, 255),  # blue
-                        (75, 0, 130),  # purple
-                        (148, 0, 211),  # violet
-                    ]
+            colordata = await asyncio.gather(*tasks)
+            for colortuple in colordata:
+                if colortuple is None:
+                    continue
+                image_hash, r, g, b, hexcolor = colortuple
+                to_cache.append((image_hash, r, g, b, hexcolor))
+                album_color_nodes.append(AlbumColorNode((r, g, b), image_hash))
 
-                chunks = []
-                tree = kdtree.create(album_color_nodes)
-                for rgb in rainbow_colors:
-                    chunks.append(list(tree.search_knn(rgb, width + height)))
+            await self.bot.db.executemany(
+                "INSERT IGNORE image_color_cache (image_hash, r, g, b, hex) VALUES (%s, %s, %s, %s, %s)",
+                to_cache,
+            )
 
-                random_offset = random.randint(0, 6)
-                final_albums = []
-                for album_index in range(width * height):
-                    if diagonal:
-                        choice_index = (
-                            album_index % width + (album_index // height) + random_offset
-                        ) % len(chunks)
-                    else:
-                        choice_index = album_index % width
-
-                    choose_from = chunks[choice_index]
-                    choice = choose_from[album_index // height]
-                    final_albums.append(
-                        (
-                            self.cover_base_urls[3].format(choice[0].data.data),
-                            f"rgb{choice[0].data.rgb}, dist {choice[1]:.2f}",
-                        )
-                    )
-
-            else:
-                tree = kdtree.create(album_color_nodes)
-                nearest = tree.search_knn(query_color, width * height)
-
-                final_albums = [
-                    (
-                        self.cover_base_urls[3].format(alb[0].data.data),
-                        f"rgb{alb[0].data.rgb}, dist {alb[1]:.2f}",
-                    )
-                    for alb in nearest
+        if rainbow:
+            if diagonal:
+                rainbow_colors = [
+                    (255, 79, 0),
+                    (255, 33, 0),
+                    (217, 29, 82),
+                    (151, 27, 147),
+                    (81, 35, 205),
+                    (0, 48, 255),
+                    (0, 147, 147),
+                    (0, 249, 0),
+                    (203, 250, 0),
+                    (255, 251, 0),
+                    (255, 200, 0),
+                    (255, 148, 0),
                 ]
+            else:
+                rainbow_colors = [
+                    (255, 0, 0),  # red
+                    (255, 127, 0),  # orange
+                    (255, 255, 0),  # yellow
+                    (0, 255, 0),  # green
+                    (0, 0, 255),  # blue
+                    (75, 0, 130),  # purple
+                    (148, 0, 211),  # violet
+                ]
+
+            chunks = []
+            tree = kdtree.create(album_color_nodes)
+            for rgb in rainbow_colors:
+                chunks.append(list(tree.search_knn(rgb, width + height)))
+
+            random_offset = random.randint(0, 6)
+            final_albums = []
+            for album_index in range(width * height):
+                if diagonal:
+                    choice_index = (
+                        album_index % width + (album_index // height) + random_offset
+                    ) % len(chunks)
+                else:
+                    choice_index = album_index % width
+
+                choose_from = chunks[choice_index]
+                choice = choose_from[album_index // height]
+                final_albums.append(
+                    (
+                        self.cover_base_urls[3].format(choice[0].data.data),
+                        f"rgb{choice[0].data.rgb}, dist {choice[1]:.2f}",
+                    )
+                )
+
+        else:
+            tree = kdtree.create(album_color_nodes)
+            nearest = tree.search_knn(query_color, width * height)
+
+            final_albums = [
+                (
+                    self.cover_base_urls[3].format(alb[0].data.data),
+                    f"rgb{alb[0].data.rgb}, dist {alb[1]:.2f}",
+                )
+                for alb in nearest
+            ]
 
         buffer = await self.chart_factory(final_albums, width, height, show_labels=False)
 
@@ -1105,7 +1095,7 @@ class LastFm(commands.Cog):
         elif arguments["method"] == "user.gettopartists":
             chart_type = "top artist"
             artists = data["topartists"]["artist"]
-            scraped_images = await scrape_artists_for_chart(
+            scraped_images = await self.scrape_artists_for_chart(
                 ctx.username, arguments["period"], arguments["amount"]
             )
             for i, artist in enumerate(artists):
@@ -1328,7 +1318,9 @@ class LastFm(commands.Cog):
             icon_url=ctx.guild.icon.replace(size=64),
         )
         content.colour = int(
-            await util.color_from_image_url(str(ctx.guild.icon.replace(size=64))),
+            await util.color_from_image_url(
+                self.bot.session, str(ctx.guild.icon.replace(size=64))
+            ),
             16,
         )
         content.set_footer(
@@ -1382,7 +1374,9 @@ class LastFm(commands.Cog):
             icon_url=ctx.guild.icon.replace(size=64),
         )
         content.colour = int(
-            await util.color_from_image_url(str(ctx.guild.icon.replace(size=64))),
+            await util.color_from_image_url(
+                self.bot.session, str(ctx.guild.icon.replace(size=64))
+            ),
             16,
         )
         content.set_footer(
@@ -1899,9 +1893,8 @@ class LastFm(commands.Cog):
             "api_token": AUDDIO_TOKEN,
             "q": query,
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url=url, data=request_data) as response:
-                data = await response.json()
+        async with self.bot.session.post(url=url, data=request_data) as response:
+            data = await response.json()
 
         if data["status"] != "success":
             raise exceptions.CommandWarning(
@@ -1958,7 +1951,9 @@ class LastFm(commands.Cog):
         )
         if cached_color:
             return int(cached_color, 16)
-        color = await util.color_from_image_url(image_url, fallback=None, return_color_object=True)
+        color = await util.color_from_image_url(
+            self.bot.session, image_url, fallback=None, return_color_object=True
+        )
         if color is None:
             return int(self.lastfm_red, 16)
 
@@ -2085,7 +2080,7 @@ class LastFm(commands.Cog):
             if (lifetime) < image_life:
                 return self.cover_base_urls[3].format(cached[0])
 
-        image = await scrape_artist_image(artist)
+        image = await self.scrape_artist_image(artist)
         if image is None:
             return ""
         image_hash = image["src"].split("/")[-1].split(".")[0]
@@ -2115,35 +2110,34 @@ class LastFm(commands.Cog):
         tries = 0
         max_tries = 2
         while True:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params) as response:
-                    self.bot.cache.stats_lastfm_requests += 1
-                    try:
-                        content = await response.json()
-                    except aiohttp.client_exceptions.ContentTypeError:
-                        if ignore_errors:
-                            return None
-                        text = await response.text()
-                        raise exceptions.LastFMError(error_code=response.status, message=text)
-
-                    if content is None:
-                        raise exceptions.LastFMError(
-                            error_code=408,
-                            message="Could not connect to LastFM",
-                        )
-                    if response.status == 200 and content.get("error") is None:
-                        return content
-                    if int(content.get("error")) == 8:
-                        tries += 1
-                        if tries < max_tries:
-                            continue
-
+            async with self.bot.session.get(url, params=params) as response:
+                self.bot.cache.stats_lastfm_requests += 1
+                try:
+                    content = await response.json()
+                except aiohttp.client_exceptions.ContentTypeError:
                     if ignore_errors:
                         return None
+                    text = await response.text()
+                    raise exceptions.LastFMError(error_code=response.status, message=text)
+
+                if content is None:
                     raise exceptions.LastFMError(
-                        error_code=content.get("error"),
-                        message=content.get("message"),
+                        error_code=408,
+                        message="Could not connect to LastFM",
                     )
+                if response.status == 200 and content.get("error") is None:
+                    return content
+                if int(content.get("error")) == 8:
+                    tries += 1
+                    if tries < max_tries:
+                        continue
+
+                if ignore_errors:
+                    return None
+                raise exceptions.LastFMError(
+                    error_code=content.get("error"),
+                    message=content.get("message"),
+                )
 
     async def custom_period(self, user, group_by, shift_hours=24):
         """Parse recent tracks to get custom duration data (24 hour)"""
@@ -2392,26 +2386,47 @@ class LastFm(commands.Cog):
             return count
         return count, reference, name
 
+    async def scrape_artist_image(self, artist):
+        url = f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
+        data = await fetch(self.bot.session, url, handling="text")
+        if data is None:
+            return None
+
+        soup = BeautifulSoup(data, "html.parser")
+        image = soup.find("img", {"class": "image-list-image"})
+        if image is None:
+            try:
+                image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
+            except AttributeError:
+                image = None
+
+        return image
+
+    async def scrape_artists_for_chart(self, username, period, amount):
+        tasks = []
+        url = f"https://www.last.fm/user/{username}/library/artists"
+        for i in range(1, math.ceil(amount / 50) + 1):
+            params = {"date_preset": period_http_format(period), "page": i}
+            task = asyncio.ensure_future(fetch(self.bot.session, url, params, handling="text"))
+            tasks.append(task)
+
+        responses = await asyncio.gather(*tasks)
+
+        images = []
+        for data in responses:
+            if len(images) >= amount:
+                break
+
+            soup = BeautifulSoup(data, "html.parser")
+            imagedivs = soup.findAll("td", {"class": "chartlist-image"})
+            images += [
+                div.find("img")["src"].replace("/avatar70s/", "/300x300/") for div in imagedivs
+            ]
+
+        return images
+
 
 # class ends here
-
-
-async def scrape_artist_image(artist):
-    url = f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
-    async with aiohttp.ClientSession() as session:
-        data = await fetch(session, url, handling="text")
-    if data is None:
-        return None
-
-    soup = BeautifulSoup(data, "html.parser")
-    image = soup.find("img", {"class": "image-list-image"})
-    if image is None:
-        try:
-            image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
-        except AttributeError:
-            image = None
-
-    return image
 
 
 async def setup(bot):
@@ -2560,29 +2575,6 @@ def period_http_format(period):
         "overall": "ALL",
     }
     return period_format_map.get(period)
-
-
-async def scrape_artists_for_chart(username, period, amount):
-    tasks = []
-    url = f"https://www.last.fm/user/{username}/library/artists"
-    async with aiohttp.ClientSession() as session:
-        for i in range(1, math.ceil(amount / 50) + 1):
-            params = {"date_preset": period_http_format(period), "page": i}
-            task = asyncio.ensure_future(fetch(session, url, params, handling="text"))
-            tasks.append(task)
-
-        responses = await asyncio.gather(*tasks)
-
-    images = []
-    for data in responses:
-        if len(images) >= amount:
-            break
-
-        soup = BeautifulSoup(data, "html.parser")
-        imagedivs = soup.findAll("td", {"class": "chartlist-image"})
-        images += [div.find("img")["src"].replace("/avatar70s/", "/300x300/") for div in imagedivs]
-
-    return images
 
 
 async def username_to_ctx(ctx):

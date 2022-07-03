@@ -4,7 +4,6 @@ import os
 import random
 import re
 
-import aiohttp
 import arrow
 import discord
 import orjson
@@ -39,6 +38,7 @@ class Media(commands.Cog):
         self.icon = "🌐"
         self.twitter_api = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
         self.ig = instagram.Instagram(
+            self.bot.session,
             IG_COOKIE,
             use_proxy=True,
             proxy_url=PROXY_URL,
@@ -198,12 +198,11 @@ class Media(commands.Cog):
             "maxResults": 25,
             "q": query,
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                if response.status == 403:
-                    raise exceptions.CommandError("Daily youtube api quota reached.")
+        async with self.bot.session.get(url, params=params) as response:
+            if response.status == 403:
+                raise exceptions.CommandError("Daily youtube api quota reached.")
 
-                data = await response.json()
+            data = await response.json()
 
         if not data.get("items"):
             return await ctx.send("No results found!")
@@ -260,25 +259,24 @@ class Media(commands.Cog):
                 files = []
                 # discord normally has 8MB file size limit, but 50MB in boosted guilds
                 max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
-                async with aiohttp.ClientSession() as session:
-                    for n, media in enumerate(post.media, start=1):
-                        ext = "mp4" if media.media_type == instagram.MediaType.VIDEO else "jpg"
-                        dateformat = arrow.get(post.timestamp).format("YYMMDD")
-                        filename = f"{dateformat}-@{post.user.username}-{shortcode}-{n}.{ext}"
+                for n, media in enumerate(post.media, start=1):
+                    ext = "mp4" if media.media_type == instagram.MediaType.VIDEO else "jpg"
+                    dateformat = arrow.get(post.timestamp).format("YYMMDD")
+                    filename = f"{dateformat}-@{post.user.username}-{shortcode}-{n}.{ext}"
 
-                        # The url params are unescaped by aiohttp's built-in yarl
-                        # This causes problems with the hash-based request signing that instagram uses
-                        # Thankfully you can plug your own yarl.URL into session.get(), with encoded=True
-                        async with session.get(yarl.URL(media.url, encoded=True)) as response:
-                            logger.info(media.url)
-                            if (
-                                int(response.headers.get("content-length", max_filesize + 1))
-                                > max_filesize
-                            ):
-                                caption += f"\n{media.url}"
-                            else:
-                                buffer = io.BytesIO(await response.read())
-                                files.append(discord.File(fp=buffer, filename=filename))
+                    # The url params are unescaped by aiohttp's built-in yarl
+                    # This causes problems with the hash-based request signing that instagram uses
+                    # Thankfully you can plug your own yarl.URL into session.get(), with encoded=True
+                    async with self.bot.session.get(yarl.URL(media.url, encoded=True)) as response:
+                        logger.info(media.url)
+                        if (
+                            int(response.headers.get("content-length", max_filesize + 1))
+                            > max_filesize
+                        ):
+                            caption += f"\n{media.url}"
+                        else:
+                            buffer = io.BytesIO(await response.read())
+                            files.append(discord.File(fp=buffer, filename=filename))
 
                 # send files to discord
                 await ctx.send(caption, files=files)
@@ -370,48 +368,45 @@ class Media(commands.Cog):
             if download:
                 # download file and rename, upload to discord
                 tweet_link = "https://" + tweet.full_text.split(" ")[-1].split("https://")[-1]
-                async with aiohttp.ClientSession() as session:
-                    timestamp = arrow.get(tweet.created_at).format("YYMMDD")
-                    caption = (
-                        f":bust_in_silhouette: **@{tweet.user.screen_name}**\n"
-                        f":calendar: {timestamp}\n"
-                        f":link: <{tweet_link}>"
-                    )
-                    files = []
-                    for n, (media_url, video_url) in enumerate(media_files, start=1):
-                        # is image not video
-                        if video_url is None:
-                            extension = "jpeg"
+                timestamp = arrow.get(tweet.created_at).format("YYMMDD")
+                caption = (
+                    f":bust_in_silhouette: **@{tweet.user.screen_name}**\n"
+                    f":calendar: {timestamp}\n"
+                    f":link: <{tweet_link}>"
+                )
+                files = []
+                for n, (media_url, video_url) in enumerate(media_files, start=1):
+                    # is image not video
+                    if video_url is None:
+                        extension = "jpeg"
+                    else:
+                        extension = "mp4"
+
+                    filename = f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
+                    too_big = False
+                    max_filesize = 8388608  # discord has 8MB file size limit
+                    url = media_url.replace(".jpg", "?format=jpg&name=orig")
+                    async with self.bot.session.get(url) as response:
+                        if (
+                            int(response.headers.get("content-length", max_filesize + 1))
+                            > max_filesize
+                        ):
+                            too_big = True
                         else:
-                            extension = "mp4"
+                            with open(filename, "wb") as f:
+                                while True:
+                                    block = await response.content.read(1024)
+                                    if not block:
+                                        break
+                                    f.write(block)
 
-                        filename = (
-                            f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
-                        )
-                        too_big = False
-                        max_filesize = 8388608  # discord has 8MB file size limit
-                        url = media_url.replace(".jpg", "?format=jpg&name=orig")
-                        async with session.get(url) as response:
-                            if (
-                                int(response.headers.get("content-length", max_filesize + 1))
-                                > max_filesize
-                            ):
-                                too_big = True
-                            else:
-                                with open(filename, "wb") as f:
-                                    while True:
-                                        block = await response.content.read(1024)
-                                        if not block:
-                                            break
-                                        f.write(block)
+                        if too_big:
+                            caption += f"\n{url}"
+                        else:
+                            with open(filename, "rb") as f:
+                                files.append(discord.File(f))
 
-                            if too_big:
-                                caption += f"\n{url}"
-                            else:
-                                with open(filename, "rb") as f:
-                                    files.append(discord.File(f))
-
-                                os.remove(filename)
+                            os.remove(filename)
 
                     await ctx.send(caption, files=files)
 
@@ -440,13 +435,12 @@ class Media(commands.Cog):
     async def gfycat(self, ctx: commands.Context, *, query):
         """Search for a gfycat gif"""
         scripts = []
-        async with aiohttp.ClientSession() as session:
-            tasks = []
-            if len(query.split(" ")) == 1:
-                tasks.append(extract_scripts(session, f"https://gfycat.com/gifs/tag/{query}"))
+        tasks = []
+        if len(query.split(" ")) == 1:
+            tasks.append(extract_scripts(self.bot.session, f"https://gfycat.com/gifs/tag/{query}"))
 
-            tasks.append(extract_scripts(session, f"https://gfycat.com/gifs/search/{query}"))
-            scripts = sum(await asyncio.gather(*tasks), [])
+        tasks.append(extract_scripts(self.bot.session, f"https://gfycat.com/gifs/search/{query}"))
+        scripts = sum(await asyncio.gather(*tasks), [])
 
         urls = []
         for script in scripts:
@@ -486,13 +480,12 @@ class Media(commands.Cog):
                 )
 
         url = f"https://www.melon.com/chart/{timeframe}/index.htm"
-        async with aiohttp.ClientSession() as session:
-            headers = {
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0",
-            }
-            async with session.get(url, headers=headers) as response:
-                soup = BeautifulSoup(await response.text(), "html.parser")
+        headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0",
+        }
+        async with self.bot.session.get(url, headers=headers) as response:
+            soup = BeautifulSoup(await response.text(), "html.parser")
 
         song_titles = [
             util.escape_md(x.find("span").find("a").text)
@@ -528,16 +521,15 @@ class Media(commands.Cog):
     async def xkcd(self, ctx: commands.Context, comic_id=None):
         """Get a random xkcd comic"""
         if comic_id is None:
-            async with aiohttp.ClientSession() as session:
-                url = "https://c.xkcd.com/random/comic"
-                headers = {
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Connection": "keep-alive",
-                    "Referer": "https://xkcd.com/",
-                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0",
-                }
-                async with session.get(url, headers=headers) as response:
-                    location = response.url
+            url = "https://c.xkcd.com/random/comic"
+            headers = {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Connection": "keep-alive",
+                "Referer": "https://xkcd.com/",
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0",
+            }
+            async with self.bot.session.get(url, headers=headers) as response:
+                location = response.url
         else:
             location = f"https://xkcd.com/{comic_id}/"
         await ctx.send(location)
@@ -559,12 +551,11 @@ class GGSoup:
         self.soup = None
 
     async def create(self, region, summoner_name, sub_url=""):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"https://{region}.op.gg/summoner/{sub_url}userName={summoner_name}"
-            ) as response:
-                data = await response.text()
-                self.soup = BeautifulSoup(data, "html.parser")
+        async with self.bot.session.get(
+            f"https://{region}.op.gg/summoner/{sub_url}userName={summoner_name}"
+        ) as response:
+            data = await response.text()
+            self.soup = BeautifulSoup(data, "html.parser")
 
     def text(self, obj, classname, source=None):
         if source is None:

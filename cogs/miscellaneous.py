@@ -1,6 +1,5 @@
 import random
 
-import aiohttp
 import arrow
 import discord
 from discord.ext import commands
@@ -102,11 +101,10 @@ class Miscellaneous(commands.Cog):
     async def ascii_text(self, ctx: commands.Context, *, text):
         """Turn text into fancy ascii art"""
         font = "small"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"https://artii.herokuapp.com/make?text={text}&font={font}"
-            ) as response:
-                content = await response.text()
+        async with self.bot.session.get(
+            f"https://artii.herokuapp.com/make?text={text}&font={font}"
+        ) as response:
+            content = await response.text()
 
         await ctx.send(f"```\n{content}\n```")
 
@@ -343,11 +341,10 @@ class Miscellaneous(commands.Cog):
                 "Use `>horoscope list` if you don't know which one you are."
             )
         params = {"sign": sunsign, "day": day}
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://aztro.sameerkumar.website/", params=params
-            ) as response:
-                data = await response.json()
+        async with self.bot.session.post(
+            "https://aztro.sameerkumar.website/", params=params
+        ) as response:
+            data = await response.json()
 
         sign = self.hs.get(sunsign)
         content = discord.Embed(
@@ -438,7 +435,7 @@ class Miscellaneous(commands.Cog):
                 continue
 
             if source.startswith("http") or source.startswith("https"):
-                url_color = await util.color_from_image_url(source)
+                url_color = await util.color_from_image_url(self.bot.session, source)
                 if url_color is not None:
                     colors.append(url_color)
                     continue
@@ -461,9 +458,8 @@ class Miscellaneous(commands.Cog):
 
         colors = [x.strip("#") for x in colors]
         url = "https://api.color.pizza/v1/" + ",".join(colors)
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                colordata = (await response.json()).get("colors")
+        async with self.bot.session.get(url) as response:
+            colordata = (await response.json()).get("colors")
 
         if len(colors) == 1:
             discord_color = await util.get_color(ctx, "#" + colors[0].strip("#"))
@@ -524,7 +520,7 @@ class Miscellaneous(commands.Cog):
 
         content = discord.Embed(title=f"`:{emoji_name}:`")
         content.set_image(url=emoji_url)
-        stats = await util.image_info_from_url(emoji_url)
+        stats = await util.image_info_from_url(self.bot.session, emoji_url)
         content.set_footer(text=f"Type: {stats['filetype']}")
 
         if isinstance(emoji, discord.Emoji):
@@ -546,21 +542,18 @@ class Miscellaneous(commands.Cog):
     async def emojify(self, ctx: commands.Context, *, text):
         """Emojify your message"""
         request_data = {"density": 100, "input": text, "shouldFilterEmojis": False}
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://api.emojify.net/convert",
-                json=request_data,
-                headers={"Content-Type": "application/json"},
-            ) as response:
-                data = await response.json()
-                result = data.get("result")
+        async with self.bot.session.post(
+            "https://api.emojify.net/convert",
+            json=request_data,
+            headers={"Content-Type": "application/json"},
+        ) as response:
+            data = await response.json()
+            result = data.get("result")
 
-                try:
-                    await ctx.send(result)
-                except discord.errors.HTTPException:
-                    raise exceptions.CommandWarning(
-                        "Your text when emojified is too long to send!"
-                    )
+            try:
+                await ctx.send(result)
+            except discord.errors.HTTPException:
+                raise exceptions.CommandWarning("Your text when emojified is too long to send!")
 
 
 async def setup(bot):

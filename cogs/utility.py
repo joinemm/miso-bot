@@ -188,23 +188,21 @@ class Utility(commands.Cog):
             ctx.command = self.bot.get_command("!")
             await ctx.command.callback(self, ctx)
 
-    @staticmethod
-    async def resolve_bang(ctx: commands.Context, bang, args):
-        async with aiohttp.ClientSession() as session:
-            params = {"q": "!" + bang + " " + args, "format": "json", "no_redirect": 1}
-            url = "https://api.duckduckgo.com"
-            async with session.get(url, params=params) as response:
-                data = await response.json(content_type=None)
-                location = data.get("Redirect")
-                if location == "":
-                    return await ctx.send(":warning: Unknown bang or found nothing!")
+    async def resolve_bang(self, ctx: commands.Context, bang, args):
+        params = {"q": "!" + bang + " " + args, "format": "json", "no_redirect": 1}
+        url = "https://api.duckduckgo.com"
+        async with self.bot.session.get(url, params=params) as response:
+            data = await response.json(content_type=None)
+            location = data.get("Redirect")
+            if location == "":
+                return await ctx.send(":warning: Unknown bang or found nothing!")
 
-                while location:
-                    async with session.get(url, params=params) as deeper_response:
-                        response = deeper_response
-                        location = response.headers.get("location")
+            while location:
+                async with self.bot.session.get(url, params=params) as deeper_response:
+                    response = deeper_response
+                    location = response.headers.get("location")
 
-                content = response.url
+            content = response.url
         await ctx.send(content)
 
     @commands.command(name="!", usage="<bang> <query...>")
@@ -337,30 +335,29 @@ class Utility(commands.Cog):
             # use given string as temporary location
             location = address
 
-        async with aiohttp.ClientSession() as session:
-            params = {"address": location, "key": GOOGLE_API_KEY}
-            async with session.get(
-                "https://maps.googleapis.com/maps/api/geocode/json", params=params
-            ) as response:
-                geocode_data = await response.json()
-            try:
-                geocode_data = geocode_data["results"][0]
-            except IndexError:
-                raise exceptions.CommandWarning("Could not find that location!")
+        params = {"address": location, "key": GOOGLE_API_KEY}
+        async with self.bot.session.get(
+            "https://maps.googleapis.com/maps/api/geocode/json", params=params
+        ) as response:
+            geocode_data = await response.json()
+        try:
+            geocode_data = geocode_data["results"][0]
+        except IndexError:
+            raise exceptions.CommandWarning("Could not find that location!")
 
-            formatted_name = geocode_data["formatted_address"]
-            lat = geocode_data["geometry"]["location"]["lat"]
-            lon = geocode_data["geometry"]["location"]["lng"]
+        formatted_name = geocode_data["formatted_address"]
+        lat = geocode_data["geometry"]["location"]["lat"]
+        lon = geocode_data["geometry"]["location"]["lng"]
 
-            # we have lat and lon now, plug them into dark sky
-            async with session.get(
-                url=f"https://api.darksky.net/forecast/{DARKSKY_API_KEY}/{lat},{lon}?units=si"
-            ) as response:
-                weather_data = await response.json()
-            current = weather_data["currently"]
-            hourly = weather_data["hourly"]
+        # we have lat and lon now, plug them into dark sky
+        async with self.bot.session.get(
+            url=f"https://api.darksky.net/forecast/{DARKSKY_API_KEY}/{lat},{lon}?units=si"
+        ) as response:
+            weather_data = await response.json()
+        current = weather_data["currently"]
+        hourly = weather_data["hourly"]
 
-            localtime = await get_timezone(session, {"lat": lat, "lon": lon})
+        localtime = await get_timezone(self.bot.session, {"lat": lat, "lon": lon})
 
         country = "N/A"
         for comp in geocode_data["address_components"]:
@@ -393,9 +390,8 @@ class Utility(commands.Cog):
         """Get synonyms for a word"""
         url = f"https://www.dictionaryapi.com/api/v3/references/thesaurus/json/{word}"
         params = {"key": THESAURUS_KEY}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url=url, params=params) as response:
-                data = await response.json()
+        async with self.bot.session.get(url=url, params=params) as response:
+            data = await response.json()
 
         if isinstance(data[0], dict):
             api_icon = "https://dictionaryapi.com/images/MWLogo_120x120_2x.png"
@@ -433,86 +429,84 @@ class Utility(commands.Cog):
             "app_key": OXFORD_TOKEN,
         }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{api_url}lemmas/en/{word}", headers=headers) as response:
+        async with self.bot.session.get(f"{api_url}lemmas/en/{word}", headers=headers) as response:
+            data = await response.json()
+
+        # searched for word id, now use the word id to get definition
+        all_entries = []
+
+        if data.get("results"):
+            definitions_embed = discord.Embed(colour=discord.Colour.from_rgb(0, 189, 242))
+            definitions_embed.description = ""
+
+            found_word = data["results"][0]["id"]
+            url = f"{api_url}entries/en-gb/{found_word}"
+            params = {"strictMatch": "false"}
+            async with self.bot.session.get(url, headers=headers, params=params) as response:
                 data = await response.json()
 
-            # searched for word id, now use the word id to get definition
-            all_entries = []
+            for entry in data["results"][0]["lexicalEntries"]:
+                definitions_value = ""
+                name = data["results"][0]["word"]
 
-            if data.get("results"):
-                definitions_embed = discord.Embed(colour=discord.Colour.from_rgb(0, 189, 242))
-                definitions_embed.description = ""
+                for i in range(len(entry["entries"][0]["senses"])):
+                    for definition in entry["entries"][0]["senses"][i].get("definitions", []):
+                        this_top_level_definition = f"\n**{i + 1}.** {definition}"
+                        if len(definitions_value + this_top_level_definition) > 1024:
+                            break
+                        definitions_value += this_top_level_definition
+                        try:
+                            for y in range(len(entry["entries"][0]["senses"][i]["subsenses"])):
+                                for subdef in entry["entries"][0]["senses"][i]["subsenses"][y][
+                                    "definitions"
+                                ]:
+                                    this_definition = f"\n**└ {i + 1}.{y + 1}.** {subdef}"
+                                    if len(definitions_value + this_definition) > 1024:
+                                        break
+                                    definitions_value += this_definition
 
-                found_word = data["results"][0]["id"]
-                url = f"{api_url}entries/en-gb/{found_word}"
-                params = {"strictMatch": "false"}
-                async with session.get(url, headers=headers, params=params) as response:
-                    data = await response.json()
+                            definitions_value += "\n"
+                        except KeyError:
+                            pass
 
-                for entry in data["results"][0]["lexicalEntries"]:
-                    definitions_value = ""
-                    name = data["results"][0]["word"]
+                    for reference in entry["entries"][0]["senses"][i].get(
+                        "crossReferenceMarkers", []
+                    ):
+                        definitions_value += reference
 
-                    for i in range(len(entry["entries"][0]["senses"])):
-                        for definition in entry["entries"][0]["senses"][i].get("definitions", []):
-                            this_top_level_definition = f"\n**{i + 1}.** {definition}"
-                            if len(definitions_value + this_top_level_definition) > 1024:
-                                break
-                            definitions_value += this_top_level_definition
-                            try:
-                                for y in range(len(entry["entries"][0]["senses"][i]["subsenses"])):
-                                    for subdef in entry["entries"][0]["senses"][i]["subsenses"][y][
-                                        "definitions"
-                                    ]:
-                                        this_definition = f"\n**└ {i + 1}.{y + 1}.** {subdef}"
-                                        if len(definitions_value + this_definition) > 1024:
-                                            break
-                                        definitions_value += this_definition
+                word_type = entry["lexicalCategory"]["text"]
+                this_entry = {
+                    "id": name,
+                    "definitions": definitions_value,
+                    "type": word_type,
+                }
+                all_entries.append(this_entry)
 
-                                definitions_value += "\n"
-                            except KeyError:
-                                pass
+            if not all_entries:
+                return await ctx.send(f"No definitions found for `{word}`")
 
-                        for reference in entry["entries"][0]["senses"][i].get(
-                            "crossReferenceMarkers", []
-                        ):
-                            definitions_value += reference
+            definitions_embed.set_author(
+                name=all_entries[0]["id"],
+                icon_url="https://i.imgur.com/vDvSmF3.png",
+            )
 
-                    word_type = entry["lexicalCategory"]["text"]
-                    this_entry = {
-                        "id": name,
-                        "definitions": definitions_value,
-                        "type": word_type,
-                    }
-                    all_entries.append(this_entry)
-
-                if not all_entries:
-                    return await ctx.send(f"No definitions found for `{word}`")
-
-                definitions_embed.set_author(
-                    name=all_entries[0]["id"],
-                    icon_url="https://i.imgur.com/vDvSmF3.png",
+            for entry in all_entries:
+                definitions_embed.add_field(
+                    name=f"{entry['type']}",
+                    value=entry["definitions"],
+                    inline=False,
                 )
 
-                for entry in all_entries:
-                    definitions_embed.add_field(
-                        name=f"{entry['type']}",
-                        value=entry["definitions"],
-                        inline=False,
-                    )
-
-                await ctx.send(embed=definitions_embed)
-            else:
-                await ctx.send(f"```ERROR: {data['error']}```")
+            await ctx.send(embed=definitions_embed)
+        else:
+            await ctx.send(f"```ERROR: {data['error']}```")
 
     @commands.command()
     async def urban(self, ctx: commands.Context, *, word):
         """Get Urban Dictionary definitions for a word"""
         url = "https://api.urbandictionary.com/v0/define"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params={"term": word}) as response:
-                data = await response.json()
+        async with self.bot.session.get(url, params={"term": word}) as response:
+            data = await response.json()
 
         pages = []
         if data["list"]:
@@ -562,58 +556,57 @@ class Utility(commands.Cog):
                 "Sorry, the maximum length of text i can translate is 1000 characters!"
             )
 
-        async with aiohttp.ClientSession() as session:
-            languages = text.partition(" ")[0]
-            if "/" in languages or "->" in languages:
-                if "/" in languages:
-                    source, target = languages.split("/")
-                elif "->" in languages:
-                    source, target = languages.split("->")
-                text = text.partition(" ")[2]
-                if source == "":
-                    source = await detect_language(session, text)
-                if target == "":
-                    target = "en"
+        languages = text.partition(" ")[0]
+        if "/" in languages or "->" in languages:
+            if "/" in languages:
+                source, target = languages.split("/")
+            elif "->" in languages:
+                source, target = languages.split("->")
+            text = text.partition(" ")[2]
+            if source == "":
+                source = await detect_language(self.bot.session, text)
+            if target == "":
+                target = "en"
+        else:
+            source = await detect_language(self.bot.session, text)
+            if source == "en":
+                target = "ko"
             else:
-                source = await detect_language(session, text)
-                if source == "en":
-                    target = "ko"
-                else:
-                    target = "en"
-            language_pair = f"{source}/{target}"
+                target = "en"
+        language_pair = f"{source}/{target}"
 
-            # we have language and query, now choose the appropriate translator
+        # we have language and query, now choose the appropriate translator
 
-            if language_pair in papago_pairs:
-                # use papago
-                url = "https://openapi.naver.com/v1/papago/n2mt"
-                params = {"source": source, "target": target, "text": text}
-                headers = {
-                    "X-Naver-Client-Id": NAVER_APPID,
-                    "X-Naver-Client-Secret": NAVER_TOKEN,
-                }
+        if language_pair in papago_pairs:
+            # use papago
+            url = "https://openapi.naver.com/v1/papago/n2mt"
+            params = {"source": source, "target": target, "text": text}
+            headers = {
+                "X-Naver-Client-Id": NAVER_APPID,
+                "X-Naver-Client-Secret": NAVER_TOKEN,
+            }
 
-                async with session.post(url, headers=headers, data=params) as response:
-                    translation = (await response.json())["message"]["result"]["translatedText"]
+            async with self.bot.session.post(url, headers=headers, data=params) as response:
+                translation = (await response.json())["message"]["result"]["translatedText"]
 
-            else:
-                # use google
-                url = "https://translation.googleapis.com/language/translate/v2"
-                params = {
-                    "key": GOOGLE_API_KEY,
-                    "model": "nmt",
-                    "target": target,
-                    "source": source,
-                    "q": text,
-                }
+        else:
+            # use google
+            url = "https://translation.googleapis.com/language/translate/v2"
+            params = {
+                "key": GOOGLE_API_KEY,
+                "model": "nmt",
+                "target": target,
+                "source": source,
+                "q": text,
+            }
 
-                async with session.get(url, params=params) as response:
-                    data = await response.json()
+            async with self.bot.session.get(url, params=params) as response:
+                data = await response.json()
 
-                try:
-                    translation = html.unescape(data["data"]["translations"][0]["translatedText"])
-                except KeyError:
-                    return await ctx.send("Sorry, I could not translate this :(")
+            try:
+                translation = html.unescape(data["data"]["translations"][0]["translatedText"])
+            except KeyError:
+                return await ctx.send("Sorry, I could not translate this :(")
 
         await ctx.send(f"`{source}->{target}` {translation}")
 
@@ -628,56 +621,54 @@ class Utility(commands.Cog):
             "units": "metric",
         }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    content = await response.text()
-                    await ctx.send(f":mag_right: {content}")
-                else:
-                    await ctx.send(":shrug:")
+        async with self.bot.session.get(url, params=params) as response:
+            if response.status == 200:
+                content = await response.text()
+                await ctx.send(f":mag_right: {content}")
+            else:
+                await ctx.send(":shrug:")
 
     @commands.command()
     async def creategif(self, ctx: commands.Context, media_url):
         """Create a gfycat gif from video url"""
         starttimer = time()
-        async with aiohttp.ClientSession() as session:
-            auth_headers = await gfycat_oauth(session)
-            url = "https://api.gfycat.com/v1/gfycats"
-            params = {"fetchUrl": media_url.strip("`")}
-            async with session.post(url, json=params, headers=auth_headers) as response:
+        auth_headers = await gfycat_oauth(self.bot.session)
+        url = "https://api.gfycat.com/v1/gfycats"
+        params = {"fetchUrl": media_url.strip("`")}
+        async with self.bot.session.post(url, json=params, headers=auth_headers) as response:
+            data = await response.json()
+
+        try:
+            gfyname = data["gfyname"]
+        except KeyError:
+            raise exceptions.CommandWarning("Unable to create gif from this link!")
+
+        message = await ctx.send(f"Encoding {emojis.LOADING}")
+
+        i = 1
+        url = f"https://api.gfycat.com/v1/gfycats/fetch/status/{gfyname}"
+        await asyncio.sleep(5)
+        while True:
+            async with self.bot.session.get(url, headers=auth_headers) as response:
                 data = await response.json()
+                task = data["task"]
 
-            try:
-                gfyname = data["gfyname"]
-            except KeyError:
-                raise exceptions.CommandWarning("Unable to create gif from this link!")
+            if task == "encoding":
+                pass
 
-            message = await ctx.send(f"Encoding {emojis.LOADING}")
+            elif task == "complete":
+                await message.edit(
+                    content=f"Gif created in **{util.stringfromtime(time() - starttimer, 2)}**"
+                    f"\nhttps://gfycat.com/{data['gfyname']}"
+                )
+                break
 
-            i = 1
-            url = f"https://api.gfycat.com/v1/gfycats/fetch/status/{gfyname}"
-            await asyncio.sleep(5)
-            while True:
-                async with session.get(url, headers=auth_headers) as response:
-                    data = await response.json()
-                    task = data["task"]
+            else:
+                await message.edit(content="There was an error while creating your gif :(")
+                break
 
-                if task == "encoding":
-                    pass
-
-                elif task == "complete":
-                    await message.edit(
-                        content=f"Gif created in **{util.stringfromtime(time() - starttimer, 2)}**"
-                        f"\nhttps://gfycat.com/{data['gfyname']}"
-                    )
-                    break
-
-                else:
-                    await message.edit(content="There was an error while creating your gif :(")
-                    break
-
-                await asyncio.sleep(i)
-                i += 1
+            await asyncio.sleep(i)
+            i += 1
 
     @commands.command()
     async def streamable(self, ctx: commands.Context, media_url):
@@ -688,48 +679,47 @@ class Utility(commands.Cog):
         params = {"url": media_url.strip("`")}
         auth = aiohttp.BasicAuth(STREAMABLE_USER, STREAMABLE_PASSWORD)
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params, auth=auth) as response:
-                if response.status != 200:
-                    try:
-                        data = await response.json()
-                        messages = []
-                        for category in data["messages"]:
-                            for msg in data["messages"][category]:
-                                messages.append(msg)
-                        messages = " | ".join(messages)
-                        errormsg = f"ERROR {response.status_code}: {messages}"
-                    except (aiohttp.ContentTypeError, KeyError):
-                        errormsg = await response.text()
+        async with self.bot.session.get(url, params=params, auth=auth) as response:
+            if response.status != 200:
+                try:
+                    data = await response.json()
+                    messages = []
+                    for category in data["messages"]:
+                        for msg in data["messages"][category]:
+                            messages.append(msg)
+                    messages = " | ".join(messages)
+                    errormsg = f"ERROR {response.status_code}: {messages}"
+                except (aiohttp.ContentTypeError, KeyError):
+                    errormsg = await response.text()
 
-                    logger.error(errormsg)
-                    return await ctx.send(f"```{errormsg.split(';')[0]}```")
+                logger.error(errormsg)
+                return await ctx.send(f"```{errormsg.split(';')[0]}```")
 
-                data = await response.json()
-                link = "https://streamable.com/" + data.get("shortcode")
-                message = await ctx.send(f"Processing Video {emojis.LOADING}")
+            data = await response.json()
+            link = "https://streamable.com/" + data.get("shortcode")
+            message = await ctx.send(f"Processing Video {emojis.LOADING}")
 
-            i = 1
-            await asyncio.sleep(5)
-            while True:
-                async with session.get(link) as response:
-                    soup = BeautifulSoup(await response.text(), "html.parser")
-                    meta = soup.find("meta", {"property": "og:url"})
+        i = 1
+        await asyncio.sleep(5)
+        while True:
+            async with self.bot.session.get(link) as response:
+                soup = BeautifulSoup(await response.text(), "html.parser")
+                meta = soup.find("meta", {"property": "og:url"})
 
-                    if meta:
-                        timestring = util.stringfromtime(time() - starttimer, 2)
-                        await message.edit(
-                            content=f"Streamable created in **{timestring}**\n{meta.get('content')}"
-                        )
-                        break
+                if meta:
+                    timestring = util.stringfromtime(time() - starttimer, 2)
+                    await message.edit(
+                        content=f"Streamable created in **{timestring}**\n{meta.get('content')}"
+                    )
+                    break
 
-                    status = soup.find("h1").text
-                    if status != "Processing Video":
-                        await message.edit(content=f":warning: {status}")
-                        break
+                status = soup.find("h1").text
+                if status != "Processing Video":
+                    await message.edit(content=f":warning: {status}")
+                    break
 
-                    await asyncio.sleep(i)
-                    i += 1
+                await asyncio.sleep(i)
+                i += 1
 
     @commands.command()
     async def stock(self, ctx: commands.Context, *, symbol):
@@ -744,43 +734,42 @@ class Utility(commands.Cog):
             >stock $TSLA
             >stock Tesla
         """
-        async with aiohttp.ClientSession() as session:
-            if not symbol.startswith("$"):
-                # make search
-                url = "http://d.yimg.com/autoc.finance.yahoo.com/autoc"
-                yahoo_param = {
-                    "query": symbol,
-                    "region": 1,
-                    "lang": "en",
-                    "callback": "YAHOO.Finance.SymbolSuggest.ssCallback",
-                }
+        if not symbol.startswith("$"):
+            # make search
+            url = "http://d.yimg.com/autoc.finance.yahoo.com/autoc"
+            yahoo_param = {
+                "query": symbol,
+                "region": 1,
+                "lang": "en",
+                "callback": "YAHOO.Finance.SymbolSuggest.ssCallback",
+            }
 
-                async with session.get(url, params=yahoo_param) as response:
-                    search_data = await response.text()
-                    search_data = search_data.replace(yahoo_param["callback"], "")
-                    search_data = json.loads(search_data.strip("();"))
+            async with self.bot.session.get(url, params=yahoo_param) as response:
+                search_data = await response.text()
+                search_data = search_data.replace(yahoo_param["callback"], "")
+                search_data = json.loads(search_data.strip("();"))
 
-                companies = search_data["ResultSet"]["Result"]
-                if not companies:
-                    return await ctx.send("Found nothing!")
-                result = companies[0]
+            companies = search_data["ResultSet"]["Result"]
+            if not companies:
+                return await ctx.send("Found nothing!")
+            result = companies[0]
 
-                symbol = result["symbol"]
+            symbol = result["symbol"]
 
-            params = {"symbol": symbol.strip("$"), "token": FINNHUB_TOKEN}
+        params = {"symbol": symbol.strip("$"), "token": FINNHUB_TOKEN}
 
-            url = "https://finnhub.io/api/v1/quote"
-            async with session.get(url, params=params) as response:
-                quote_data = await response.json()
+        url = "https://finnhub.io/api/v1/quote"
+        async with self.bot.session.get(url, params=params) as response:
+            quote_data = await response.json()
 
-            error = quote_data.get("error")
-            if error is not None:
-                return await ctx.send(error)
+        error = quote_data.get("error")
+        if error is not None:
+            return await ctx.send(error)
 
-            url = "https://finnhub.io/api/v1/stock/profile2"
-            params["symbol"] = profile_ticker(params["symbol"])
-            async with session.get(url, params=params) as response:
-                company_profile = await response.json()
+        url = "https://finnhub.io/api/v1/stock/profile2"
+        params["symbol"] = profile_ticker(params["symbol"])
+        async with self.bot.session.get(url, params=params) as response:
+            company_profile = await response.json()
 
         change = float(quote_data["c"]) - float(quote_data["pc"])
         gains = change > 0

@@ -162,8 +162,6 @@ async def page_switcher(ctx, pages):
     # add all page numbers
     for i, page in enumerate(pages.items, start=1):
         old_footer = page.footer.text
-        if old_footer == discord.Embed.Empty:
-            old_footer = None
         page.set_footer(
             text=f"{i}/{len(pages.items)}" + (f" | {old_footer}" if old_footer is not None else "")
         )
@@ -562,7 +560,7 @@ def rgb_to_hex(rgb):
     return "{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
 
 
-async def color_from_image_url(url, fallback="E74C3C", return_color_object=False):
+async def color_from_image_url(session, url, fallback="E74C3C", return_color_object=False):
     """
     :param url      : image url
     :param fallback : the color to return in case the operation fails
@@ -571,11 +569,10 @@ async def color_from_image_url(url, fallback="E74C3C", return_color_object=False
     if url.strip() == "":
         return fallback
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                image = Image.open(io.BytesIO(await response.read()))
-                colors = colorgram.extract(image, 1)
-                dominant_color = colors[0].rgb
+        async with session.get(url) as response:
+            image = Image.open(io.BytesIO(await response.read()))
+            colors = colorgram.extract(image, 1)
+            dominant_color = colors[0].rgb
 
         if return_color_object:
             return dominant_color
@@ -614,28 +611,27 @@ def find_custom_emojis(text):
     return emoji_list
 
 
-async def image_info_from_url(url):
+async def image_info_from_url(session, url):
     """Return dictionary containing filesize, filetype and dimensions of an image"""
-    async with aiohttp.ClientSession() as session:
-        async with session.get(str(url)) as response:
-            filesize = int(response.headers.get("Content-Length")) / 1024
-            filetype = response.headers.get("Content-Type")
-            try:
-                image = Image.open(io.BytesIO(await response.read()))
-            except UnidentifiedImageError:
-                return None
+    async with session.get(str(url)) as response:
+        filesize = int(response.headers.get("Content-Length")) / 1024
+        filetype = response.headers.get("Content-Type")
+        try:
+            image = Image.open(io.BytesIO(await response.read()))
+        except UnidentifiedImageError:
+            return None
 
-            dimensions = image.size
-            if filesize > 1024:
-                filesize = f"{filesize/1024:.2f}MB"
-            else:
-                filesize = f"{filesize:.2f}KB"
+        dimensions = image.size
+        if filesize > 1024:
+            filesize = f"{filesize/1024:.2f}MB"
+        else:
+            filesize = f"{filesize:.2f}KB"
 
-            return {
-                "filesize": filesize,
-                "filetype": filetype,
-                "dimensions": f"{dimensions[0]}x{dimensions[1]}",
-            }
+        return {
+            "filesize": filesize,
+            "filetype": filetype,
+            "dimensions": f"{dimensions[0]}x{dimensions[1]}",
+        }
 
 
 class OptionalSubstitute(dict):
@@ -771,18 +767,17 @@ def format_html(template, replacements):
 
 
 async def render_html(bot, payload):
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.post(
-                f"http://{IMAGE_SERVER_HOST}:3000/html", data=payload
-            ) as response:
-                if response.status == 200:
-                    bot.cache.stats_html_rendered += 1
-                    buffer = io.BytesIO(await response.read())
-                    return buffer
-                raise exceptions.RendererError(f"{response.status} : {await response.text()}")
-        except aiohttp.client_exceptions.ClientConnectorError:
-            raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
+    try:
+        async with bot.session.post(
+            f"http://{IMAGE_SERVER_HOST}:3000/html", data=payload
+        ) as response:
+            if response.status == 200:
+                bot.cache.stats_html_rendered += 1
+                buffer = io.BytesIO(await response.read())
+                return buffer
+            raise exceptions.RendererError(f"{response.status} : {await response.text()}")
+    except aiohttp.client_exceptions.ClientConnectorError:
+        raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
 
 
 def ordinal(n):

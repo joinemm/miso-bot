@@ -409,7 +409,7 @@ class Mod(commands.Cog):
                 await ctx.guild.ban(user, delete_message_days=0)
                 content.title = ":white_check_mark: Banned user"
             except discord.errors.Forbidden:
-                content.title = discord.Embed.Empty
+                content.title = None
                 content.description = f":no_entry: It seems I don't have the permission to ban **{user}** {user.mention}"
                 content.colour = int("be1931", 16)
             await msg.edit(embed=content)

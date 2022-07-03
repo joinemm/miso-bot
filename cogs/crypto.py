@@ -1,6 +1,5 @@
 from decimal import Decimal
 
-import aiohttp
 import discord
 from discord.ext import commands
 
@@ -51,11 +50,10 @@ class Cryptocurrency(commands.Cog):
             raise exceptions.CommandError("Limit must be 100 or less.")
 
         symbol = (coin + pair).upper()
-        async with aiohttp.ClientSession() as session:
-            url = "https://api.binance.com/api/v3/klines"
-            params = {"symbol": symbol, "interval": interval, "limit": limit}
-            async with session.get(url, params=params) as response:
-                data = await response.json()
+        url = "https://api.binance.com/api/v3/klines"
+        params = {"symbol": symbol, "interval": interval, "limit": limit}
+        async with self.bot.session.get(url, params=params) as response:
+            data = await response.json()
 
         if isinstance(data, dict):
             raise exceptions.CommandError(data.get("msg"))
@@ -87,9 +85,8 @@ class Cryptocurrency(commands.Cog):
         symbol = (coin + pair).upper()
         url = "https://api.binance.com/api/v3/ticker/24hr"
         params = {"symbol": symbol}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                data = await response.json()
+        async with self.bot.session.get(url, params=params) as response:
+            data = await response.json()
 
         error = data.get("msg")
         if error:

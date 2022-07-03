@@ -5,7 +5,6 @@ import json
 import os
 import random
 
-import aiohttp
 import arrow
 import async_cse
 import discord
@@ -198,9 +197,9 @@ class Kpop(commands.Cog):
             "https://kprofiles.com/kpop-solo-singers/",
         ]
 
-        async def scrape(session, url):
+        async def scrape(url):
             artists = []
-            async with session.get(url) as response:
+            async with self.bot.session.get(url) as response:
                 soup = BeautifulSoup(await response.text(), "html.parser")
                 content = soup.find("div", {"class": "entry-content herald-entry-content"})
                 outer = content.find_all("p")
@@ -212,11 +211,10 @@ class Kpop(commands.Cog):
             return artists
 
         tasks = []
-        async with aiohttp.ClientSession() as session:
-            for url in urls_to_scrape:
-                tasks.append(scrape(session, url))
+        for url in urls_to_scrape:
+            tasks.append(scrape(url))
 
-            artist_list_new = list(set(sum(await asyncio.gather(*tasks), [])))
+        artist_list_new = list(set(sum(await asyncio.gather(*tasks), [])))
 
         with open("data/data.json", "w") as f:
             json.dump({"artists": artist_list_new}, f, indent=4)

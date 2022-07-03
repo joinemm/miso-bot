@@ -4,7 +4,6 @@ import os
 import time
 from datetime import datetime
 
-import aiohttp
 import arrow
 import discord
 import humanize
@@ -80,7 +79,6 @@ class Information(commands.Cog):
         )
 
         current = []
-        # former = []
         for user_id, is_active, amount, donating_since in sorted(
             patrons, key=lambda x: x[2], reverse=True
         ):
@@ -93,14 +91,8 @@ class Information(commands.Cog):
                     f"**${int(amount)}** by **{user}** (*for {humanize.naturaldelta(datetime.now() - donating_since)}*)"
                 )
 
-            # else:
-            #     former.append(f"{user}")
-
         if current:
             content.description += "\n\n" + ("\n".join(current))
-
-        # if former:
-        #     content.add_field(name="Former donators", value=", ".join(former))
 
         await ctx.send(embed=content)
 
@@ -125,7 +117,7 @@ class Information(commands.Cog):
         content.add_field(name="Github", value="https://github.com/joinemm/miso-bot", inline=False)
         content.add_field(name="Discord", value="https://discord.gg/RzDW3Ne", inline=False)
 
-        data = await get_commits("joinemm", "miso-bot")
+        data = await self.get_commits("joinemm", "miso-bot")
         last_update = data[0]["commit"]["author"].get("date")
         content.set_footer(text=f"Latest update: {arrow.get(last_update).humanize()}")
 
@@ -187,7 +179,7 @@ class Information(commands.Cog):
     @commands.command()
     async def changelog(self, ctx: commands.Context, author="joinemm", repo="miso-bot"):
         """See github commit history"""
-        data = await get_commits(author, repo)
+        data = await self.get_commits(author, repo)
         content = discord.Embed(color=discord.Color.from_rgb(46, 188, 79))
         content.set_author(
             name="Github commit history",
@@ -534,8 +526,10 @@ class Information(commands.Cog):
         content = discord.Embed()
         content.set_author(name=str(guild), url=guild.icon.url)
         content.set_image(url=guild.icon.url)
-        stats = await util.image_info_from_url(guild.icon.url)
-        color = await util.color_from_image_url(str(guild.icon.replace(size=64, format="png")))
+        stats = await util.image_info_from_url(self.bot.session, guild.icon.url)
+        color = await util.color_from_image_url(
+            self.bot.session, str(guild.icon.replace(size=64, format="png"))
+        )
         content.colour = int(color, 16)
         if stats is not None:
             content.set_footer(
@@ -603,15 +597,13 @@ class Information(commands.Cog):
                 file=discord.File(img),
             )
 
+    async def get_commits(self, author, repository):
+        url = f"https://api.github.com/repos/{author}/{repository}/commits"
+        async with self.bot.session.get(url) as response:
+            data = await response.json()
+
+        return data
+
 
 async def setup(bot):
     await bot.add_cog(Information(bot))
-
-
-async def get_commits(author, repository):
-    url = f"https://api.github.com/repos/{author}/{repository}/commits"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            data = await response.json()
-
-    return data
