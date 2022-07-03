@@ -1,0 +1,24 @@
+discord.py[speed] @ git+https://github.com/Rapptz/discord.py.git
+aiohttp
+aiohttp-cors
+aiomysql
+arrow
+async-cse
+asyncpraw
+beautifulsoup4
+bleach
+colorgram.py
+durations-nlp
+humanize
+jishaku
+kdtree
+matplotlib
+numpy
+Pillow
+psutil
+python-dotenv
+regex
+scipy
+statcord.py
+tweepy
+uvloop
