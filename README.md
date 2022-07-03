@@ -47,6 +47,10 @@ A discord bot with almost 100 commands and features, including but not limited t
 
 ...and much more. Visit <https://misobot.xyz> for more detailed overview of the features.
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=joinemm/miso-bot&type=Date)](https://star-history.com/#joinemm/miso-bot&Date)
+
 ## Deployment using docker
 
 First copy/rename `.env.example` to `.env` and fill it with your own keys.
@@ -54,6 +58,23 @@ Everything else should be handled by the `docker-compose.yml`
 
     $ docker-compose up --build
 
-## Star History
+## Deploying locally
 
-[![Star History Chart](https://api.star-history.com/svg?repos=joinemm/miso-bot&type=Date)](https://star-history.com/#joinemm/miso-bot&Date)
+The dependencies are compiled using pip-tools from `requirements.in` and `dev-requirements.in`. the dev file just adds linters and pre-commit.
+
+Installation using pip-tools:
+
+    $ pip-sync requirements.txt dev-requirements.txt
+
+Installation using pip:
+
+    $ pip install -r requirements.txt -r dev-requirements.txt
+
+You need to have a mysql/mariadb database running, then run the migrations in `sql/init/...`. After this, you can run the bot:
+
+    $ python main.py
+
+> Note: Running this way, the HTML rendering will not work as it relies on an external docker container. You will have to run that separately.
+
+
+
