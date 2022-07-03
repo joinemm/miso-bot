@@ -4,8 +4,8 @@ import random
 from operator import itemgetter
 
 import arrow
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 
 from modules import exceptions, util
 
@@ -111,7 +111,7 @@ class Typings(commands.Cog):
                 f"Currently supported languages are:\n>>> {langs}"
             )
 
-        content = nextcord.Embed(
+        content = discord.Embed(
             title=f":rocket: Starting a new typing race | {wordcount} words",
             color=int("55acee", 16),
         )
@@ -146,7 +146,7 @@ class Typings(commands.Cog):
                 try:
                     for emoji in [note_emoji, check_emoji]:
                         asyncio.ensure_future(enter_message.remove_reaction(emoji, ctx.bot.user))
-                except (nextcord.errors.NotFound, nextcord.errors.Forbidden):
+                except (discord.errors.NotFound, discord.errors.Forbidden):
                     pass
                 break
             else:
@@ -168,7 +168,7 @@ class Typings(commands.Cog):
                             try:
                                 await cant_race_alone.delete()
                                 await enter_message.remove_reaction(check_emoji, user)
-                            except nextcord.errors.Forbidden:
+                            except discord.errors.Forbidden:
                                 await ctx.send(
                                     "`error: i'm missing required discord permission [ manage messages ]`"
                                 )
@@ -205,7 +205,7 @@ class Typings(commands.Cog):
 
         results = await asyncio.gather(*tasks)
 
-        content = nextcord.Embed(title=":checkered_flag: Race complete!", color=int("e1e8ed", 16))
+        content = discord.Embed(title=":checkered_flag: Race complete!", color=int("e1e8ed", 16))
         rows = []
         values = []
         for i, (player, wpm, accuracy) in enumerate(
@@ -259,7 +259,7 @@ class Typings(commands.Cog):
             return player, wpm, accuracy
 
     @typing.command(name="history")
-    async def typing_history(self, ctx: commands.Context, member: nextcord.Member = None):
+    async def typing_history(self, ctx: commands.Context, member: discord.Member = None):
         """See your typing test history"""
         if member is None:
             member = ctx.author
@@ -277,7 +277,7 @@ class Typings(commands.Cog):
                 + " taken any typing tests yet!",
             )
 
-        content = nextcord.Embed(
+        content = discord.Embed(
             title=f":stopwatch: {util.displayname(member)} Typing test history",
             color=int("dd2e44", 16),
         )
@@ -294,7 +294,7 @@ class Typings(commands.Cog):
     @typing.command(name="cleardata")
     async def typing_clear(self, ctx: commands.Context):
         """Clear your typing data"""
-        content = nextcord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
+        content = discord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
         content.description = (
             "This action will delete *all* of your saved typing data and is **irreversible**."
         )
@@ -320,7 +320,7 @@ class Typings(commands.Cog):
         )
 
     @typing.command(name="stats")
-    async def typing_stats(self, ctx: commands.Context, user: nextcord.Member = None):
+    async def typing_stats(self, ctx: commands.Context, user: discord.Member = None):
         """See your typing statistics"""
         if user is None:
             user = ctx.author
@@ -343,7 +343,7 @@ class Typings(commands.Cog):
             )
 
         test_count, max_wpm, avg_wpm, avg_acc, race_count, win_count = data
-        content = nextcord.Embed(
+        content = discord.Embed(
             title=f":bar_chart: Typing stats for {user.name}", color=int("3b94d9", 16)
         )
         content.description = (
@@ -395,8 +395,8 @@ class Typings(commands.Cog):
         return wordlist
 
 
-def setup(bot):
-    bot.add_cog(Typings(bot))
+async def setup(bot):
+    await bot.add_cog(Typings(bot))
 
 
 def calculate_entry(message, words_message, wordlist):

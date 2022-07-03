@@ -1,8 +1,8 @@
 import asyncio
 
 import arrow
-import nextcord
-from nextcord.ext import commands, tasks
+import discord
+from discord.ext import commands, tasks
 
 from modules import exceptions, log, util
 
@@ -17,6 +17,8 @@ class Mod(commands.Cog):
         self.icon = "🔨"
         self.unmute_list = []
         self.cache_needs_refreshing = True
+
+    async def cog_load(self):
         self.unmute_loop.start()
 
     def cog_unload(self):
@@ -31,7 +33,6 @@ class Mod(commands.Cog):
 
     @unmute_loop.before_loop
     async def before_unmute_loop(self):
-        await self.bot.wait_until_ready()
         logger.info("Starting unmuting loop")
 
     async def check_mutes(self):
@@ -71,16 +72,16 @@ class Mod(commands.Cog):
                 if channel is not None:
                     try:
                         await user.remove_roles(mute_role)
-                    except nextcord.errors.Forbidden:
+                    except discord.errors.Forbidden:
                         pass
                     try:
                         await channel.send(
-                            embed=nextcord.Embed(
+                            embed=discord.Embed(
                                 description=f":stopwatch: Unmuted {user.mention} (mute duration passed)",
                                 color=int("66757f", 16),
                             )
                         )
-                    except nextcord.errors.Forbidden:
+                    except discord.errors.Forbidden:
                         logger.warning(
                             "Unable to send unmuting message due to missing permissions!"
                         )
@@ -125,7 +126,7 @@ class Mod(commands.Cog):
                         break
             try:
                 await ctx.channel.delete_messages(deleted)
-            except nextcord.errors.HTTPException:
+            except discord.errors.HTTPException:
                 raise exceptions.CommandError(
                     "You can only delete messages that are under 14 days old."
                 )
@@ -141,7 +142,7 @@ class Mod(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def giverole(
-        self, ctx: commands.Context, role: nextcord.Role, members: commands.Greedy[nextcord.Member]
+        self, ctx: commands.Context, role: discord.Role, members: commands.Greedy[discord.Member]
     ):
         """Give a role to multiple people"""
         success = []
@@ -159,7 +160,7 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(moderate_members=True)
-    async def timeout(self, ctx: commands.Context, member: nextcord.Member, *, duration="1 hour"):
+    async def timeout(self, ctx: commands.Context, member: discord.Member, *, duration="1 hour"):
         """Timeout user. Pass 'remove' as the duration to remove"""
         if member.timeout is not None:
             seconds = member.timeout.timestamp() - arrow.now().int_timestamp
@@ -181,7 +182,7 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
-    async def mute(self, ctx: commands.Context, member: nextcord.Member, *, duration=None):
+    async def mute(self, ctx: commands.Context, member: discord.Member, *, duration=None):
         """Mute user"""
         mute_role_id = await self.bot.db.execute(
             """
@@ -215,7 +216,7 @@ class Mod(commands.Cog):
 
         try:
             await member.add_roles(mute_role)
-        except nextcord.errors.Forbidden:
+        except discord.errors.Forbidden:
             raise exceptions.CommandError(
                 f"It seems I don't have permission to mute {member.mention}"
             )
@@ -248,7 +249,7 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
-    async def unmute(self, ctx: commands.Context, member: nextcord.Member):
+    async def unmute(self, ctx: commands.Context, member: discord.Member):
         """Unmute user"""
         mute_role_id = await self.bot.db.execute(
             """
@@ -265,7 +266,7 @@ class Mod(commands.Cog):
             )
         try:
             await member.remove_roles(mute_role)
-        except nextcord.errors.Forbidden:
+        except discord.errors.Forbidden:
             raise exceptions.CommandError(
                 f"It seems I don't have permission to unmute {member.mention}"
             )
@@ -291,7 +292,7 @@ class Mod(commands.Cog):
             if user is None:
                 try:
                     user = await self.bot.fetch_user(user_id)
-                except nextcord.errors.NotFound:
+                except discord.errors.NotFound:
                     user = None
 
             if user is None:
@@ -299,7 +300,7 @@ class Mod(commands.Cog):
             else:
                 rows.append(f"`{user_id}` -> {user} {user.mention}")
 
-        content = nextcord.Embed(
+        content = discord.Embed(
             title=f":face_with_monocle: Inspecting {len(ids)} users...",
             color=int("bdddf4", 16),
         )
@@ -319,7 +320,7 @@ class Mod(commands.Cog):
             if user is None:
                 try:
                     user = await self.bot.fetch_user(int(discord_user))
-                except (ValueError, nextcord.NotFound):
+                except (ValueError, discord.NotFound):
                     failure.append(f"`{discord_user}` Invalid user or id")
                     continue
 
@@ -329,7 +330,7 @@ class Mod(commands.Cog):
 
             try:
                 await ctx.guild.ban(user, delete_message_days=0)
-            except nextcord.errors.Forbidden:
+            except discord.errors.Forbidden:
                 failure.append(f"`{user}` No permission to ban")
 
             else:
@@ -356,9 +357,9 @@ class Mod(commands.Cog):
             if user is None:
                 try:
                     user = await self.bot.fetch_user(int(discord_user))
-                except (ValueError, nextcord.NotFound):
+                except (ValueError, discord.NotFound):
                     await ctx.send(
-                        embed=nextcord.Embed(
+                        embed=discord.Embed(
                             description=f":warning: Invalid user or id `{discord_user}`",
                             color=int("be1931", 16),
                         )
@@ -369,29 +370,29 @@ class Mod(commands.Cog):
                 return await ctx.send("no.")
 
             # confirmation dialog for guild members
-            if isinstance(user, nextcord.Member):
+            if isinstance(user, discord.Member):
                 await self.send_ban_confirmation(ctx, user)
 
-            elif isinstance(user, nextcord.User):
+            elif isinstance(user, discord.User):
                 try:
                     await ctx.guild.ban(user, delete_message_days=0)
-                except nextcord.errors.Forbidden:
+                except discord.errors.Forbidden:
                     await ctx.send(
-                        embed=nextcord.Embed(
+                        embed=discord.Embed(
                             description=f":no_entry: It seems I don't have the permission to ban **{user}**",
                             color=int("be1931", 16),
                         )
                     )
                 else:
                     await ctx.send(
-                        embed=nextcord.Embed(
+                        embed=discord.Embed(
                             description=f":hammer: Banned `{user}`",
                             color=int("f4900c", 16),
                         )
                     )
             else:
                 await ctx.send(
-                    embed=nextcord.Embed(
+                    embed=discord.Embed(
                         description=f":warning: Invalid user or id `{discord_user}`",
                         color=int("be1931", 16),
                     )
@@ -399,7 +400,7 @@ class Mod(commands.Cog):
 
     @staticmethod
     async def send_ban_confirmation(ctx: commands.Context, user):
-        content = nextcord.Embed(title=":hammer: Ban user?", color=int("f4900c", 16))
+        content = discord.Embed(title=":hammer: Ban user?", color=int("f4900c", 16))
         content.description = f"{user.mention}\n**{user.name}#{user.discriminator}**\n{user.id}"
         msg = await ctx.send(embed=content)
 
@@ -407,8 +408,8 @@ class Mod(commands.Cog):
             try:
                 await ctx.guild.ban(user, delete_message_days=0)
                 content.title = ":white_check_mark: Banned user"
-            except nextcord.errors.Forbidden:
-                content.title = nextcord.Embed.Empty
+            except discord.errors.Forbidden:
+                content.title = discord.Embed.Empty
                 content.description = f":no_entry: It seems I don't have the permission to ban **{user}** {user.mention}"
                 content.colour = int("be1931", 16)
             await msg.edit(embed=content)
@@ -434,15 +435,15 @@ class Mod(commands.Cog):
             if user is None:
                 try:
                     user = await self.bot.fetch_user(int(user))
-                except (ValueError, nextcord.NotFound):
+                except (ValueError, discord.NotFound):
                     raise exceptions.CommandError(f"Invalid user or id `{user}`")
             try:
                 await ctx.guild.unban(user)
-            except nextcord.errors.Forbidden:
+            except discord.errors.Forbidden:
                 raise exceptions.CommandError(
                     f"It seems I don't have the permission to unban **{user}** {user.mention}"
                 )
-            except nextcord.errors.NotFound:
+            except discord.errors.NotFound:
                 raise exceptions.CommandWarning(f"Unable to unban. **{user}** is not banned")
             else:
                 return await util.send_success(ctx, f"Unbanned **{user}** {user.mention}")
@@ -454,15 +455,15 @@ class Mod(commands.Cog):
             if user is None:
                 try:
                     user = await self.bot.fetch_user(int(discord_user))
-                except (ValueError, nextcord.NotFound):
+                except (ValueError, discord.NotFound):
                     failure.append(f"`{discord_user}` Invalid user or id")
                     continue
 
             try:
                 await ctx.guild.unban(user)
-            except nextcord.errors.Forbidden:
+            except discord.errors.Forbidden:
                 failure.append(f"`{user}` No permission to unban")
-            except nextcord.errors.NotFound:
+            except discord.errors.NotFound:
                 failure.append(f"`{user}` is not banned")
             else:
                 success.append(f"`{user}` Unbanned")
@@ -472,5 +473,5 @@ class Mod(commands.Cog):
         )
 
 
-def setup(bot):
-    bot.add_cog(Mod(bot))
+async def setup(bot):
+    await bot.add_cog(Mod(bot))

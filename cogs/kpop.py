@@ -8,10 +8,10 @@ import random
 import aiohttp
 import arrow
 import async_cse
+import discord
 import humanize
-import nextcord
 from bs4 import BeautifulSoup
-from nextcord.ext import commands
+from discord.ext import commands
 
 from modules import exceptions, util
 
@@ -41,8 +41,8 @@ class Kpop(commands.Cog):
                 f.write("{}")
                 self.artist_list = []
 
-    def cog_unload(self):
-        self.bot.loop.create_task(self.shutdown())
+    async def cog_unload(self):
+        await self.shutdown()
 
     async def shutdown(self):
         await self.google_client.close()
@@ -79,7 +79,7 @@ class Kpop(commands.Cog):
             rows.append(
                 f"{self.gender_icon.get(gender, '')} **{f'{group} ' if group is not None else ''} {name}** ({dob.year})"
             )
-        content = nextcord.Embed(title=f"Kpop idols born on {humanize.naturalday(dt)}")
+        content = discord.Embed(title=f"Kpop idols born on {humanize.naturalday(dt)}")
         if not rows:
             content.description = "No idols found with this birthday :("
             await ctx.send(embed=content)
@@ -145,7 +145,7 @@ class Kpop(commands.Cog):
                     idol_id,
                 )
 
-        content = nextcord.Embed()
+        content = discord.Embed()
         if gender == "F":
             content.colour = int("e7586d", 16)
         elif gender == "M":
@@ -352,8 +352,8 @@ class Kpop(commands.Cog):
                 )
 
 
-def setup(bot):
-    bot.add_cog(Kpop(bot))
+async def setup(bot):
+    await bot.add_cog(Kpop(bot))
 
 
 def get_gender(user_input):

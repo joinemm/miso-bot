@@ -1,5 +1,5 @@
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 
 
 class EmbedHelpCommand(commands.HelpCommand):
@@ -15,8 +15,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         this_cmd = ""
         if hasattr(c, "commands"):
             for subc in c.commands:
-                if depth > 1 or this_cmd:
-                    this_cmd += "\n"
+                this_cmd += "\n"
                 this_cmd += f"{' '*depth}└ **{subc.name}**"
                 # + (
                 #     f"\n{' '*(depth+1)}{subc.short_doc}" if subc.short_doc is not None else "-"
@@ -26,7 +25,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         return this_cmd
 
     async def send_bot_help(self, mapping):
-        embed = nextcord.Embed(title="Command categories", colour=self.COLOUR)
+        embed = discord.Embed(title="Command categories", colour=self.COLOUR)
 
         for (
             cog,
@@ -39,7 +38,7 @@ class EmbedHelpCommand(commands.HelpCommand):
 
             filtered = await self.filter_commands(bot_commands, sort=True)
             if filtered:
-                embed.add_field(name=name, value=cog.description or "...")
+                embed.add_field(name=name, value=cog.description or "no description")
 
         embed.set_footer(
             text=f"{self.context.clean_prefix}help [category] for more details. (case sensitive)"
@@ -48,7 +47,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         await self.get_destination().send(embed=embed)
 
     async def send_cog_help(self, cog):
-        embed = nextcord.Embed(
+        embed = discord.Embed(
             title=(f"{cog.icon} " if hasattr(cog, "icon") else "") + cog.qualified_name,
             colour=self.COLOUR,
         )
@@ -59,8 +58,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         for command in filtered:
             embed.add_field(
                 name=f"{self.get_command_signature(command)}",
-                value=(f"{command.short_doc}\n" if command.short_doc is not None else "-")
-                + self.get_subcommands(command),
+                value=(command.short_doc or "no description") + self.get_subcommands(command),
                 inline=False,
             )
 
@@ -68,7 +66,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         await self.get_destination().send(embed=embed)
 
     async def send_group_help(self, group):
-        embed = nextcord.Embed(title=group.qualified_name, colour=self.COLOUR)
+        embed = discord.Embed(title=group.qualified_name, colour=self.COLOUR)
         if group.help:
             embed.description = group.help
         elif group.short_doc:
@@ -89,7 +87,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         await self.get_destination().send(embed=embed)
 
     async def send_command_help(self, command):
-        embed = nextcord.Embed(
+        embed = discord.Embed(
             title=f"{self.get_command_signature(command)}",
             colour=self.COLOUR,
         )
@@ -107,7 +105,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         await self.get_destination().send(embed=embed)
 
     async def group_help_brief(self, ctx: commands.Context, group):
-        embed = nextcord.Embed(colour=self.COLOUR)
+        embed = discord.Embed(colour=self.COLOUR)
         embed.description = "`" + ctx.prefix + group.qualified_name
         embed.description += f" [{' | '.join(c.name for c in group.commands)}]`"
         embed.set_footer(text=f"{ctx.prefix}help {group.qualified_name} for more detailed help")

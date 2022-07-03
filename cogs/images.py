@@ -1,7 +1,7 @@
 import os
 
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 
 from modules import util
@@ -214,10 +214,10 @@ class Images(commands.Cog):
         save_location = f"downloads/{ctx.message.id}_output_{filename.split('/')[-1]}"
         image.save(save_location)
         with open(save_location, "rb") as img:
-            await ctx.send(file=nextcord.File(img))
+            await ctx.send(file=discord.File(img))
 
         os.remove(save_location)
 
 
-def setup(bot):
-    bot.add_cog(Images(bot))
+async def setup(bot):
+    await bot.add_cog(Images(bot))

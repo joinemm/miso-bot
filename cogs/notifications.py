@@ -1,8 +1,8 @@
 import asyncio
 
-import nextcord
+import discord
 import regex
-from nextcord.ext import commands
+from discord.ext import commands
 
 from modules import emojis, exceptions, util
 
@@ -15,7 +15,9 @@ class Notifications(commands.Cog):
         self.icon = "📨"
         self.keyword_regex = r"(?:^|\s|[\~\"\'\+\*\`\_\/])(\L<words>)(?:$|\W|\s|s)"
         self.notifications_cache = {}
-        bot.loop.create_task(self.create_cache())
+
+    async def cog_load(self):
+        await self.create_cache()
 
     async def create_cache(self):
         keywords = await self.bot.db.execute(
@@ -32,7 +34,7 @@ class Notifications(commands.Cog):
                 self.notifications_cache[str(guild_id)][keyword.lower().strip()] = [user_id]
 
     async def send_notification(self, member, message, keywords, test=False):
-        content = nextcord.Embed(color=message.author.color)
+        content = discord.Embed(color=message.author.color)
         content.set_author(name=f"{message.author}", icon_url=message.author.display_avatar.url)
         pattern = regex.compile(self.keyword_regex, words=keywords, flags=regex.IGNORECASE)
         highlighted_text = regex.sub(pattern, lambda x: f"**{x.group(0)}**", message.content)
@@ -43,7 +45,7 @@ class Notifications(commands.Cog):
         )
         content.set_footer(
             text=f"{message.guild.name} | #{message.channel.name}",
-            icon_url=getattr(message.guild.icon, "url", nextcord.Embed.Empty),
+            icon_url=getattr(message.guild.icon, "url", discord.Embed.Empty),
         )
         content.timestamp = message.created_at
 
@@ -63,7 +65,7 @@ class Notifications(commands.Cog):
                         member.id,
                         keyword,
                     )
-        except nextcord.errors.Forbidden:
+        except discord.errors.Forbidden:
             self.bot.logger.warning(f"Forbidden when trying to send a notification to {member}.")
 
     @commands.Cog.listener()
@@ -147,7 +149,7 @@ class Notifications(commands.Cog):
 
         try:
             await ctx.message.delete()
-        except (nextcord.Forbidden, nextcord.NotFound):
+        except (discord.Forbidden, discord.NotFound):
             pass
         guild_id = ctx.guild.id
         keyword = keyword.lower().strip()
@@ -168,7 +170,7 @@ class Notifications(commands.Cog):
                 ctx.author,
                 f"New keyword notification for `{keyword}` set in **{ctx.guild.name}**",
             )
-        except nextcord.errors.Forbidden:
+        except discord.errors.Forbidden:
             raise exceptions.CommandWarning(
                 "I was unable to send you a DM! Please change your settings."
             )
@@ -201,7 +203,7 @@ class Notifications(commands.Cog):
 
         try:
             await ctx.message.delete()
-        except (nextcord.Forbidden, nextcord.NotFound):
+        except (discord.Forbidden, discord.NotFound):
             pass
         guild_id = ctx.guild.id
         keyword = keyword.lower().strip()
@@ -222,7 +224,7 @@ class Notifications(commands.Cog):
                 ctx.author,
                 f"The keyword notification for `{keyword}` that you set in **{ctx.guild.name}** has been removed.",
             )
-        except nextcord.errors.Forbidden:
+        except discord.errors.Forbidden:
             raise exceptions.CommandWarning(
                 "I was unable to send you a DM! Please change your settings."
             )
@@ -253,7 +255,7 @@ class Notifications(commands.Cog):
         if not words:
             raise exceptions.CommandInfo("You have not set any notifications yet!")
 
-        content = nextcord.Embed(
+        content = discord.Embed(
             title=f":love_letter: You have {len(words)} notifications",
             color=int("dd2e44", 16),
         )
@@ -268,7 +270,7 @@ class Notifications(commands.Cog):
 
         try:
             await util.send_as_pages(ctx.author, content, rows, maxpages=1, maxrows=50)
-        except nextcord.errors.Forbidden:
+        except discord.errors.Forbidden:
             raise exceptions.CommandWarning(
                 "I was unable to send you a DM! Please change your settings."
             )
@@ -298,7 +300,7 @@ class Notifications(commands.Cog):
         await self.create_cache()
 
     @notification.command(name="test")
-    async def notification_test(self, ctx: commands.Context, message: nextcord.Message = None):
+    async def notification_test(self, ctx: commands.Context, message: discord.Message = None):
         """
         Test if Miso can send you a notification
         If supplied with a message id, will check if you would have been notified by it.
@@ -309,7 +311,7 @@ class Notifications(commands.Cog):
                     ctx.author, message or ctx.message, ["test"], test=True
                 )
                 await ctx.send(":ok_hand: Check your DM")
-            except nextcord.errors.Forbidden:
+            except discord.errors.Forbidden:
                 raise exceptions.CommandWarning(
                     "I was unable to send you a DM! Please check your privacy settings."
                 )
@@ -334,5 +336,5 @@ class Notifications(commands.Cog):
                 await ctx.send(":ok_hand: Check your DM")
 
 
-def setup(bot):
-    bot.add_cog(Notifications(bot))
+async def setup(bot):
+    await bot.add_cog(Notifications(bot))

@@ -6,13 +6,13 @@ import re
 
 import aiohttp
 import arrow
-import nextcord
+import discord
 import orjson
 import regex
 import tweepy
 import yarl
 from bs4 import BeautifulSoup
-from nextcord.ext import commands
+from discord.ext import commands
 from tweepy import OAuthHandler
 
 from modules import exceptions, instagram, log, util
@@ -38,7 +38,13 @@ class Media(commands.Cog):
         self.bot = bot
         self.icon = "🌐"
         self.twitter_api = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
-        self.ig = instagram.Instagram(IG_COOKIE, True, PROXY_URL, PROXY_USER, PROXY_PASS)
+        self.ig = instagram.Instagram(
+            IG_COOKIE,
+            use_proxy=True,
+            proxy_url=PROXY_URL,
+            proxy_user=PROXY_USER,
+            proxy_pass=PROXY_PASS,
+        )
         self.ig_colors = [
             int("405de6", 16),
             int("5851db", 16),
@@ -88,7 +94,7 @@ class Media(commands.Cog):
         if ggsoup.soup.find("div", {"class": "SummonerNotFoundLayout"}):
             raise exceptions.CommandWarning("Summoner not found!")
 
-        content = nextcord.Embed()
+        content = discord.Embed()
         content.set_author(
             name=f"{ggsoup.text('span', 'Name')} [{region.upper()}]",
             icon_url=ggsoup.src("img", "ProfileImage"),
@@ -151,7 +157,7 @@ class Media(commands.Cog):
 
         region = parsed_region
 
-        content = nextcord.Embed(title=f"{summoner_name} current game")
+        content = discord.Embed(title=f"{summoner_name} current game")
 
         ggsoup = GGSoup()
         await ggsoup.create(region, summoner_name, sub_url="spectator/")
@@ -272,14 +278,14 @@ class Media(commands.Cog):
                                 caption += f"\n{media.url}"
                             else:
                                 buffer = io.BytesIO(await response.read())
-                                files.append(nextcord.File(fp=buffer, filename=filename))
+                                files.append(discord.File(fp=buffer, filename=filename))
 
                 # send files to discord
                 await ctx.send(caption, files=files)
 
             else:
                 # send as embeds
-                content = nextcord.Embed(color=random.choice(self.ig_colors))
+                content = discord.Embed(color=random.choice(self.ig_colors))
                 content.set_author(
                     name=f"@{post.user.username}", icon_url=post.user.avatar_url, url=post_url
                 )
@@ -296,7 +302,7 @@ class Media(commands.Cog):
         # finally delete discord automatic embed
         try:
             await ctx.message.edit(suppress=True)
-        except (nextcord.Forbidden, nextcord.NotFound):
+        except (discord.Forbidden, discord.NotFound):
             pass
 
     @commands.command(aliases=["twt"], usage="<links...> '-d'")
@@ -354,7 +360,7 @@ class Media(commands.Cog):
 
                 media_files.append((media_url, video_url))
 
-            content = nextcord.Embed(colour=int(tweet.user.profile_link_color, 16))
+            content = discord.Embed(colour=int(tweet.user.profile_link_color, 16))
             content.set_author(
                 icon_url=tweet.user.profile_image_url,
                 name=f"@{tweet.user.screen_name}",
@@ -403,7 +409,7 @@ class Media(commands.Cog):
                                 caption += f"\n{url}"
                             else:
                                 with open(filename, "rb") as f:
-                                    files.append(nextcord.File(f))
+                                    files.append(discord.File(f))
 
                                 os.remove(filename)
 
@@ -427,7 +433,7 @@ class Media(commands.Cog):
         try:
             # delete discord automatic embed
             await ctx.message.edit(suppress=True)
-        except (nextcord.Forbidden, nextcord.NotFound):
+        except (discord.Forbidden, discord.NotFound):
             pass
 
     @commands.command(aliases=["gif", "gfy"])
@@ -502,7 +508,7 @@ class Media(commands.Cog):
         # ]
         image = soup.find("img", {"onerror": "WEBPOCIMG.defaultAlbumImg(this);"}).get("src")
 
-        content = nextcord.Embed(color=nextcord.Color.from_rgb(0, 205, 60))
+        content = discord.Embed(color=discord.Color.from_rgb(0, 205, 60))
         content.set_author(
             name=f"Melon top {len(song_titles)}"
             + ("" if timeframe == "" else f" - {timeframe.capitalize()}"),
@@ -537,8 +543,8 @@ class Media(commands.Cog):
         await ctx.send(location)
 
 
-def setup(bot):
-    bot.add_cog(Media(bot))
+async def setup(bot):
+    await bot.add_cog(Media(bot))
 
 
 async def extract_scripts(session, url):

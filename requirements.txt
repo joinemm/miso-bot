@@ -35,13 +35,12 @@ humanfriendly==10.0
 humanize==3.14.0
 idna==3.3
 import-expression==1.1.4
-jishaku==2.3.2
+jishaku==2.5.0
 kdtree==0.16
 kiwisolver==1.3.2
 matplotlib==3.5.1
 mccabe==0.6.1
 multidict==6.0.2
-nextcord==2.0.0a7
 numpy==1.22.2
 oauthlib==3.2.0
 orjson==3.6.6
@@ -73,3 +72,5 @@ uvloop==0.16.0
 webencodings==0.5.1
 yarl==1.7.2
 pre-commit==2.18.1
+
+discord.py[speed] @ git+https://github.com/Rapptz/discord.py.git

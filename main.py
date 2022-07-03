@@ -1,3 +1,4 @@
+import logging  # noqa: F401
 import os
 import sys
 
@@ -59,7 +60,7 @@ if maintenance_mode:
     ]
 
 
-def run():
+def main():
     bot = MisoBot(
         extensions=extensions,
         default_prefix=prefix,
@@ -68,4 +69,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    main()

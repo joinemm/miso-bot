@@ -3,7 +3,7 @@ import ssl
 
 import aiohttp_cors
 from aiohttp import web
-from nextcord.ext import commands, tasks
+from discord.ext import commands, tasks
 
 from modules import log
 
@@ -54,12 +54,11 @@ class WebServer(commands.Cog):
         else:
             self.ssl_context = None
 
-        self.bot.loop.create_task(self.run())
+    async def cog_load(self):
         self.cache_stats.start()
+        self.bot.loop.create_task(self.run())
 
     async def run(self):
-        await self.bot.wait_until_ready()
-
         if HOST is not None:
             try:
                 logger.info(f"Starting webserver on {HOST}:{PORT}")
@@ -174,7 +173,6 @@ class WebServer(commands.Cog):
 
     @cache_stats.before_loop
     async def before_caching(self):
-        await self.bot.wait_until_ready()
         logger.info("Starting web stats caching loop")
 
     def cog_unload(self):
@@ -186,5 +184,5 @@ class WebServer(commands.Cog):
         await self.app.cleanup()
 
 
-def setup(bot):
-    bot.add_cog(WebServer(bot))
+async def setup(bot):
+    await bot.add_cog(WebServer(bot))

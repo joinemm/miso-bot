@@ -2,8 +2,8 @@ import random
 
 import aiohttp
 import arrow
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 
 from libraries import emoji_literals, minestat
 from modules import exceptions, util
@@ -232,9 +232,9 @@ class Miscellaneous(commands.Cog):
                 nameslist[0], nameslist[1]
             )
 
-        content = nextcord.Embed(
+        content = discord.Embed(
             title=f"{nameslist[0]} {emoji} {nameslist[1]} - {percentage}%",
-            colour=nextcord.Colour.magenta(),
+            colour=discord.Colour.magenta(),
         )
         content.description = text
         await ctx.send(embed=content)
@@ -295,7 +295,7 @@ class Miscellaneous(commands.Cog):
         server = await self.bot.loop.run_in_executor(
             None, lambda: minestat.MineStat(address, int(port))
         )
-        content = nextcord.Embed(color=nextcord.Color.green())
+        content = discord.Embed(color=discord.Color.green())
         if server.online:
             content.add_field(name="Server Address", value=f"`{server.address}`")
             content.add_field(name="Version", value=server.version)
@@ -350,7 +350,7 @@ class Miscellaneous(commands.Cog):
                 data = await response.json()
 
         sign = self.hs.get(sunsign)
-        content = nextcord.Embed(
+        content = discord.Embed(
             color=int("9266cc", 16),
             title=f"{sign['emoji']} {sign['name']} - {data['current_date']}",
             description=data["description"],
@@ -389,7 +389,7 @@ class Miscellaneous(commands.Cog):
     @horoscope.command(name="list")
     async def horoscope_list(self, ctx: commands.Context):
         """Get list of all zodiac signs"""
-        content = nextcord.Embed(
+        content = discord.Embed(
             color=int("9266cc", 16),
             title=":crystal_ball: Zodiac signs",
             description="\n".join(
@@ -453,7 +453,7 @@ class Miscellaneous(commands.Cog):
         if not colors:
             return await ctx.send("No valid colors to show")
 
-        content = nextcord.Embed(colour=await util.get_color(ctx, "#" + colors[0].strip("#")))
+        content = discord.Embed(colour=await util.get_color(ctx, "#" + colors[0].strip("#")))
 
         if len(colors) > 50:
             await ctx.send("Maximum amount of colors is 50, ignoring rest...")
@@ -522,12 +522,12 @@ class Miscellaneous(commands.Cog):
             emoji_name = emoji_name.strip(":")
             emoji_url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
 
-        content = nextcord.Embed(title=f"`:{emoji_name}:`")
+        content = discord.Embed(title=f"`:{emoji_name}:`")
         content.set_image(url=emoji_url)
         stats = await util.image_info_from_url(emoji_url)
         content.set_footer(text=f"Type: {stats['filetype']}")
 
-        if isinstance(emoji, nextcord.Emoji):
+        if isinstance(emoji, discord.Emoji):
             emoji = await emoji.guild.fetch_emoji(emoji.id)
             desc = [f"Uploaded {arrow.get(emoji.created_at).format('D/M/YYYY')}"]
             if emoji.user:
@@ -557,11 +557,11 @@ class Miscellaneous(commands.Cog):
 
                 try:
                     await ctx.send(result)
-                except nextcord.errors.HTTPException:
+                except discord.errors.HTTPException:
                     raise exceptions.CommandWarning(
                         "Your text when emojified is too long to send!"
                     )
 
 
-def setup(bot):
-    bot.add_cog(Miscellaneous(bot))
+async def setup(bot):
+    await bot.add_cog(Miscellaneous(bot))

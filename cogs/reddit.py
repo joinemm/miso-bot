@@ -3,8 +3,8 @@ import os
 import arrow
 import asyncpraw
 import asyncprawcore
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 
 from modules import emojis, util
 
@@ -163,7 +163,7 @@ class Reddit(commands.Cog):
     async def render_submission(submission, censor=True):
         """Turns reddit submission into a discord embed"""
         message_text = None
-        content = nextcord.Embed()
+        content = discord.Embed()
         content.title = (
             f"`[{submission.link_flair_text}]` "
             if hasattr(submission, "link_flair_text") and submission.link_flair_text is not None
@@ -182,7 +182,7 @@ class Reddit(commands.Cog):
                 name=f"u/{redditor.name}",
                 url=f"https://old.reddit.com/u/{redditor.name}",
                 icon_url=(
-                    redditor.icon_img if hasattr(redditor, "icon_img") else nextcord.Embed.Empty
+                    redditor.icon_img if hasattr(redditor, "icon_img") else discord.Embed.Empty
                 ),
             )
 
@@ -299,5 +299,5 @@ def can_send_nsfw(ctx, content):
     return True
 
 
-def setup(bot):
-    bot.add_cog(Reddit(bot))
+async def setup(bot):
+    await bot.add_cog(Reddit(bot))

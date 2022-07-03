@@ -1,8 +1,8 @@
 import random
 
+import discord
 import humanize
-import nextcord
-from nextcord.ext import commands
+from discord.ext import commands
 
 from modules import util
 
@@ -99,7 +99,7 @@ class Fishy(commands.Cog):
     # @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.cooldown(1, 5, type=commands.BucketType.user)
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin", "fush"])
-    async def fishy(self, ctx: commands.Context, user: nextcord.Member = None):
+    async def fishy(self, ctx: commands.Context, user: discord.Member = None):
         """Go fishing"""
         receiver = user or ctx.author
         gift = receiver is not ctx.author
@@ -222,7 +222,7 @@ class Fishy(commands.Cog):
             return await ctx.send("No data! Go fishing first.")
 
         total = sum(data[3:])
-        content = nextcord.Embed(
+        content = discord.Embed(
             title=f":fishing_pole_and_fish: {owner} fishy stats",
             color=int("55acee", 16),
             description="\n".join(
@@ -308,5 +308,5 @@ class Fishy(commands.Cog):
         return 0
 
 
-def setup(bot):
-    bot.add_cog(Fishy(bot))
+async def setup(bot):
+    await bot.add_cog(Fishy(bot))

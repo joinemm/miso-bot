@@ -6,9 +6,9 @@ from time import time
 
 import aiohttp
 import arrow
-import nextcord
+import discord
 from bs4 import BeautifulSoup
-from nextcord.ext import commands, tasks
+from discord.ext import commands, tasks
 
 from modules import emojis, exceptions, log, queries, util
 
@@ -88,6 +88,8 @@ class Utility(commands.Cog):
         self.icon = "🔧"
         self.reminder_list = []
         self.cache_needs_refreshing = True
+
+    async def cog_load(self):
         self.reminder_loop.start()
 
     def cog_unload(self):
@@ -102,7 +104,6 @@ class Utility(commands.Cog):
 
     @reminder_loop.before_loop
     async def before_reminder_loop(self):
-        await self.bot.wait_until_ready()
         logger.info("Starting reminder loop")
 
     async def check_reminders(self):
@@ -144,7 +145,7 @@ class Utility(commands.Cog):
                         f"Deleting reminder set for {date.format('DD/MM/YYYY HH:mm:ss')} for being over 6 hours late"
                     )
                 else:
-                    embed = nextcord.Embed(
+                    embed = discord.Embed(
                         color=int("d3a940", 16),
                         title=":alarm_clock: Reminder!",
                         description=content,
@@ -159,7 +160,7 @@ class Utility(commands.Cog):
                     try:
                         await user.send(embed=embed)
                         logger.info(f'Reminded {user} to "{content}"')
-                    except nextcord.errors.Forbidden:
+                    except discord.errors.Forbidden:
                         logger.warning(f"Unable to remind {user}, missing DM permissions!")
             else:
                 logger.info(f"Deleted expired reminder by unknown user {user_id}")
@@ -222,7 +223,7 @@ class Utility(commands.Cog):
 
         try:
             await ctx.trigger_typing()
-        except nextcord.errors.Forbidden:
+        except discord.errors.Forbidden:
             pass
 
         command_logger.info(log.log_command(ctx))
@@ -285,7 +286,7 @@ class Utility(commands.Cog):
 
         self.cache_needs_refreshing = True
         await ctx.send(
-            embed=nextcord.Embed(
+            embed=discord.Embed(
                 color=int("ccd6dd", 16),
                 description=(
                     f":pencil: I'll message you on **{date.to('utc').format('DD/MM/YYYY HH:mm:ss')}"
@@ -380,7 +381,7 @@ class Utility(commands.Cog):
             f":map: [See on map](https://www.google.com/maps/search/?api=1&query={lat},{lon})",
         ]
 
-        content = nextcord.Embed(
+        content = discord.Embed(
             color=int("e1e8ed", 16), title=f":flag_{country}: {formatted_name}"
         )
         content.add_field(name=f"{weather_icon} {summary}", value="\n".join(information_rows))
@@ -404,7 +405,7 @@ class Utility(commands.Cog):
                 fl = definition["fl"]
                 offensive = definition["meta"]["offensive"]
                 syns = definition["meta"]["syns"][0]
-                content = nextcord.Embed(color=int("d71921", 16))
+                content = discord.Embed(color=int("d71921", 16))
                 content.set_author(
                     name=f"{base_word.capitalize()}, {fl}" + (" (offensive)" if offensive else ""),
                     icon_url=api_icon,
@@ -440,7 +441,7 @@ class Utility(commands.Cog):
             all_entries = []
 
             if data.get("results"):
-                definitions_embed = nextcord.Embed(colour=nextcord.Colour.from_rgb(0, 189, 242))
+                definitions_embed = discord.Embed(colour=discord.Colour.from_rgb(0, 189, 242))
                 definitions_embed.description = ""
 
                 found_word = data["results"][0]["id"]
@@ -519,7 +520,7 @@ class Utility(commands.Cog):
                 definition = entry["definition"].replace("]", "**").replace("[", "**")
                 example = entry["example"].replace("]", "**").replace("[", "**")
                 timestamp = entry["written_on"]
-                content = nextcord.Embed(colour=nextcord.Colour.from_rgb(254, 78, 28))
+                content = discord.Embed(colour=discord.Colour.from_rgb(254, 78, 28))
                 content.description = f"{definition}"
 
                 if not example == "":
@@ -794,13 +795,13 @@ class Utility(commands.Cog):
             return f"${quote_data[s]}"
 
         if company_profile.get("name") is not None:
-            content = nextcord.Embed(
+            content = discord.Embed(
                 title=f"${company_profile['ticker']} | {company_profile['name']}"
             )
             content.set_thumbnail(url=company_profile.get("logo"))
             content.set_footer(text=company_profile["exchange"])
         else:
-            content = nextcord.Embed(title=f"${symbol}")
+            content = discord.Embed(title=f"${symbol}")
 
         content.add_field(
             name="Change",
@@ -813,7 +814,7 @@ class Utility(commands.Cog):
         content.add_field(name="High", value=getcur("h"))
         content.add_field(name="Low", value=getcur("l"))
 
-        content.colour = nextcord.Color.green() if gains else nextcord.Color.red()
+        content.colour = discord.Color.green() if gains else discord.Color.red()
         content.timestamp = arrow.get(quote_data["t"]).datetime
 
         await ctx.send(embed=content)
@@ -824,7 +825,7 @@ class Utility(commands.Cog):
         await util.command_group_help(ctx)
 
     @timezone.command(name="now")
-    async def tz_now(self, ctx: commands.Context, member: nextcord.Member = None):
+    async def tz_now(self, ctx: commands.Context, member: discord.Member = None):
         """Get current time for a member"""
         if member is None:
             member = ctx.author
@@ -886,7 +887,7 @@ class Utility(commands.Cog):
     @timezone.command(name="list")
     async def tz_list(self, ctx: commands.Context):
         """List current time of all server members who have it saved"""
-        content = nextcord.Embed(
+        content = discord.Embed(
             title=f":clock2: Current time in {ctx.guild}",
             color=int("3b88c3", 16),
         )
@@ -911,8 +912,8 @@ class Utility(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
 
-def setup(bot):
-    bot.add_cog(Utility(bot))
+async def setup(bot):
+    await bot.add_cog(Utility(bot))
 
 
 def profile_ticker(ticker):

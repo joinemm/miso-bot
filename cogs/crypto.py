@@ -1,8 +1,8 @@
 from decimal import Decimal
 
 import aiohttp
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 
 from modules import emojis, exceptions, util
 
@@ -79,7 +79,7 @@ class Cryptocurrency(commands.Cog):
             "imageFormat": "png",
         }
         buffer = await util.render_html(self.bot, payload)
-        await ctx.send(file=nextcord.File(fp=buffer, filename=f"candlestick_{coin}_{pair}.png"))
+        await ctx.send(file=discord.File(fp=buffer, filename=f"candlestick_{coin}_{pair}.png"))
 
     @crypto.command()
     async def price(self, ctx: commands.Context, coin, pair="USDT"):
@@ -95,7 +95,7 @@ class Cryptocurrency(commands.Cog):
         if error:
             raise exceptions.CommandError(error)
 
-        content = nextcord.Embed(color=int("f3ba2e", 16))
+        content = discord.Embed(color=int("f3ba2e", 16))
         content.set_author(
             name=f"{data.get('symbol')} | Binance",
             icon_url=self.binance_icon,
@@ -132,5 +132,5 @@ class Cryptocurrency(commands.Cog):
         await ctx.send(embed=content)
 
 
-def setup(bot):
-    bot.add_cog(Cryptocurrency(bot))
+async def setup(bot):
+    await bot.add_cog(Cryptocurrency(bot))

@@ -1,7 +1,7 @@
 import asyncio
 
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 
 from modules import exceptions, queries, util
 
@@ -21,7 +21,7 @@ class Rolepicker(commands.Cog):
         await util.command_group_help(ctx)
 
     @rolepicker.command(name="add")
-    async def rolepicker_add(self, ctx: commands.Context, role: nextcord.Role, *, name):
+    async def rolepicker_add(self, ctx: commands.Context, role: discord.Role, *, name):
         """Add a role to the rolepicker"""
         await self.bot.db.execute(
             """
@@ -68,7 +68,7 @@ class Rolepicker(commands.Cog):
         )
 
     @rolepicker.command(name="channel")
-    async def rolepicker_channel(self, ctx: commands.Context, channel: nextcord.TextChannel):
+    async def rolepicker_channel(self, ctx: commands.Context, channel: discord.TextChannel):
         """Set the channel you want to add and remove roles in"""
         await queries.update_setting(ctx, "rolepicker_settings", "channel_id", channel.id)
         self.bot.cache.rolepickers.add(channel.id)
@@ -88,7 +88,7 @@ class Rolepicker(commands.Cog):
             """,
             ctx.guild.id,
         )
-        content = nextcord.Embed(
+        content = discord.Embed(
             title=f":scroll: Available roles in {ctx.guild.name}",
             color=int("ffd983", 16),
         )
@@ -136,7 +136,7 @@ class Rolepicker(commands.Cog):
             await asyncio.sleep(5)
             try:
                 await message.delete()
-            except nextcord.errors.NotFound:
+            except discord.errors.NotFound:
                 pass
             return
 
@@ -161,7 +161,7 @@ class Rolepicker(commands.Cog):
             elif command == "+":
                 try:
                     await message.author.add_roles(role)
-                except nextcord.errors.Forbidden:
+                except discord.errors.Forbidden:
                     await errorhandler.send(
                         message.channel,
                         "error",
@@ -169,7 +169,7 @@ class Rolepicker(commands.Cog):
                     )
                 else:
                     await message.channel.send(
-                        embed=nextcord.Embed(
+                        embed=discord.Embed(
                             description=f":white_check_mark: Added {role.mention} to your roles",
                             color=role.color,
                         ),
@@ -177,7 +177,7 @@ class Rolepicker(commands.Cog):
             elif command == "-":
                 try:
                     await message.author.remove_roles(role)
-                except nextcord.errors.Forbidden:
+                except discord.errors.Forbidden:
                     await errorhandler.send(
                         message.channel,
                         "error",
@@ -185,7 +185,7 @@ class Rolepicker(commands.Cog):
                     )
                 else:
                     await message.channel.send(
-                        embed=nextcord.Embed(
+                        embed=discord.Embed(
                             description=f":x: Removed your role {role.mention}",
                             color=role.color,
                         ),
@@ -200,9 +200,9 @@ class Rolepicker(commands.Cog):
         await asyncio.sleep(5)
         try:
             await message.delete()
-        except nextcord.errors.NotFound:
+        except discord.errors.NotFound:
             pass
 
 
-def setup(bot):
-    bot.add_cog(Rolepicker(bot))
+async def setup(bot):
+    await bot.add_cog(Rolepicker(bot))

@@ -8,11 +8,11 @@ import re
 import aiohttp
 import arrow
 import colorgram
-import nextcord
+import discord
 import regex
+from discord.ext import commands
 from durations_nlp import Duration
 from durations_nlp.exceptions import InvalidTokenError
-from nextcord.ext import commands
 from PIL import Image, UnidentifiedImageError
 
 from libraries import emoji_literals
@@ -34,7 +34,7 @@ def displayname(member, escape=True):
         return None
 
     name = member.name
-    if isinstance(member, nextcord.Member):
+    if isinstance(member, discord.Member):
         name = member.nick or member.name
 
     if escape:
@@ -44,7 +44,7 @@ def displayname(member, escape=True):
 
 async def send_success(ctx, message):
     await ctx.send(
-        embed=nextcord.Embed(description=":white_check_mark: " + message, color=int("77b255", 16))
+        embed=discord.Embed(description=":white_check_mark: " + message, color=int("77b255", 16))
     )
 
 
@@ -89,58 +89,9 @@ def flags_to_badges(user):
                 result.append(emojis.Badge[flag].value)
             except KeyError:
                 pass
-    if isinstance(user, nextcord.Member) and user.premium_since is not None:
+    if isinstance(user, discord.Member) and user.premium_since is not None:
         result.append(emojis.Badge["boosting"].value)
     return result or ["-"]
-
-
-def region_flag(region: nextcord.VoiceRegion):
-    """Get the flag emoji representing a discord voice region"""
-    if region in [
-        nextcord.VoiceRegion.eu_central,
-        nextcord.VoiceRegion.eu_west,
-        nextcord.VoiceRegion.europe,
-    ]:
-        return ":flag_eu:"
-    if region in [
-        nextcord.VoiceRegion.us_central,
-        nextcord.VoiceRegion.us_east,
-        nextcord.VoiceRegion.us_south,
-        nextcord.VoiceRegion.us_west,
-        nextcord.VoiceRegion.vip_us_east,
-        nextcord.VoiceRegion.vip_us_west,
-    ]:
-        return ":flag_us:"
-    if region in [
-        nextcord.VoiceRegion.amsterdam,
-        nextcord.VoiceRegion.vip_amsterdam,
-    ]:
-        return ":flag_nl:"
-    if region is nextcord.VoiceRegion.dubai:
-        return "flag_ae"
-    if region is nextcord.VoiceRegion.frankfurt:
-        return ":flag_de:"
-    if region is nextcord.VoiceRegion.hongkong:
-        return ":flag_hk:"
-    if region is nextcord.VoiceRegion.india:
-        return ":flag_in:"
-    if region is nextcord.VoiceRegion.japan:
-        return ":flag_jp:"
-    if region is nextcord.VoiceRegion.london:
-        return ":flag_gb:"
-    if region is nextcord.VoiceRegion.russia:
-        return ":flag_ru:"
-    if region is nextcord.VoiceRegion.singapore:
-        return ":flag_sg:"
-    if region is nextcord.VoiceRegion.south_korea:
-        return ":flag_kr:"
-    if region is nextcord.VoiceRegion.southafrica:
-        return ":flag_za:"
-    if region is nextcord.VoiceRegion.sydney:
-        return ":flag_au:"
-    if region is nextcord.VoiceRegion.brazil:
-        return ":flag_br:"
-    return ":woman_shrugging:"
 
 
 async def send_as_pages(ctx, content, rows, maxrows=15, maxpages=10):
@@ -211,7 +162,7 @@ async def page_switcher(ctx, pages):
     # add all page numbers
     for i, page in enumerate(pages.items, start=1):
         old_footer = page.footer.text
-        if old_footer == nextcord.Embed.Empty:
+        if old_footer == discord.Embed.Empty:
             old_footer = None
         page.set_footer(
             text=f"{i}/{len(pages.items)}" + (f" | {old_footer}" if old_footer is not None else "")
@@ -326,7 +277,7 @@ async def reaction_buttons(
     try:
         for emojiname in functions:
             await message.add_reaction(emojiname)
-    except nextcord.errors.Forbidden:
+    except discord.errors.Forbidden:
         return
 
     def check(payload):
@@ -350,14 +301,14 @@ async def reaction_buttons(
         else:
             try:
                 exits = await functions[str(payload.emoji)]()
-            except nextcord.errors.NotFound:
+            except discord.errors.NotFound:
                 # message was deleted
                 return
             try:
                 await message.remove_reaction(payload.emoji, payload.member)
-            except nextcord.errors.NotFound:
+            except discord.errors.NotFound:
                 pass
-            except nextcord.errors.Forbidden:
+            except discord.errors.Forbidden:
                 await ctx.send(
                     "`error: I'm missing required discord permission [ manage messages ]`"
                 )
@@ -367,17 +318,17 @@ async def reaction_buttons(
     for emojiname in functions:
         try:
             await message.clear_reactions()
-        except (nextcord.errors.NotFound, nextcord.errors.Forbidden):
+        except (discord.errors.NotFound, discord.errors.Forbidden):
             pass
 
 
 def message_embed(message):
     """
     Creates a nice embed from message
-    :param: message : nextcord.Message you want to embed
-    :returns        : nextcord.Embed
+    :param: message : discord.Message you want to embed
+    :returns        : discord.Embed
     """
-    content = nextcord.Embed()
+    content = discord.Embed()
     content.set_author(name=f"{message.author}", icon_url=message.author.display_avatar.url)
     content.description = message.content
     content.set_footer(text=f"{message.guild.name} | #{message.channel.name}")
@@ -464,7 +415,7 @@ async def get_user(ctx, argument, fallback=None):
     """
     :param argument : name, nickname, id, mention
     :param fallback : return this if not found
-    :returns        : nextcord.User
+    :returns        : discord.User
     """
     if argument is None:
         return fallback
@@ -479,7 +430,7 @@ async def get_member(ctx, argument, fallback=None, try_user=False):
     :param argument : name, nickname, id, mention
     :param fallback : return this if not found
     :param try_user : try to get user if not found
-    :returns        : nextcord.Member | nextcord.User
+    :returns        : discord.Member | discord.User
     """
     if argument is None:
         return fallback
@@ -496,7 +447,7 @@ async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
     :param argument    : name, id, mention
     :param fallback    : return this if not found
     :param guildfilter : guild to search for the channel in. defaults to ctx.guild
-    :returns           : nextcord.TextChannel
+    :returns           : discord.TextChannel
     """
     if argument is None:
         return fallback
@@ -506,7 +457,7 @@ async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
         except commands.errors.BadArgument:
             return fallback
     else:
-        result = nextcord.utils.find(
+        result = discord.utils.find(
             lambda m: argument in (m.name, m.id), guildfilter.text_channels
         )
         return result or fallback
@@ -516,7 +467,7 @@ async def get_role(ctx, argument, fallback=None):
     """
     :param argument : name, id, mention
     :param fallback : return this if not found
-    :returns        : nextcord.Role
+    :returns        : discord.Role
     """
     if argument is None:
         return fallback
@@ -530,7 +481,7 @@ async def get_color(ctx, argument, fallback=None):
     """
     :param argument : hex or discord color name
     :param fallback : return this if not found
-    :returns        : nextcord.Color
+    :returns        : discord.Color
     """
     if argument is None:
         return fallback
@@ -544,7 +495,7 @@ async def get_emoji(ctx, argument, fallback=None):
     """
     :param argument : name, id, message representation
     :param fallback : return this if not found
-    :returns        : nextcord.Emoji | nextcord.PartialEmoji
+    :returns        : discord.Emoji | discord.PartialEmoji
     """
     if argument is None:
         return fallback
@@ -561,9 +512,9 @@ async def get_guild(ctx, argument, fallback=None):
     """
     :param argument : name, id
     :param fallback : return this if not found
-    :returns        : nextcord.Guild
+    :returns        : discord.Guild
     """
-    result = nextcord.utils.find(lambda m: argument in (m.name, m.id), ctx.bot.guilds)
+    result = discord.utils.find(lambda m: argument in (m.name, m.id), ctx.bot.guilds)
     return result or fallback
 
 
@@ -697,7 +648,7 @@ def create_welcome_embed(user, guild, messageformat):
     if messageformat is None:
         messageformat = "Welcome **{username}** {mention} to **{server}**"
 
-    content = nextcord.Embed(title="New member! :wave:", color=int("5dadec", 16))
+    content = discord.Embed(title="New member! :wave:", color=int("5dadec", 16))
     content.set_thumbnail(url=user.display_avatar.url)
     content.timestamp = arrow.utcnow().datetime
     content.set_footer(text=f"👤#{len(guild.members)}")
@@ -735,7 +686,7 @@ def create_goodbye_message(user, guild, messageformat):
 
 class UserActivity:
     def __init__(self, activities):
-        self.emoji: nextcord.PartialEmoji = None
+        self.emoji: discord.PartialEmoji = None
         self.status_text: str = None
         self.base: str = None
         self.spotify: bool = False
@@ -744,25 +695,25 @@ class UserActivity:
             return
 
         for activity in activities:
-            if isinstance(activity, nextcord.CustomActivity):
+            if isinstance(activity, discord.CustomActivity):
                 self.emoji = activity.emoji
                 self.status_text = activity.name
 
-            elif isinstance(activity, nextcord.BaseActivity):
-                if activity.type == nextcord.ActivityType.playing:
+            elif isinstance(activity, discord.BaseActivity):
+                if activity.type == discord.ActivityType.playing:
                     prefix = "Playing"
-                elif activity.type == nextcord.ActivityType.streaming:
+                elif activity.type == discord.ActivityType.streaming:
                     prefix = "Streaming"
-                elif activity.type == nextcord.ActivityType.listening:
+                elif activity.type == discord.ActivityType.listening:
                     prefix = "Listening"
-                elif activity.type == nextcord.ActivityType.watching:
+                elif activity.type == discord.ActivityType.watching:
                     prefix = "Watching"
-                elif activity.type == nextcord.ActivityType.streaming:
+                elif activity.type == discord.ActivityType.streaming:
                     prefix = "Streaming"
 
                 self.base = prefix + " " + (f"**{activity.name}**")
 
-            elif isinstance(activity, nextcord.Spotify):
+            elif isinstance(activity, discord.Spotify):
                 self.spotify = True
 
             else:
@@ -786,7 +737,7 @@ class UserActivity:
 
 
 async def send_tasks_result_list(ctx, successful_operations, failed_operations, title=None):
-    content = nextcord.Embed(
+    content = discord.Embed(
         color=(int("77b255", 16) if successful_operations else int("dd2e44", 16))
     )
     rows = []

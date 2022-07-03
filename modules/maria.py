@@ -13,7 +13,6 @@ class MariaDB:
     def __init__(self, bot):
         self.bot = bot
         self.pool = None
-        bot.loop.create_task(self.initialize_pool())
 
     async def wait_for_pool(self):
         i = 0

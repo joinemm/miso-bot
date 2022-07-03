@@ -1,7 +1,6 @@
 from modules import log
 
 logger = log.get_logger(__name__)
-log.get_logger(__name__)
 
 
 class Cache:
@@ -22,9 +21,7 @@ class Cache:
         self.event_triggers = {
             "message": 0,
             "message_delete": 0,
-            "message_edit": 0,
             "reaction_add": 0,
-            "reaction_remove": 0,
             "member_join": 0,
             "member_remove": 0,
             "guild_join": 0,
@@ -35,7 +32,6 @@ class Cache:
         self.stats_notifications_sent = 0
         self.stats_lastfm_requests = 0
         self.stats_html_rendered = 0
-        bot.loop.create_task(self.initialize_settings_cache())
 
     async def cache_starboard_settings(self):
         data = await self.bot.db.execute(
@@ -103,7 +99,7 @@ class Cache:
                 self.autoroles[str(guild_id)] = set([role_id])
 
     async def initialize_settings_cache(self):
-        self.bot.logger.info("Caching settings...")
+        logger.info("Caching settings...")
         prefixes = await self.bot.db.execute("SELECT guild_id, prefix FROM guild_prefix")
         for guild_id, prefix in prefixes:
             self.prefixes[str(guild_id)] = prefix

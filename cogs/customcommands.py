@@ -1,8 +1,8 @@
 import asyncio
 
 import arrow
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 
 from modules import exceptions, log, queries, util
 
@@ -171,7 +171,7 @@ class CustomCommands(commands.Cog, name="Commands"):
     @command.command(name="search")
     async def command_search(self, ctx: commands.Context, name):
         """Search for a command"""
-        content = nextcord.Embed()
+        content = discord.Embed()
 
         internal_rows = []
         for command in self.bot_command_list(match=name):
@@ -198,7 +198,7 @@ class CustomCommands(commands.Cog, name="Commands"):
             rows.append(f"{ctx.prefix}{command}")
 
         if rows:
-            content = nextcord.Embed(title=f"{ctx.guild.name} custom commands")
+            content = discord.Embed(title=f"{ctx.guild.name} custom commands")
             await util.send_as_pages(ctx, content, rows)
         else:
             raise exceptions.CommandInfo("No custom commands have been added on this server yet")
@@ -233,7 +233,7 @@ class CustomCommands(commands.Cog, name="Commands"):
         if count < 1:
             raise exceptions.CommandWarning("This server has no custom commands yet!")
 
-        content = nextcord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
+        content = discord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
         content.description = f"This action will delete all **{count}** custom commands on this server and is **irreversible**."
         msg = await ctx.send(embed=content)
 
@@ -259,5 +259,5 @@ class CustomCommands(commands.Cog, name="Commands"):
         )
 
 
-def setup(bot):
-    bot.add_cog(CustomCommands(bot))
+async def setup(bot):
+    await bot.add_cog(CustomCommands(bot))

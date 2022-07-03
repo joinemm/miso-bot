@@ -1,7 +1,7 @@
 import os
 
 import statcord
-from nextcord.ext import commands
+from discord.ext import commands
 
 
 class StatcordPost(commands.Cog):
@@ -16,5 +16,5 @@ class StatcordPost(commands.Cog):
         self.api.command_run(ctx)
 
 
-def setup(bot):
-    bot.add_cog(StatcordPost(bot))
+async def setup(bot):
+    await bot.add_cog(StatcordPost(bot))

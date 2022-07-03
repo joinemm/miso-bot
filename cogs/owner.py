@@ -1,8 +1,8 @@
 import asyncio
 
 import arrow
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 
 from modules import log, util
 
@@ -33,7 +33,7 @@ class Owner(commands.Cog):
     async def guilds(self, ctx: commands.Context):
         """Show all connected guilds"""
         membercount = len(set(self.bot.get_all_members()))
-        content = nextcord.Embed(
+        content = discord.Embed(
             title=f"Total **{len(self.bot.guilds)}** guilds, **{membercount}** unique users"
         )
 
@@ -51,11 +51,11 @@ class Owner(commands.Cog):
             if search_term.lower() in guild.name.lower():
                 rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
 
-        content = nextcord.Embed(title=f"Found **{len(rows)}** guilds matching search term")
+        content = discord.Embed(title=f"Found **{len(rows)}** guilds matching search term")
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
-    async def userguilds(self, ctx: commands.Context, user: nextcord.User):
+    async def userguilds(self, ctx: commands.Context, user: discord.User):
         """Get all guilds user is part of"""
         rows = []
         for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
@@ -63,7 +63,7 @@ class Owner(commands.Cog):
             if guildmember is not None:
                 rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
 
-        content = nextcord.Embed(title=f"User **{user}** found in **{len(rows)}** guilds")
+        content = discord.Embed(title=f"User **{user}** found in **{len(rows)}** guilds")
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
@@ -80,7 +80,7 @@ class Owner(commands.Cog):
 
     @donator.command(name="addsingle")
     async def donator_addsingle(
-        self, ctx: commands.Context, user: nextcord.User, platform, amount: float, ts=None
+        self, ctx: commands.Context, user: discord.User, platform, amount: float, ts=None
     ):
         """Add a new single time donation"""
         if ts is None:
@@ -102,7 +102,7 @@ class Owner(commands.Cog):
 
     @donator.command(name="add")
     async def donator_add(
-        self, ctx, user: nextcord.User, username, platform, tier: int, amount: int, since_ts=None
+        self, ctx, user: discord.User, username, platform, tier: int, amount: int, since_ts=None
     ):
         """Add a new monthly donator"""
         if since_ts is None:
@@ -128,13 +128,13 @@ class Owner(commands.Cog):
         )
 
     @donator.command(name="remove")
-    async def donator_remove(self, ctx: commands.Context, user: nextcord.User):
+    async def donator_remove(self, ctx: commands.Context, user: discord.User):
         """Remove a donator"""
         await self.bot.db.execute("DELETE FROM donator WHERE user_id = %s", user.id)
         await util.send_success(ctx, f"Removed **{user}** from the donators list.")
 
     @donator.command(name="toggle")
-    async def donator_toggle(self, ctx: commands.Context, user: nextcord.User):
+    async def donator_toggle(self, ctx: commands.Context, user: discord.User):
         """Toggle user's donator status"""
         await self.bot.db.execute(
             "UPDATE donator SET currently_active = !currently_active WHERE user_id = %s",
@@ -143,7 +143,7 @@ class Owner(commands.Cog):
         await util.send_success(ctx, f"**{user}** donator status changed.")
 
     @donator.command(name="tier")
-    async def donator_tier(self, ctx: commands.Context, user: nextcord.User, new_tier: int):
+    async def donator_tier(self, ctx: commands.Context, user: discord.User, new_tier: int):
         """Change user's donation tier"""
         await self.bot.db.execute(
             "UPDATE donator SET donation_tier = %s WHERE user_id = %s",
@@ -163,7 +163,7 @@ class Owner(commands.Cog):
                 await ctx.send(f"```py\n{content}\n```")
             else:
                 await ctx.send(":white_check_mark:")
-        except nextcord.errors.HTTPException:
+        except discord.errors.HTTPException:
             # too long, page it
             pages = []
             this_page = "```py\n"
@@ -231,5 +231,5 @@ def clean_codeblock(text):
     return clean_lines
 
 
-def setup(bot):
-    bot.add_cog(Owner(bot))
+async def setup(bot):
+    await bot.add_cog(Owner(bot))

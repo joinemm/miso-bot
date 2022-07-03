@@ -1,13 +1,13 @@
 import asyncio
 import traceback
 
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 
 from modules import emojis, exceptions, log, queries, util
 
 logger = log.get_logger(__name__)
-command_logger = log.get_logger("commands")
+command_logger = log.get_command_logger()
 
 
 class ErrorHander(commands.Cog):
@@ -51,7 +51,7 @@ class ErrorHander(commands.Cog):
         if codeblock:
             message = f"`{message}`"
 
-        embed = nextcord.Embed(
+        embed = discord.Embed(
             color=settings["color"],
             description=f"{settings['description_prefix']} {message}",
         )
@@ -62,7 +62,7 @@ class ErrorHander(commands.Cog):
 
         try:
             await ctx.send(embed=embed, **kwargs)
-        except nextcord.errors.Forbidden:
+        except discord.errors.Forbidden:
             self.bot.logger.warning("Forbidden when trying to send error message embed")
 
     async def log_and_traceback(self, ctx: commands.Context, error):
@@ -116,7 +116,7 @@ class ErrorHander(commands.Cog):
                     "info",
                     "This command cannot be used in DM",
                 )
-            except (nextcord.HTTPException, nextcord.errors.Forbidden):
+            except (discord.HTTPException, discord.errors.Forbidden):
                 pass
 
         elif isinstance(error, commands.MissingPermissions):
@@ -157,13 +157,13 @@ class ErrorHander(commands.Cog):
         elif isinstance(error, (commands.BadArgument)):
             await self.send(ctx, "warning", str(error), help_footer=True)
 
-        elif isinstance(error, nextcord.errors.Forbidden):
+        elif isinstance(error, discord.errors.Forbidden):
             try:
                 await self.send(ctx, "error", str(error), codeblock=True)
-            except nextcord.errors.Forbidden:
+            except discord.errors.Forbidden:
                 try:
                     await ctx.message.add_reaction("🙊")
-                except nextcord.errors.Forbidden:
+                except discord.errors.Forbidden:
                     await self.log_and_traceback(ctx, error)
 
         elif isinstance(error, exceptions.LastFMError):
@@ -227,5 +227,5 @@ class ErrorHander(commands.Cog):
             await self.log_and_traceback(ctx, error)
 
 
-def setup(bot):
-    bot.add_cog(ErrorHander(bot))
+async def setup(bot):
+    await bot.add_cog(ErrorHander(bot))
