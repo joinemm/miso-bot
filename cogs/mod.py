@@ -32,8 +32,8 @@ class Mod(commands.Cog):
             logger.error(f"unmute loop error: {e}")
 
     @unmute_loop.before_loop
-    async def before_unmute_loop(self):
-        logger.info("Starting unmuting loop")
+    async def task_waiter(self):
+        await self.bot.wait_until_ready()
 
     async def check_mutes(self):
         """Check all current mutes"""

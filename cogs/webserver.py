@@ -59,6 +59,7 @@ class WebServer(commands.Cog):
         self.bot.loop.create_task(self.run())
 
     async def run(self):
+        await self.bot.wait_until_ready()
         if HOST is not None:
             try:
                 logger.info(f"Starting webserver on {HOST}:{PORT}")
@@ -172,8 +173,8 @@ class WebServer(commands.Cog):
         self.cached["users"] = len(set(self.bot.get_all_members()))
 
     @cache_stats.before_loop
-    async def before_caching(self):
-        logger.info("Starting web stats caching loop")
+    async def task_waiter(self):
+        await self.bot.wait_until_ready()
 
     def cog_unload(self):
         self.cache_stats.cancel()

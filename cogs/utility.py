@@ -103,8 +103,8 @@ class Utility(commands.Cog):
             logger.error(f"Reminder loop error: {e}")
 
     @reminder_loop.before_loop
-    async def before_reminder_loop(self):
-        logger.info("Starting reminder loop")
+    async def task_waiter(self):
+        await self.bot.wait_until_ready()
 
     async def check_reminders(self):
         """Check all current reminders"""

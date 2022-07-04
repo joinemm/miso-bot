@@ -33,16 +33,12 @@ class Events(commands.Cog):
         self.stats_commands = 0
 
     async def cog_load(self):
-        await self.start_tasks()
-
-    def cog_unload(self):
-        self.status_loop.cancel()
-
-    async def start_tasks(self):
-        """Start tasks"""
         self.status_loop.start()
         # self.xp_loop.start()
         # self.stats_loop.start()
+
+    def cog_unload(self):
+        self.status_loop.cancel()
 
     async def insert_stats(self):
         self.bot.logger.info("inserting usage stats")
@@ -214,8 +210,10 @@ class Events(commands.Cog):
             logger.error(f"stats_loop: {e}")
 
     @status_loop.before_loop
-    async def before_status_loop(self):
-        logger.info("Starting status loop")
+    @xp_loop.before_loop
+    @stats_loop.before_loop
+    async def task_waiter(self):
+        await self.bot.wait_until_ready()
 
     async def next_status(self):
         """switch to the next status message"""
