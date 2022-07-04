@@ -657,12 +657,12 @@ class Events(commands.Cog):
                         and react.emoji.id == payload.emoji.id
                     ):
                         reaction_count = react.count
-                        reacted_users = await react.users().flatten()
+                        reacted_users = [user async for user in react.users()]
                         break
                 else:
                     if react.emoji == payload.emoji.name:
                         reaction_count = react.count
-                        reacted_users = await react.users().flatten()
+                        reacted_users = [user async for user in react.users()]
                         break
 
             reacted_users = set(reacted_users)

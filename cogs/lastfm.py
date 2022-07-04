@@ -30,6 +30,8 @@ logger = log.get_logger(__name__)
 
 def is_small_server():
     async def predicate(ctx):
+        if ctx.guild is None:
+            return True
         users = await ctx.bot.db.execute(
             """
             SELECT count(*) FROM user_settings WHERE user_id IN %s

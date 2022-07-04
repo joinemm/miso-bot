@@ -88,7 +88,10 @@ class Instagram:
 
     async def extract(self, shortcode: str) -> IgPost:
         """Extract all media from given Instagram post"""
-        real_media_id = InstagramIdCodec.decode(shortcode[:11])
+        try:
+            real_media_id = InstagramIdCodec.decode(shortcode[:11])
+        except ValueError:
+            raise InstagramError("Not a valid Instagram link")
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:98.0) Gecko/20100101 Firefox/98.0",
             "Cookie": self.cookie,
