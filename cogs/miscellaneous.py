@@ -1,3 +1,4 @@
+import json
 import random
 
 import arrow
@@ -96,6 +97,42 @@ class Miscellaneous(commands.Cog):
             end = values[0]
         choice = random.randint(start, end)
         await ctx.send(f"Random range `{start}-{end}`\n> **{choice}**")
+
+    @commands.command()
+    async def advice(self, ctx: commands.Context):
+        """Get some life advice"""
+        slip_max = 244
+        url = f"https://api.adviceslip.com/advice/{random.randint(1, slip_max)}"
+        async with self.bot.session.get(url) as response:
+            data = json.loads(await response.text())
+        await ctx.send(f"*{data['slip']['advice']}*")
+
+    @commands.command()
+    async def affirmation(self, ctx: commands.Context):
+        """Get some affirmation"""
+        async with self.bot.session.get("https://www.affirmations.dev") as response:
+            data = await response.json()
+        await ctx.send(f"*{data['affirmation']}*")
+
+    @commands.command(aliases=["imbored"])
+    async def iambored(self, ctx: commands.Context):
+        """Get something to do"""
+        async with self.bot.session.get("http://www.boredapi.com/api/activity/") as response:
+            data = await response.json()
+
+        # https://www.boredapi.com/documentation
+        activity_emoji = {
+            "education": ":books:",
+            "recreational": ":carousel_horse:",
+            "social": ":champagne_glass:",
+            "diy": ":tools:",
+            "charity": ":juggling:",
+            "cooking": ":cook:",
+            "relaxation": ":beach:",
+            "music": ":saxophone:",
+            "busywork": ":broom:",
+        }
+        await ctx.send(f"{activity_emoji.get(data['type'], '')} {data['activity']}")
 
     @commands.command(name="ascii")
     async def ascii_text(self, ctx: commands.Context, *, text):
