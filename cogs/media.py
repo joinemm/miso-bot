@@ -395,7 +395,7 @@ class Media(commands.Cog):
                             buffer = io.BytesIO(await response.read())
                             files.append(discord.File(fp=buffer, filename=filename))
 
-                    await ctx.send(caption, files=files)
+                await ctx.send(caption, files=files)
 
             else:
                 # just send link in embed
