@@ -1,7 +1,6 @@
 import asyncio
 import csv
 import datetime
-import json
 import os
 import random
 
@@ -28,17 +27,6 @@ class Kpop(commands.Cog):
             "F": ":female_sign: ",
             "M": ":male_sign: ",
         }
-        try:
-            with open("data/data.json", "r") as f:
-                data = json.load(f)
-                try:
-                    self.artist_list = data["artists"]
-                except KeyError:
-                    self.artist_list = []
-        except FileNotFoundError:
-            with open("data/data.json", "w") as f:
-                f.write("{}")
-                self.artist_list = []
 
     async def cog_unload(self):
         await self.shutdown()
@@ -177,27 +165,37 @@ class Kpop(commands.Cog):
     @commands.group(invoke_without_command=True)
     async def stan(self, ctx: commands.Context):
         """Get a random kpop artist to stan"""
-        if self.artist_list:
-            await ctx.send(f"stan **{random.choice(self.artist_list)}**")
-        else:
-            raise exceptions.CommandWarning("Artist list is empty :thinking:")
+        # fast random row
+        # https://stackoverflow.com/questions/4329396/mysql-select-10-random-rows-from-600k-rows-fast
+        random_row = await self.bot.db.execute(
+            """
+            SELECT * FROM stannable_artist AS t1
+                JOIN (
+                    SELECT id FROM stannable_artist
+                    ORDER BY RAND()
+                    LIMIT 1
+                ) AS t2
+            ON t1.id = t2.id
+            """,
+            one_row=True,
+        )
+        await ctx.send(f"stan **{random_row[1]}**")
 
     @commands.is_owner()
     @stan.command(hidden=True)
     async def update(self, ctx: commands.Context):
         """Update the artist database"""
-        artist_list_new = set()
-        urls_to_scrape = [
-            "https://kprofiles.com/k-pop-girl-groups/",
-            "https://kprofiles.com/disbanded-kpop-groups-list/",
-            "https://kprofiles.com/disbanded-kpop-boy-groups/",
-            "https://kprofiles.com/k-pop-boy-groups/",
-            "https://kprofiles.com/co-ed-groups-profiles/",
-            "https://kprofiles.com/kpop-duets-profiles/",
-            "https://kprofiles.com/kpop-solo-singers/",
+        categories = [
+            ("Girl group", "https://kprofiles.com/k-pop-girl-groups/"),
+            ("Disbanded", "https://kprofiles.com/disbanded-kpop-groups-list/"),
+            ("Disbanded", "https://kprofiles.com/disbanded-kpop-boy-groups/"),
+            ("Boy group", "https://kprofiles.com/k-pop-boy-groups/"),
+            ("Co-Ed group", "https://kprofiles.com/co-ed-groups-profiles/"),
+            ("Duet", "https://kprofiles.com/kpop-duets-profiles/"),
+            ("Soloist", "https://kprofiles.com/kpop-solo-singers/"),
         ]
 
-        async def scrape(url):
+        async def scrape(category, url):
             artists = []
             async with self.bot.session.get(url) as response:
                 soup = BeautifulSoup(await response.text(), "html.parser")
@@ -207,25 +205,26 @@ class Kpop(commands.Cog):
                     for artist in p.find_all("a"):
                         artist = artist.text.replace("Profile", "").replace("profile", "").strip()
                         if not artist == "":
-                            artists.append(artist)
+                            artists.append([artist, category])
             return artists
 
-        tasks = []
-        for url in urls_to_scrape:
-            tasks.append(scrape(url))
+        task_results = await asyncio.gather(
+            *[scrape(category, url) for category, url in categories]
+        )
+        new_artist_list = [artist for sublist in task_results for artist in sublist]
 
-        artist_list_new = list(set(sum(await asyncio.gather(*tasks), [])))
-
-        with open("data/data.json", "w") as f:
-            json.dump({"artists": artist_list_new}, f, indent=4)
+        await self.bot.db.executemany(
+            """
+            INSERT IGNORE stannable_artist (artist_name, category)
+                VALUES (%s, %s)
+            """,
+            new_artist_list,
+        )
 
         await util.send_success(
             ctx,
-            f"**Artist list updated**\n"
-            f"New entries: **{len(artist_list_new) - len(self.artist_list)}**\n"
-            f"Total: **{len(artist_list_new)}**",
+            f"**Artist list updated**\n" f"Stannable artist count: **{len(new_artist_list)}**",
         )
-        self.artist_list = artist_list_new
 
     @commands.is_owner()
     @commands.command(name="rebuildkpopdb", hidden=True)
