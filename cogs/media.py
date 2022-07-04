@@ -257,7 +257,7 @@ class Media(commands.Cog):
                     ]
                 )
                 files = []
-                # discord normally has 8MB file size limit, but 50MB in boosted guilds
+                # discord normally has 8MB file size limit, but it can be increased in some guilds
                 max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
                 for n, media in enumerate(post.media, start=1):
                     ext = "mp4" if media.media_type == instagram.MediaType.VIDEO else "jpg"
@@ -268,9 +268,8 @@ class Media(commands.Cog):
                     # This causes problems with the hash-based request signing that instagram uses
                     # Thankfully you can plug your own yarl.URL into session.get(), with encoded=True
                     async with self.bot.session.get(yarl.URL(media.url, encoded=True)) as response:
-                        logger.info(media.url)
                         if (
-                            int(response.headers.get("content-length", max_filesize + 1))
+                            int(response.headers.get("content-length", max_filesize))
                             > max_filesize
                         ):
                             caption += f"\n{media.url}"
@@ -383,30 +382,18 @@ class Media(commands.Cog):
                         extension = "mp4"
 
                     filename = f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
-                    too_big = False
-                    max_filesize = 8388608  # discord has 8MB file size limit
+                    # discord normally has 8MB file size limit, but it can be increased in some guilds
+                    max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
                     url = media_url.replace(".jpg", "?format=jpg&name=orig")
                     async with self.bot.session.get(url) as response:
                         if (
-                            int(response.headers.get("content-length", max_filesize + 1))
+                            int(response.headers.get("content-length", max_filesize))
                             > max_filesize
                         ):
-                            too_big = True
-                        else:
-                            with open(filename, "wb") as f:
-                                while True:
-                                    block = await response.content.read(1024)
-                                    if not block:
-                                        break
-                                    f.write(block)
-
-                        if too_big:
                             caption += f"\n{url}"
                         else:
-                            with open(filename, "rb") as f:
-                                files.append(discord.File(f))
-
-                            os.remove(filename)
+                            buffer = io.BytesIO(await response.read())
+                            files.append(discord.File(fp=buffer, filename=filename))
 
                     await ctx.send(caption, files=files)
 
