@@ -2,6 +2,7 @@ import asyncio
 import html
 import json
 import os
+import random
 from time import time
 
 import aiohttp
@@ -26,6 +27,7 @@ STREAMABLE_USER = os.environ.get("STREAMABLE_USER")
 STREAMABLE_PASSWORD = os.environ.get("STREAMABLE_PASSWORD")
 THESAURUS_KEY = os.environ.get("THESAURUS_KEY")
 FINNHUB_TOKEN = os.environ.get("FINNHUB_TOKEN")
+RAPIDAPI_KEY = os.environ.get("RAPIDAPI_KEY")
 
 command_logger = log.get_command_logger()
 
@@ -385,127 +387,69 @@ class Utility(commands.Cog):
         content.set_footer(text=f"🕐 Local time {localtime}")
         await ctx.send(embed=content)
 
-    @commands.command(aliases=["synonyms", "synonym"])
-    async def thesaurus(self, ctx: commands.Context, *, word):
-        """Get synonyms for a word"""
-        url = f"https://www.dictionaryapi.com/api/v3/references/thesaurus/json/{word}"
-        params = {"key": THESAURUS_KEY}
-        async with self.bot.session.get(url=url, params=params) as response:
-            data = await response.json()
-
-        if isinstance(data[0], dict):
-            api_icon = "https://dictionaryapi.com/images/MWLogo_120x120_2x.png"
-            pages = []
-            for definition in data:
-                base_word = definition["hwi"]["hw"]
-                fl = definition["fl"]
-                offensive = definition["meta"]["offensive"]
-                syns = definition["meta"]["syns"][0]
-                content = discord.Embed(color=int("d71921", 16))
-                content.set_author(
-                    name=f"{base_word.capitalize()}, {fl}" + (" (offensive)" if offensive else ""),
-                    icon_url=api_icon,
-                )
-                content.description = ",\n".join(x.capitalize() for x in definition["shortdef"])
-                content.add_field(name="Synonyms", value=", ".join(syns))
-                pages.append(content)
-
-            await util.page_switcher(ctx, pages)
-
-        else:
-            if len(data) > 5:
-                data = data[:5]
-            suggestions = ", ".join(f"`{x}`" for x in data)
-            await ctx.send(f'No definitions found for "{word}". Did you mean: {suggestions}?')
-
     @commands.command()
     async def define(self, ctx: commands.Context, *, word):
-        """Get Oxford Dictionary definitions for a word"""
-        api_url = "https://od-api.oxforddictionaries.com/api/v2/"
+        API_BASE_URL = "wordsapiv1.p.rapidapi.com"
+        COLORS = ["226699", "f4900c", "553788"]
 
-        headers = {
-            "Accept": "application/json",
-            "app_id": OXFORD_APPID,
-            "app_key": OXFORD_TOKEN,
-        }
-
-        async with self.bot.session.get(f"{api_url}lemmas/en/{word}", headers=headers) as response:
+        headers = {"X-RapidAPI-Key": RAPIDAPI_KEY, "X-RapidAPI-Host": API_BASE_URL}
+        url = f"{API_BASE_URL}/words/{word}"
+        async with self.bot.session.get(url, headers=headers) as response:
             data = await response.json()
 
-        # searched for word id, now use the word id to get definition
-        all_entries = []
+        if data.get("results") is None:
+            raise exceptions.CommandWarning(f"No definitions found for `{word}`")
 
-        if data.get("results"):
-            definitions_embed = discord.Embed(colour=discord.Colour.from_rgb(0, 189, 242))
-            definitions_embed.description = ""
+        content = discord.Embed(
+            title=f":books: {word.capitalize()}",
+            color=int(random.choice(COLORS), 16),
+        )
 
-            found_word = data["results"][0]["id"]
-            url = f"{api_url}entries/en-gb/{found_word}"
-            params = {"strictMatch": "false"}
-            async with self.bot.session.get(url, headers=headers, params=params) as response:
-                data = await response.json()
-
-            for entry in data["results"][0]["lexicalEntries"]:
-                definitions_value = ""
-                name = data["results"][0]["word"]
-
-                for i in range(len(entry["entries"][0]["senses"])):
-                    for definition in entry["entries"][0]["senses"][i].get("definitions", []):
-                        this_top_level_definition = f"\n**{i + 1}.** {definition}"
-                        if len(definitions_value + this_top_level_definition) > 1024:
-                            break
-                        definitions_value += this_top_level_definition
-                        try:
-                            for y in range(len(entry["entries"][0]["senses"][i]["subsenses"])):
-                                for subdef in entry["entries"][0]["senses"][i]["subsenses"][y][
-                                    "definitions"
-                                ]:
-                                    this_definition = f"\n**└ {i + 1}.{y + 1}.** {subdef}"
-                                    if len(definitions_value + this_definition) > 1024:
-                                        break
-                                    definitions_value += this_definition
-
-                            definitions_value += "\n"
-                        except KeyError:
-                            pass
-
-                    for reference in entry["entries"][0]["senses"][i].get(
-                        "crossReferenceMarkers", []
-                    ):
-                        definitions_value += reference
-
-                word_type = entry["lexicalCategory"]["text"]
-                this_entry = {
-                    "id": name,
-                    "definitions": definitions_value,
-                    "type": word_type,
-                }
-                all_entries.append(this_entry)
-
-            if not all_entries:
-                return await ctx.send(f"No definitions found for `{word}`")
-
-            definitions_embed.set_author(
-                name=all_entries[0]["id"],
-                icon_url="https://i.imgur.com/vDvSmF3.png",
-            )
-
-            for entry in all_entries:
-                definitions_embed.add_field(
-                    name=f"{entry['type']}",
-                    value=entry["definitions"],
-                    inline=False,
+        if data.get("pronunciation") is not None:
+            if isinstance(data["pronunciation"], str):
+                content.description = f"`{data['pronunciation']}`"
+            elif data["pronunciation"].get("all") is not None:
+                content.description = f"`{data['pronunciation'].get('all')}`"
+            else:
+                content.description = "\n".join(
+                    f"{wt}: `{pro}`" for wt, pro in data["pronunciation"].items()
                 )
 
-            await ctx.send(embed=definitions_embed)
-        else:
-            await ctx.send(f"```ERROR: {data['error']}```")
+        results = {}
+        for result in data["results"]:
+            word_type = result["partOfSpeech"]
+            try:
+                results[word_type].append(result)
+            except KeyError:
+                results[word_type] = [result]
+
+        for category, definitions in results.items():
+            category_definitions = []
+            for n, category_result in enumerate(definitions, start=1):
+                parts = [f"**{n}.** {category_result['definition'].capitalize()}"]
+
+                if category_result.get("examples") is not None:
+                    parts.append(f'> *"{category_result.get("examples")[0]}"*')
+
+                if category_result.get("synonyms") is not None:
+                    quoted_synonyms = [f"`{x}`" for x in category_result["synonyms"]]
+                    parts.append(f"> Similar: {' '.join(quoted_synonyms)}")
+
+                category_definitions.append("\n".join(parts))
+
+            content.add_field(
+                name=category.upper(),
+                value="\n".join(category_definitions)[:1024],
+                inline=False,
+            )
+
+        await ctx.send(embed=content)
 
     @commands.command()
     async def urban(self, ctx: commands.Context, *, word):
         """Get Urban Dictionary definitions for a word"""
-        url = "https://api.urbandictionary.com/v0/define"
-        async with self.bot.session.get(url, params={"term": word}) as response:
+        API_BASE_URL = "https://api.urbandictionary.com/v0/define"
+        async with self.bot.session.get(API_BASE_URL, params={"term": word}) as response:
             data = await response.json()
 
         pages = []
