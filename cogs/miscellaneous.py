@@ -101,11 +101,18 @@ class Miscellaneous(commands.Cog):
     @commands.command()
     async def advice(self, ctx: commands.Context):
         """Get some life advice"""
-        slip_max = 244
-        url = f"https://api.adviceslip.com/advice/{random.randint(1, slip_max)}"
+        # for some reason the api is missing content for these ids
+        missing_ids = {0, 22, 48, 67}
+        slip_id = 0
+        while slip_id in missing_ids:
+            slip_id = random.randint(1, 224)
+        url = f"https://api.adviceslip.com/advice/{slip_id}"
         async with self.bot.session.get(url) as response:
             data = json.loads(await response.text())
-        await ctx.send(f"*{data['slip']['advice']}*")
+        try:
+            await ctx.send(f"*{data['slip']['advice']}*")
+        except KeyError:
+            raise exceptions.CommandError(f"slip_id={slip_id} :: {data}")
 
     @commands.command()
     async def affirmation(self, ctx: commands.Context):
