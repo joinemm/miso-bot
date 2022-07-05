@@ -676,6 +676,7 @@ class Utility(commands.Cog):
         FINNHUB_API_QUOTE_URL = "https://finnhub.io/api/v1/quote"
         FINNHUB_API_PROFILE_URL = "https://finnhub.io/api/v1/stock/profile2"
 
+        symbol = symbol.upper()
         params = {"symbol": symbol.strip("$"), "token": FINNHUB_TOKEN}
         async with self.bot.session.get(FINNHUB_API_QUOTE_URL, params=params) as response:
             quote_data = await response.json()
