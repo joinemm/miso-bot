@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS kpop_idol (
 
 CREATE TABLE IF NOT EXISTS stannable_artist (
     id INT NOT NULL AUTO_INCREMENT,
-    artist_name VARCHAR(64),
+    artist_name VARCHAR(128),
     category VARCHAR(64) NOT NULL,
+    UNIQUE(artist_name),
     PRIMARY KEY (id)
 );

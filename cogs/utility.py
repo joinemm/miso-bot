@@ -388,11 +388,12 @@ class Utility(commands.Cog):
 
     @commands.command()
     async def define(self, ctx: commands.Context, *, word):
+        """Get definitions for a given word"""
         API_BASE_URL = "wordsapiv1.p.rapidapi.com"
         COLORS = ["226699", "f4900c", "553788"]
 
         headers = {"X-RapidAPI-Key": RAPIDAPI_KEY, "X-RapidAPI-Host": API_BASE_URL}
-        url = f"{API_BASE_URL}/words/{word}"
+        url = f"https://{API_BASE_URL}/words/{word}"
         async with self.bot.session.get(url, headers=headers) as response:
             data = await response.json()
 
@@ -446,7 +447,7 @@ class Utility(commands.Cog):
 
     @commands.command()
     async def urban(self, ctx: commands.Context, *, word):
-        """Get Urban Dictionary definitions for a word"""
+        """Get Urban Dictionary entries for a given word"""
         API_BASE_URL = "https://api.urbandictionary.com/v0/define"
         async with self.bot.session.get(API_BASE_URL, params={"term": word}) as response:
             data = await response.json()
