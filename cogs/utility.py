@@ -1,6 +1,5 @@
 import asyncio
 import html
-import json
 import os
 import random
 from time import time
@@ -670,66 +669,39 @@ class Utility(commands.Cog):
         """
         Get price data for the US stock market
 
-        Usage:
-            >stock $<symbol>
-            >stock <company>
-
         Example:
             >stock $TSLA
-            >stock Tesla
         """
-        if not symbol.startswith("$"):
-            # make search
-            url = "http://d.yimg.com/autoc.finance.yahoo.com/autoc"
-            yahoo_param = {
-                "query": symbol,
-                "region": 1,
-                "lang": "en",
-                "callback": "YAHOO.Finance.SymbolSuggest.ssCallback",
-            }
-
-            async with self.bot.session.get(url, params=yahoo_param) as response:
-                search_data = await response.text()
-                search_data = search_data.replace(yahoo_param["callback"], "")
-                search_data = json.loads(search_data.strip("();"))
-
-            companies = search_data["ResultSet"]["Result"]
-            if not companies:
-                return await ctx.send("Found nothing!")
-            result = companies[0]
-
-            symbol = result["symbol"]
+        FINNHUB_API_QUOTE_URL = "https://finnhub.io/api/v1/quote"
+        FINNHUB_API_PROFILE_URL = "https://finnhub.io/api/v1/stock/profile2"
 
         params = {"symbol": symbol.strip("$"), "token": FINNHUB_TOKEN}
-
-        url = "https://finnhub.io/api/v1/quote"
-        async with self.bot.session.get(url, params=params) as response:
+        async with self.bot.session.get(FINNHUB_API_QUOTE_URL, params=params) as response:
             quote_data = await response.json()
 
         error = quote_data.get("error")
-        if error is not None:
-            return await ctx.send(error)
+        if error:
+            raise exceptions.CommandError(error)
 
-        url = "https://finnhub.io/api/v1/stock/profile2"
-        params["symbol"] = profile_ticker(params["symbol"])
-        async with self.bot.session.get(url, params=params) as response:
+        if quote_data["c"] == 0:
+            raise exceptions.CommandWarning("Company not found")
+
+        async with self.bot.session.get(FINNHUB_API_PROFILE_URL, params=params) as response:
             company_profile = await response.json()
 
         change = float(quote_data["c"]) - float(quote_data["pc"])
-        gains = change > 0
-        if gains:
-            tri = emojis.GREEN_UP
-        else:
-            tri = emojis.RED_DOWN
+        GAINS = change > 0
 
+        arrow_emoji = emojis.GREEN_UP if GAINS else emojis.RED_DOWN
         percentage = ((float(quote_data["c"]) / float(quote_data["pc"])) - 1) * 100
+        market_cap = int(company_profile["marketCapitalization"])
 
-        def getcur(s):
-            return f"${quote_data[s]}"
+        def get_money(key):
+            return f"${quote_data[key]}"
 
         if company_profile.get("name") is not None:
             content = discord.Embed(
-                title=f"${company_profile['ticker']} | {company_profile['name']}"
+                title=f"${company_profile['ticker']} | {company_profile['name']}",
             )
             content.set_thumbnail(url=company_profile.get("logo"))
             content.set_footer(text=company_profile["exchange"])
@@ -738,16 +710,16 @@ class Utility(commands.Cog):
 
         content.add_field(
             name="Change",
-            value=f"{'+$' if gains else '-$'}{abs(change):.2f}{tri}\n({percentage:.2f}%)",
+            value=f"{'+' if GAINS else '-'}${abs(change):.2f}{arrow_emoji}\n({percentage:.2f}%)",
         )
-        content.add_field(name="Open", value=getcur("o"))
-        content.add_field(name="Previous close", value=getcur("pc"))
+        content.add_field(name="Open", value=get_money("o"))
+        content.add_field(name="Previous close", value=get_money("pc"))
+        content.add_field(name="Current price", value=get_money("c"))
+        content.add_field(name="Today's high", value=get_money("h"))
+        content.add_field(name="Today's low", value=get_money("l"))
+        content.add_field(name="Market capitalization", value=f"${market_cap:,}", inline=False)
 
-        content.add_field(name="Current price", value=getcur("c"))
-        content.add_field(name="High", value=getcur("h"))
-        content.add_field(name="Low", value=getcur("l"))
-
-        content.colour = discord.Color.green() if gains else discord.Color.red()
+        content.colour = discord.Color.green() if GAINS else discord.Color.red()
         content.timestamp = arrow.get(quote_data["t"]).datetime
 
         await ctx.send(embed=content)
