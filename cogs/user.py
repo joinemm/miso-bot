@@ -128,60 +128,58 @@ class User(commands.Cog):
             user = ctx.guild.get_member(user.id) or user
 
         content = discord.Embed(
-            title=f"{user.name}#{user.discriminator}{' :robot:' if user.bot else ''} | #{user.id}"
+            title=f"{':robot: ' if user.bot else ''}{user.name}#{user.discriminator}"
         )
         content.set_thumbnail(url=user.display_avatar.url)
-
-        if isinstance(user, discord.Member):
-            content.colour = user.color
-            activity_display = util.UserActivity(user.activities).display()
-            if user.is_on_mobile() and user.status is discord.Status.online:
-                status_emoji = "mobile"
-            else:
-                status_emoji = user.status.name
-            status_display = f"{emojis.Status[status_emoji].value} {user.status.name.capitalize()}"
-
-        else:
-            activity_display = "Unavailable"
-            status_display = "Unavailable"
-            content.colour = int(
-                await util.color_from_image_url(
-                    self.bot.session, user.display_avatar.replace(size=64, format="png").url
-                ),
-                16,
-            )
-
-        content.add_field(name="Status", value=status_display)
+        content.set_footer(text=f"#{user.id}")
         content.add_field(name="Badges", value="> " + " ".join(util.flags_to_badges(user)))
-        content.add_field(name="Activity", value=activity_display or "None")
         content.add_field(name="Mention", value=user.mention)
         content.add_field(name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M"))
 
         if isinstance(user, discord.Member):
             content.colour = user.color
-            content.add_field(
-                name="Joined server", value=user.joined_at.strftime("%d/%m/%Y %H:%M")
-            )
 
             member_number = 1
             for member in ctx.guild.members:
                 if member.joined_at < user.joined_at:
                     member_number += 1
+
+            boosting_date = None
+            if user.premium_since:
+                boosting_date = humanize.naturaldelta(discord.utils.utcnow() - user.premium_since)
+
             content.add_field(name="Member", value=f"#{member_number} / {len(ctx.guild.members)}")
             content.add_field(
-                name="Server rank",
-                value=await self.get_rank(user, "user_activity", user.guild),
+                name="Boosting", value=f"For {boosting_date}" if boosting_date else "No"
+            )
+            content.add_field(
+                name="Joined server", value=user.joined_at.strftime("%d/%m/%Y %H:%M")
             )
 
-            roles_length = 0
-            role_string = ""
-            for role in reversed(user.roles[1:]):
-                role_string += " " + role.mention
-                roles_length += len(role.name)
-            if role_string == "":
-                role_string = "None"
+            if self.bot.intents.presences:
+                activity_display = util.UserActivity(user.activities).display()
+                if user.is_on_mobile():  # and user.status is discord.Status.online:
+                    status = "mobile"
+                else:
+                    status = user.status.name
+                status_display = f"{emojis.Status[status].value} {user.status.name.capitalize()}"
 
-            content.add_field(name="Roles", value=role_string, inline=(roles_length < 20))
+                content.add_field(name="Status", value=status_display)
+                content.add_field(name="Activity", value=activity_display or "Unavailable")
+
+            content.add_field(
+                name="Roles",
+                value=" ".join(x.mention for x in reversed(user.roles[1:])),
+                inline=False,
+            )
+        else:
+            content.colour = int(
+                await util.color_from_image_url(
+                    self.bot.session,
+                    user.display_avatar.replace(size=64, format="png").url,
+                ),
+                16,
+            )
 
         await ctx.send(embed=content)
 
@@ -279,16 +277,13 @@ class User(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["sinfo", "guildinfo"])
-    async def serverinfo(self, ctx: commands.Context, guild_id: int = None):
+    async def serverinfo(self, ctx: commands.Context, *, guild: discord.Guild = None):
         """Get various information on server"""
-        if guild_id is None:
+        if guild is None:
             guild = ctx.guild
-        else:
-            guild = self.bot.get_guild(guild_id)
-            if guild is None:
-                raise exceptions.CommandWarning(f'Guild with id "{guild_id}" not found.')
 
-        content = discord.Embed(title=f"**{guild.name}** | #{guild.id}")
+        content = discord.Embed(title=f"{guild.name}")
+        content.set_footer(text=f"#{guild.id}")
         if guild.icon:
             color = await util.color_from_image_url(
                 self.bot.session, guild.icon.replace(format="png", size=64).url
