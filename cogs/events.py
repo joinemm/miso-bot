@@ -357,9 +357,6 @@ class Events(commands.Cog):
         """Called when member leaves a guild"""
         if not self.bot.is_ready():
             return
-        self.bot.cache.event_triggers["member_remove"] += 1
-        # log event
-        await self.bot.wait_until_ready()
         logging_channel_id = None
         logging_settings = self.bot.cache.logging_settings.get(str(member.guild.id))
         if logging_settings:
