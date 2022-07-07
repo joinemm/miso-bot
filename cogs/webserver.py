@@ -23,12 +23,10 @@ class WebServer(commands.Cog):
         self.bot = bot
         self.app = web.Application()
         self.cached = {"guilds": 0, "users": 0, "commands": 0}
+        self.cached_command_list = []
         self.app.router.add_route("GET", "/", self.index)
-        self.app.router.add_route("GET", "/guilds", self.guild_count)
-        self.app.router.add_route("GET", "/users", self.user_count)
         self.app.router.add_route("GET", "/ping", self.ping_handler)
         self.app.router.add_route("GET", "/stats", self.website_statistics)
-        self.app.router.add_route("GET", "/commands", self.command_count)
         self.app.router.add_route("GET", "/documentation", self.command_list)
         self.app.router.add_route("GET", "/donators", self.donator_list)
         # Configure default CORS settings.
@@ -56,6 +54,7 @@ class WebServer(commands.Cog):
 
     async def cog_load(self):
         self.cache_stats.start()
+        self.cached_command_list = await self.generate_command_list()
         self.bot.loop.create_task(self.run())
 
     async def run(self):
@@ -78,7 +77,7 @@ class WebServer(commands.Cog):
     async def index(request):
         return web.Response(text="Hi I'm Miso Bot!")
 
-    async def donator_list(self, request):
+    async def update_donator_list(self):
         donators = []
         data = await self.bot.db.execute(
             """
@@ -91,27 +90,19 @@ class WebServer(commands.Cog):
             donators.append(
                 {"name": user.name, "avatar": user.display_avatar.url, "amount": amount}
             )
-        return web.json_response(donators)
+        return donators
+
+    async def donator_list(self, request):
+        return web.json_response(self.cached["donators"])
 
     async def ping_handler(self, request):
         return web.Response(text=f"{self.bot.latency*1000}")
-
-    async def guild_count(self, request):
-        return web.Response(text=f"{len(self.bot.guilds)}")
-
-    async def user_count(self, request):
-        return web.Response(text=f"{len(set(self.bot.get_all_members()))}")
-
-    async def command_count(self, request):
-        count = await self.bot.db.execute("SELECT SUM(uses) FROM command_usage", one_value=True)
-        return web.Response(text=f"{count}")
 
     async def website_statistics(self, request):
         return web.json_response(self.cached)
 
     async def command_list(self, request):
-        result = await self.generate_command_list()
-        return web.json_response(result)
+        return web.json_response(self.cached_command_list)
 
     def get_command_structure(self, command):
         if command.hidden or not command.enabled:
@@ -171,6 +162,7 @@ class WebServer(commands.Cog):
         )
         self.cached["guilds"] = len(self.bot.guilds)
         self.cached["users"] = len(set(self.bot.get_all_members()))
+        self.cached["donators"] = await self.get_donator_list()
 
     @cache_stats.before_loop
     async def task_waiter(self):
