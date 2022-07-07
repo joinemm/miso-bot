@@ -54,7 +54,6 @@ class WebServer(commands.Cog):
 
     async def cog_load(self):
         self.cache_stats.start()
-        self.cached_command_list = await self.generate_command_list()
         self.bot.loop.create_task(self.run())
 
     async def run(self):
@@ -163,6 +162,7 @@ class WebServer(commands.Cog):
         self.cached["guilds"] = len(self.bot.guilds)
         self.cached["users"] = len(set(self.bot.get_all_members()))
         self.cached["donators"] = await self.get_donator_list()
+        self.cached_command_list = await self.generate_command_list()
 
     @cache_stats.before_loop
     async def task_waiter(self):
