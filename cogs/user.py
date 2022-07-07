@@ -1,5 +1,4 @@
 import asyncio
-import typing
 
 import arrow
 import bleach
@@ -7,7 +6,6 @@ import discord
 import humanize
 from discord.ext import commands
 
-from libraries import plotter
 from modules import emojis, exceptions, queries, util
 
 
@@ -21,55 +19,6 @@ class User(commands.Cog):
         self.medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
         with open("html/profile.min.html", "r", encoding="utf-8") as file:
             self.profile_html = file.read()
-
-    async def get_rank(self, user, table="user_activity", guild=None):
-        """Get user's xp ranking from given table"""
-        if guild is None:
-            total, pos = (
-                await self.bot.db.execute(
-                    f"""
-                    SELECT (SELECT COUNT(DISTINCT(user_id)) FROM {table} WHERE not is_bot),
-                    ranking FROM (
-                        SELECT RANK() OVER(ORDER BY xp DESC) AS ranking, user_id,
-                            SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp
-                        FROM {table}
-                        WHERE not is_bot
-                        GROUP BY user_id
-                    ) as sub
-                    WHERE user_id = %s
-                    """,
-                    user.id,
-                    one_row=True,
-                )
-                or (None, None)
-            )
-
-        else:
-            total, pos = (
-                await self.bot.db.execute(
-                    f"""
-                    SELECT (SELECT COUNT(user_id) FROM {table} WHERE not is_bot AND guild_id = %s),
-                    ranking FROM (
-                        SELECT RANK() OVER(ORDER BY xp DESC) AS ranking, user_id,
-                            SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp
-                        FROM {table}
-                        WHERE not is_bot
-                        AND guild_id = %s
-                        GROUP BY user_id
-                    ) as sub
-                    WHERE user_id = %s
-                    """,
-                    guild.id,
-                    guild.id,
-                    user.id,
-                    one_row=True,
-                )
-                or (None, None)
-            )
-
-        if pos is None or total is None:
-            return "N/A"
-        return f"#{int(pos)} / {total}"
 
     @commands.command(aliases=["dp", "av", "pfp"])
     async def avatar(self, ctx: commands.Context, *, user: discord.User = None):
@@ -333,151 +282,6 @@ class User(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.command(aliases=["level"])
-    async def activity(
-        self, ctx: commands.Context, user: typing.Optional[discord.Member] = None, scope=""
-    ):
-        """See your hourly activity chart (GMT)"""
-        if user is None:
-            user = ctx.author
-
-        is_global = scope.lower() == "global"
-
-        if is_global:
-            global_activity = await self.bot.db.execute(
-                """
-                SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,h20,h21,h22,h23
-                    FROM user_activity
-                WHERE user_id = %s
-                GROUP BY guild_id
-                """,
-                user.id,
-            )
-            if global_activity:
-                activity_data = []
-                for i in range(24):
-                    activity_data.append(sum(r[i] for r in global_activity))
-                xp = sum(activity_data)
-            else:
-                activity_data = [0] * 24
-                xp = 0
-        else:
-            activity_data = await self.bot.db.execute(
-                """
-                SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,h20,h21,h22,h23
-                    FROM user_activity
-                WHERE user_id = %s AND guild_id = %s
-                """,
-                user.id,
-                ctx.guild.id,
-                one_row=True,
-            )
-            xp = sum(activity_data) if activity_data else 0
-
-        if xp == 0:
-            return ctx.send("No data!")
-
-        level = util.get_level(xp)
-
-        title = (
-            f"LVL {level} | {xp - util.get_xp(level)}/"
-            f"{util.xp_to_next_level(level)} XP to levelup | Total xp: {xp}"
-        )
-
-        plotter.create_graph(activity_data, str(user.color), title=title)
-
-        with open("downloads/graph.png", "rb") as img:
-            await ctx.send(
-                f"`Hourly cumulative {'global' if is_global else 'server'} activity for {user}`",
-                file=discord.File(img),
-            )
-
-    @commands.command(aliases=["ranking"])
-    @commands.cooldown(1, 30, type=commands.BucketType.member)
-    async def rank(self, ctx: commands.Context, user: discord.Member = None):
-        """See your server activity ranking"""
-        if user is None:
-            user = ctx.author
-
-        content = discord.Embed(color=user.color)
-        content.set_author(
-            name=f"Server activity ranks for {util.displayname(user, escape=False)}",
-            icon_url=user.display_avatar.url,
-        )
-
-        textbox = ""
-        for table, label in [
-            ("user_activity_day", "Daily  "),
-            ("user_activity_week", "Weekly "),
-            ("user_activity_month", "Monthly"),
-            ("user_activity", "Overall"),
-        ]:
-            ranking = await self.get_rank(user, table, ctx.guild)
-            textbox += f"\n{label} : {ranking}"
-
-        content.description = f"```\n{textbox}\n```"
-        await ctx.send(embed=content)
-
-    @commands.command(aliases=["globalranking", "grank"])
-    @commands.cooldown(1, 60, type=commands.BucketType.member)
-    async def globalrank(self, ctx: commands.Context, user: discord.Member = None):
-        """See your global activity ranking"""
-        if user is None:
-            user = ctx.author
-
-        content = discord.Embed(color=user.color)
-        content.set_author(
-            name=f"Global activity ranks for {util.displayname(user, escape=False)}",
-            icon_url=user.display_avatar.url,
-        )
-
-        textbox = ""
-        for table, label in [
-            ("user_activity_day", "Daily  "),
-            ("user_activity_week", "Weekly "),
-            ("user_activity_month", "Monthly"),
-            ("user_activity", "Overall"),
-        ]:
-            ranking = await self.get_rank(user, table)
-            textbox += f"\n{label} : {ranking}"
-
-        content.description = f"```\n{textbox}\n```"
-        await ctx.send(embed=content)
-
-    @commands.command()
-    async def topservers(self, ctx: commands.Context, timeframe=""):
-        """See your top servers by XP"""
-        time, table = get_activity_table(timeframe)
-        data = await self.bot.db.execute(
-            f"""
-            SELECT guild_id, SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23)
-                as xp FROM {table}
-                WHERE user_id = %s
-            GROUP BY guild_id
-            ORDER BY xp DESC
-            """,
-            ctx.author.id,
-        )
-        rows = []
-        total_xp = sum(x[1] for x in data)
-        for i, (guild_id, xp) in enumerate(data, start=1):
-            guild = self.bot.get_guild(guild_id)
-            if guild is None:
-                guild_name = guild_id
-            else:
-                guild_name = f"**{guild.name}**"
-
-            rows.append(f"`#{i}` {guild_name} — `{xp}` xp ({(xp/total_xp)*100:.1f}%)")
-
-        content = discord.Embed()
-        content.set_author(
-            name=f"{util.displayname(ctx.author, escape=False)} — {time} top servers",
-            icon_url=ctx.author.display_avatar.url,
-        )
-        content.set_footer(text=f"Total {len(rows)} servers")
-        content.colour = ctx.author.color
-        await util.send_as_pages(ctx, content, rows)
-
     @commands.group(case_insensitive=True, aliases=["lb"])
     async def leaderboard(self, ctx: commands.Context):
         """Show various leaderboards"""
@@ -518,65 +322,6 @@ class User(commands.Cog):
             title=f":fish: {'Global' if global_data else ctx.guild.name} fishy leaderboard",
             color=int("55acee", 16),
         )
-        await util.send_as_pages(ctx, content, rows)
-
-    @leaderboard.command(name="levels", aliases=["xp", "level"])
-    async def leaderboard_levels(self, ctx: commands.Context, scope="", timeframe=""):
-        """Activity XP leaderboard"""
-        _global_ = scope == "global"
-        if timeframe == "":
-            timeframe = scope
-
-        time, table = get_activity_table(timeframe)
-        if _global_:
-            data = await self.bot.db.execute(
-                f"""
-                SELECT user_id, SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp,
-                    SUM(message_count) FROM {table}
-                WHERE NOT is_bot
-                GROUP BY user_id ORDER BY xp DESC
-                """
-            )
-        else:
-            data = await self.bot.db.execute(
-                f"""
-                SELECT user_id, SUM(h0+h1+h2+h3+h4+h5+h6+h7+h8+h9+h10+h11+h12+h13+h14+h15+h16+h17+h18+h19+h20+h21+h22+h23) as xp,
-                    message_count FROM {table}
-                WHERE guild_id = %s AND NOT is_bot
-                GROUP BY user_id ORDER BY xp DESC
-                """,
-                ctx.guild.id,
-            )
-
-        rows = []
-        for i, (user_id, xp, message_count) in enumerate(data, start=1):
-            if _global_:
-                user = self.bot.get_user(user_id)
-            else:
-                user = ctx.guild.get_member(user_id)
-
-            if user is None:
-                continue
-
-            if i <= len(self.medal_emoji):
-                ranking = self.medal_emoji[i - 1]
-            else:
-                ranking = f"`#{i:2}`"
-
-            rows.append(
-                f"{ranking} **{util.displayname(user)}** — "
-                + (f"LVL **{util.get_level(xp)}**, " if time == "" else "")
-                + f"**{xp}** XP, **{message_count}** message{'' if message_count == 1 else 's'}"
-            )
-
-        content = discord.Embed(
-            color=int("5c913b", 16),
-            title=f":bar_chart: {'Global' if _global_ else ctx.guild.name} {time}levels leaderboard",
-        )
-
-        if not rows:
-            rows = ["No data."]
-
         await util.send_as_pages(ctx, content, rows)
 
     @leaderboard.command(name="wpm", aliases=["typing"])
@@ -704,36 +449,6 @@ class User(commands.Cog):
             if user_settings[2] is not None:
                 badges.append(make_badge(badge_classes["location"]))
 
-        server_activity = await self.bot.db.execute(
-            """
-            SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,h20,h21,h22,h23 as xp
-                FROM user_activity
-            WHERE user_id = %s AND guild_id = %s
-            """,
-            user.id,
-            ctx.guild.id,
-            one_row=True,
-        )
-        server_xp = sum(server_activity) if server_activity else 0
-
-        global_activity = await self.bot.db.execute(
-            """
-            SELECT h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,h19,h20,h21,h22,h23 as xp
-                FROM user_activity
-            WHERE user_id = %s
-            GROUP BY guild_id
-            """,
-            user.id,
-        )
-        if global_activity:
-            new_global_activity = []
-            for i in range(24):
-                new_global_activity.append(sum(r[i] for r in global_activity))
-            global_xp = sum(new_global_activity)
-        else:
-            new_global_activity = [0] * 24
-            global_xp = 0
-
         if user.bot:
             description = "I am a bot<br>BEEP BOOP"
         else:
@@ -757,7 +472,7 @@ class User(commands.Cog):
         )
 
         if profile_data:
-            description, background_url, background_color, show_graph = profile_data
+            description, background_url, background_color, _show_graph = profile_data
             if description is not None:
                 description = bleach.clean(
                     description.replace("\n", "<br>"),
@@ -770,7 +485,6 @@ class User(commands.Cog):
         else:
             background_color = user.color
             background_url = ""
-            show_graph = True
 
         command_uses = await self.bot.db.execute(
             """
@@ -792,15 +506,15 @@ class User(commands.Cog):
             "DISCRIMINATOR": f"#{user.discriminator}",
             "DESCRIPTION": description,
             "FISHY_AMOUNT": fishy or 0,
-            "SERVER_LEVEL": util.get_level(server_xp),
-            "GLOBAL_LEVEL": util.get_level(global_xp),
-            "ACTIVITY_DATA": str(new_global_activity),
-            "CHART_MAX": max(new_global_activity),
+            "SERVER_LEVEL": 0,
+            "GLOBAL_LEVEL": 0,
+            "ACTIVITY_DATA": [],
+            "CHART_MAX": 0,
             "COMMANDS_USED": command_uses or 0,
             "BADGES": "\n".join(badges),
             "USERNAME_SIZE": get_font_size(user.name),
-            "SHOW_GRAPH": "true" if show_graph else "false",
-            "DESCRIPTION_HEIGHT": "250px" if show_graph else "350px",
+            "SHOW_GRAPH": "false",
+            "DESCRIPTION_HEIGHT": "350px",
         }
 
         payload = {
@@ -857,7 +571,7 @@ class User(commands.Cog):
         await util.send_success(ctx, "Profile background image updated!")
 
     @util.patrons_only()
-    @editprofile.command(name="graph")
+    @editprofile.command(name="graph", hidden=True, enabled=False)
     async def editprofile_graph(self, ctx: commands.Context, value: bool):
         """Toggle whether to show activity graph on your profile or not"""
         await self.bot.db.execute(
@@ -1034,15 +748,3 @@ class User(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(User(bot))
-
-
-def get_activity_table(timeframe):
-    if timeframe in ["day", "daily"]:
-        return "daily ", "user_activity_day"
-    if timeframe in ["week", "weekly"]:
-        return "weekly ", "user_activity_week"
-    if timeframe in ["month", "monthly"]:
-        return "monthly ", "user_activity_month"
-    if timeframe in ["year", "yearly"]:
-        return "yearly ", "user_activity_year"
-    return "", "user_activity"

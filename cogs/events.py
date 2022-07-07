@@ -1,5 +1,5 @@
-import asyncio
 import random
+from itertools import cycle
 
 import arrow
 import discord
@@ -17,166 +17,40 @@ class Events(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.statuses = [
-            ("watching", lambda: f"{len(self.bot.guilds):,} servers"),
-            ("listening", lambda: f"{len(set(self.bot.get_all_members())):,} users"),
-            ("playing", lambda: "misobot.xyz"),
-        ]
-        self.activities = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
-        self.xp_cache = {}
-        self.emoji_usage_cache = {"unicode": {}, "custom": {}}
-        self.current_status = None
+        self.statuses = cycle(
+            [
+                ("watching", lambda: f"{len(self.bot.guilds):,} servers"),
+                ("listening", lambda: f"{len(set(self.bot.get_all_members())):,} users"),
+                ("playing", lambda: "misobot.xyz"),
+            ]
+        )
+        self.activity_id = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3}
         self.guildlog = 652916681299066900
-        self.xp_limit = 150
-        self.stats_messages = 0
-        self.stats_reactions = 0
-        self.stats_commands = 0
 
     async def cog_load(self):
         self.status_loop.start()
-        # self.xp_loop.start()
-        # self.stats_loop.start()
 
     def cog_unload(self):
         self.status_loop.cancel()
 
-    async def insert_stats(self):
-        self.bot.logger.info("inserting usage stats")
-        ts = arrow.now().floor("minute")
-        await self.bot.db.execute(
-            """
-            INSERT INTO stats (
-                ts, messages, reactions, commands_used,
-                guild_count, member_count, notifications_sent,
-                lastfm_api_requests, html_rendered
-            )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE
-                messages = messages + VALUES(messages),
-                reactions = reactions + VALUES(reactions),
-                commands_used = commands_used + VALUES(commands_used),
-                guild_count = VALUES(guild_count),
-                member_count = VALUES(member_count),
-                notifications_sent = notifications_sent + values(notifications_sent),
-                lastfm_api_requests = lastfm_api_requests + values(lastfm_api_requests),
-                html_rendered = html_rendered + values(html_rendered)
-            """,
-            ts.datetime,
-            self.stats_messages,
-            self.stats_reactions,
-            self.stats_commands,
-            len(self.bot.guilds),
-            len(set(self.bot.get_all_members())),
-            self.bot.cache.stats_notifications_sent,
-            self.bot.cache.stats_lastfm_requests,
-            self.bot.cache.stats_html_rendered,
+    @tasks.loop(minutes=3.0)
+    async def status_loop(self):
+        await self.next_status()
+
+    @status_loop.before_loop
+    async def task_waiter(self):
+        await self.bot.wait_until_ready()
+
+    async def next_status(self):
+        """switch to the next status message"""
+        activity_type, status_func = next(self.statuses)
+        await self.bot.change_presence(
+            status=discord.Status.online,
+            activity=discord.Activity(
+                type=discord.ActivityType(self.activity_id[activity_type]),
+                name=status_func(),
+            ),
         )
-        self.stats_messages = 0
-        self.stats_reactions = 0
-        self.stats_commands = 0
-        self.bot.cache.stats_notifications_sent = 0
-        self.bot.cache.stats_lastfm_requests = 0
-        self.bot.cache.stats_html_rendered = 0
-
-    async def write_usage_data(self):
-        values = []
-        total_messages = 0
-        total_users = 0
-        total_xp = 0
-        for guild_id in self.xp_cache:
-            for user_id, value in self.xp_cache[guild_id].items():
-                xp = min(value["xp"], self.xp_limit)
-                values.append(
-                    (
-                        int(guild_id),
-                        int(user_id),
-                        value["bot"],
-                        xp,
-                        value["messages"],
-                    )
-                )
-                total_messages += value["messages"]
-                total_xp += xp
-                total_users += 1
-
-        sql_tasks = []
-        if values:
-            currenthour = arrow.utcnow().hour
-            for activity_table in [
-                "user_activity",
-                "user_activity_day",
-                "user_activity_week",
-                "user_activity_month",
-            ]:
-                sql_tasks.append(
-                    self.bot.db.executemany(
-                        f"""
-                    INSERT INTO {activity_table} (guild_id, user_id, is_bot, h{currenthour}, message_count)
-                        VALUES (%s, %s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE
-                        h{currenthour} = h{currenthour} + VALUES(h{currenthour}),
-                        message_count = message_count + VALUES(message_count)
-                    """,
-                        values,
-                    )
-                )
-        self.xp_cache = {}
-
-        unicode_emoji_values = []
-        for guild_id in self.emoji_usage_cache["unicode"]:
-            for user_id in self.emoji_usage_cache["unicode"][guild_id]:
-                for emoji_name, value in self.emoji_usage_cache["unicode"][guild_id][
-                    user_id
-                ].items():
-                    unicode_emoji_values.append((int(guild_id), int(user_id), emoji_name, value))
-
-        if unicode_emoji_values:
-            sql_tasks.append(
-                self.bot.db.executemany(
-                    """
-                INSERT INTO unicode_emoji_usage (guild_id, user_id, emoji_name, uses)
-                    VALUES (%s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    uses = uses + VALUES(uses)
-                """,
-                    unicode_emoji_values,
-                )
-            )
-        self.emoji_usage_cache["unicode"] = {}
-
-        custom_emoji_values = []
-        for guild_id in self.emoji_usage_cache["custom"]:
-            for user_id in self.emoji_usage_cache["custom"][guild_id]:
-                for emoji_id, value in self.emoji_usage_cache["custom"][guild_id][user_id].items():
-                    custom_emoji_values.append(
-                        (
-                            int(guild_id),
-                            int(user_id),
-                            value["name"],
-                            emoji_id,
-                            value["uses"],
-                        )
-                    )
-
-        if custom_emoji_values:
-            sql_tasks.append(
-                self.bot.db.executemany(
-                    """
-                INSERT INTO custom_emoji_usage (guild_id, user_id, emoji_name, emoji_id, uses)
-                    VALUES (%s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    uses = uses + VALUES(uses)
-                """,
-                    custom_emoji_values,
-                )
-            )
-        self.emoji_usage_cache["custom"] = {}
-        if sql_tasks:
-            await asyncio.gather(*sql_tasks)
-            logger.info(
-                f"Inserted {total_messages} messages from {total_users} users, "
-                f"average {total_messages/300:.2f} messages / second, {total_xp/total_users} xp per user"
-            )
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context):
@@ -186,49 +60,6 @@ class Events(commands.Cog):
             command_logger.info(log.log_command(ctx))
             if ctx.guild is not None:
                 await queries.save_command_usage(ctx)
-
-    @tasks.loop(minutes=1.0)
-    async def xp_loop(self):
-        try:
-            await self.write_usage_data()
-        except Exception as e:
-            logger.error(f"xp_loop: {e}")
-
-    @tasks.loop(minutes=3.0)
-    async def status_loop(self):
-        try:
-            await self.next_status()
-        except Exception as e:
-            logger.error(f"next_status: {e}")
-
-    @tasks.loop(minutes=1.0)
-    async def stats_loop(self):
-        try:
-            await self.insert_stats()
-        except Exception as e:
-            logger.error(f"stats_loop: {e}")
-
-    @status_loop.before_loop
-    @xp_loop.before_loop
-    @stats_loop.before_loop
-    async def task_waiter(self):
-        await self.bot.wait_until_ready()
-
-    async def next_status(self):
-        """switch to the next status message"""
-        new_status_id = self.current_status
-        while new_status_id == self.current_status:
-            new_status_id = random.randrange(0, len(self.statuses))
-
-        status = self.statuses[new_status_id]
-        self.current_status = new_status_id
-
-        await self.bot.change_presence(
-            status=discord.Status.online,
-            activity=discord.Activity(
-                type=discord.ActivityType(self.activities[status[0]]), name=status[1]()
-            ),
-        )
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
@@ -453,79 +284,14 @@ class Events(commands.Cog):
             return
 
         autoresponses = self.bot.cache.autoresponse.get(str(message.guild.id), True)
-
         if autoresponses:
             await self.easter_eggs(message)
-
-        # temp fix
-        return
-
-        # xp gain
-        message_xp = util.xp_from_message(message)
-        if self.xp_cache.get(str(message.guild.id)) is None:
-            self.xp_cache[str(message.guild.id)] = {}
-        try:
-            self.xp_cache[str(message.guild.id)][str(message.author.id)]["xp"] += message_xp
-            self.xp_cache[str(message.guild.id)][str(message.author.id)]["messages"] += 1
-        except KeyError:
-            self.xp_cache[str(message.guild.id)][str(message.author.id)] = {
-                "xp": message_xp,
-                "messages": 1,
-                "bot": message.author.bot,
-            }
-
-        # log emojis
-        if self.bot.cache.log_emoji:
-            unicode_emojis = util.find_unicode_emojis(message.content)
-            custom_emojis = util.find_custom_emojis(message.content)
-
-            for emoji_name in unicode_emojis:
-                if self.emoji_usage_cache["unicode"].get(str(message.guild.id)) is None:
-                    self.emoji_usage_cache["unicode"][str(message.guild.id)] = {}
-                if (
-                    self.emoji_usage_cache["unicode"][str(message.guild.id)].get(
-                        str(message.author.id)
-                    )
-                    is None
-                ):
-                    self.emoji_usage_cache["unicode"][str(message.guild.id)][
-                        str(message.author.id)
-                    ] = {}
-                try:
-                    self.emoji_usage_cache["unicode"][str(message.guild.id)][
-                        str(message.author.id)
-                    ][emoji_name] += 1
-                except KeyError:
-                    self.emoji_usage_cache["unicode"][str(message.guild.id)][
-                        str(message.author.id)
-                    ][emoji_name] = 1
-
-            for emoji_name, emoji_id in custom_emojis:
-                if self.emoji_usage_cache["custom"].get(str(message.guild.id)) is None:
-                    self.emoji_usage_cache["custom"][str(message.guild.id)] = {}
-                if (
-                    self.emoji_usage_cache["custom"][str(message.guild.id)].get(
-                        str(message.author.id)
-                    )
-                    is None
-                ):
-                    self.emoji_usage_cache["custom"][str(message.guild.id)][
-                        str(message.author.id)
-                    ] = {}
-                try:
-                    self.emoji_usage_cache["custom"][str(message.guild.id)][
-                        str(message.author.id)
-                    ][str(emoji_id)]["uses"] += 1
-                except KeyError:
-                    self.emoji_usage_cache["custom"][str(message.guild.id)][
-                        str(message.author.id)
-                    ][str(emoji_id)] = {"uses": 1, "name": emoji_name}
 
     @staticmethod
     async def easter_eggs(message):
         """Easter eggs handler"""
         # stfu
-        if random.randint(0, 3) == 0 and "stfu" in message.content.lower():
+        if random.randint(1, 5) == 1 and "stfu" in message.content.lower():
             try:
                 await message.channel.send("no u")
             except discord.errors.Forbidden:
@@ -534,14 +300,14 @@ class Events(commands.Cog):
         stripped_content = message.content.lower().strip("!.?~ ")
 
         # hi
-        if stripped_content == "hi" and random.randint(0, 19) == 0:
+        if stripped_content == "hi" and random.randint(1, 20) == 1:
             try:
                 await message.channel.send("hi")
             except discord.errors.Forbidden:
                 pass
 
         # hello there
-        elif stripped_content == "hello there" and random.randint(0, 3) == 0:
+        elif stripped_content == "hello there" and random.randint(1, 5) == 1:
             try:
                 await message.channel.send("General Kenobi")
             except discord.errors.Forbidden:

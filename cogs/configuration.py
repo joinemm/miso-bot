@@ -234,18 +234,6 @@ class Configuration(commands.Cog):
             f"{channel.mention} is no longer being ignored from deleted message logging.",
         )
 
-    @commands.command(aliases=["levelups"])
-    @commands.guild_only()
-    @commands.has_permissions(manage_messages=True)
-    async def levelup(self, ctx: commands.Context, value: bool):
-        """Enable or disable levelup messages"""
-        await queries.update_setting(ctx, "guild_settings", "levelup_messages", value)
-        self.bot.cache.levelupmessage[str(ctx.guild.id)] = value
-        if value:
-            await util.send_success(ctx, "Level up messages are now **enabled**")
-        else:
-            await util.send_success(ctx, "Level up messages are now **disabled**")
-
     @commands.group()
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)

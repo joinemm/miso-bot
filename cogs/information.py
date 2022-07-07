@@ -9,9 +9,7 @@ import discord
 import humanize
 import psutil
 from discord.ext import commands
-from numpy import nan
 
-from libraries import emoji_literals, plotter
 from modules import emojis, exceptions, util
 
 
@@ -251,85 +249,6 @@ class Information(commands.Cog):
 
         await ctx.send(embed=content)
 
-    @commands.command()
-    async def emojistats(self, ctx: commands.Context, user: discord.Member = None, *args):
-        """See most used emojis on the server, optionally filtered by user"""
-        global_user = False
-        if "global" in [x.lower() for x in args] and user is not None:
-            global_user = True
-            custom_emojis = await self.bot.db.execute(
-                """
-                SELECT sum(uses), emoji_id, emoji_name
-                    FROM custom_emoji_usage
-                    WHERE user_id = %s
-                GROUP BY emoji_id
-                """,
-                user.id,
-            )
-            default_emojis = await self.bot.db.execute(
-                """
-                SELECT sum(uses), emoji_name
-                    FROM unicode_emoji_usage
-                    WHERE user_id = %s
-                GROUP BY emoji_name
-                """,
-                user.id,
-            )
-        else:
-            opt = [] if user is None else [user.id]
-            custom_emojis = await self.bot.db.execute(
-                f"""
-                SELECT sum(uses), emoji_id, emoji_name
-                    FROM custom_emoji_usage
-                    WHERE guild_id = %s
-                    {'AND user_id = %s' if user is not None else ''}
-                GROUP BY emoji_id
-                """,
-                ctx.guild.id,
-                *opt,
-            )
-            default_emojis = await self.bot.db.execute(
-                f"""
-                SELECT sum(uses), emoji_name
-                    FROM unicode_emoji_usage
-                    WHERE guild_id = %s
-                    {'AND user_id = %s' if user is not None else ''}
-                GROUP BY emoji_name
-                """,
-                ctx.guild.id,
-                *opt,
-            )
-
-        if not custom_emojis and not default_emojis:
-            return await ctx.send("No emojis have been used yet!")
-
-        all_emojis = []
-        for uses, emoji_name in default_emojis:
-            emoji_repr = emoji_literals.NAME_TO_UNICODE.get(emoji_name)
-            all_emojis.append((uses, emoji_repr))
-
-        for uses, emoji_id, emoji_name in custom_emojis:
-            emoji = self.bot.get_emoji(int(emoji_id))
-            if emoji is not None and emoji.is_usable():
-                emoji_repr = str(emoji)
-            else:
-                emoji_repr = "`" + emoji_name + "`"
-            all_emojis.append((uses, emoji_repr))
-
-        rows = []
-        for i, (uses, emoji_name) in enumerate(
-            sorted(all_emojis, key=lambda x: x[0], reverse=True), start=1
-        ):
-            rows.append(f"`#{i:2}` {emoji_name} — **{uses}** Use" + ("s" if uses > 1 else ""))
-
-        content = discord.Embed(
-            title="Most used emojis"
-            + (f" by {user.name}" if user is not None else "")
-            + (" globally" if global_user else f" in {ctx.guild.name}"),
-            color=int("ffcc4d", 16),
-        )
-        await util.send_as_pages(ctx, content, rows, maxrows=15)
-
     @commands.group(usage="[command]")
     async def commandstats(self, ctx: commands.Context):
         """See command usage statistics"""
@@ -537,65 +456,6 @@ class Information(commands.Cog):
             )
 
         await ctx.send(embed=content)
-
-    @commands.command(hidden=True)
-    async def stats(self, ctx: commands.Context):
-        """See bot stats"""
-        content = discord.Embed(
-            title=":bar_chart: Events since last reboot",
-            description="",
-            color=int("5c913b", 16),
-        )
-        for event, count in self.bot.cache.event_triggers.items():
-            content.description += f"\n`on_{event}`: **{count}**"
-        await ctx.send(embed=content)
-
-    @commands.command(hidden=True)
-    async def statsgraph(self, ctx: commands.Context, stat, hours: int = 24):
-        """Show various stat graphs"""
-        stat = stat.lower()
-        available = [
-            "messages",
-            "reactions",
-            "commands_used",
-            "guild_count",
-            "member_count",
-            "notifications_sent",
-            "lastfm_api_requests",
-            "html_rendered",
-        ]
-        if stat not in available:
-            raise exceptions.CommandWarning(f"Available stats: {', '.join(available)}")
-
-        data = await self.bot.db.execute(
-            f"""
-            SELECT UNIX_TIMESTAMP(ts), DAY(ts), HOUR(ts), MINUTE(ts), {stat}
-                FROM stats
-                WHERE ts >= NOW() + INTERVAL -{hours} HOUR
-                AND ts <  NOW() + INTERVAL 0 DAY
-            ORDER BY ts
-            """
-        )
-        datadict = {}
-        for row in data:
-            datadict[str(row[0])] = row[-1]
-
-        patched_data = []
-        frame = []
-        now = arrow.utcnow()
-        first_data_ts = arrow.get(data[0][0])
-        start = max(now.shift(hours=-hours), first_data_ts)
-        for dt in arrow.Arrow.span_range("minute", start, now.shift(minutes=-1)):
-            dt = dt[0]
-            value = datadict.get(str(dt.int_timestamp), nan)
-            frame.append(dt.datetime)
-            patched_data.append(value)
-
-        plotter.time_series_graph(frame, patched_data, str(discord.Color.random()))
-        with open("downloads/graph.png", "rb") as img:
-            await ctx.send(
-                file=discord.File(img),
-            )
 
     async def get_commits(self, author, repository):
         url = f"https://api.github.com/repos/{author}/{repository}/commits"

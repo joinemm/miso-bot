@@ -11,16 +11,12 @@ class Cache:
         self.rolepickers = set()
         self.votechannels = set()
         self.autoresponse = {}
-        self.levelupmessage = {}
         self.blacklist = {}
         self.logging_settings = {}
         self.autoroles = {}
         self.marriages = set()
         self.starboard_settings = {}
         self.starboard_blacklisted_channels = set()
-        self.stats_notifications_sent = 0
-        self.stats_lastfm_requests = 0
-        self.stats_html_rendered = 0
 
     async def cache_starboard_settings(self):
         data = await self.bot.db.execute(
@@ -102,11 +98,10 @@ class Cache:
         )
 
         guild_settings = await self.bot.db.execute(
-            "SELECT guild_id, levelup_messages, autoresponses FROM guild_settings"
+            "SELECT guild_id, autoresponses FROM guild_settings"
         )
-        for guild_id, levelup_messages, autoresponses in guild_settings:
+        for guild_id, autoresponses in guild_settings:
             self.autoresponse[str(guild_id)] = autoresponses
-            self.levelupmessage[str(guild_id)] = levelup_messages
 
         self.blacklist = {
             "global": {
