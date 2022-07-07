@@ -184,7 +184,6 @@ class Events(commands.Cog):
         # prevent double invocation for subcommands
         if ctx.invoked_subcommand is None:
             command_logger.info(log.log_command(ctx))
-            self.stats_commands += 1
             if ctx.guild is not None:
                 await queries.save_command_usage(ctx)
 
@@ -234,7 +233,8 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         """Called when the bot joins a new guild"""
-        self.bot.cache.event_triggers["guild_join"] += 1
+        if not self.bot.is_ready():
+            return
         blacklisted = await self.bot.db.execute(
             "SELECT reason FROM blacklisted_guild WHERE guild_id = %s",
             guild.id,
@@ -244,7 +244,6 @@ class Events(commands.Cog):
             logger.info(f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}")
             return await guild.leave()
 
-        await self.bot.wait_until_ready()
         logger.info(f"New guild : {guild}")
         content = discord.Embed(color=discord.Color.green())
         content.title = "New guild!"
@@ -263,14 +262,8 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         """Called when the bot leaves a guild"""
-        self.bot.cache.event_triggers["guild_remove"] += 1
-        # blacklisted = await self.bot.db.execute(
-        #     "SELECT reason FROM blacklisted_guild WHERE guild_id = %s", guild.id, one_value=True
-        # )
-        # if blacklisted:
-        #     return
-
-        await self.bot.wait_until_ready()
+        if not self.bot.is_ready():
+            return
         logger.info(f"Left guild {guild}")
         content = discord.Embed(color=discord.Color.red())
         content.title = "Left guild!"
@@ -289,9 +282,8 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         """Called when a new member joins a guild"""
-        self.bot.cache.event_triggers["member_join"] += 1
-        # log event
-        await self.bot.wait_until_ready()
+        if not self.bot.is_ready():
+            return
         logging_channel_id = None
         logging_settings = self.bot.cache.logging_settings.get(str(member.guild.id))
         if logging_settings:
@@ -339,9 +331,8 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         """Called when user gets banned from a server"""
-        self.bot.cache.event_triggers["member_ban"] += 1
-
-        await self.bot.wait_until_ready()
+        if not self.bot.is_ready():
+            return
         logging_channel_id = None
         logging_settings = self.bot.cache.logging_settings.get(str(guild.id))
         if logging_settings:
@@ -360,10 +351,6 @@ class Events(commands.Cog):
                     )
                 except discord.errors.Forbidden:
                     pass
-
-    @commands.Cog.listener()
-    async def on_member_unban(self, *_):
-        self.bot.cache.event_triggers["member_unban"] += 1
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
@@ -415,8 +402,6 @@ class Events(commands.Cog):
         if not self.bot.is_ready():
             return
 
-        self.bot.cache.event_triggers["message_delete"] += 1
-
         channel = self.bot.get_channel(payload.channel_id)
         if channel is None:
             return
@@ -461,8 +446,6 @@ class Events(commands.Cog):
         """Listener that gets called on every message"""
         if not self.bot.is_ready():
             return
-        self.stats_messages += 1
-        self.bot.cache.event_triggers["message"] += 1
 
         # ignore DMs
         if message.guild is None:
@@ -599,8 +582,6 @@ class Events(commands.Cog):
         if not self.bot.is_ready():
             return
 
-        self.stats_reactions += 1
-        self.bot.cache.event_triggers["reaction_add"] += 1
         user = self.bot.get_user(payload.user_id)
         if user.bot:
             return

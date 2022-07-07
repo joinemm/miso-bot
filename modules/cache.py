@@ -18,17 +18,6 @@ class Cache:
         self.marriages = set()
         self.starboard_settings = {}
         self.starboard_blacklisted_channels = set()
-        self.event_triggers = {
-            "message": 0,
-            "message_delete": 0,
-            "reaction_add": 0,
-            "member_join": 0,
-            "member_remove": 0,
-            "guild_join": 0,
-            "guild_remove": 0,
-            "member_ban": 0,
-            "member_unban": 0,
-        }
         self.stats_notifications_sent = 0
         self.stats_lastfm_requests = 0
         self.stats_html_rendered = 0
