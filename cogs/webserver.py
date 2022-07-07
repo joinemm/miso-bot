@@ -161,7 +161,7 @@ class WebServer(commands.Cog):
         )
         self.cached["guilds"] = len(self.bot.guilds)
         self.cached["users"] = len(set(self.bot.get_all_members()))
-        self.cached["donators"] = await self.get_donator_list()
+        self.cached["donators"] = await self.update_donator_list()
         self.cached_command_list = await self.generate_command_list()
 
     @cache_stats.before_loop

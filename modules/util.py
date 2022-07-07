@@ -772,7 +772,6 @@ async def render_html(bot, payload):
             f"http://{IMAGE_SERVER_HOST}:3000/html", data=payload
         ) as response:
             if response.status == 200:
-                bot.cache.stats_html_rendered += 1
                 buffer = io.BytesIO(await response.read())
                 return buffer
             raise exceptions.RendererError(f"{response.status} : {await response.text()}")

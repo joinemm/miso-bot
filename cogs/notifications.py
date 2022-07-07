@@ -53,7 +53,6 @@ class Notifications(commands.Cog):
             await member.send(embed=content)
             self.bot.logger.info(f"Sending notification for words {keywords} to {member}")
             if not test:
-                self.bot.cache.stats_notifications_sent += 1
                 for keyword in keywords:
                     await self.bot.db.execute(
                         """

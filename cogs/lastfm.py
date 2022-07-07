@@ -2113,7 +2113,6 @@ class LastFm(commands.Cog):
         max_tries = 2
         while True:
             async with self.bot.session.get(url, params=params) as response:
-                self.bot.cache.stats_lastfm_requests += 1
                 try:
                     content = await response.json()
                 except aiohttp.client_exceptions.ContentTypeError:
