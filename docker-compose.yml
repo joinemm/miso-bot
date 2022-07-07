@@ -15,14 +15,6 @@ services:
       - MARIADB_DATABASE=misobot
       - MARIADB_ROOT_PASSWORD=secure-af
 
-  gateway:
-    image: gelbpunkt/gateway-proxy:znver2
-    restart: unless-stopped
-    expose:
-      - 7878
-    volumes:
-      - ./gateway_proxy_config.json:/config.json
-
   prometheus:
     image: prom/prometheus
     restart: unless-stopped

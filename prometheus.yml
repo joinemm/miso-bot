@@ -16,4 +16,4 @@ scrape_configs:
     scrape_interval: 5s
 
     static_configs:
-      - targets: ['gateway:7878', 'image-server:3000']
+      - targets: ['image-server:3000']
