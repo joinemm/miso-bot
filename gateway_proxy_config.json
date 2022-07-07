@@ -1,0 +1,24 @@
+{
+  "log_level": "info",
+  "token": "",
+  "intents": 46607,
+  "port": 7878,
+  "activity": {
+    "type": 0,
+    "name": "on shard {{shard}} with twilight proxy"
+  },
+  "status": "idle",
+  "backpressure": 100,
+  "cache": {
+    "channels": true,
+    "presences": false,
+    "emojis": true,
+    "current_member": true,
+    "members": true,
+    "roles": true,
+    "stage_instances": false,
+    "stickers": true,
+    "users": true,
+    "voice_states": false
+  }
+}

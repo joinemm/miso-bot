@@ -32,7 +32,7 @@ class MisoBot(commands.AutoShardedBot):
                 webhooks=False,
                 invites=False,
                 voice_states=False,
-                presences=True,  # requires verification
+                presences=False,  # requires verification
                 guild_messages=True,
                 dm_messages=True,
                 guild_reactions=True,
@@ -93,6 +93,9 @@ class MisoBot(commands.AutoShardedBot):
         """Overrides built-in on_message()"""
         if not self.is_ready():
             return
+
+        # replace iphone apostrophes that break everything somehow
+        message.content = message.content.replace("'", "′").replace("‘", "′").replace("’", "′")
 
         await super().on_message(message)
 

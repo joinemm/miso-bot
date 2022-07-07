@@ -14,16 +14,30 @@ services:
       - MARIADB_PASSWORD=botpw
       - MARIADB_DATABASE=misobot
       - MARIADB_ROOT_PASSWORD=secure-af
-    networks:
-      - botnet
-    labels:
-      ofelia.enabled: 'true'
-      ofelia.job-exec.daily-clear.schedule: '@daily'
-      ofelia.job-exec.daily-clear.command: sh -c "mysql -ubot -pbotpw -D misobot < /scripts/clear_activity_day.sql"
-      ofelia.job-exec.weekly-clear.schedule: '@weekly'
-      ofelia.job-exec.weekly-clear.command: sh -c "mysql -ubot -pbotpw -D misobot < /scripts/clear_activity_week.sql"
-      ofelia.job-exec.monthly-clear.schedule: '@monthly'
-      ofelia.job-exec.monthly-clear.command: sh -c "mysql -ubot -pbotpw -D misobot < /scripts/clear_activity_month.sql"
+
+  gateway:
+    image: gelbpunkt/gateway-proxy:znver2
+    restart: unless-stopped
+    expose:
+      - 7878
+    volumes:
+      - ./gateway_proxy_config.json:/config.json
+
+  prometheus:
+    image: prom/prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana-oss
+    restart: unless-stopped
+    ports:
+      - "9080:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
 
   image-server:
     container_name: image-server
@@ -34,17 +48,6 @@ services:
       - SYS_ADMIN
     expose:
       - 3000
-    networks:
-      - botnet
-
-  ofelia:
-    image: mcuadros/ofelia:latest
-    restart: unless-stopped
-    depends_on:
-      - db
-    command: daemon --docker
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
 
   bot:
     container_name: miso-bot
@@ -55,8 +58,6 @@ services:
     restart: unless-stopped
     depends_on:
       - db
-    networks:
-      - botnet
     ports:
       - '443:443'
     env_file:
@@ -67,8 +68,9 @@ services:
       - WEBSERVER_HOSTNAME=miso-bot
 
 networks:
-  botnet:
+  default:
     driver: bridge
 
 volumes:
   database:
+  grafana-storage:

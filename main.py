@@ -6,6 +6,7 @@ import uvloop
 from dotenv import load_dotenv
 
 from modules import log
+from modules.gateway_proxy import ProxiedBot, patch_with_gateway
 from modules.misobot import MisoBot
 
 uvloop.install()
@@ -14,6 +15,7 @@ logger = log.get_logger(__name__)
 
 developer_mode = "dev" in sys.argv
 maintenance_mode = "maintenance" in sys.argv
+API_GATEWAY_PROXY = None  # "http://gateway:7878"
 
 if developer_mode:
     logger.info("Developer mode is ON")
@@ -61,10 +63,17 @@ if maintenance_mode:
 
 
 def main():
-    bot = MisoBot(
-        extensions=extensions,
-        default_prefix=prefix,
-    )
+    if API_GATEWAY_PROXY:
+        patch_with_gateway()
+        bot = ProxiedBot(
+            extensions=extensions,
+            default_prefix=prefix,
+        )
+    else:
+        bot = MisoBot(
+            extensions=extensions,
+            default_prefix=prefix,
+        )
     bot.run(TOKEN)
 
 
