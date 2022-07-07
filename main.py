@@ -45,11 +45,11 @@ extensions = [
     "images",
     "utility",
     "typings",
-    "webserver",
     "reddit",
     "crypto",
     "kpop",
     "stats",
+    "webserver",
 ]
 
 if maintenance_mode:
@@ -64,7 +64,7 @@ if maintenance_mode:
 
 def main():
     if API_GATEWAY_PROXY:
-        patch_with_gateway()
+        patch_with_gateway(API_GATEWAY_PROXY)
         bot = ProxiedBot(
             extensions=extensions,
             default_prefix=prefix,

@@ -141,7 +141,7 @@ class ErrorHander(commands.Cog):
             await self.send(
                 ctx,
                 "error",
-                "Support me on patreon to use this command! <https://patreon.com/joinemm>",
+                f"You have to be a donator to use this command! See `{ctx.prefix}donate`",
             )
 
         elif isinstance(error, exceptions.ServerTooBig):
