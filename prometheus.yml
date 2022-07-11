@@ -7,6 +7,5 @@ scrape_configs:
       - targets: ['image-server:3000']
   - job_name: 'miso'
     scrape_interval: 10s
-    scheme: https
     static_configs:
-      - targets: ['bot']
+      - targets: ['bot:443']
