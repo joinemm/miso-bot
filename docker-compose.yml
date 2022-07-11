@@ -22,6 +22,7 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-storage:/prometheus
 
   grafana:
     image: grafana/grafana-oss
@@ -66,3 +67,4 @@ networks:
 volumes:
   database:
   grafana-storage:
+  prometheus-storage:
