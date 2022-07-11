@@ -2,6 +2,7 @@ import traceback
 from time import time
 
 import aiohttp
+import orjson
 from discord import Activity, ActivityType, AllowedMentions, Intents, Status
 from discord.errors import Forbidden
 from discord.ext import commands
@@ -32,7 +33,7 @@ class MisoBot(commands.AutoShardedBot):
                 webhooks=False,
                 invites=False,
                 voice_states=False,
-                presences=False,  # requires verification
+                presences=True,  # requires verification
                 guild_messages=True,
                 dm_messages=True,
                 guild_reactions=True,
@@ -57,7 +58,10 @@ class MisoBot(commands.AutoShardedBot):
         self.register_hooks()
 
     async def setup_hook(self):
-        self.session = aiohttp.ClientSession()
+        self.session = aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(limit=0),
+            json_serialize=lambda x: orjson.dumps(x).decode(),
+        )
         await self.db.initialize_pool()
         await self.cache.initialize_settings_cache()
         await self.load_all_extensions()
@@ -85,17 +89,14 @@ class MisoBot(commands.AutoShardedBot):
 
     async def close(self):
         """Overrides built-in close()"""
-        await self.db.cleanup()
         await self.session.close()
+        await self.db.cleanup()
         await super().close()
 
     async def on_message(self, message):
         """Overrides built-in on_message()"""
         if not self.is_ready():
             return
-
-        # replace iphone apostrophes that break everything somehow
-        message.content = message.content.replace("'", "′").replace("‘", "′").replace("’", "′")
 
         await super().on_message(message)
 

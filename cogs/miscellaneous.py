@@ -1,8 +1,8 @@
-import json
 import random
 
 import arrow
 import discord
+import orjson
 from discord.ext import commands
 
 from libraries import emoji_literals, minestat
@@ -108,7 +108,7 @@ class Miscellaneous(commands.Cog):
             slip_id = random.randint(1, 224)
         url = f"https://api.adviceslip.com/advice/{slip_id}"
         async with self.bot.session.get(url) as response:
-            data = json.loads(await response.text())
+            data = orjson.loads(await response.text()).decode()
         try:
             await ctx.send(f"*{data['slip']['advice']}*")
         except KeyError:

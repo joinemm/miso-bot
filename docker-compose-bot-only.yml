@@ -10,7 +10,6 @@ services:
     network_mode: host
     ports:
       - '6969:6969'
-      - '7878:7878'
     env_file:
       - .env
     environment:
