@@ -15,38 +15,48 @@ class Prometheus(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.ram_gauge = Gauge(
-            "memory_usage_bytes",
-            "Memory usage in bytes.",
+            "miso_memory_usage_bytes",
+            "Memory usage of the bot process in bytes.",
         )
         self.cpu_gauge = Gauge(
-            "cpu_usage_percent",
-            "CPU usage percent.",
+            "system_cpu_usage_percent",
+            "CPU usage of the system in percent.",
             ["core"],
         )
         self.event_counter = Counter(
-            "gateway_events_total",
+            "miso_gateway_events_total",
             "Total number of gateway events.",
             ["event_type"],
         )
         self.command_histogram = Histogram(
-            "command_response_time_seconds",
+            "miso_command_response_time_seconds",
             "Command end-to-end response time in seconds.",
             ["command"],
             buckets=(0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0),
         )
         self.shard_latency_summary = Summary(
-            "shard_latency_seconds",
+            "miso_shard_latency_seconds",
             "Latency of a shard in seconds.",
             ["shard"],
+        )
+        self.guild_count = Gauge(
+            "miso_cached_guild_count",
+            "Total amount of guilds cached.",
+        )
+        self.member_count = Gauge(
+            "miso_cached_member_count",
+            "Total amount of members cached.",
         )
 
     async def cog_load(self):
         self.log_system_metrics.start()
         self.log_shard_latencies.start()
+        self.log_cache_contents.start()
 
     def cog_unload(self):
         self.log_system_metrics.cancel()
         self.log_shard_latencies.cancel()
+        self.log_cache_contents.cancel()
 
     @commands.Cog.listener()
     async def on_socket_event_type(self, event_type):
@@ -57,6 +67,13 @@ class Prometheus(commands.Cog):
         for shard in self.bot.shards.values():
             self.shard_latency_summary.labels(shard.id).observe(shard.latency)
 
+    @tasks.loop(minutes=1)
+    async def log_cache_contents(self):
+        guild_count = len(self.bot.guilds)
+        member_count = len(set(self.bot.get_all_members()))
+        self.guild_count.set(guild_count)
+        self.member_count.set(member_count)
+
     @tasks.loop(seconds=1)
     async def log_system_metrics(self):
         ram = psutil.Process().memory_info().rss
@@ -65,6 +82,7 @@ class Prometheus(commands.Cog):
             self.cpu_gauge.labels(core).set(usage)
 
     @log_shard_latencies.before_loop
+    @log_cache_contents.before_loop
     async def task_waiter(self):
         await self.bot.wait_until_ready()
 
