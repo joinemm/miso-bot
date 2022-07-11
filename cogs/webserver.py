@@ -4,6 +4,7 @@ import ssl
 import aiohttp_cors
 from aiohttp import web
 from discord.ext import commands, tasks
+from prometheus_async import aio
 
 from modules import log
 
@@ -24,11 +25,12 @@ class WebServer(commands.Cog):
         self.app = web.Application()
         self.cached = {"guilds": 0, "users": 0, "commands": 0}
         self.cached_command_list = []
-        self.app.router.add_route("GET", "/", self.index)
-        self.app.router.add_route("GET", "/ping", self.ping_handler)
-        self.app.router.add_route("GET", "/stats", self.website_statistics)
-        self.app.router.add_route("GET", "/documentation", self.command_list)
-        self.app.router.add_route("GET", "/donators", self.donator_list)
+        self.app.router.add_get("/", self.index)
+        self.app.router.add_get("/ping", self.ping_handler)
+        self.app.router.add_get("/stats", self.website_statistics)
+        self.app.router.add_get("/documentation", self.command_list)
+        self.app.router.add_get("/donators", self.donator_list)
+        self.app.router.add_get("/metrics", aio.web.server_stats)
         # Configure default CORS settings.
         self.cors = aiohttp_cors.setup(
             self.app,
@@ -55,6 +57,32 @@ class WebServer(commands.Cog):
     async def cog_load(self):
         self.cache_stats.start()
         self.bot.loop.create_task(self.run())
+
+    async def cog_unload(self):
+        self.cache_stats.cancel()
+        await self.shutdown()
+
+    @tasks.loop(minutes=1)
+    async def cache_stats(self):
+        self.cached["commands"] = int(
+            await self.bot.db.execute("SELECT SUM(uses) FROM command_usage", one_value=True)
+        )
+        self.cached["guilds"] = len(self.bot.guilds)
+        self.cached["users"] = len(set(self.bot.get_all_members()))
+        self.cached["donators"] = await self.update_donator_list()
+        self.cached_command_list = await self.generate_command_list()
+
+    @cache_stats.before_loop
+    async def task_waiter(self):
+        await self.bot.wait_until_ready()
+
+    @cache_stats.error
+    async def cache_stats_error(self, error):
+        logger.error(error)
+
+    async def shutdown(self):
+        await self.app.shutdown()
+        await self.app.cleanup()
 
     async def run(self):
         await self.bot.wait_until_ready()
@@ -153,28 +181,6 @@ class WebServer(commands.Cog):
             result.append(cog_content)
 
         return result
-
-    @tasks.loop(minutes=1)
-    async def cache_stats(self):
-        self.cached["commands"] = int(
-            await self.bot.db.execute("SELECT SUM(uses) FROM command_usage", one_value=True)
-        )
-        self.cached["guilds"] = len(self.bot.guilds)
-        self.cached["users"] = len(set(self.bot.get_all_members()))
-        self.cached["donators"] = await self.update_donator_list()
-        self.cached_command_list = await self.generate_command_list()
-
-    @cache_stats.before_loop
-    async def task_waiter(self):
-        await self.bot.wait_until_ready()
-
-    def cog_unload(self):
-        self.cache_stats.cancel()
-        self.bot.loop.create_task(self.shutdown())
-
-    async def shutdown(self):
-        await self.app.shutdown()
-        await self.app.cleanup()
 
 
 async def setup(bot):

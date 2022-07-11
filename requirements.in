@@ -22,3 +22,4 @@ scipy
 statcord.py
 tweepy
 uvloop
+prometheus-async

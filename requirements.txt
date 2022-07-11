@@ -114,6 +114,10 @@ pillow==9.0.1
     #   -r requirements.in
     #   colorgram-py
     #   matplotlib
+prometheus-async==22.2.0
+    # via -r requirements.in
+prometheus-client==0.14.1
+    # via prometheus-async
 psutil==5.9.0
     # via
     #   -r requirements.in
@@ -171,6 +175,8 @@ webencodings==0.5.1
     # via bleach
 wheel==0.37.1
     # via astunparse
+wrapt==1.14.1
+    # via prometheus-async
 yarl==1.7.2
     # via
     #   aiohttp

@@ -48,6 +48,7 @@ extensions = [
     "kpop",
     "stats",
     "webserver",
+    "prometheus",
 ]
 
 if maintenance_mode:
