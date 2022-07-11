@@ -20,7 +20,7 @@ class MisoBot(commands.AutoShardedBot):
             case_insensitive=True,
             allowed_mentions=AllowedMentions(everyone=False),
             max_messages=20000,
-            heartbeat_timeout=300,
+            heartbeat_timeout=120,
             owner_id=133311691852218378,
             client_id=500385855072894982,
             status=Status.idle,
