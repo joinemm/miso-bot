@@ -7,13 +7,14 @@ from discord.ext import commands
 
 from libraries import emoji_literals, minestat
 from modules import exceptions, util
+from modules.misobot import MisoBot
 
 
 class Miscellaneous(commands.Cog):
     """Miscellaneous commands"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "🔮"
         self.hs = {
             "aquarius": {
@@ -108,7 +109,7 @@ class Miscellaneous(commands.Cog):
             slip_id = random.randint(1, 224)
         url = f"https://api.adviceslip.com/advice/{slip_id}"
         async with self.bot.session.get(url) as response:
-            data = orjson.loads(await response.text()).decode()
+            data = orjson.loads(await response.text())
         try:
             await ctx.send(f"*{data['slip']['advice']}*")
         except KeyError:
@@ -118,14 +119,14 @@ class Miscellaneous(commands.Cog):
     async def affirmation(self, ctx: commands.Context):
         """Get some affirmation"""
         async with self.bot.session.get("https://www.affirmations.dev") as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
         await ctx.send(f"*{data['affirmation']}*")
 
     @commands.command(aliases=["imbored"])
     async def iambored(self, ctx: commands.Context):
         """Get something to do"""
         async with self.bot.session.get("http://www.boredapi.com/api/activity/") as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
 
         # https://www.boredapi.com/documentation
         activity_emoji = {
@@ -388,7 +389,7 @@ class Miscellaneous(commands.Cog):
         async with self.bot.session.post(
             "https://aztro.sameerkumar.website/", params=params
         ) as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
 
         sign = self.hs.get(sunsign)
         content = discord.Embed(
@@ -503,7 +504,7 @@ class Miscellaneous(commands.Cog):
         colors = [x.strip("#") for x in colors]
         url = "https://api.color.pizza/v1/" + ",".join(colors)
         async with self.bot.session.get(url) as response:
-            colordata = (await response.json()).get("colors")
+            colordata = (await response.json(loads=orjson.loads)).get("colors")
 
         if len(colors) == 1:
             discord_color = await util.get_color(ctx, "#" + colors[0].strip("#"))
@@ -591,7 +592,7 @@ class Miscellaneous(commands.Cog):
             json=request_data,
             headers={"Content-Type": "application/json"},
         ) as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
             result = data.get("result")
 
             try:

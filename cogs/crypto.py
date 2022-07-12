@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 import discord
+import orjson
 from discord.ext import commands
 
 from modules import emojis, exceptions, util
@@ -53,7 +54,7 @@ class Cryptocurrency(commands.Cog):
         url = "https://api.binance.com/api/v3/klines"
         params = {"symbol": symbol, "interval": interval, "limit": limit}
         async with self.bot.session.get(url, params=params) as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
 
         if isinstance(data, dict):
             raise exceptions.CommandError(data.get("msg"))
@@ -86,7 +87,7 @@ class Cryptocurrency(commands.Cog):
         url = "https://api.binance.com/api/v3/ticker/24hr"
         params = {"symbol": symbol}
         async with self.bot.session.get(url, params=params) as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
 
         error = data.get("msg")
         if error:

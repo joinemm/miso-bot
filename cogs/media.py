@@ -202,7 +202,7 @@ class Media(commands.Cog):
             if response.status == 403:
                 raise exceptions.CommandError("Daily youtube api quota reached.")
 
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
 
         if not data.get("items"):
             return await ctx.send("No results found!")

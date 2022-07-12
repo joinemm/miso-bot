@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 import aiohttp
+import orjson
 
 
 class ExpiredCookie(Exception):
@@ -106,7 +107,7 @@ class Instagram:
             proxy_auth=self.proxy_auth,
         ) as response:
             try:
-                data = await response.json()
+                data = await response.json(loads=orjson.loads)
             except aiohttp.ContentTypeError:
                 raise ExpiredCookie
 

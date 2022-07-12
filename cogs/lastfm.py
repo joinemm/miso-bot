@@ -12,6 +12,7 @@ import arrow
 import colorgram
 import discord
 import kdtree
+import orjson
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from PIL import Image
@@ -212,7 +213,7 @@ class LastFm(commands.Cog):
         }
 
         async with self.bot.session.get(url, params=params) as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
 
         video_id = data["items"][0]["id"]["videoId"]
         video_url = f"https://youtube.com/watch?v={video_id}"
@@ -1896,7 +1897,7 @@ class LastFm(commands.Cog):
             "q": query,
         }
         async with self.bot.session.post(url=url, data=request_data) as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
 
         if data["status"] != "success":
             raise exceptions.CommandWarning(
@@ -2114,7 +2115,7 @@ class LastFm(commands.Cog):
         while True:
             async with self.bot.session.get(url, params=params) as response:
                 try:
-                    content = await response.json()
+                    content = await response.json(loads=orjson.loads)
                 except aiohttp.client_exceptions.ContentTypeError:
                     if ignore_errors:
                         return None
@@ -2560,7 +2561,7 @@ async def fetch(session, url, params=None, handling="json"):
         if response.status != 200:
             return None
         if handling == "json":
-            return await response.json()
+            return await response.json(loads=orjson.loads)
         if handling == "text":
             return await response.text()
         return await response

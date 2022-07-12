@@ -7,6 +7,7 @@ from datetime import datetime
 import arrow
 import discord
 import humanize
+import orjson
 import psutil
 from discord.ext import commands
 
@@ -460,7 +461,7 @@ class Information(commands.Cog):
     async def get_commits(self, author, repository):
         url = f"https://api.github.com/repos/{author}/{repository}/commits"
         async with self.bot.session.get(url) as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
 
         return data
 

@@ -7,6 +7,7 @@ from time import time
 import aiohttp
 import arrow
 import discord
+import orjson
 from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
 
@@ -395,7 +396,7 @@ class Utility(commands.Cog):
         headers = {"X-RapidAPI-Key": RAPIDAPI_KEY, "X-RapidAPI-Host": API_BASE_URL}
         url = f"https://{API_BASE_URL}/words/{word}"
         async with self.bot.session.get(url, headers=headers) as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
 
         if data.get("results") is None:
             raise exceptions.CommandWarning(f"No definitions found for `{word}`")
@@ -450,7 +451,7 @@ class Utility(commands.Cog):
         """Get Urban Dictionary entries for a given word"""
         API_BASE_URL = "https://api.urbandictionary.com/v0/define"
         async with self.bot.session.get(API_BASE_URL, params={"term": word}) as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
 
         pages = []
         if data["list"]:
@@ -531,7 +532,9 @@ class Utility(commands.Cog):
             }
 
             async with self.bot.session.post(url, headers=headers, data=params) as response:
-                translation = (await response.json())["message"]["result"]["translatedText"]
+                translation = (await response.json(loads=orjson.loads))["message"]["result"][
+                    "translatedText"
+                ]
 
         else:
             # use google
@@ -545,7 +548,7 @@ class Utility(commands.Cog):
             }
 
             async with self.bot.session.get(url, params=params) as response:
-                data = await response.json()
+                data = await response.json(loads=orjson.loads)
 
             try:
                 translation = html.unescape(data["data"]["translations"][0]["translatedText"])
@@ -580,7 +583,7 @@ class Utility(commands.Cog):
         url = "https://api.gfycat.com/v1/gfycats"
         params = {"fetchUrl": media_url.strip("`")}
         async with self.bot.session.post(url, json=params, headers=auth_headers) as response:
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
 
         try:
             gfyname = data["gfyname"]
@@ -594,7 +597,7 @@ class Utility(commands.Cog):
         await asyncio.sleep(5)
         while True:
             async with self.bot.session.get(url, headers=auth_headers) as response:
-                data = await response.json()
+                data = await response.json(loads=orjson.loads)
                 task = data["task"]
 
             if task == "encoding":
@@ -626,7 +629,7 @@ class Utility(commands.Cog):
         async with self.bot.session.get(url, params=params, auth=auth) as response:
             if response.status != 200:
                 try:
-                    data = await response.json()
+                    data = await response.json(loads=orjson.loads)
                     messages = []
                     for category in data["messages"]:
                         for msg in data["messages"][category]:
@@ -639,7 +642,7 @@ class Utility(commands.Cog):
                 logger.error(errormsg)
                 return await ctx.send(f"```{errormsg.split(';')[0]}```")
 
-            data = await response.json()
+            data = await response.json(loads=orjson.loads)
             link = "https://streamable.com/" + data.get("shortcode")
             message = await ctx.send(f"Processing Video {emojis.LOADING}")
 
@@ -679,7 +682,7 @@ class Utility(commands.Cog):
         symbol = symbol.upper()
         params = {"symbol": symbol.strip("$"), "token": FINNHUB_TOKEN}
         async with self.bot.session.get(FINNHUB_API_QUOTE_URL, params=params) as response:
-            quote_data = await response.json()
+            quote_data = await response.json(loads=orjson.loads)
 
         error = quote_data.get("error")
         if error:
@@ -689,7 +692,7 @@ class Utility(commands.Cog):
             raise exceptions.CommandWarning("Company not found")
 
         async with self.bot.session.get(FINNHUB_API_PROFILE_URL, params=params) as response:
-            company_profile = await response.json()
+            company_profile = await response.json(loads=orjson.loads)
 
         change = float(quote_data["c"]) - float(quote_data["pc"])
         GAINS = change > 0
@@ -864,7 +867,7 @@ async def detect_language(session, string):
     params = {"key": GOOGLE_API_KEY, "q": string[:1000]}
 
     async with session.get(url, params=params) as response:
-        data = await response.json()
+        data = await response.json(loads=orjson.loads)
         language = data["data"]["detections"][0][0]["language"]
 
     return language
@@ -879,7 +882,7 @@ async def gfycat_oauth(session):
     }
 
     async with session.post(url, json=params) as response:
-        data = await response.json()
+        data = await response.json(loads=orjson.loads)
         access_token = data["access_token"]
 
     auth_headers = {"Authorization": f"Bearer {access_token}"}
