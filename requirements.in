@@ -19,7 +19,6 @@ psutil
 python-dotenv
 regex
 scipy
-statcord.py
 tweepy
 uvloop
 prometheus-async

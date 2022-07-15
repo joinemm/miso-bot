@@ -15,7 +15,6 @@ aiohttp==3.8.1
     #   async-cse
     #   asyncprawcore
     #   discord-py
-    #   statcord-py
 aiohttp-cors==0.7.0
     # via -r requirements.in
 aiomysql==0.0.22
@@ -119,9 +118,7 @@ prometheus-async==22.2.0
 prometheus-client==0.14.1
     # via prometheus-async
 psutil==5.9.0
-    # via
-    #   -r requirements.in
-    #   statcord-py
+    # via -r requirements.in
 pycares==4.1.2
     # via aiodns
 pycparser==2.21
@@ -159,8 +156,6 @@ six==1.16.0
     #   tweepy
 soupsieve==2.3.1
     # via beautifulsoup4
-statcord-py==3.1.0
-    # via -r requirements.in
 tweepy==3.10.0
     # via -r requirements.in
 typing-extensions==4.0.1

@@ -46,7 +46,6 @@ extensions = [
     "reddit",
     "crypto",
     "kpop",
-    "stats",
     "webserver",
     "prometheus",
 ]
