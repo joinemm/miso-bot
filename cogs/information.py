@@ -98,7 +98,7 @@ class Information(commands.Cog):
     @commands.command(name="info")
     async def info(self, ctx: commands.Context):
         """Get information about the bot"""
-        membercount = len(set(self.bot.get_all_members()))
+        membercount = len(self.bot.users)
         content = discord.Embed(
             title=f"Miso Bot | version {self.bot.version}",
             colour=int("E46A92", 16),
@@ -302,6 +302,7 @@ class Information(commands.Cog):
             await ctx.send(embed=content)
 
     @commandstats.command(name="global")
+    @commands.is_owner()
     async def commandstats_global(self, ctx: commands.Context, user: discord.Member = None):
         """Most used commands globally"""
         content = discord.Embed(

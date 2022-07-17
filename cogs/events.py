@@ -20,7 +20,7 @@ class Events(commands.Cog):
         self.statuses = cycle(
             [
                 ("watching", lambda: f"{len(self.bot.guilds):,} servers"),
-                ("listening", lambda: f"{len(set(self.bot.get_all_members())):,} users"),
+                ("listening", lambda: f"{len(self.bot.users):,} users"),
                 ("playing", lambda: "misobot.xyz"),
             ]
         )

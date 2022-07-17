@@ -62,7 +62,7 @@ class Prometheus(commands.Cog):
     async def on_socket_event_type(self, event_type):
         self.event_counter.labels(event_type).inc()
 
-    @tasks.loop(seconds=1)
+    @tasks.loop(seconds=10)
     async def log_shard_latencies(self):
         for shard in self.bot.shards.values():
             self.shard_latency_summary.labels(shard.id).observe(shard.latency)
@@ -70,11 +70,11 @@ class Prometheus(commands.Cog):
     @tasks.loop(minutes=1)
     async def log_cache_contents(self):
         guild_count = len(self.bot.guilds)
-        member_count = len(set(self.bot.get_all_members()))
+        member_count = len(self.bot.users)
         self.guild_count.set(guild_count)
         self.member_count.set(member_count)
 
-    @tasks.loop(seconds=1)
+    @tasks.loop(seconds=10)
     async def log_system_metrics(self):
         ram = psutil.Process().memory_info().rss
         self.ram_gauge.set(ram)

@@ -68,7 +68,7 @@ class WebServer(commands.Cog):
             await self.bot.db.execute("SELECT SUM(uses) FROM command_usage", one_value=True)
         )
         self.cached["guilds"] = len(self.bot.guilds)
-        self.cached["users"] = len(set(self.bot.get_all_members()))
+        self.cached["users"] = len(self.bot.users)
         self.cached["donators"] = await self.update_donator_list()
         self.cached_command_list = await self.generate_command_list()
 
