@@ -19,8 +19,8 @@ class Events(commands.Cog):
         self.bot = bot
         self.statuses = cycle(
             [
-                ("watching", lambda: f"{len(self.bot.guilds):,} servers"),
-                ("listening", lambda: f"{len(self.bot.users):,} users"),
+                ("watching", lambda: f"{self.bot.guild_count:,} servers"),
+                ("listening", lambda: f"{self.bot.member_count:,} members"),
                 ("playing", lambda: "misobot.xyz"),
             ]
         )
