@@ -7,6 +7,7 @@ from discord.ext import commands, tasks
 
 from libraries import emoji_literals
 from modules import log, queries, util
+from modules.misobot import MisoBot
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
@@ -16,7 +17,7 @@ class Events(commands.Cog):
     """Event handlers for various discord events"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.statuses = cycle(
             [
                 ("watching", lambda: f"{self.bot.guild_count:,} servers"),
@@ -64,8 +65,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         """Called when the bot joins a new guild"""
-        if not self.bot.is_ready():
-            return
+        await self.bot.wait_until_ready()
         blacklisted = await self.bot.db.execute(
             "SELECT reason FROM blacklisted_guild WHERE guild_id = %s",
             guild.id,
@@ -93,8 +93,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         """Called when the bot leaves a guild"""
-        if not self.bot.is_ready():
-            return
+        await self.bot.wait_until_ready()
         logger.info(f"Left guild {guild}")
         content = discord.Embed(color=discord.Color.red())
         content.title = "Left guild!"
@@ -113,8 +112,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         """Called when a new member joins a guild"""
-        if not self.bot.is_ready():
-            return
+        await self.bot.wait_until_ready()
         logging_channel_id = None
         logging_settings = self.bot.cache.logging_settings.get(str(member.guild.id))
         if logging_settings:
@@ -162,8 +160,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         """Called when user gets banned from a server"""
-        if not self.bot.is_ready():
-            return
+        await self.bot.wait_until_ready()
         logging_channel_id = None
         logging_settings = self.bot.cache.logging_settings.get(str(guild.id))
         if logging_settings:
@@ -186,8 +183,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         """Called when member leaves a guild"""
-        if not self.bot.is_ready():
-            return
+        await self.bot.wait_until_ready()
         logging_channel_id = None
         logging_settings = self.bot.cache.logging_settings.get(str(member.guild.id))
         if logging_settings:
@@ -227,8 +223,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_message_delete(self, payload):
         """Listener that gets called when any message is deleted"""
-        if not self.bot.is_ready():
-            return
+        await self.bot.wait_until_ready()
 
         channel = self.bot.get_channel(payload.channel_id)
         if channel is None:
@@ -272,8 +267,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Listener that gets called on every message"""
-        if not self.bot.is_ready():
-            return
+        await self.bot.wait_until_ready()
 
         # ignore DMs
         if message.guild is None:
@@ -342,8 +336,7 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         """Starboard event handler"""
-        if not self.bot.is_ready():
-            return
+        await self.bot.wait_until_ready()
 
         user = self.bot.get_user(payload.user_id)
         if user.bot:

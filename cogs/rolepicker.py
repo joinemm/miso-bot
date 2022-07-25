@@ -4,13 +4,14 @@ import discord
 from discord.ext import commands
 
 from modules import exceptions, queries, util
+from modules.misobot import MisoBot
 
 
 class Rolepicker(commands.Cog):
     """Set up a role picker"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "🧮"
 
     @commands.group(case_insensitive=True)
@@ -111,8 +112,7 @@ class Rolepicker(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Rolechannel message handler"""
-        if not self.bot.is_ready():
-            return
+        await self.bot.wait_until_ready()
 
         if message.guild is None:
             return

@@ -70,9 +70,7 @@ class Notifications(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         """Notification message handler"""
-        # make sure bot cache is ready
-        if not self.bot.is_ready():
-            return
+        await self.bot.wait_until_ready()
 
         # ignore DMs
         if message.guild is None:

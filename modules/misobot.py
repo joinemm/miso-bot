@@ -96,9 +96,6 @@ class MisoBot(commands.AutoShardedBot):
 
     async def on_message(self, message):
         """Overrides built-in on_message()"""
-        if not self.is_ready():
-            return
-
         await super().on_message(message)
 
     async def on_ready(self):

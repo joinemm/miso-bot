@@ -61,7 +61,7 @@ class WebServer(commands.Cog):
 
     async def cog_load(self):
         self.cache_stats.start()
-        self.cached_command_list = await self.generate_command_list()
+        self.cached_command_list = self.generate_command_list()
         self.bot.loop.create_task(self.run())
 
     async def cog_unload(self):
@@ -156,7 +156,7 @@ class WebServer(commands.Cog):
 
         return result
 
-    async def generate_command_list(self):
+    def generate_command_list(self):
         ignored_cogs = ["Jishaku", "Owner"]
         result = []
         for cog in self.bot.cogs.values():
