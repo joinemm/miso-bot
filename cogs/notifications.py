@@ -122,6 +122,8 @@ class Notifications(commands.Cog):
                     user_id,
                     keyword,
                 )
+                continue
+
             if member is not None and message.channel.permissions_for(member).read_messages:
                 asyncio.ensure_future(self.send_notification(member, message, users_words))
 
