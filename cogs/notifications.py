@@ -110,7 +110,18 @@ class Notifications(commands.Cog):
                     users_keywords[user_id] = [keyword]
 
         for user_id, users_words in users_keywords.items():
-            member = await message.guild.fetch_member(user_id)
+            try:
+                member = await message.guild.fetch_member(user_id)
+            except discord.NotFound:
+                self.bot.logger.warning(
+                    f"User {user_id} not found, deleting their notification for {users_words}"
+                )
+                await self.bot.db.execute(
+                    """DELETE FROM notification WHERE guild_id = %s AND user_id = %s AND keyword = %s""",
+                    message.guild.id,
+                    user_id,
+                    keyword,
+                )
             if member is not None and message.channel.permissions_for(member).read_messages:
                 asyncio.ensure_future(self.send_notification(member, message, users_words))
 
