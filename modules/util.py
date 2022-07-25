@@ -4,6 +4,7 @@ import io
 import math
 import os
 import re
+from time import time
 
 import aiohttp
 import arrow
@@ -16,9 +17,10 @@ from durations_nlp.exceptions import InvalidTokenError
 from PIL import Image, UnidentifiedImageError
 
 from libraries import emoji_literals
-from modules import emojis, exceptions, queries
+from modules import emojis, exceptions, log, queries
 
 IMAGE_SERVER_HOST = os.environ.get("IMAGE_SERVER_HOST")
+logger = log.get_logger(__name__)
 
 
 class ErrorMessage(Exception):
@@ -782,6 +784,15 @@ async def render_html(bot, payload):
 def ordinal(n):
     """Return number with ordinal suffix eg. 1st, 2nd, 3rd, 4th..."""
     return str(n) + {1: "st", 2: "nd", 3: "rd"}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
+
+
+async def require_chunked(guild: discord.Guild):
+    if guild is not None and not guild.chunked:
+        start_time = time()
+        await guild.chunk(cache=True)
+        logger.info(
+            f"Chunked [{guild}] with {guild.member_count} members in {time() - start_time:.2f} seconds"
+        )
 
 
 class TwoWayIterator:

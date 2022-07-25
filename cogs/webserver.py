@@ -62,13 +62,13 @@ class WebServer(commands.Cog):
         self.cache_stats.cancel()
         await self.shutdown()
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=5)
     async def cache_stats(self):
         self.cached["commands"] = int(
             await self.bot.db.execute("SELECT SUM(uses) FROM command_usage", one_value=True)
         )
-        self.cached["guilds"] = len(self.bot.guilds)
-        self.cached["users"] = len(self.bot.users)
+        self.cached["guilds"] = self.bot.guild_count
+        self.cached["users"] = self.bot.member_count
         self.cached["donators"] = await self.update_donator_list()
         self.cached_command_list = await self.generate_command_list()
 

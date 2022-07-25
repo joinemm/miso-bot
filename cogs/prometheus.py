@@ -5,6 +5,7 @@ from discord.ext import commands, tasks
 from prometheus_client import Counter, Gauge, Histogram, Summary
 
 from modules import log
+from modules.misobot import MisoBot
 
 logger = log.get_logger(__name__)
 
@@ -13,7 +14,7 @@ class Prometheus(commands.Cog):
     """Collects prometheus metrics"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.ram_gauge = Gauge(
             "miso_memory_usage_bytes",
             "Memory usage of the bot process in bytes.",
@@ -45,7 +46,11 @@ class Prometheus(commands.Cog):
         )
         self.member_count = Gauge(
             "miso_cached_member_count",
-            "Total amount of members cached.",
+            "Sum of all guilds' member counts",
+        )
+        self.user_count = Gauge(
+            "miso_cached_user_count",
+            "Total amount of users cached",
         )
 
     async def cog_load(self):
@@ -69,10 +74,11 @@ class Prometheus(commands.Cog):
 
     @tasks.loop(minutes=1)
     async def log_cache_contents(self):
-        guild_count = len(self.bot.guilds)
+        guild_count = self.bot.guild_count
         member_count = len(self.bot.users)
         self.guild_count.set(guild_count)
         self.member_count.set(member_count)
+        self.user_count.set(self.bot.member_count)
 
     @tasks.loop(seconds=10)
     async def log_system_metrics(self):

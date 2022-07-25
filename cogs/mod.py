@@ -54,6 +54,7 @@ class Mod(commands.Cog):
 
             guild = self.bot.get_guild(guild_id)
             if guild is not None:
+                await util.require_chunked(guild)
                 user = guild.get_member(user_id)
             else:
                 user = None

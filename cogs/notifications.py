@@ -68,7 +68,7 @@ class Notifications(commands.Cog):
             self.bot.logger.warning(f"Forbidden when trying to send a notification to {member}.")
 
     @commands.Cog.listener()
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         """Notification message handler"""
         # make sure bot cache is ready
         if not self.bot.is_ready():
@@ -87,21 +87,10 @@ class Notifications(commands.Cog):
         if not keywords:
             return
 
-        filtered_keywords = {}
-        for keyword, users in keywords.items():
-            filtered_users = []
-            for user_id in users:
-                member = message.guild.get_member(user_id)
-                if member is not None and member.id is not message.author.id:
-                    filtered_users.append(member.id)
-            if filtered_users:
-                filtered_keywords[keyword] = filtered_users
-
-        if len(filtered_keywords) < 1:
-            return
-
         pattern = regex.compile(
-            self.keyword_regex, words=filtered_keywords.keys(), flags=regex.IGNORECASE
+            self.keyword_regex,
+            words=keywords.keys(),
+            flags=regex.IGNORECASE,
         )
 
         finds = pattern.findall(message.content)
@@ -111,15 +100,17 @@ class Notifications(commands.Cog):
         users_keywords = {}
         for keyword in set(finds):
             keyword = keyword.lower().strip()
-            users_to_notify = filtered_keywords.get(keyword, [])
+            users_to_notify = keywords.get(keyword, [])
             for user_id in users_to_notify:
+                if user_id == message.author.id:
+                    continue
                 try:
                     users_keywords[user_id].append(keyword)
                 except KeyError:
                     users_keywords[user_id] = [keyword]
 
         for user_id, users_words in users_keywords.items():
-            member = message.guild.get_member(user_id)
+            member = await message.guild.fetch_member(user_id)
             if member is not None and message.channel.permissions_for(member).read_messages:
                 asyncio.ensure_future(self.send_notification(member, message, users_words))
 

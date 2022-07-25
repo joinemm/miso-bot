@@ -12,13 +12,14 @@ import psutil
 from discord.ext import commands
 
 from modules import emojis, exceptions, util
+from modules.misobot import MisoBot
 
 
 class Information(commands.Cog):
     """See bot related information"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "ℹ️"
 
     @commands.command()
@@ -98,18 +99,18 @@ class Information(commands.Cog):
     @commands.command(name="info")
     async def info(self, ctx: commands.Context):
         """Get information about the bot"""
-        membercount = len(self.bot.users)
         content = discord.Embed(
             title=f"Miso Bot | version {self.bot.version}",
             colour=int("E46A92", 16),
         )
-        owner = self.bot.get_user(self.bot.owner_id)
+        owner = await self.bot.fetch_user(self.bot.owner_id)
         content.description = (
-            f"Created by **{owner}** {owner.mention} using discord.py {discord.__version__}\n\n"
+            f"Created by **{owner}** {owner.mention} \n"
+            f"using *discord.py {discord.__version__}\n\n*"
             f"Use `{ctx.prefix}help` to get help on any commands, \n"
             f"or visit the website for more detailed instructions.\n\n"
-            f"Currently in **{len(self.bot.guilds)}** servers across **{len(self.bot.latencies)}** shards,\n"
-            f"totalling **{membercount}** unique users."
+            f"Currently in **{self.bot.guild_count}** servers "
+            f"with a total member count of **{self.bot.member_count}**."
         )
         content.set_thumbnail(url=self.bot.user.display_avatar.url)
         content.add_field(name="Website", value="https://misobot.xyz", inline=False)

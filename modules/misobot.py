@@ -24,6 +24,7 @@ class MisoBot(commands.AutoShardedBot):
             owner_id=133311691852218378,
             client_id=500385855072894982,
             status=Status.idle,
+            chunk_guilds_at_startup=False,
             intents=Intents(  # https://discordpy.readthedocs.io/en/latest/api.html?highlight=intents#intents
                 guilds=True,
                 members=True,  # requires verification
@@ -33,7 +34,7 @@ class MisoBot(commands.AutoShardedBot):
                 webhooks=False,
                 invites=False,
                 voice_states=False,
-                presences=True,  # requires verification
+                presences=False,  # requires verification
                 guild_messages=True,
                 dm_messages=True,
                 guild_reactions=True,
@@ -111,6 +112,7 @@ class MisoBot(commands.AutoShardedBot):
     @staticmethod
     async def before_any_command(ctx: commands.Context):
         """Runs before any command"""
+        await util.require_chunked(ctx.guild)
         ctx.timer = time()
         try:
             await ctx.typing()
@@ -134,3 +136,28 @@ class MisoBot(commands.AutoShardedBot):
         if retry_after:
             raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.member)
         return True
+
+    @property
+    def member_count(self) -> int:
+        return sum(guild.member_count for guild in self.guilds)
+
+    @property
+    def guild_count(self) -> int:
+        return len(self.guilds)
+
+
+class MisoCluster(MisoBot):
+    def __init__(self, **kwargs):
+        self.cluster_name = kwargs.pop("cluster_name")
+        self.cluster_id = kwargs.pop("cluster_id")
+        super().__init__(**kwargs)
+
+        self.logger = log.get_logger(f"MisoBot#{self.cluster_name}")
+
+        self.run(kwargs["token"])
+
+    async def on_ready(self):
+        self.logger.info(f"Cluster {self.cluster_name} ready")
+
+    async def on_shard_ready(self, shard_id):
+        self.logger.info(f"Shard {shard_id} ready")

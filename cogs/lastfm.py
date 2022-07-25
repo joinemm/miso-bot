@@ -33,6 +33,7 @@ def is_small_server():
     async def predicate(ctx):
         if ctx.guild is None:
             return True
+        await util.require_chunked(ctx.guild)
         users = await ctx.bot.db.execute(
             """
             SELECT count(*) FROM user_settings WHERE user_id IN %s

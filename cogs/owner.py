@@ -32,9 +32,8 @@ class Owner(commands.Cog):
     @commands.command()
     async def guilds(self, ctx: commands.Context):
         """Show all connected guilds"""
-        membercount = len(self.bot.users)
         content = discord.Embed(
-            title=f"Total **{len(self.bot.guilds)}** guilds, **{membercount}** unique users"
+            title=f"Total **{self.bot.guild_count}** guilds, **{self.bot.member_count}** members"
         )
 
         rows = []
