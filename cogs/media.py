@@ -15,12 +15,13 @@ from discord.ext import commands
 from tweepy import OAuthHandler
 
 from modules import exceptions, instagram, log, util
+from modules.views import LinkButton
 
 logger = log.get_logger(__name__)
 
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")
-IG_COOKIE = os.environ.get("IG_COOKIE")
+IG_SESSION_ID = os.environ.get("IG_SESSION_ID")
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
@@ -39,153 +40,12 @@ class Media(commands.Cog):
         self.twitter_api = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
         self.ig = instagram.Instagram(
             self.bot.session,
-            IG_COOKIE,
+            IG_SESSION_ID,
             use_proxy=True,
             proxy_url=PROXY_URL,
             proxy_user=PROXY_USER,
             proxy_pass=PROXY_PASS,
         )
-        self.ig_colors = [
-            int("405de6", 16),
-            int("5851db", 16),
-            int("833ab4", 16),
-            int("c13584", 16),
-            int("e1306c", 16),
-            int("fd1d1d", 16),
-            int("f56040", 16),
-            int("f77737", 16),
-            int("fcaf45", 16),
-        ]
-        self.regions = {
-            "kr": "www",
-            "korea": "www",
-            "eune": "eune",
-            "euw": "euw",
-            "jp": "jp",
-            "japan": "jp",
-            "na": "na",
-            "oceania": "oce",
-            "oce": "oce",
-            "brazil": "br",
-            "las": "las",
-            "russia": "ru",
-            "ru": "ru",
-            "turkey": "tr",
-            "tr": "tr",
-        }
-
-    @commands.group(aliases=["league"], case_insensitive=True, enabled=False)
-    async def opgg(self, ctx: commands.Context):
-        """League of legends stats"""
-        await util.command_group_help(ctx)
-
-    @opgg.command()
-    async def profile(self, ctx: commands.Context, region, *, summoner_name):
-        """See your op.gg profile"""
-        parsed_region = self.regions.get(region.lower())
-        if parsed_region is None:
-            return await ctx.send(f":warning: Unknown region `{region}`")
-
-        region = parsed_region
-
-        ggsoup = GGSoup()
-        await ggsoup.create(region, summoner_name)
-
-        if ggsoup.soup.find("div", {"class": "SummonerNotFoundLayout"}):
-            raise exceptions.CommandWarning("Summoner not found!")
-
-        content = discord.Embed()
-        content.set_author(
-            name=f"{ggsoup.text('span', 'Name')} [{region.upper()}]",
-            icon_url=ggsoup.src("img", "ProfileImage"),
-        )
-
-        rank = ggsoup.text("div", "TierRank")
-        lp = ""
-        wins_losses = ""
-        if rank != "Unranked":
-            lp = ggsoup.text("span", "LeaguePoints")
-            wins_losses = (
-                f"{ggsoup.text('span', 'wins')} {ggsoup.text('span', 'losses')} "
-                f"({ggsoup.text('span', 'winratio').split()[-1]})"
-            )
-
-        content.add_field(
-            name="Rank",
-            value=f"**{rank}**" + (f" {lp} **|** {wins_losses}" if rank != "Unranked" else ""),
-            inline=False,
-        )
-
-        rank_image = "https:" + ggsoup.soup.find("div", {"class": "Medal"}).find("img").get("src")
-        content.set_thumbnail(url=rank_image)
-        content.colour = int("5383e8", 16)
-
-        champions = []
-        for championbox in ggsoup.soup.findAll("div", {"class": "ChampionBox"}):
-            name = championbox.find("div", {"class": "ChampionName"}).get("title")
-            played_div = championbox.find("div", {"class": "Played"})
-            played_count = played_div.find("div", {"class": "Title"}).text.strip()
-            winrate = played_div.find("div", {"class": "WinRatio"}).text.strip()
-            champions.append(
-                f"**{played_count.replace(' Played', '** Played')} **{name}** ({winrate})"
-            )
-
-        content.add_field(name="Champions", value="\n".join(champions) if champions else "None")
-
-        match_history = []
-        for match in ggsoup.soup.findAll("div", {"class": "GameItem"}):
-            gametype = ggsoup.text("div", "GameType", match)
-            champion = match.find("div", {"class": "ChampionName"}).find("a").text.strip()
-            win = match.get("data-game-result") == "win"
-            kda = "".join(ggsoup.text("div", "KDA", match.find("div", {"class": "KDA"})).split())
-            emoji = ":blue_square:" if win else ":red_square:"
-            match_history.append(f"{emoji} **{gametype}** as **{champion}** `{kda}`")
-
-        content.add_field(
-            name="Match History",
-            value="\n".join(match_history) if match_history else "No matches found",
-        )
-
-        await ctx.send(embed=content)
-
-    @opgg.command()
-    async def nowplaying(self, ctx: commands.Context, region, *, summoner_name):
-        """Show your current game"""
-        parsed_region = self.regions.get(region.lower())
-        if parsed_region is None:
-            return await ctx.send(f":warning: Unknown region `{region}`")
-
-        region = parsed_region
-
-        content = discord.Embed(title=f"{summoner_name} current game")
-
-        ggsoup = GGSoup()
-        await ggsoup.create(region, summoner_name, sub_url="spectator/")
-
-        error = ggsoup.soup.find("div", {"class": "SpectatorError"})
-        if error:
-            raise exceptions.CommandWarning(error.find("h2").text)
-
-        blue_team = ggsoup.soup.find("table", {"class": "Team-100"})
-        red_team = ggsoup.soup.find("table", {"class": "Team-200"})
-        for title, team in [("Blue Team", blue_team), ("Red Team", red_team)]:
-            rows = []
-            players = team.find("tbody").findAll("tr")
-            for player in players:
-                champion = (
-                    player.find("td", {"class": "ChampionImage"})
-                    .find("a")
-                    .get("href")
-                    .split("/")[2]
-                )
-                summoner = ggsoup.text("a", "SummonerName", player)
-                url = f"https://{region}.op.gg/summoner/userName={summoner.replace(' ', '%20')}"
-                rank = ggsoup.text("div", "TierRank", player)
-                rows.append(f"`{rank:20} |` [{summoner}]({url}) as **{champion}**")
-
-            content.add_field(name=title, value="\n".join(rows), inline=False)
-
-        await ctx.send(embed=content)
 
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx: commands.Context, *, query):
@@ -215,15 +75,35 @@ class Media(commands.Cog):
             index_entries=True,
         )
 
-    @commands.command(aliases=["ig", "insta"], usage="<links...> '-d'")
+    async def download_media(self, media_url: str, filename: str, max_filesize: int):
+        # The url params are unescaped by aiohttp's built-in yarl
+        # This causes problems with the hash-based request signing that instagram uses
+        # Thankfully you can plug your own yarl.URL with encoded=True so it wont get encoded twice
+        async with self.bot.session.get(yarl.URL(media_url, encoded=True)) as response:
+            if int(response.headers.get("content-length", max_filesize)) > max_filesize:
+                return f"\n{media_url}"
+            else:
+                buffer = io.BytesIO(await response.read())
+                return discord.File(fp=buffer, filename=filename)
+
+    @commands.command()
+    async def story(self, ctx, name, pk=None):
+        await ctx.send()
+
+    @commands.command(aliases=["ig", "insta"], usage="<links...> '-e'")
     async def instagram(self, ctx: commands.Context, *links):
         """Retrieve images from one or more instagram posts"""
         urls = []
-        download = False
+        use_embeds = False
 
         for link in links:
-            if link.lower() in ["-d", "--download"]:
-                download = True
+            if link.lower() in ["-e", "--embed"]:
+                use_embeds = True
+            elif link.lower() in ["-d", "--download"]:
+                await ctx.send(
+                    ":information_source: `-d` is deprecated and is now the default option. pass `-e` to use embeds"
+                )
+                await ctx.typing()
             else:
                 urls.append(link)
 
@@ -231,70 +111,85 @@ class Media(commands.Cog):
             raise exceptions.CommandWarning("Only 5 links at a time please!")
 
         for post_url in urls:
-            result = regex.findall("/(p|reel|tv)/(.*?)(/|\\Z)", post_url)
-            if result:
-                shortcode = result[0][1]
+            shortcode = None
+            story_pk = None
+            username = None
+            result = regex.search(r"/(p|reel|tv)/(.*?)(/|\Z)", post_url)
+            if result is not None:
+                shortcode = result.group(2)
             else:
-                shortcode = post_url.strip("/").split("/")[0]
+                story_result = regex.search(r"/stories/(.*?)/(\d*)(/|\Z)", post_url)
+                if story_result is not None:
+                    username = story_result.group(1)
+                    story_pk = story_result.group(2)
+                else:
+                    shortcode = post_url.strip("/").split("/")[0]
 
-            post_url = f"https://www.instagram.com/p/{shortcode}"
             try:
-                post = await self.ig.extract(shortcode)
+                if shortcode:
+                    post_url = f"https://www.instagram.com/p/{shortcode}"
+                    post = await self.ig.get_post(shortcode)
+                else:
+                    post_url = f"https://www.instagram.com/stories/{username}/{story_pk}"
+                    post = await self.ig.get_story(username, story_pk)
             except instagram.ExpiredCookie:
                 raise exceptions.CommandError(
-                    "The Instagram login cookie has expired, please ask my developer to reauthenticate!"
+                    "The Instagram login session has expired, please ask my developer to reauthenticate!"
                 )
+            except instagram.ExpiredStory:
+                raise exceptions.CommandError("This story is no longer available.")
             except instagram.InstagramError as e:
                 raise exceptions.CommandError(e.message)
 
-            if download:
-                # send as files
-                caption = "\n".join(
-                    [
-                        f":bust_in_silhouette: **@{post.user.username}**",
-                        f":calendar: <t:{post.timestamp}:d>",
-                        f":link: <{post_url}>",
-                    ]
+            if use_embeds:
+                # send as embeds
+                content = discord.Embed(color=self.ig.color)
+                content.set_author(
+                    name=f"@{post.user.username}",
+                    icon_url=post.user.avatar_url,
+                    url=post_url,
                 )
-                files = []
+                embeds = []
+                videos = []
+                for n, media in enumerate(post.media, start=1):
+                    if n == len(post.media):
+                        content.timestamp = arrow.get(post.timestamp).datetime
+                    if media.media_type == instagram.MediaType.VIDEO:
+                        videos.append(media.url)
+                    else:
+                        content.set_image(url=media.url)
+                        embeds.append(content.copy())
+                    content._author = None
+                if embeds:
+                    await ctx.send(embeds=embeds)
+                if videos:
+                    await ctx.send("\n".join(videos))
+            else:
+                # send as files
+                caption = f"{self.ig.emoji} **@{post.user.username}** <t:{post.timestamp}:R>"
+                tasks = []
                 # discord normally has 8MB file size limit, but it can be increased in some guilds
                 max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
                 for n, media in enumerate(post.media, start=1):
                     ext = "mp4" if media.media_type == instagram.MediaType.VIDEO else "jpg"
                     dateformat = arrow.get(post.timestamp).format("YYMMDD")
                     filename = f"{dateformat}-@{post.user.username}-{shortcode}-{n}.{ext}"
+                    tasks.append(self.download_media(media.url, filename, max_filesize))
 
-                    # The url params are unescaped by aiohttp's built-in yarl
-                    # This causes problems with the hash-based request signing that instagram uses
-                    # Thankfully you can plug your own yarl.URL into session.get(), with encoded=True
-                    async with self.bot.session.get(yarl.URL(media.url, encoded=True)) as response:
-                        if (
-                            int(response.headers.get("content-length", max_filesize))
-                            > max_filesize
-                        ):
-                            caption += f"\n{media.url}"
-                        else:
-                            buffer = io.BytesIO(await response.read())
-                            files.append(discord.File(fp=buffer, filename=filename))
+                files = []
+                results = await asyncio.gather(*tasks)
+                for result in results:
+                    if isinstance(result, discord.File):
+                        files.append(result)
+                    else:
+                        caption += result
 
                 # send files to discord
-                await ctx.send(caption, files=files)
-
-            else:
-                # send as embeds
-                content = discord.Embed(color=random.choice(self.ig_colors))
-                content.set_author(
-                    name=f"@{post.user.username}", icon_url=post.user.avatar_url, url=post_url
+                await ctx.send(
+                    caption,
+                    files=files,
+                    view=LinkButton("View on Instagram", post_url),
                 )
-                for n, media in enumerate(post.media, start=1):
-                    if n == len(post.media):
-                        content.timestamp = arrow.get(post.timestamp).datetime
-                    if media.media_type == instagram.MediaType.VIDEO:
-                        await ctx.send(media.url)
-                    else:
-                        content.set_image(url=media.url)
-                        await ctx.send(embed=content)
-                    content._author = None
 
         # finally delete discord automatic embed
         try:
@@ -302,18 +197,25 @@ class Media(commands.Cog):
         except (discord.Forbidden, discord.NotFound):
             pass
 
-    @commands.command(aliases=["twt"], usage="<links...> '-d'")
+    @commands.command(aliases=["twt"], usage="<links...> '-e'")
     async def twitter(self, ctx: commands.Context, *links):
         """Retrieve images from one or more tweets"""
         urls = []
-        download = False
-        if len(links) > 5:
-            raise exceptions.CommandWarning("Only 5 links at a time please!")
+        use_embeds = False
         for link in links:
-            if link.lower() in ["-d", "--download"]:
-                download = True
+            if link.lower() in ["-e", "--embed"]:
+                use_embeds = True
+            elif link.lower() in ["-d", "--download"]:
+                await ctx.send(
+                    ":information_source: `-d` is deprecated and is now the default option. pass `-e` to use embeds"
+                )
+                await ctx.typing()
             else:
                 urls.append(link)
+
+        if len(urls) > 5:
+            raise exceptions.CommandWarning("Only 5 links at a time please!")
+
         for tweet_url in urls:
             if "status" in tweet_url:
                 tweet_id = re.search(r"status/(\d+)", tweet_url).group(1)
@@ -364,20 +266,35 @@ class Media(commands.Cog):
                 url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}",
             )
 
-            if download:
+            if use_embeds:
+                # just send link in embed
+                embeds = []
+                videos = []
+                for n, (media_url, video_url) in enumerate(media_files, start=1):
+                    url = media_url.replace(".jpg", "?format=jpg&name=orig")
+                    content.set_image(url=url)
+                    if n == len(media_files):
+                        content.timestamp = tweet.created_at
+                    embeds.append(content.copy())
+                    if video_url is not None:
+                        # contains a video/gif, send it separately
+                        videos.append(video_url)
+                    content._author = None
+
+                if embeds:
+                    await ctx.send(embeds=embeds)
+                if videos:
+                    await ctx.send("\n".join(videos))
+            else:
                 # download file and rename, upload to discord
                 tweet_link = "https://" + tweet.full_text.split(" ")[-1].split("https://")[-1]
-                timestamp = arrow.get(tweet.created_at).format("YYMMDD")
-                caption = (
-                    f":bust_in_silhouette: **@{tweet.user.screen_name}**\n"
-                    f":calendar: {timestamp}\n"
-                    f":link: <{tweet_link}>"
-                )
-                files = []
+                timestamp = arrow.get(tweet.created_at).timestamp()
+                caption = f"<:twitter:937425165241946162> **@{tweet.user.screen_name}** <t:{int(timestamp)}:R>"
+                tasks = []
                 for n, (media_url, video_url) in enumerate(media_files, start=1):
                     # is image not video
                     if video_url is None:
-                        extension = "jpeg"
+                        extension = "jpg"
                     else:
                         extension = "mp4"
 
@@ -385,32 +302,19 @@ class Media(commands.Cog):
                     # discord normally has 8MB file size limit, but it can be increased in some guilds
                     max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
                     url = media_url.replace(".jpg", "?format=jpg&name=orig")
-                    async with self.bot.session.get(url) as response:
-                        if (
-                            int(response.headers.get("content-length", max_filesize))
-                            > max_filesize
-                        ):
-                            caption += f"\n{url}"
-                        else:
-                            buffer = io.BytesIO(await response.read())
-                            files.append(discord.File(fp=buffer, filename=filename))
+                    tasks.append(self.download_media(url, filename, max_filesize))
 
-                await ctx.send(caption, files=files)
+                files = []
+                results = await asyncio.gather(*tasks)
+                for result in results:
+                    if isinstance(result, discord.File):
+                        files.append(result)
+                    else:
+                        caption += result
 
-            else:
-                # just send link in embed
-                for n, (media_url, video_url) in enumerate(media_files, start=1):
-                    url = media_url.replace(".jpg", "?format=jpg&name=orig")
-                    content.set_image(url=url)
-                    if n == len(media_files):
-                        content.timestamp = tweet.created_at
-                    await ctx.send(embed=content)
-
-                    if video_url is not None:
-                        # contains a video/gif, send it separately
-                        await ctx.send(video_url)
-
-                    content._author = None
+                await ctx.send(
+                    caption, files=files, view=LinkButton("View on twitter", tweet_link)
+                )
 
         try:
             # delete discord automatic embed

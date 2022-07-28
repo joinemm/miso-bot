@@ -11,6 +11,10 @@ class ExpiredCookie(Exception):
     pass
 
 
+class ExpiredStory(Exception):
+    pass
+
+
 class InstagramError(Exception):
     def __init__(self, message):
         self.message = message
@@ -31,6 +35,7 @@ class IgMedia:
 
 @dataclass
 class IgUser:
+    id: int
     username: str
     avatar_url: str
 
@@ -76,9 +81,15 @@ class InstagramIdCodec:
 
 class Instagram:
     def __init__(
-        self, session, cookie, use_proxy=False, proxy_url=None, proxy_user=None, proxy_pass=None
+        self,
+        session: aiohttp.ClientSession,
+        session_id: str,
+        use_proxy: bool = False,
+        proxy_url: str = None,
+        proxy_user: str = None,
+        proxy_pass: str = None,
     ):
-        self.cookie = cookie
+        self.session_id = session_id
         self.session = session
         if use_proxy:
             self.proxy = proxy_url
@@ -87,23 +98,36 @@ class Instagram:
             self.proxy = None
             self.proxy_auth = None
 
-    async def extract(self, shortcode: str) -> IgPost:
-        """Extract all media from given Instagram post"""
-        try:
-            real_media_id = InstagramIdCodec.decode(shortcode[:11])
-        except ValueError:
-            raise InstagramError("Not a valid Instagram link")
+    @property
+    def emoji(self):
+        return "<:ig:937425165162262528>"
+
+    @property
+    def color(self):
+        return int("ce0071", 16)
+
+    def parse_media(self, resource):
+        resource_media_type = MediaType(int(resource["media_type"]))
+        if resource_media_type == MediaType.PHOTO:
+            res = resource["image_versions2"]["candidates"][0]
+            return IgMedia(resource_media_type, res["url"])
+        elif resource_media_type == MediaType.VIDEO:
+            res = resource["video_versions"][0]
+            return IgMedia(resource_media_type, res["url"])
+
+    async def v1_api_request(self, endpoint: str, params: dict = None):
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:98.0) Gecko/20100101 Firefox/98.0",
-            "Cookie": self.cookie,
             "X-IG-App-ID": "936619743392459",
         }
-        url = f"https://i.instagram.com/api/v1/media/{real_media_id}/info/"
-
+        cookies = {"sessionid": self.session_id}
+        base_url = "https://i.instagram.com/api/v1/"
         async with self.session.get(
-            url,
+            base_url + endpoint,
             headers=headers,
+            cookies=cookies,
             proxy=self.proxy,
+            params=params,
             proxy_auth=self.proxy_auth,
         ) as response:
             try:
@@ -111,50 +135,58 @@ class Instagram:
             except aiohttp.ContentTypeError:
                 raise ExpiredCookie
 
-            try:
-                data = data["items"][0]
-            except KeyError:
-                raise InstagramError(data["message"])
+            if data["status"] != "ok":
+                raise InstagramError(data.get("message"))
 
-            resources = []
-            media = []
+        return data
 
-            media_type = MediaType(int(data["media_type"]))
-            if media_type == MediaType.ALBUM:
-                for carousel_media in data["carousel_media"]:
-                    resources.append(carousel_media)
-            else:
-                resources = [data]
+    async def get_story(self, username: str, story_pk: str) -> IgPost:
+        user = await self.get_user(username)
+        data = await self.v1_api_request("feed/reels_media/", {"reel_ids": user.id})
+        stories = data["reels"][user.id]["items"]
+        try:
+            story = next(filter(lambda x: x["pk"] == story_pk, stories))
+        except StopIteration:
+            raise ExpiredStory
 
-            for resource in resources:
-                resource_media_type = MediaType(int(resource["media_type"]))
-                if resource_media_type == MediaType.PHOTO:
-                    res = resource["image_versions2"]["candidates"][0]
-                    media.append(IgMedia(resource_media_type, res["url"]))
-                elif resource_media_type == MediaType.VIDEO:
-                    res = resource["video_versions"][0]
-                    media.append(IgMedia(resource_media_type, res["url"]))
+        return IgPost(user, [self.parse_media(story)], story["taken_at"])
 
-            timestamp = data["taken_at"]
-            user = IgUser(data["user"]["username"], data["user"]["profile_pic_url"])
-            return IgPost(user, media, timestamp)
+    async def get_user(self, username) -> IgUser:
+        data = await self.v1_api_request("users/web_profile_info/", {"username": username})
+        user = data["data"]["user"]
+        return IgUser(user["id"], user["username"], user["profile_pic_url"])
 
-    async def test(self):
-        """Test that every kind of post works"""
-        one_image = "CdxAbDbrUGs"
-        one_video = "CefwLP0KgSO"
-        image_carousel = "CdxHB09rE9m"
-        video_and_image_carousel = "Cei0fGmLlZd"
-        reel = "CeeDK8XgPCP"
+    async def get_post(self, shortcode: str) -> IgPost:
+        """Extract all media from given Instagram post"""
+        try:
+            real_media_id = InstagramIdCodec.decode(shortcode[:11])
+        except ValueError:
+            raise InstagramError("Not a valid Instagram link")
 
-        results = await asyncio.gather(
-            self.extract(one_image),
-            self.extract(one_video),
-            self.extract(reel),
-            self.extract(image_carousel),
-            self.extract(video_and_image_carousel),
+        data = await self.v1_api_request(f"media/{real_media_id}/info/")
+        data = data["items"][0]
+
+        resources = []
+        media = []
+
+        media_type = MediaType(int(data["media_type"]))
+        if media_type == MediaType.ALBUM:
+            for carousel_media in data["carousel_media"]:
+                resources.append(carousel_media)
+        else:
+            resources = [data]
+
+        for resource in resources:
+            media.append(self.parse_media(resource))
+
+        timestamp = data["taken_at"]
+        user = data["user"]
+        user = IgUser(
+            user["pk"],
+            user["username"],
+            user["profile_pic_url"],
         )
-        print(results)
+        return IgPost(user, media, timestamp)
 
 
 if __name__ == "__main__":
