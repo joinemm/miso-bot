@@ -86,10 +86,6 @@ class Media(commands.Cog):
                 buffer = io.BytesIO(await response.read())
                 return discord.File(fp=buffer, filename=filename)
 
-    @commands.command()
-    async def story(self, ctx, name, pk=None):
-        await ctx.send()
-
     @commands.command(aliases=["ig", "insta"], usage="<links...> '-e'")
     async def instagram(self, ctx: commands.Context, *links):
         """Retrieve images from one or more instagram posts"""
