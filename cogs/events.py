@@ -79,7 +79,7 @@ class Events(commands.Cog):
         content = discord.Embed(color=discord.Color.green())
         content.title = "New guild!"
         content.description = (
-            f"Miso just joined **{guild}**\nWith **{guild.member_count-1}** members"
+            f"Miso just joined **{guild}**\nWith **{guild.member_count}** members :D"
         )
         try:
             content.set_thumbnail(url=guild.icon.url)
@@ -98,7 +98,7 @@ class Events(commands.Cog):
         content = discord.Embed(color=discord.Color.red())
         content.title = "Left guild!"
         content.description = (
-            f"Miso just left **{guild}**\nWith **{guild.member_count-1}** members :("
+            f"Miso just left **{guild}**\nWith **{guild.member_count}** members :("
         )
         try:
             content.set_thumbnail(url=guild.icon.url)
