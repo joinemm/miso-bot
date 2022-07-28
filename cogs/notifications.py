@@ -120,6 +120,7 @@ class Notifications(commands.Cog):
                     user_id,
                     keyword,
                 )
+                await self.create_cache()
                 continue
 
             if member is not None and message.channel.permissions_for(member).read_messages:
