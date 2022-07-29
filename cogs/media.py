@@ -167,7 +167,7 @@ class Media(commands.Cog):
                     await ctx.send("\n".join(videos))
             else:
                 # send as files
-                caption = f"{self.ig.emoji} **@{post.user.username}** <t:{post.timestamp}:R>"
+                caption = f"{self.ig.emoji} **@{post.user.username}** <t:{post.timestamp}:d>"
                 tasks = []
                 # discord normally has 8MB file size limit, but it can be increased in some guilds
                 max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
@@ -290,7 +290,7 @@ class Media(commands.Cog):
                 # download file and rename, upload to discord
                 tweet_link = "https://" + tweet.full_text.split(" ")[-1].split("https://")[-1]
                 timestamp = arrow.get(tweet.created_at).timestamp()
-                caption = f"<:twitter:937425165241946162> **@{tweet.user.screen_name}** <t:{int(timestamp)}:R>"
+                caption = f"<:twitter:937425165241946162> **@{tweet.user.screen_name}** <t:{int(timestamp)}:d>"
                 tasks = []
                 for n, (media_url, video_url) in enumerate(media_files, start=1):
                     # is image not video
