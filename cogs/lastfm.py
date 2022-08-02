@@ -297,8 +297,8 @@ class LastFm(commands.Cog):
 
         content = discord.Embed()
         content.colour = await self.cached_image_color(image_url)
-        content.description = f":cd: **{util.escape_md(album)}**"
-        content.title = f"**{util.escape_md(artist)} — *{util.escape_md(track)}* **"
+        content.description = f":cd: **{discord.utils.escape_markdown(album)}**"
+        content.title = f"**{discord.utils.escape_markdown(artist)} — *{discord.utils.escape_markdown(track)}* **"
         content.set_thumbnail(url=image_url)
 
         # tags and playcount
@@ -374,7 +374,7 @@ class LastFm(commands.Cog):
 
         rows = []
         for i, artist in enumerate(artists, start=1):
-            name = util.escape_md(artist["name"])
+            name = discord.utils.escape_markdown(artist["name"])
             plays = artist["playcount"]
             rows.append(f"`#{i:2}` **{plays}** {format_plays(plays)} : **{name}**")
 
@@ -415,8 +415,8 @@ class LastFm(commands.Cog):
 
         rows = []
         for i, album in enumerate(albums, start=1):
-            name = util.escape_md(album["name"])
-            artist_name = util.escape_md(album["artist"]["name"])
+            name = discord.utils.escape_markdown(album["name"])
+            artist_name = discord.utils.escape_markdown(album["artist"]["name"])
             plays = album["playcount"]
             rows.append(
                 f"`#{i:2}` **{plays}** {format_plays(plays)} : **{artist_name}** — ***{name}***"
@@ -462,8 +462,8 @@ class LastFm(commands.Cog):
             if i == 1:
                 image_url = await self.get_artist_image(tracks[0]["artist"]["name"])
 
-            name = util.escape_md(track["name"])
-            artist_name = util.escape_md(track["artist"]["name"])
+            name = discord.utils.escape_markdown(track["name"])
+            artist_name = discord.utils.escape_markdown(track["artist"]["name"])
             plays = track["playcount"]
             rows.append(
                 f"`#{i:2}` **{plays}** {format_plays(plays)} : **{artist_name}** — ***{name}***"
@@ -497,8 +497,8 @@ class LastFm(commands.Cog):
 
         rows = []
         for track in tracks:
-            name = util.escape_md(track["name"])
-            artist_name = util.escape_md(track["artist"]["#text"])
+            name = discord.utils.escape_markdown(track["name"])
+            artist_name = discord.utils.escape_markdown(track["artist"]["#text"])
             rows.append(f"**{artist_name}** — ***{name}***")
 
         image_url = tracks[0]["image"][-1]["#text"]
@@ -553,7 +553,7 @@ class LastFm(commands.Cog):
 
         artist, data = await self.artist_top(ctx, period, artistname, datatype)
         if artist is None or not data:
-            artistname = util.escape_md(artistname)
+            artistname = discord.utils.escape_markdown(artistname)
             if period == "overall":
                 return await ctx.send(f"You have never listened to **{artistname}**!")
             return await ctx.send(
@@ -564,7 +564,7 @@ class LastFm(commands.Cog):
         rows = []
         for i, (name, playcount) in enumerate(data, start=1):
             rows.append(
-                f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{util.escape_md(name)}**"
+                f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{discord.utils.escape_markdown(name)}**"
             )
             total += playcount
 
@@ -645,7 +645,7 @@ class LastFm(commands.Cog):
         for i, (name, playcount) in enumerate(data, start=1):
             total_plays += playcount
             rows.append(
-                f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{util.escape_md(name)}**"
+                f"`#{i:2}` **{playcount}** {format_plays(playcount)} — **{discord.utils.escape_markdown(name)}**"
             )
 
         titlestring = f"top tracks from {albumname}\n— by {artistname}"
@@ -742,7 +742,7 @@ class LastFm(commands.Cog):
             albumsdiv, tracksdiv, _ = soup.findAll("tbody", {"data-playlisting-add-entries": ""})
 
         except ValueError:
-            artistname = util.escape_md(artistname)
+            artistname = discord.utils.escape_markdown(artistname)
             if period == "overall":
                 return await ctx.send(f"You have never listened to **{artistname}**!")
             return await ctx.send(
@@ -817,7 +817,7 @@ class LastFm(commands.Cog):
         content.add_field(
             name=f":cd: {albums_count} Albums",
             value="\n".join(
-                f"`#{i:2}` **{util.escape_md(item)}** ({playcount})"
+                f"`#{i:2}` **{discord.utils.escape_markdown(item)}** ({playcount})"
                 for i, (item, playcount) in enumerate(albums, start=1)
             ),
             inline=True,
@@ -825,7 +825,7 @@ class LastFm(commands.Cog):
         content.add_field(
             name=f":musical_note: {tracks_count} Tracks",
             value="\n".join(
-                f"`#{i:2}` **{util.escape_md(item)}** ({playcount})"
+                f"`#{i:2}` **{discord.utils.escape_markdown(item)}** ({playcount})"
                 for i, (item, playcount) in enumerate(tracks, start=1)
             ),
             inline=True,
@@ -1313,7 +1313,7 @@ class LastFm(commands.Cog):
 
         for song, member in listeners:
             rows.append(
-                f"{util.displayname(member)} | **{util.escape_md(song.get('artist'))}** — ***{util.escape_md(song.get('name'))}***"
+                f"{util.displayname(member)} | **{discord.utils.escape_markdown(song.get('artist'))}** — ***{discord.utils.escape_markdown(song.get('name'))}***"
             )
 
         content = discord.Embed()
@@ -1369,7 +1369,7 @@ class LastFm(commands.Cog):
                 suffix = f"({arrow.get(song.get('date')).humanize()})"
 
             rows.append(
-                f"{util.displayname(member)} | **{util.escape_md(song.get('artist'))}** — ***{util.escape_md(song.get('name'))}*** {suffix}"
+                f"{util.displayname(member)} | **{discord.utils.escape_markdown(song.get('artist'))}** — ***{discord.utils.escape_markdown(song.get('name'))}*** {suffix}"
             )
 
         content = discord.Embed()
@@ -1441,7 +1441,7 @@ class LastFm(commands.Cog):
                 content.set_thumbnail(url=image_url)
 
             rows.append(
-                f"`#{i:2}` **{playcount}** {format_plays(playcount)} : **{util.escape_md(artistname)}**"
+                f"`#{i:2}` **{playcount}** {format_plays(playcount)} : **{discord.utils.escape_markdown(artistname)}**"
             )
 
         await util.send_as_pages(ctx, content, rows, 15)
@@ -1470,7 +1470,7 @@ class LastFm(commands.Cog):
                     continue
                 total_users += 1
                 for data_block in user_data:
-                    name = f'{util.escape_md(data_block["artist"]["name"])} — *{util.escape_md(data_block["name"])}*'
+                    name = f'{discord.utils.escape_markdown(data_block["artist"]["name"])} — *{discord.utils.escape_markdown(data_block["name"])}*'
                     plays = int(data_block["playcount"])
                     image_url = data_block["image"][-1]["#text"]
                     total_plays += plays
@@ -1527,7 +1527,7 @@ class LastFm(commands.Cog):
                     continue
                 total_users += 1
                 for data_block in user_data:
-                    name = f'{util.escape_md(data_block["artist"]["name"])} — *{util.escape_md(data_block["name"])}*'
+                    name = f'{discord.utils.escape_markdown(data_block["artist"]["name"])} — *{discord.utils.escape_markdown(data_block["name"])}*'
                     plays = int(data_block["playcount"])
                     artistname = data_block["artist"]["name"]
                     total_plays += plays
@@ -1634,7 +1634,7 @@ class LastFm(commands.Cog):
         else:
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
-        artistname = util.escape_md(artistname)
+        artistname = discord.utils.escape_markdown(artistname)
 
         rows = []
         old_king = None
@@ -1739,8 +1739,8 @@ class LastFm(commands.Cog):
         else:
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
-        artistname = util.escape_md(artistname)
-        trackname = util.escape_md(trackname)
+        artistname = discord.utils.escape_markdown(artistname)
+        trackname = discord.utils.escape_markdown(trackname)
 
         rows = []
         total = 0
@@ -1815,8 +1815,8 @@ class LastFm(commands.Cog):
         else:
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
-        artistname = util.escape_md(artistname)
-        albumname = util.escape_md(albumname)
+        artistname = discord.utils.escape_markdown(artistname)
+        albumname = discord.utils.escape_markdown(albumname)
 
         rows = []
         total = 0
@@ -1869,7 +1869,7 @@ class LastFm(commands.Cog):
         rows = []
         for artist, playcount in crownartists:
             rows.append(
-                f"**{util.escape_md(str(artist))}** with **{playcount}** {format_plays(playcount)}"
+                f"**{discord.utils.escape_markdown(str(artist))}** with **{playcount}** {format_plays(playcount)}"
             )
 
         content = discord.Embed(color=discord.Color.gold())
