@@ -110,7 +110,7 @@ class Media(commands.Cog):
             shortcode = None
             story_pk = None
             username = None
-            result = regex.search(r"/(p|reel|tv)/([a-zA-Z\-_]{,11})", post_url)
+            result = regex.search(r"/(p|reel|tv)/([a-zA-Z\-_\d]{,11})", post_url)
             if result is not None:
                 shortcode = result.group(2)
             else:
@@ -119,7 +119,8 @@ class Media(commands.Cog):
                     username = story_result.group(1)
                     story_pk = story_result.group(2)
                 else:
-                    shortcode_only = regex.search(r"[a-zA-Z\-_]{,11}", post_url)
+                    shortcode_only = regex.search(r"[a-zA-Z\-_\d]{,11}", post_url)
+                    print(shortcode_only)
                     if shortcode_only is None:
                         raise exceptions.CommandError(
                             f"Invalid Instagram link or shortcode `{post_url}`"
