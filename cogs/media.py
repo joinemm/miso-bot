@@ -21,7 +21,6 @@ logger = log.get_logger(__name__)
 
 TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
 TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")
-IG_SESSION_ID = os.environ.get("IG_SESSION_ID")
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
@@ -40,7 +39,7 @@ class Media(commands.Cog):
         self.twitter_api = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
         self.ig = instagram.Instagram(
             self.bot.session,
-            IG_SESSION_ID,
+            IG_COOKIE,
             use_proxy=True,
             proxy_url=PROXY_URL,
             proxy_user=PROXY_USER,
@@ -116,16 +115,14 @@ class Media(commands.Cog):
             else:
                 story_result = regex.search(r"/stories/(.*?)/(\d*)", post_url)
                 if story_result is not None:
-                    username = story_result.group(1)
-                    story_pk = story_result.group(2)
+                    username, story_pk = story_result.groups()
                 else:
                     shortcode_only = regex.search(r"[a-zA-Z\-_\d]{,11}", post_url)
-                    print(shortcode_only)
                     if shortcode_only is None:
                         raise exceptions.CommandError(
                             f"Invalid Instagram link or shortcode `{post_url}`"
                         )
-                    shortcode = shortcode_only.group(1)
+                    shortcode = shortcode_only.group(0)
 
             try:
                 if shortcode:

@@ -83,13 +83,13 @@ class Instagram:
     def __init__(
         self,
         session: aiohttp.ClientSession,
-        session_id: str,
+        cookie: str,
         use_proxy: bool = False,
         proxy_url: str = None,
         proxy_user: str = None,
         proxy_pass: str = None,
     ):
-        self.session_id = session_id
+        self.cookie = cookie
         self.session = session
         if use_proxy:
             self.proxy = proxy_url
@@ -119,13 +119,12 @@ class Instagram:
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:98.0) Gecko/20100101 Firefox/98.0",
             "X-IG-App-ID": "936619743392459",
+            "Cookie": self.cookie,
         }
-        cookies = {"sessionid": self.session_id}
         base_url = "https://i.instagram.com/api/v1/"
         async with self.session.get(
             base_url + endpoint,
             headers=headers,
-            cookies=cookies,
             proxy=self.proxy,
             params=params,
             proxy_auth=self.proxy_auth,
