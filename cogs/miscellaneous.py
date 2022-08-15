@@ -1,4 +1,6 @@
+import os
 import random
+from typing import Union
 
 import arrow
 import discord
@@ -8,6 +10,8 @@ from discord.ext import commands
 from libraries import emoji_literals, minestat
 from modules import exceptions, util
 from modules.misobot import MisoBot
+
+EMOJIFIER_HOST = os.environ.get("EMOJIFIER_HOST")
 
 
 class Miscellaneous(commands.Cog):
@@ -584,13 +588,26 @@ class Miscellaneous(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def emojify(self, ctx: commands.Context, *, text):
-        """Emojify your message"""
-        request_data = {"density": 100, "input": text, "shouldFilterEmojis": False}
+    async def emojify(self, ctx: commands.Context, *, text: Union[discord.Message, str]):
+        """Emojify your message
+
+        Usage:
+            >emojify <text...>
+            >emojify <link to message>
+        """
+
+        input_text = text.content if isinstance(text, discord.Message) else text
+
         async with self.bot.session.post(
-            "https://api.emojify.net/convert",
-            json=request_data,
-            headers={"Content-Type": "application/json"},
+            f"http://{EMOJIFIER_HOST}:3000/convert",
+            json={
+                "density": 100,
+                "input": input_text,
+                "shouldFilterEmojis": False,
+            },
+            headers={
+                "Content-Type": "application/json",
+            },
         ) as response:
             data = await response.json(loads=orjson.loads)
             result = data.get("result")
@@ -598,7 +615,7 @@ class Miscellaneous(commands.Cog):
             try:
                 await ctx.send(result)
             except discord.errors.HTTPException:
-                raise exceptions.CommandWarning("Your text when emojified is too long to send!")
+                raise exceptions.CommandWarning("Your text once emojified is too long to send!")
 
 
 async def setup(bot):

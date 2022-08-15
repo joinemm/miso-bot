@@ -42,6 +42,13 @@ services:
     expose:
       - 3000
 
+  emojifier:
+    container_name: emojifier
+    build: https://github.com/joinemm/emojify.git#backend
+    restart: unless-stopped
+    expose:
+      - 3000
+
   bot:
     container_name: miso-bot
     build: .
@@ -58,6 +65,7 @@ services:
     environment:
       - DB_HOST=miso-db
       - IMAGE_SERVER_HOST=image-server
+      - EMOJIFIER_HOST=emojifier
       - WEBSERVER_HOSTNAME=miso-bot
 
 networks:
