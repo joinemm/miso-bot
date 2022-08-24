@@ -1,5 +1,4 @@
 import asyncio
-import html
 import io
 import math
 import os
@@ -18,6 +17,7 @@ from discord.ext import commands
 from PIL import Image
 
 from modules import emojis, exceptions, log, util
+from modules.genius import Genius
 
 LASTFM_APPID = os.environ.get("LASTFM_APIKEY")
 LASTFM_TOKEN = os.environ.get("LASTFM_SECRET")
@@ -1892,22 +1892,10 @@ class LastFm(commands.Cog):
                 return await ctx.send(":warning: Could not get currently playing track!")
             query = artistname + " " + trackname
 
-        url = "https://api.audd.io/findLyrics/"
-        request_data = {
-            "api_token": AUDDIO_TOKEN,
-            "q": query,
-        }
-        async with self.bot.session.post(url=url, data=request_data) as response:
-            data = await response.json(loads=orjson.loads)
-
-        if data["status"] != "success":
-            raise exceptions.CommandWarning(
-                f"Something went wrong! `error {data['error']['error_code']}: {data['error']['error_message']}`"
-            )
-
-        results = data["result"]
+        genius = Genius(self.bot.session)
+        results = await genius.search(query)
         if not results:
-            return await ctx.send("Found nothing!")
+            raise exceptions.CommandWarning(f'Found no lyrics for "{query}"')
 
         if len(results) > 1:
             picker_content = discord.Embed(title=f"Search results for `{query}`")
@@ -1941,8 +1929,16 @@ class LastFm(commands.Cog):
         else:
             result = results[0]
 
-        rows = html.unescape(result["lyrics"]).split("\n")
-        content = discord.Embed(title=result["full_title"])
+        lyrics = await genius.scrape_lyrics(result["path"])
+        rows = [f'[Lyrics by Genius]({result["url"]})\n']
+        for page in lyrics:
+            rows += page.strip().split("\n")
+        image_color = await util.color_from_image_url(
+            self.bot.session, result["song_art_image_thumbnail_url"]
+        )
+        content = discord.Embed(title=result["full_title"], color=int(image_color, 16))
+        content.set_footer(text=f"Released {result['release_date_for_display']}")
+        content.set_thumbnail(url=result["song_art_image_url"])
         await util.send_as_pages(ctx, content, rows, maxrows=20)
 
     async def cached_image_color(self, image_url):
