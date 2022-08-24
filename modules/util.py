@@ -573,7 +573,9 @@ async def color_from_image_url(session, url, fallback="E74C3C", return_color_obj
     try:
         async with session.get(url) as response:
             image = Image.open(io.BytesIO(await response.read()))
-            colors = colorgram.extract(image, 1)
+            colors = await asyncio.get_running_loop().run_in_executor(
+                None, lambda: colorgram.extract(image, 1)
+            )
             dominant_color = colors[0].rgb
 
         if return_color_object:
