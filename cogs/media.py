@@ -1,6 +1,5 @@
 import asyncio
 import io
-import os
 import random
 import re
 
@@ -19,16 +18,6 @@ from modules.views import LinkButton
 
 logger = log.get_logger(__name__)
 
-TWITTER_CKEY = os.environ.get("TWITTER_CONSUMER_KEY")
-TWITTER_CSECRET = os.environ.get("TWITTER_CONSUMER_SECRET")
-SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
-SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
-GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
-PROXY_URL = os.environ.get("PROXY_URL")
-PROXY_USER = os.environ.get("PROXY_USER")
-PROXY_PASS = os.environ.get("PROXY_PASS")
-IG_COOKIE = os.environ.get("IG_COOKIE")
-
 
 class Media(commands.Cog):
     """Fetch various media"""
@@ -36,22 +25,20 @@ class Media(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.icon = "🌐"
-        self.twitter_api = tweepy.API(OAuthHandler(TWITTER_CKEY, TWITTER_CSECRET))
-        self.ig = instagram.Instagram(
-            self.bot.session,
-            IG_COOKIE,
-            use_proxy=True,
-            proxy_url=PROXY_URL,
-            proxy_user=PROXY_USER,
-            proxy_pass=PROXY_PASS,
+        self.twitter_api = tweepy.API(
+            OAuthHandler(
+                self.bot.keychain.TWITTER_CONSUMER_KEY,
+                self.bot.keychain.TWITTER_CONSUMER_SECRET,
+            )
         )
+        self.ig = instagram.Instagram(self.bot, use_proxy=True)
 
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx: commands.Context, *, query):
         """Search for videos from youtube"""
         url = "https://www.googleapis.com/youtube/v3/search"
         params = {
-            "key": GOOGLE_API_KEY,
+            "key": self.bot.keychain.GCS_DEVELOPER_KEY,
             "part": "snippet",
             "type": "video",
             "maxResults": 25,

@@ -1,7 +1,6 @@
 import asyncio
 import csv
 import datetime
-import os
 import random
 
 import arrow
@@ -13,15 +12,13 @@ from discord.ext import commands
 
 from modules import exceptions, util
 
-GCS_DEVELOPER_KEY = os.environ.get("GOOGLE_KEY")
-
 
 class Kpop(commands.Cog):
     """Kpop related commands"""
 
     def __init__(self, bot):
         self.bot = bot
-        self.google_client = async_cse.Search(GCS_DEVELOPER_KEY)
+        self.google_client = async_cse.Search(bot.keychain.GCS_DEVELOPER_KEY)
         self.icon = "💃"
         self.gender_icon = {
             "F": ":female_sign: ",

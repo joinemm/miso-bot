@@ -9,6 +9,7 @@ from discord.ext import commands
 
 from modules import cache, log, maria, util
 from modules.help import EmbedHelpCommand
+from modules.keychain import Keychain
 
 
 class MisoBot(commands.AutoShardedBot):
@@ -54,6 +55,7 @@ class MisoBot(commands.AutoShardedBot):
         self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
         self.db = maria.MariaDB(self)
         self.cache = cache.Cache(self)
+        self.keychain = Keychain()
         self.version = "5.1"
         self.extensions_loaded = False
         self.register_hooks()

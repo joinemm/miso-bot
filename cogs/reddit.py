@@ -1,5 +1,3 @@
-import os
-
 import arrow
 import asyncpraw
 import asyncprawcore
@@ -7,9 +5,6 @@ import discord
 from discord.ext import commands
 
 from modules import emojis, util
-
-CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID")
-CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET")
 
 
 class RedditError(commands.CommandError):
@@ -32,8 +27,8 @@ class Reddit(commands.Cog):
             "year": "yearly",
         }
         self.client = asyncpraw.Reddit(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
+            client_id=self.bot.keychain.REDDIT_CLIENT_ID,
+            client_secret=self.bot.keychain.REDDIT_CLIENT_SECRET,
             user_agent="discord:miso_bot",
         )
 

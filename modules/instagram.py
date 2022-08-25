@@ -1,10 +1,10 @@
-import asyncio
-import os
 from dataclasses import dataclass
 from enum import Enum
 
 import aiohttp
 import orjson
+
+from modules.misobot import MisoBot
 
 
 class ExpiredCookie(Exception):
@@ -82,15 +82,16 @@ class InstagramIdCodec:
 class Instagram:
     def __init__(
         self,
-        session: aiohttp.ClientSession,
-        cookie: str,
+        bot: MisoBot,
         use_proxy: bool = False,
-        proxy_url: str = None,
-        proxy_user: str = None,
-        proxy_pass: str = None,
     ):
-        self.cookie = cookie
-        self.session = session
+        self.bot = bot
+        self.session = bot.session
+
+        proxy_url: str = bot.keychain.PROXY_URL
+        proxy_user: str = bot.keychain.PROXY_USER
+        proxy_pass: str = bot.keychain.PROXY_PASS
+
         if use_proxy:
             self.proxy = proxy_url
             self.proxy_auth = aiohttp.BasicAuth(proxy_user, proxy_pass)
@@ -119,7 +120,7 @@ class Instagram:
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:98.0) Gecko/20100101 Firefox/98.0",
             "X-IG-App-ID": "936619743392459",
-            "Cookie": self.cookie,
+            "Cookie": self.bot.keychain.IG_COOKIE,
         }
         base_url = "https://i.instagram.com/api/v1/"
         async with self.session.get(
@@ -186,17 +187,3 @@ class Instagram:
             user["profile_pic_url"],
         )
         return IgPost(user, media, timestamp)
-
-
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-
-    load_dotenv()
-
-    IG_COOKIE = os.environ.get("IG_COOKIE")
-    PROXY_URL = os.environ.get("PROXY_URL")
-    PROXY_USER = os.environ.get("PROXY_USER")
-    PROXY_PASS = os.environ.get("PROXY_PASS")
-
-    ig = Instagram(IG_COOKIE, True, PROXY_URL, PROXY_USER, PROXY_PASS)
-    asyncio.run(ig.test())

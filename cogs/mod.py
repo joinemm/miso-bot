@@ -286,7 +286,10 @@ class Mod(commands.Cog):
     async def inspect(self, ctx: commands.Context, *ids: int):
         """Resolve user ids into usernames"""
         if len(ids) > 25:
-            raise exceptions.CommandWarning("Only 25 at a time please!")
+            raise exceptions.CommandWarning("Only 25 ids at a time please!")
+        elif len(ids) == 0:
+            await util.send_command_help(ctx)
+
         rows = []
         for user_id in ids:
             user = self.bot.get_user(user_id)

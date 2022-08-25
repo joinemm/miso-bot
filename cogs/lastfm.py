@@ -1,7 +1,6 @@
 import asyncio
 import io
 import math
-import os
 import random
 import re
 import urllib.parse
@@ -18,11 +17,6 @@ from PIL import Image
 
 from modules import emojis, exceptions, log, util
 from modules.genius import Genius
-
-LASTFM_APPID = os.environ.get("LASTFM_APIKEY")
-LASTFM_TOKEN = os.environ.get("LASTFM_SECRET")
-GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
-AUDDIO_TOKEN = os.environ.get("AUDDIO_TOKEN")
 
 MISSING_IMAGE_HASH = "2a96cbd8b46e442fc41c2b86b821562f"
 
@@ -210,7 +204,7 @@ class LastFm(commands.Cog):
             "type": "video",
             "maxResults": 1,
             "q": f"{artist} {track}",
-            "key": GOOGLE_API_KEY,
+            "key": self.bot.keychain.GCS_DEVELOPER_KEY,
         }
 
         async with self.bot.session.get(url, params=params) as response:
@@ -1892,7 +1886,7 @@ class LastFm(commands.Cog):
                 return await ctx.send(":warning: Could not get currently playing track!")
             query = artistname + " " + trackname
 
-        genius = Genius(self.bot.session)
+        genius = Genius(self.bot)
         results = await genius.search(query)
         if not results:
             raise exceptions.CommandWarning(f'Found no lyrics for "{query}"')
@@ -1925,6 +1919,10 @@ class LastFm(commands.Cog):
             else:
                 result = results[int(msg.content) - 1]
                 await bot_msg.delete()
+                try:
+                    await msg.delete()
+                except (discord.Forbidden, discord.NotFound):
+                    pass
 
         else:
             result = results[0]
@@ -2105,7 +2103,7 @@ class LastFm(commands.Cog):
     async def api_request(self, params, ignore_errors=False):
         """Get json data from the lastfm api"""
         url = "http://ws.audioscrobbler.com/2.0/"
-        params["api_key"] = LASTFM_APPID
+        params["api_key"] = self.bot.keychain.LASTFM_API_KEY
         params["format"] = "json"
         tries = 0
         max_tries = 2
