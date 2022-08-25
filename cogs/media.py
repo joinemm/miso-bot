@@ -66,6 +66,10 @@ class Media(commands.Cog):
         # This causes problems with the hash-based request signing that instagram uses
         # Thankfully you can plug your own yarl.URL with encoded=True so it wont get encoded twice
         async with self.bot.session.get(yarl.URL(media_url, encoded=True)) as response:
+            if not response.ok:
+                logger.error(await response.text())
+                response.raise_for_status()
+
             if int(response.headers.get("content-length", max_filesize)) > max_filesize:
                 return f"\n{media_url}"
             else:
