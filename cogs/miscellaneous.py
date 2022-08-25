@@ -473,15 +473,11 @@ class Miscellaneous(commands.Cog):
 
             else:
                 source = str(source).strip("#")
+                converted_color = await util.get_color(ctx, source)
                 # random without an amount
                 if next_is_random_count:
                     colors.append("{:06x}".format(random.randint(0, 0xFFFFFF)))
                     next_is_random_count = False
-
-                # hex or named discord color
-                converted_color = await util.get_color(ctx, source)
-                if converted_color is not None:
-                    colors.append(str(converted_color))
 
                 # image url
                 elif source.startswith("http"):
@@ -504,6 +500,10 @@ class Miscellaneous(commands.Cog):
                 # random
                 elif source.lower() == "random":
                     next_is_random_count = True
+
+                # hex or named discord color
+                elif converted_color is not None:
+                    colors.append(str(converted_color))
 
                 else:
                     await ctx.send(f"I don't know what to do with `{source}`")
