@@ -1,8 +1,9 @@
 import asyncio
 import html
-import os
+import json
 import random
 from time import time
+from zoneinfo import ZoneInfo
 
 import aiohttp
 import arrow
@@ -12,22 +13,6 @@ from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
 
 from modules import emojis, exceptions, log, queries, util
-
-GOOGLE_API_KEY = os.environ.get("GOOGLE_KEY")
-DARKSKY_API_KEY = os.environ.get("DARK_SKY_KEY")
-TIMEZONE_API_KEY = os.environ.get("TIMEZONEDB_API_KEY")
-OXFORD_APPID = os.environ.get("OXFORD_APPID")
-OXFORD_TOKEN = os.environ.get("OXFORD_TOKEN")
-NAVER_APPID = os.environ.get("NAVER_APPID")
-NAVER_TOKEN = os.environ.get("NAVER_TOKEN")
-WOLFRAM_APPID = os.environ.get("WOLFRAM_APPID")
-GFYCAT_CLIENT_ID = os.environ.get("GFYCAT_CLIENT_ID")
-GFYCAT_SECRET = os.environ.get("GFYCAT_SECRET")
-STREAMABLE_USER = os.environ.get("STREAMABLE_USER")
-STREAMABLE_PASSWORD = os.environ.get("STREAMABLE_PASSWORD")
-THESAURUS_KEY = os.environ.get("THESAURUS_KEY")
-FINNHUB_TOKEN = os.environ.get("FINNHUB_TOKEN")
-RAPIDAPI_KEY = os.environ.get("RAPIDAPI_KEY")
 
 command_logger = log.get_command_logger()
 
@@ -65,20 +50,6 @@ papago_pairs = [
     "zh-tw/zh-tw",
 ]
 
-weather_icons = {
-    "clear-day": ":sunny:",
-    "clear-night": ":night_with_stars:",
-    "fog": ":foggy:",
-    "hail": ":cloud_snow:",
-    "sleet": ":cloud_snow:",
-    "snow": ":cloud_snow:",
-    "partly-cloudy-day": ":partly_sunny:",
-    "cloudy": ":cloud:",
-    "partly-cloudy-night": ":cloud:",
-    "tornado": ":cloud_tornado:",
-    "wind": ":wind_blowing_face:",
-}
-
 logger = log.get_logger(__name__)
 
 
@@ -90,6 +61,8 @@ class Utility(commands.Cog):
         self.icon = "🔧"
         self.reminder_list = []
         self.cache_needs_refreshing = True
+        with open("data/weather.json") as f:
+            self.weather_constants = json.load(f)
 
     async def cog_load(self):
         self.reminder_loop.start()
@@ -222,7 +195,7 @@ class Utility(commands.Cog):
             return await ctx.send_help(ctx.command)
 
         try:
-            await ctx.trigger_typing()
+            await ctx.typing()
         except discord.errors.Forbidden:
             pass
 
@@ -295,53 +268,200 @@ class Utility(commands.Cog):
             )
         )
 
-    @commands.command(usage="['save'] <location>")
-    async def weather(self, ctx: commands.Context, *, address=None):
-        """
-        Get weather of given location.
-
-        Usage:
-            >weather
-            >weather <location>
-            >weather save <location>
-        """
-        if address is None:
-            # use saved location
-            location = await self.bot.db.execute(
+    @commands.group()
+    async def weather(self, ctx: commands.Context):
+        """Show current weather in given location"""
+        if ctx.invoked_subcommand is None:
+            await util.command_group_help(ctx)
+        else:
+            ctx.location = await self.bot.db.execute(
                 "SELECT location_string FROM user_settings WHERE user_id = %s",
                 ctx.author.id,
                 one_value=True,
             )
-            if not location:
-                return await util.send_command_help(ctx)
-        else:
-            # check if user wants to save location
-            try:
-                cmd, saved_address = address.split(" ", 1)
-                cmd = cmd.lower()
-            except ValueError:
-                cmd = None
 
-            if cmd == "save":
-                await self.bot.db.execute(
-                    """
-                    INSERT INTO user_settings (user_id, location_string)
-                        VALUES (%s, %s)
-                    ON DUPLICATE KEY UPDATE
-                        location_string = VALUES(location_string)
-                    """,
-                    ctx.author.id,
-                    saved_address,
+    @weather.command(name="now")
+    async def weather_now(self, ctx: commands.Context, *, location: str = None):
+        if location is None:
+            location = ctx.location
+            if ctx.location is None:
+                raise exceptions.CommandInfo(
+                    f"Please save your location using `{ctx.prefix}weather save <location...>`"
                 )
-                return await util.send_success(ctx, f"Saved your location as `{saved_address}`")
-            # use given string as temporary location
-            location = address
 
-        params = {"address": location, "key": GOOGLE_API_KEY}
-        async with self.bot.session.get(
-            "https://maps.googleapis.com/maps/api/geocode/json", params=params
-        ) as response:
-            geocode_data = await response.json()
+        lat, lon, address = await self.geolocate(location)
+        local_time, country_code = await self.get_country_information(lat, lon)
+
+        API_BASE_URL = "https://api.tomorrow.io/v4/timelines"
+        params = {
+            "apikey": self.bot.keychain.TOMORROWIO_TOKEN,
+            "location": f"{lat},{lon}",
+            "fields": ",".join(
+                [
+                    "precipitationProbability",
+                    "precipitationType",
+                    "windSpeed",
+                    "windGust",
+                    "windDirection",
+                    "temperature",
+                    "temperatureApparent",
+                    "cloudCover",
+                    "weatherCode",
+                    "humidity",
+                    "temperatureMin",
+                    "temperatureMax",
+                    "sunriseTime",
+                    "sunsetTime",
+                ]
+            ),
+            "units": "metric",
+            "timesteps": ",".join(["current", "1d"]),
+            "endTime": arrow.utcnow().shift(days=+1, minutes=+5).isoformat(),
+        }
+
+        if isinstance(local_time.tzinfo, ZoneInfo):
+            params["timezone"] = str(local_time.tzinfo)
+        else:
+            logger.warning("Arrow object must be constructed with ZoneInfo timezone object")
+
+        async with self.bot.session.get(API_BASE_URL, params=params) as response:
+            data = await response.json(loads=orjson.loads)
+
+        current_data = next(
+            filter(lambda t: t["timestep"] == "current", data["data"]["timelines"])
+        )
+        daily_data = next(filter(lambda t: t["timestep"] == "1d", data["data"]["timelines"]))
+        values_current = current_data["intervals"][0]["values"]
+        values_today = daily_data["intervals"][0]["values"]
+        #  values_tomorrow = daily_data["intervals"][1]["values"]
+        temperature = values_current["temperature"]
+        temperature_apparent = values_current["temperatureApparent"]
+        sunrise = arrow.get(values_current["sunriseTime"]).to(local_time.tzinfo).format("HH:mm")
+        sunset = arrow.get(values_current["sunsetTime"]).to(local_time.tzinfo).format("HH:mm")
+
+        icon = self.weather_constants["id_to_icon"][str(values_current["weatherCode"])]
+        summary = self.weather_constants["id_to_description"][str(values_current["weatherCode"])]
+
+        if (
+            values_today["precipitationType"] != 0
+            and values_today["precipitationProbability"] != 0
+        ):
+            precipitation_type = self.weather_constants["precipitation"][
+                str(values_today["precipitationType"])
+            ]
+            summary += f", with {values_today['precipitationProbability']}% chance of {precipitation_type}"
+
+        content = discord.Embed(color=int("e1e8ed", 16))
+        content.title = f":flag_{country_code.lower()}: {address}"
+        content.set_footer(text=f"🕐 Local time {local_time.format('HH:mm')}")
+
+        def render(F: bool):
+            information_rows = [
+                f":thermometer: Currently **{temp(temperature, F)}**, feels like **{temp(temperature_apparent, F)}**",
+                f":calendar: Daily low **{temp(values_today['temperatureMin'], F)}**, high **{temp(values_today['temperatureMax'], F)}**",
+                f":dash: Wind speed **{values_current['windSpeed']} m/s** with gusts of **{values_current['windGust']} m/s**",
+                f":sunrise: Sunrise at **{sunrise}**, sunset at **{sunset}**",
+                f":sweat_drops: Air humidity **{values_current['humidity']}%**",
+                f":map: [See on map](https://www.google.com/maps/search/?api=1&query={lat},{lon})",
+            ]
+
+            content.clear_fields().add_field(
+                name=f"{icon} {summary}",
+                value="\n".join(information_rows),
+            )
+
+            return content
+
+        await WeatherUnitToggler(render, False).run(ctx)
+
+    @weather.command(name="forecast")
+    async def weather_forecast(self, ctx: commands.Context, *, location: str = None):
+        if location is None:
+            location = ctx.location
+            if ctx.location is None:
+                raise exceptions.CommandInfo(
+                    f"Please save your location using `{ctx.prefix}weather save <location...>`"
+                )
+
+        lat, lon, address = await self.geolocate(location)
+        local_time, country_code = await self.get_country_information(lat, lon)
+        API_BASE_URL = "https://api.tomorrow.io/v4/timelines"
+        params = {
+            "apikey": self.bot.keychain.TOMORROWIO_TOKEN,
+            "location": f"{lat},{lon}",
+            "fields": ",".join(
+                [
+                    "precipitationProbability",
+                    "precipitationType",
+                    "windSpeed",
+                    "windGust",
+                    "windDirection",
+                    "temperature",
+                    "temperatureApparent",
+                    "cloudCover",
+                    "weatherCode",
+                    "humidity",
+                    "temperatureMin",
+                    "temperatureMax",
+                ]
+            ),
+            "units": "metric",
+            "timesteps": "1d",
+            "endTime": arrow.utcnow().shift(days=+7).isoformat(),
+        }
+
+        if isinstance(local_time.tzinfo, ZoneInfo):
+            params["timezone"] = str(local_time.tzinfo)
+        else:
+            logger.warning("Arrow object must be constructed with ZoneInfo timezone object")
+
+        async with self.bot.session.get(API_BASE_URL, params=params) as response:
+            data = await response.json(loads=orjson.loads)
+
+        content = discord.Embed(
+            title=f":flag_{country_code.lower()}: {address}",
+            color=int("ffcc4d", 16),
+        )
+
+        def render(F: bool):
+            days = []
+            for day in data["data"]["timelines"][0]["intervals"]:
+                date = arrow.get(day["startTime"]).format("**`ddd`** `D/M`")
+                values = day["values"]
+                minTemp = values["temperatureMin"]
+                maxTemp = values["temperatureMax"]
+                icon = self.weather_constants["id_to_icon"][str(values["weatherCode"])]
+                description = self.weather_constants["id_to_description"][
+                    str(values["weatherCode"])
+                ]
+                days.append(
+                    f"{date} {icon} **{temp(maxTemp, F)}** / **{temp(minTemp, F)}** — {description}"
+                )
+
+            content.description = "\n".join(days)
+            return content
+
+        await WeatherUnitToggler(render, False).run(ctx)
+
+    @weather.command(name="save")
+    async def weather_save(self, ctx: commands.Context, *, location: str):
+        await self.bot.db.execute(
+            """
+            INSERT INTO user_settings (user_id, location_string)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                location_string = VALUES(location_string)
+            """,
+            ctx.author.id,
+            location,
+        )
+        return await util.send_success(ctx, f"Saved your location as `{location}`")
+
+    async def geolocate(self, location):
+        GOOGLE_GEOCODING_API_URL = "https://maps.googleapis.com/maps/api/geocode/json"
+        params = {"address": location, "key": self.bot.keychain.GCS_DEVELOPER_KEY}
+        async with self.bot.session.get(GOOGLE_GEOCODING_API_URL, params=params) as response:
+            geocode_data = await response.json(loads=orjson.loads)
         try:
             geocode_data = geocode_data["results"][0]
         except IndexError:
@@ -351,41 +471,28 @@ class Utility(commands.Cog):
         lat = geocode_data["geometry"]["location"]["lat"]
         lon = geocode_data["geometry"]["location"]["lng"]
 
-        # we have lat and lon now, plug them into dark sky
-        async with self.bot.session.get(
-            url=f"https://api.darksky.net/forecast/{DARKSKY_API_KEY}/{lat},{lon}?units=si"
-        ) as response:
-            weather_data = await response.json()
-        current = weather_data["currently"]
-        hourly = weather_data["hourly"]
+        return lat, lon, formatted_name
 
-        localtime = await get_timezone(self.bot.session, {"lat": lat, "lon": lon})
-
-        country = "N/A"
-        for comp in geocode_data["address_components"]:
-            if "country" in comp["types"]:
-                country = comp["short_name"].lower()
-
-        weather_icon = weather_icons.get(current["icon"], "")
-        try:
-            summary = hourly["summary"]
-        except KeyError:
-            summary = "No weather forecast found."
-
-        information_rows = [
-            f":thermometer: Currently **{current['temperature']} °C** ({to_f(current['temperature']):.2f} °F)",
-            f":neutral_face: Feels like **{current['apparentTemperature']} °C** ({to_f(current['apparentTemperature']):.2f} °F)",
-            f":dash: Wind speed **{current['windSpeed']} m/s** with gusts of **{current['windGust']} m/s**",
-            f":sweat_drops: Humidity **{int(current['humidity'] * 100)}%**",
-            f":map: [See on map](https://www.google.com/maps/search/?api=1&query={lat},{lon})",
-        ]
-
-        content = discord.Embed(
-            color=int("e1e8ed", 16), title=f":flag_{country}: {formatted_name}"
-        )
-        content.add_field(name=f"{weather_icon} {summary}", value="\n".join(information_rows))
-        content.set_footer(text=f"🕐 Local time {localtime}")
-        await ctx.send(embed=content)
+    async def get_country_information(self, lat, lon):
+        TIMEZONE_API_URL = "http://api.timezonedb.com/v2.1/get-time-zone"
+        params = {
+            "key": self.bot.keychain.TIMEZONEDB_API_KEY,
+            "format": "json",
+            "by": "position",
+            "lat": lat,
+            "lng": lon,
+        }
+        async with self.bot.session.get(TIMEZONE_API_URL, params=params) as response:
+            data = await response.json(loads=orjson.loads)
+            country_code = data["countryCode"]
+            try:
+                local_time = arrow.now(ZoneInfo(data["zoneName"]))
+            except ValueError:
+                # does not have a time zone
+                # most likely a special place such as antarctica
+                # use UTC
+                local_time = arrow.utcnow()
+            return local_time, country_code
 
     @commands.command()
     async def define(self, ctx: commands.Context, *, word):
@@ -393,7 +500,10 @@ class Utility(commands.Cog):
         API_BASE_URL = "wordsapiv1.p.rapidapi.com"
         COLORS = ["226699", "f4900c", "553788"]
 
-        headers = {"X-RapidAPI-Key": RAPIDAPI_KEY, "X-RapidAPI-Host": API_BASE_URL}
+        headers = {
+            "X-RapidAPI-Key": self.bot.keychain.RAPIDAPI_KEY,
+            "X-RapidAPI-Host": API_BASE_URL,
+        }
         url = f"https://{API_BASE_URL}/words/{word}"
         async with self.bot.session.get(url, headers=headers) as response:
             data = await response.json(loads=orjson.loads)
@@ -509,11 +619,11 @@ class Utility(commands.Cog):
                 source, target = languages.split("->")
             text = text.partition(" ")[2]
             if source == "":
-                source = await detect_language(self.bot.session, text)
+                source = await detect_language(self.bot, text)
             if target == "":
                 target = "en"
         else:
-            source = await detect_language(self.bot.session, text)
+            source = await detect_language(self.bot, text)
             if source == "en":
                 target = "ko"
             else:
@@ -527,8 +637,8 @@ class Utility(commands.Cog):
             url = "https://openapi.naver.com/v1/papago/n2mt"
             params = {"source": source, "target": target, "text": text}
             headers = {
-                "X-Naver-Client-Id": NAVER_APPID,
-                "X-Naver-Client-Secret": NAVER_TOKEN,
+                "X-Naver-Client-Id": self.bot.keychain.NAVER_APPID,
+                "X-Naver-Client-Secret": self.bot.keychain.NAVER_TOKEN,
             }
 
             async with self.bot.session.post(url, headers=headers, data=params) as response:
@@ -540,7 +650,7 @@ class Utility(commands.Cog):
             # use google
             url = "https://translation.googleapis.com/language/translate/v2"
             params = {
-                "key": GOOGLE_API_KEY,
+                "key": self.bot.keychain.GCS_DEVELOPER_KEY,
                 "model": "nmt",
                 "target": target,
                 "source": source,
@@ -562,7 +672,7 @@ class Utility(commands.Cog):
         """Ask something from wolfram alpha"""
         url = "http://api.wolframalpha.com/v1/result"
         params = {
-            "appid": WOLFRAM_APPID,
+            "appid": self.bot.keychain.WOLFRAM_APPID,
             "i": query,
             "output": "json",
             "units": "metric",
@@ -579,7 +689,7 @@ class Utility(commands.Cog):
     async def creategif(self, ctx: commands.Context, media_url):
         """Create a gfycat gif from video url"""
         starttimer = time()
-        auth_headers = await gfycat_oauth(self.bot.session)
+        auth_headers = await gfycat_oauth(self.bot)
         url = "https://api.gfycat.com/v1/gfycats"
         params = {"fetchUrl": media_url.strip("`")}
         async with self.bot.session.post(url, json=params, headers=auth_headers) as response:
@@ -624,7 +734,9 @@ class Utility(commands.Cog):
 
         url = "https://api.streamable.com/import"
         params = {"url": media_url.strip("`")}
-        auth = aiohttp.BasicAuth(STREAMABLE_USER, STREAMABLE_PASSWORD)
+        auth = aiohttp.BasicAuth(
+            self.bot.keychain.STREAMABLE_USER, self.bot.keychain.STREAMABLE_PASSWORD
+        )
 
         async with self.bot.session.get(url, params=params, auth=auth) as response:
             if response.status != 200:
@@ -680,7 +792,7 @@ class Utility(commands.Cog):
         FINNHUB_API_PROFILE_URL = "https://finnhub.io/api/v1/stock/profile2"
 
         symbol = symbol.upper()
-        params = {"symbol": symbol.strip("$"), "token": FINNHUB_TOKEN}
+        params = {"symbol": symbol.strip("$"), "token": self.bot.keychain.FINNHUB_TOKEN}
         async with self.bot.session.get(FINNHUB_API_QUOTE_URL, params=params) as response:
             quote_data = await response.json(loads=orjson.loads)
 
@@ -826,62 +938,33 @@ async def setup(bot):
     await bot.add_cog(Utility(bot))
 
 
-def profile_ticker(ticker):
-    subs = {"GOOG": "GOOGL"}
-    return subs.get(ticker) or ticker
-
-
-async def get_timezone(session, coord, clocktype="12hour"):
-    url = "http://api.timezonedb.com/v2.1/get-time-zone"
-    params = {
-        "key": TIMEZONE_API_KEY,
-        "format": "json",
-        "by": "position",
-        "lat": str(coord["lat"]),
-        "lng": str(coord["lon"]),
-    }
-    async with session.get(url, params=params) as response:
-        if response.status != 200:
-            return f"HTTP ERROR {response.status}"
-
-        timestring = (await response.json()).get("formatted").split(" ")
-        try:
-            hours, minutes = [int(x) for x in timestring[1].split(":")[:2]]
-        except IndexError:
-            return "N/A"
-
-        if clocktype == "12hour":
-            if hours > 12:
-                suffix = "PM"
-                hours -= 12
-            else:
-                suffix = "AM"
-                if hours == 0:
-                    hours = 12
-            return f"{hours}:{minutes:02d} {suffix}"
-        return f"{hours}:{minutes:02d}"
-
-
-async def detect_language(session, string):
+async def detect_language(bot, string):
     url = "https://translation.googleapis.com/language/translate/v2/detect"
-    params = {"key": GOOGLE_API_KEY, "q": string[:1000]}
+    params = {"key": bot.keychain.GCS_DEVELOPER_KEY, "q": string[:1000]}
 
-    async with session.get(url, params=params) as response:
+    async with bot.session.get(url, params=params) as response:
         data = await response.json(loads=orjson.loads)
         language = data["data"]["detections"][0][0]["language"]
 
     return language
 
 
-async def gfycat_oauth(session):
+def temp(celsius: float, convert_to_f: bool = False) -> str:
+    if convert_to_f:
+        return f"{int((celsius * 9.0 / 5.0) + 32)} °F"
+    else:
+        return f"{int(celsius)} °C"
+
+
+async def gfycat_oauth(bot):
     url = "https://api.gfycat.com/v1/oauth/token"
     params = {
         "grant_type": "client_credentials",
-        "client_id": GFYCAT_CLIENT_ID,
-        "client_secret": GFYCAT_SECRET,
+        "client_id": bot.keychain.GFYCAT_CLIENT_ID,
+        "client_secret": bot.keychain.GFYCAT_SECRET,
     }
 
-    async with session.post(url, json=params) as response:
+    async with bot.session.post(url, json=params) as response:
         data = await response.json(loads=orjson.loads)
         access_token = data["access_token"]
 
@@ -890,5 +973,33 @@ async def gfycat_oauth(session):
     return auth_headers
 
 
-def to_f(c):
-    return c * (9.0 / 5.0) + 32
+class WeatherUnitToggler(discord.ui.View):
+    def __init__(self, renderfunction, F):
+        super().__init__()
+        # renderfunction should be a function that takes boolean F,
+        # denoting whether to use fahrenheit or not, and return a discord embed
+        self.renderfunction = renderfunction
+        self.message = None
+        self.F = F
+
+    async def run(self, ctx):
+        self.update_label()
+        content = self.renderfunction(self.F)
+        self.message = await ctx.send(embed=content, view=self)
+
+    def update_label(self):
+        self.toggle.label = "°C" if self.F else "°F"
+
+    @discord.ui.button(emoji="🌡️", style=discord.ButtonStyle.secondary)
+    async def toggle(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.F = not self.F
+        self.update_label()
+
+        content = self.renderfunction(self.F)
+        await interaction.response.edit_message(embed=content, view=self)
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+        await self.message.edit(view=None)
