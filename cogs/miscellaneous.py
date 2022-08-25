@@ -146,17 +146,6 @@ class Miscellaneous(commands.Cog):
         }
         await ctx.send(f"{activity_emoji.get(data['type'], '')} {data['activity']}")
 
-    @commands.command(name="ascii")
-    async def ascii_text(self, ctx: commands.Context, *, text):
-        """Turn text into fancy ascii art"""
-        font = "small"
-        async with self.bot.session.get(
-            f"https://artii.herokuapp.com/make?text={text}&font={font}"
-        ) as response:
-            content = await response.text()
-
-        await ctx.send(f"```\n{content}\n```")
-
     @commands.command(aliases=["8ball"])
     async def eightball(self, ctx: commands.Context, *, question):
         """Ask a yes/no question"""
