@@ -847,7 +847,7 @@ class LastFm(commands.Cog):
         if image is None:
             return None
 
-        colors = self.bot.loop.run_in_executor(None, lambda: colorgram.extract(image, 1))
+        colors = await self.bot.loop.run_in_executor(None, lambda: colorgram.extract(image, 1))
         dominant_color = colors[0].rgb
 
         return (
