@@ -86,7 +86,7 @@ class Media(commands.Cog):
                 return discord.File(fp=buffer, filename=filename)
 
     @commands.command(aliases=["ig", "insta"], usage="<links...> '-e'")
-    async def instagram(self, ctx: commands.Context, *links):
+    async def instagram(self, ctx: commands.Context, *links: str):
         """Retrieve images from one or more instagram posts"""
         urls = []
         use_embeds = False
@@ -101,6 +101,9 @@ class Media(commands.Cog):
                 await ctx.typing()
             else:
                 urls.append(link)
+
+        if not urls:
+            return await util.send_command_help(ctx)
 
         if len(urls) > 5:
             raise exceptions.CommandWarning("Only 5 links at a time please!")
@@ -198,7 +201,7 @@ class Media(commands.Cog):
             pass
 
     @commands.command(aliases=["twt"], usage="<links...> '-e'")
-    async def twitter(self, ctx: commands.Context, *links):
+    async def twitter(self, ctx: commands.Context, *links: str):
         """Retrieve images from one or more tweets"""
         urls = []
         use_embeds = False
@@ -212,6 +215,9 @@ class Media(commands.Cog):
                 await ctx.typing()
             else:
                 urls.append(link)
+
+        if not urls:
+            return await util.send_command_help(ctx)
 
         if len(urls) > 5:
             raise exceptions.CommandWarning("Only 5 links at a time please!")
