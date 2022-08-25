@@ -41,7 +41,7 @@ class Genius:
         }
         async with self.bot.session.get(url, headers=headers) as response:
             content = await response.text()
-            soup = BeautifulSoup(content, "html.parser")
+            soup = BeautifulSoup(content, "lxml")
             lyric_containers = soup.find_all("div", {"data-lyrics-container": "true"})
             for container in lyric_containers:
                 lyrics.append(MDText().convert_soup(container))

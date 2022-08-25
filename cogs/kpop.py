@@ -195,7 +195,7 @@ class Kpop(commands.Cog):
         async def scrape(category, url):
             artists = []
             async with self.bot.session.get(url) as response:
-                soup = BeautifulSoup(await response.text(), "html.parser")
+                soup = BeautifulSoup(await response.text(), "lxml")
                 content = soup.find("div", {"class": "entry-content herald-entry-content"})
                 outer = content.find_all("p")
                 for p in outer:

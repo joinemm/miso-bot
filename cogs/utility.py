@@ -762,7 +762,7 @@ class Utility(commands.Cog):
         await asyncio.sleep(5)
         while True:
             async with self.bot.session.get(link) as response:
-                soup = BeautifulSoup(await response.text(), "html.parser")
+                soup = BeautifulSoup(await response.text(), "lxml")
                 meta = soup.find("meta", {"property": "og:url"})
 
                 if meta:

@@ -374,7 +374,7 @@ class Media(commands.Cog):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0",
         }
         async with self.bot.session.get(url, headers=headers) as response:
-            soup = BeautifulSoup(await response.text(), "html.parser")
+            soup = BeautifulSoup(await response.text(), "lxml")
 
         song_titles = [
             discord.utils.escape_markdown(x.find("span").find("a").text)
@@ -431,7 +431,7 @@ async def setup(bot):
 async def extract_scripts(session, url):
     async with session.get(url) as response:
         data = await response.text()
-        soup = BeautifulSoup(data, "html.parser")
+        soup = BeautifulSoup(data, "lxml")
         return soup.find_all("script", {"type": "application/ld+json"})
 
 
@@ -444,7 +444,7 @@ class GGSoup:
             f"https://{region}.op.gg/summoner/{sub_url}userName={summoner_name}"
         ) as response:
             data = await response.text()
-            self.soup = BeautifulSoup(data, "html.parser")
+            self.soup = BeautifulSoup(data, "lxml")
 
     def text(self, obj, classname, source=None):
         if source is None:

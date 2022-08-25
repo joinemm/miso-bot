@@ -672,7 +672,7 @@ class LastFm(commands.Cog):
         if data is None:
             raise exceptions.LastFMError(404, "Album page not found")
 
-        soup = BeautifulSoup(data, "html.parser")
+        soup = BeautifulSoup(data, "lxml")
 
         album = {
             "image_url": soup.find("header", {"class": "library-header"})
@@ -701,7 +701,7 @@ class LastFm(commands.Cog):
         if data is None:
             raise exceptions.LastFMError(404, "Artist page not found")
 
-        soup = BeautifulSoup(data, "html.parser")
+        soup = BeautifulSoup(data, "lxml")
 
         artist = {
             "image_url": soup.find("span", {"class": "library-header-image"})
@@ -731,7 +731,7 @@ class LastFm(commands.Cog):
         if data is None:
             raise exceptions.LastFMError(404, "Artist page not found")
 
-        soup = BeautifulSoup(data, "html.parser")
+        soup = BeautifulSoup(data, "lxml")
         try:
             albumsdiv, tracksdiv, _ = soup.findAll("tbody", {"data-playlisting-add-entries": ""})
 
@@ -2389,7 +2389,7 @@ class LastFm(commands.Cog):
         if data is None:
             return None
 
-        soup = BeautifulSoup(data, "html.parser")
+        soup = BeautifulSoup(data, "lxml")
         image = soup.find("img", {"class": "image-list-image"})
         if image is None:
             try:
@@ -2414,7 +2414,7 @@ class LastFm(commands.Cog):
             if len(images) >= amount:
                 break
 
-            soup = BeautifulSoup(data, "html.parser")
+            soup = BeautifulSoup(data, "lxml")
             imagedivs = soup.findAll("td", {"class": "chartlist-image"})
             images += [
                 div.find("img")["src"].replace("/avatar70s/", "/300x300/") for div in imagedivs
@@ -2635,7 +2635,7 @@ async def get_additional_pages(session, soup, url):
     async def get_additional_page(n):
         new_url = url + f"&page={n}"
         data = await fetch(session, new_url, handling="text")
-        soup = BeautifulSoup(data, "html.parser")
+        soup = BeautifulSoup(data, "lxml")
         return get_list_contents(soup)
 
     tasks = []
