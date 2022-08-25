@@ -1,0 +1,63 @@
+{
+  "id_to_icon": {
+    "0": "",
+    "1000": ":sunny:",
+    "1100": ":white_sun_small_cloud:",
+    "1101": ":partly_sunny:",
+    "1102": ":white_sun_cloud:",
+    "1001": ":cloud:",
+    "2000": ":foggy:",
+    "2100": ":foggy:",
+    "4000": ":cloud_rain:",
+    "4001": ":cloud_rain:",
+    "4200": ":cloud_rain:",
+    "4201": ":cloud_rain:",
+    "5000": ":cloud_snow:",
+    "5001": ":cloud_snow:",
+    "5100": ":cloud_snow:",
+    "5101": ":cloud_snow:",
+    "6000": ":cloud_rain:",
+    "6001": ":cloud_snow:",
+    "6200": ":cloud_rain:",
+    "6201": ":cloud_snow:",
+    "7000": ":ice_cube:",
+    "7101": ":ice_cube:",
+    "7102": ":ice_cube:",
+    "8000": ":cloud_lightning:"
+  },
+
+  "id_to_description": {
+    "0": "Unknown",
+    "1000": "Clear, Sunny",
+    "1100": "Mostly Clear",
+    "1101": "Partly Cloudy",
+    "1102": "Mostly Cloudy",
+    "1001": "Cloudy",
+    "2000": "Fog",
+    "2100": "Light Fog",
+    "4000": "Drizzle",
+    "4001": "Rain",
+    "4200": "Light Rain",
+    "4201": "Heavy Rain",
+    "5000": "Snow",
+    "5001": "Flurries",
+    "5100": "Light Snow",
+    "5101": "Heavy Snow",
+    "6000": "Freezing Drizzle",
+    "6001": "Freezing Rain",
+    "6200": "Light Freezing Rain",
+    "6201": "Heavy Freezing Rain",
+    "7000": "Ice Pellets",
+    "7101": "Heavy Ice Pellets",
+    "7102": "Light Ice Pellets",
+    "8000": "Thunderstorm"
+  },
+
+  "precipitation": {
+    "0": "N/A",
+    "1": "Rain",
+    "2": "Snow",
+    "3": "Freezing Rain",
+    "4": "Ice Pellets"
+  }
+}
