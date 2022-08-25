@@ -6,6 +6,7 @@ import arrow
 import discord
 import orjson
 from discord.ext import commands
+from PIL import UnidentifiedImageError
 
 from libraries import emoji_literals, minestat
 from modules import exceptions, util
@@ -435,7 +436,11 @@ class Miscellaneous(commands.Cog):
         return await ctx.send(embed=content)
 
     @commands.command(aliases=["colour"], usage="<hex | @member | @role | 'random' | url> ...")
-    async def color(self, ctx: commands.Context, *sources):
+    async def color(
+        self,
+        ctx: commands.Context,
+        *sources: Union[int, discord.Member, discord.Role, str],
+    ):
         """
         Visualise colors
 
@@ -448,80 +453,113 @@ class Miscellaneous(commands.Cog):
             >color random [amount]
             >color <image url>
         """
-        if not sources:
+        if not sources and not ctx.message.attachments:
             return await util.send_command_help(ctx)
 
+        if len(sources) > 50:
+            await ctx.send("Maximum amount of colors is 50, ignoring rest...")
+
         colors = []
-        i = 0
-        while i < len(sources):
-            source = sources[i]
-            i += 1
-            if source.lower() == "random":
-                try:
-                    amount = int(sources[i])
-                    i += 1
-                except (IndexError, ValueError):
-                    amount = 1
+        next_is_random_count = False
+        for source in sources[:50]:
+            # random used with an amount
+            if next_is_random_count and isinstance(source, int):
+                slots = 50 - len(colors)
+                amount = min(source, slots)
+                colors += ["{:06x}".format(random.randint(0, 0xFFFFFF)) for _ in range(amount)]
+            # member or role color
+            elif isinstance(source, (discord.Member, discord.Role)):
+                colors.append(str(source.color))
 
-                for _ in range(min(amount, 50)):
+            else:
+                source = str(source).strip("#")
+                # random without an amount
+                if next_is_random_count:
                     colors.append("{:06x}".format(random.randint(0, 0xFFFFFF)))
-                continue
+                    next_is_random_count = False
 
-            role_or_user = await util.get_member(ctx, source) or await util.get_role(ctx, source)
-            if role_or_user is not None:
-                colors.append(str(role_or_user.color).strip("#"))
-                continue
+                # hex or named discord color
+                converted_color = await util.get_color(ctx, source)
+                if converted_color is not None:
+                    colors.append(str(converted_color))
 
-            if source.startswith("http") or source.startswith("https"):
-                url_color = await util.color_from_image_url(self.bot.session, source)
+                # image url
+                elif source.startswith("http"):
+                    try:
+                        url_color = await util.color_from_image_url(
+                            self.bot.session,
+                            source,
+                            fallback=None,
+                            size_limit=True,
+                            ignore_errors=False,
+                        )
+                    except ValueError:
+                        await ctx.send("Supplied image is too large!")
+                    except UnidentifiedImageError:
+                        await ctx.send("Supplied url is not an image!")
+                    else:
+                        if url_color is not None:
+                            colors.append(url_color)
+
+                # random
+                elif source.lower() == "random":
+                    next_is_random_count = True
+
+                else:
+                    await ctx.send(f"I don't know what to do with `{source}`")
+
+        # random was last input without an amount
+        if next_is_random_count:
+            colors.append("{:06x}".format(random.randint(0, 0xFFFFFF)))
+
+        # try attachments too
+        for a in ctx.message.attachments:
+            try:
+                url_color = await util.color_from_image_url(
+                    self.bot.session,
+                    a.url,
+                    fallback=None,
+                    size_limit=True,
+                    ignore_errors=False,
+                )
+            except ValueError:
+                await ctx.send("Supplied attachment is too large!")
+            except UnidentifiedImageError:
+                await ctx.send("Supplied attachment is not an image!")
+            else:
                 if url_color is not None:
                     colors.append(url_color)
-                    continue
-
-            color = await util.get_color(ctx, "#" + source.strip("#"))
-            if color is not None:
-                colors.append(str(color))
-                continue
-
-            await ctx.send(f"Error parsing `{source}`")
 
         if not colors:
-            return await ctx.send("No valid colors to show")
-
-        content = discord.Embed(colour=await util.get_color(ctx, "#" + colors[0].strip("#")))
-
-        if len(colors) > 50:
-            await ctx.send("Maximum amount of colors is 50, ignoring rest...")
-            colors = colors[:50]
+            raise exceptions.CommandInfo("There is nothing to show")
 
         colors = [x.strip("#") for x in colors]
+        content = discord.Embed(colour=int(colors[0], 16))
+
         url = "https://api.color.pizza/v1/" + ",".join(colors)
         async with self.bot.session.get(url) as response:
             colordata = (await response.json(loads=orjson.loads)).get("colors")
 
         if len(colors) == 1:
-            discord_color = await util.get_color(ctx, "#" + colors[0].strip("#"))
+            discord_color = await util.get_color(ctx, colors[0])
             hexvalue = colordata[0]["requestedHex"]
             rgbvalue = discord_color.to_rgb()
             name = colordata[0]["name"]
             luminance = colordata[0]["luminance"]
             image_url = f"http://www.colourlovers.com/img/{colors[0]}/200/200/color.png"
             content.title = name
-            content.description = (
-                f"**HEX:** `{hexvalue}`\n"
-                f"**RGB:** {rgbvalue}\n"
-                f"**Luminance:** {luminance:.4f}"
+            content.description = "\n".join(
+                [
+                    f"**HEX:** `{hexvalue}`",
+                    f"**RGB:** {rgbvalue}",
+                    f"**Luminance:** {luminance:.4f}",
+                ]
             )
         else:
-            content.description = ""
-            palette = ""
-            for i, color in enumerate(colors):
-                hexvalue = colordata[i]["requestedHex"]
-                name = colordata[i]["name"]
-                content.description += f"`{hexvalue}` **| {name}**\n"
-                palette += color.strip("#") + "/"
-
-            image_url = f"https://www.colourlovers.com/paletteImg/{palette}palette.png"
+            content.description = "\n".join(
+                [f'`{c["requestedHex"]}` **| {c["name"]}**' for c in colordata]
+            )
+            image_url = f"https://www.colourlovers.com/paletteImg/{'/'.join(colors)}/palette.png"
 
         content.set_image(url=image_url)
         await ctx.send(embed=content)

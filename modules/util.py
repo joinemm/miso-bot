@@ -477,18 +477,21 @@ async def get_role(ctx, argument, fallback=None):
         return fallback
 
 
-async def get_color(ctx, argument, fallback=None):
+async def get_color(ctx, argument: str, fallback=None):
     """
     :param argument : hex or discord color name
     :param fallback : return this if not found
-    :returns        : discord.Color
+    :returns        : discord.Color or None
     """
     if argument is None:
         return fallback
     try:
         return await commands.ColourConverter().convert(ctx, argument)
     except commands.errors.BadArgument:
-        return fallback
+        try:
+            return await commands.ColourConverter().convert(ctx, "#" + argument)
+        except commands.errors.BadArgument:
+            return fallback
 
 
 async def get_emoji(ctx, argument, fallback=None):
@@ -562,7 +565,14 @@ def rgb_to_hex(rgb):
     return "{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
 
 
-async def color_from_image_url(session, url, fallback="E74C3C", return_color_object=False):
+async def color_from_image_url(
+    session,
+    url,
+    fallback="E74C3C",
+    return_color_object=False,
+    size_limit=False,
+    ignore_errors=True,
+):
     """
     :param url      : image url
     :param fallback : the color to return in case the operation fails
@@ -573,17 +583,22 @@ async def color_from_image_url(session, url, fallback="E74C3C", return_color_obj
     try:
         async with session.get(url) as response:
             image = Image.open(io.BytesIO(await response.read()))
+            if size_limit and sum(image.size) > 2048:
+                raise ValueError("Image is too large")
             colors = await asyncio.get_running_loop().run_in_executor(
                 None, lambda: colorgram.extract(image, 1)
             )
             dominant_color = colors[0].rgb
-
-        if return_color_object:
-            return dominant_color
-        return rgb_to_hex(dominant_color)
     except Exception as e:
-        print(e)
-        return fallback
+        if ignore_errors:
+            return fallback
+        else:
+            raise e
+
+    if return_color_object:
+        return dominant_color
+    else:
+        return rgb_to_hex(dominant_color)
 
 
 def find_unicode_emojis(text):
