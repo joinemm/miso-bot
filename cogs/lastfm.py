@@ -87,10 +87,10 @@ class LastFm(commands.Cog):
     @commands.group(case_insensitive=True, aliases=["lastfm"])
     async def fm(self, ctx: commands.Context):
         """Interact with LastFM using your linked account"""
-        await username_to_ctx(ctx)
-
         if ctx.invoked_subcommand is None:
             await util.command_group_help(ctx)
+        else:
+            await username_to_ctx(ctx)
 
     @fm.command()
     async def set(self, ctx: commands.Context, username):
@@ -2591,7 +2591,7 @@ async def username_to_ctx(ctx):
     )
     if not ctx.username and str(ctx.invoked_subcommand) not in ["fm set"]:
         if not ctx.foreign_target:
-            msg = f"No last.fm username saved! Please use `{ctx.prefix}fm set <lastfm username>`"
+            msg = f"No last.fm username saved! Please use `{ctx.prefix}fm set` to save your username (last.fm account required)"
         else:
             msg = f"{ctx.usertarget.mention} has not saved their lastfm username!"
 

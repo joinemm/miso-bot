@@ -164,8 +164,8 @@ class Media(commands.Cog):
                     content._author = None
                 if embeds:
                     await ctx.send(embeds=embeds)
-                if videos:
-                    await ctx.send("\n".join(videos))
+                for video in videos:
+                    await ctx.send(video)
             else:
                 # send as files
                 username = discord.utils.escape_markdown(post.user.username)
