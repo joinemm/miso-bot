@@ -2554,6 +2554,8 @@ def parse_chart_arguments(args, server_version=False):
 async def fetch(session, url, params=None, handling="json"):
     async with session.get(url, params=params) as response:
         if response.status != 200:
+            data = await response.text()
+            logger.error(f"Lastfm error {response.status}, {data}")
             return None
         if handling == "json":
             return await response.json(loads=orjson.loads)
