@@ -86,7 +86,8 @@ class Instagram:
         use_proxy: bool = False,
     ):
         self.bot = bot
-        self.session = bot.session
+        self.jar = aiohttp.CookieJar(unsafe=True)
+        self.session = aiohttp.ClientSession(cookie_jar=self.jar)
 
         proxy_url: str = bot.keychain.PROXY_URL
         proxy_user: str = bot.keychain.PROXY_USER
@@ -107,6 +108,10 @@ class Instagram:
     def color(self):
         return int("ce0071", 16)
 
+    async def close(self):
+        await self.session.close()
+        print("closed")
+
     def parse_media(self, resource):
         resource_media_type = MediaType(int(resource["media_type"]))
         if resource_media_type == MediaType.PHOTO:
@@ -118,9 +123,28 @@ class Instagram:
 
     async def v1_api_request(self, endpoint: str, params: dict = None):
         headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:98.0) Gecko/20100101 Firefox/98.0",
-            "X-IG-App-ID": "936619743392459",
             "Cookie": self.bot.keychain.IG_COOKIE,
+            "Host": "i.instagram.com",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:104.0) Gecko/20100101 Firefox/104.0",
+            "Accept": "*/*",
+            "Accept-Language": "en,en-US;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "X-CSRFToken": "lZbuGF42VnBBG434qZcPMJK6MKXPJeMf",
+            "X-Instagram-AJAX": "1006164448",
+            "X-IG-App-ID": "936619743392459",
+            "X-ASBD-ID": "198387",
+            "X-IG-WWW-Claim": "hmac.AR2Amvh6EFx6QPx3x751CvpHPpxJnFp-_XkaIPhPBUv3_fMo",
+            "Origin": "https://www.instagram.com",
+            "DNT": "1",
+            "Proxy-Authorization": "Basic U2Vsam9vbmFzOkszdjVScU4=",
+            "Connection": "keep-alive",
+            "Referer": "https://www.instagram.com/",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-site",
+            "Pragma": "no-cache",
+            "Cache-Control": "no-cache",
+            "TE": "trailers",
         }
         base_url = "https://i.instagram.com/api/v1/"
         async with self.session.get(

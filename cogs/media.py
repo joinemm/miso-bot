@@ -33,6 +33,9 @@ class Media(commands.Cog):
         )
         self.ig = instagram.Instagram(self.bot, use_proxy=True)
 
+    async def cog_unload(self):
+        await self.ig.close()
+
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx: commands.Context, *, query):
         """Search for videos from youtube"""
