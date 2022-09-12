@@ -325,6 +325,11 @@ class Utility(commands.Cog):
             logger.warning("Arrow object must be constructed with ZoneInfo timezone object")
 
         async with self.bot.session.get(API_BASE_URL, params=params) as response:
+            if response.status != 200:
+                logger.error(response.status)
+                logger.error(response.headers)
+                logger.error(await response.text())
+                raise exceptions.CommandError(f"Weather api returned HTTP ERROR {response.status}")
             data = await response.json(loads=orjson.loads)
 
         current_data = next(
@@ -416,6 +421,11 @@ class Utility(commands.Cog):
             logger.warning("Arrow object must be constructed with ZoneInfo timezone object")
 
         async with self.bot.session.get(API_BASE_URL, params=params) as response:
+            if response.status != 200:
+                logger.error(response.status)
+                logger.error(response.headers)
+                logger.error(await response.text())
+                raise exceptions.CommandError(f"Weather api returned HTTP ERROR {response.status}")
             data = await response.json(loads=orjson.loads)
 
         content = discord.Embed(
