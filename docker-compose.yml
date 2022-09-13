@@ -52,10 +52,10 @@ services:
   bot:
     container_name: miso-bot
     build: .
-    security_opt:
-      - seccomp:unconfined
     command: python -O main.py
     restart: unless-stopped
+    expose:
+      - 443
     depends_on:
       - db
     ports:
