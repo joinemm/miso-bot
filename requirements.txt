@@ -104,7 +104,7 @@ numpy==1.22.2
     #   -r requirements.in
     #   matplotlib
     #   scipy
-oauthlib==3.2.0
+oauthlib==3.2.1
     # via requests-oauthlib
 orjson==3.6.6
     # via discord-py
