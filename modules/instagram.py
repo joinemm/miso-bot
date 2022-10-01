@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 import aiohttp
+import arrow
 import orjson
 
 from modules.misobot import MisoBot
@@ -79,6 +80,84 @@ class InstagramIdCodec:
         return num
 
 
+class Datalama:
+    BASE_URL = "https://api.datalama.io"
+
+    def __init__(self, bot: MisoBot):
+        self.bot: MisoBot = bot
+
+    async def api_request(self, endpoint: str, params: dict) -> dict:
+        headers = {
+            "accept": "application/json",
+            "x-access-key": self.bot.keychain.DATALAMA_ACCESS_KEY,
+        }
+        async with self.bot.session.get(
+            self.BASE_URL + endpoint, params=params, headers=headers
+        ) as response:
+            data = await response.json()
+            if (
+                response.status != 200
+                or data.get("exc_type") is not None
+                or data.get("detail") is not None
+            ):
+                raise InstagramError(
+                    f"ERROR {response.status} | {data.get('exc_type')} | {data.get('detail')}"
+                )
+            return data
+
+    async def get_post(self, shortcode: str) -> IgPost:
+        data = await self.api_request("/v1/media/by/code", {"code": shortcode})
+
+        media = []
+        post_media_type = MediaType(data["media_type"])
+
+        if post_media_type == MediaType.ALBUM:
+            for resource in data["resources"]:
+                resource_media_type = MediaType(resource["media_type"])
+                if resource_media_type == MediaType.PHOTO:
+                    display_url = resource["image_versions"][0]["url"]
+                elif resource_media_type == MediaType.VIDEO:
+                    display_url = resource["video_url"]
+                media.append(IgMedia(resource_media_type, display_url))
+        elif post_media_type == MediaType.VIDEO:
+            media.append(IgMedia(post_media_type, data["video_url"]))
+        else:
+            media.append(IgMedia(post_media_type, data["image_versions"][0]["url"]))
+
+        user = data["user"]
+        user = IgUser(
+            user["pk"],
+            user["username"],
+            user["profile_pic_url"],
+        )
+
+        timestamp = data["taken_at_ts"]
+
+        return IgPost(user, media, timestamp)
+
+    async def get_story(self, story_pk: str) -> IgPost:
+        data = await self.api_request("/v1/story/by/id", {"id": story_pk})
+
+        media = []
+        post_media_type = MediaType(data["media_type"])
+
+        if post_media_type == MediaType.VIDEO:
+            media.append(IgMedia(post_media_type, data["video_url"]))
+        else:
+            media.append(IgMedia(post_media_type, data["thumbnail_url"]))
+
+        user = data["user"]
+        user = IgUser(
+            user["pk"],
+            user["username"],
+            user["profile_pic_url"],
+        )
+
+        timestamp = int(arrow.get(data["taken_at"]).timestamp())
+
+        return IgPost(user, media, timestamp)
+
+
 class Instagram:
     def __init__(
         self,
@@ -121,6 +200,54 @@ class Instagram:
             res = resource["video_versions"][0]
             return IgMedia(resource_media_type, res["url"])
 
+    async def graphql_request(self, shortcode: str):
+        url = "https://www.instagram.com/graphql/query/"
+        params = {
+            "query_hash": "9f8827793ef34641b2fb195d4d41151c",
+            "variables": '{"shortcode": "'
+            + shortcode
+            + '", "child_comment_count": 3, "fetch_comment_count": 40, "parent_comment_count": 24, "has_threaded_comments": "true"}',
+        }
+        headers = {
+            "Host": "www.instagram.com",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:104.0) Gecko/20100101 Firefox/104.0",
+            "Accept": "*/*",
+            "Accept-Language": "en,en-US;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "X-Instagram-AJAX": "1006292718",
+            "X-IG-App-ID": "936619743392459",
+            "X-ASBD-ID": "198387",
+            "X-IG-WWW-Claim": "0",
+            "X-Requested-With": "XMLHttpRequest",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Referer": "https://www.instagram.com/p/Ci3_9mnrK9z/",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+            "Pragma": "no-cache",
+            "Cache-Control": "no-cache",
+            "TE": "trailers",
+            "Cookie": self.bot.keychain.IG_COOKIE,
+        }
+        async with self.session.get(
+            url,
+            headers=headers,
+            proxy=self.proxy,
+            params=params,
+            proxy_auth=self.proxy_auth,
+        ) as response:
+            try:
+                data = await response.json(loads=orjson.loads)
+            except aiohttp.ContentTypeError:
+                raise ExpiredCookie
+
+            if data["status"] != "ok":
+                print(data)
+                raise InstagramError(f'[HTTP {response.status}] {data.get("message")}')
+
+        return data
+
     async def v1_api_request(self, endpoint: str, params: dict = None):
         headers = {
             "Cookie": self.bot.keychain.IG_COOKIE,
@@ -129,14 +256,11 @@ class Instagram:
             "Accept": "*/*",
             "Accept-Language": "en,en-US;q=0.5",
             "Accept-Encoding": "gzip, deflate, br",
-            "X-CSRFToken": "lZbuGF42VnBBG434qZcPMJK6MKXPJeMf",
             "X-Instagram-AJAX": "1006164448",
             "X-IG-App-ID": "936619743392459",
             "X-ASBD-ID": "198387",
-            "X-IG-WWW-Claim": "hmac.AR2Amvh6EFx6QPx3x751CvpHPpxJnFp-_XkaIPhPBUv3_fMo",
             "Origin": "https://www.instagram.com",
             "DNT": "1",
-            "Proxy-Authorization": "Basic U2Vsam9vbmFzOkszdjVScU4=",
             "Connection": "keep-alive",
             "Referer": "https://www.instagram.com/",
             "Sec-Fetch-Dest": "empty",
@@ -211,3 +335,38 @@ class Instagram:
             user["profile_pic_url"],
         )
         return IgPost(user, media, timestamp)
+
+    async def get_post_graphql(self, shortcode: str) -> IgPost:
+        data = await self.graphql_request(shortcode)
+        data = data["data"]["shortcode_media"]
+        mediatype = to_mediatype(data["__typename"])
+
+        media = []
+        if mediatype == MediaType.ALBUM:
+            for node in data["edge_sidecar_to_children"]["edges"]:
+                node = node["node"]
+                node_mediatype = to_mediatype(node["__typename"])
+                display_url = node["display_resources"][-1]["src"]
+                media.append(IgMedia(node_mediatype, display_url))
+        else:
+            display_url = data["display_resources"][-1]["src"]
+            media.append(IgMedia(mediatype, display_url))
+
+        timestamp = data["taken_at_timestamp"]
+        user = data["owner"]
+        user = IgUser(
+            user["id"],
+            user["username"],
+            user["profile_pic_url"],
+        )
+        return IgPost(user, media, timestamp)
+
+
+def to_mediatype(typename: str):
+    match typename:
+        case "GraphVideo":
+            return MediaType.VIDEO
+        case "GraphImage":
+            return MediaType.PHOTO
+        case "GraphSidecar":
+            return MediaType.ALBUM

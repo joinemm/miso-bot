@@ -124,10 +124,10 @@ class Media(commands.Cog):
             try:
                 if shortcode:
                     post_url = f"https://www.instagram.com/p/{shortcode}"
-                    post = await self.ig.get_post(shortcode)
+                    post = await instagram.Datalama(self.bot).get_post(shortcode)
                 else:
                     post_url = f"https://www.instagram.com/stories/{username}/{story_pk}"
-                    post = await self.ig.get_story(username, story_pk)
+                    post = await instagram.Datalama(self.bot).get_story(story_pk)
             except instagram.ExpiredCookie:
                 raise exceptions.CommandError(
                     "The Instagram login session has expired, please ask my developer to reauthenticate!"

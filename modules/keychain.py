@@ -34,6 +34,7 @@ class Keychain:
         "PROXY_USER",
         "PROXY_PASS",
         "IG_COOKIE",
+        "DATALAMA_ACCESS_KEY",
     ]
 
     OPTIONAL = [
