@@ -5,11 +5,13 @@ import sys
 import uvloop
 from dotenv import load_dotenv
 
-from modules import log
-from modules.misobot import MisoBot
+# dotenv has to be loaded before importing MisoBot
+load_dotenv()
+
+from modules import log  # noqa: E402
+from modules.misobot import MisoBot  # noqa: E402
 
 uvloop.install()
-load_dotenv()
 logger = log.get_logger(__name__)
 
 developer_mode = "dev" in sys.argv
