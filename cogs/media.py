@@ -7,14 +7,16 @@ import arrow
 import discord
 import orjson
 import regex
-import tweepy
 import yarl
+from aiohttp import ClientResponseError
 from bs4 import BeautifulSoup
 from discord.ext import commands
-from tweepy import OAuthHandler
 
 from modules import exceptions, instagram, log, util
 from modules.views import LinkButton
+
+# from tweepy import OAuthHandler
+# import tweepy
 
 logger = log.get_logger(__name__)
 
@@ -25,12 +27,12 @@ class Media(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.icon = "🌐"
-        self.twitter_api = tweepy.API(
-            OAuthHandler(
-                self.bot.keychain.TWITTER_CONSUMER_KEY,
-                self.bot.keychain.TWITTER_CONSUMER_SECRET,
-            )
-        )
+        # self.twitter_api = tweepy.API(
+        #     OAuthHandler(
+        #         self.bot.keychain.TWITTER_CONSUMER_KEY,
+        #         self.bot.keychain.TWITTER_CONSUMER_SECRET,
+        #     )
+        # )
         self.ig = instagram.Instagram(self.bot, use_proxy=True)
 
     async def cog_unload(self):
@@ -73,11 +75,27 @@ class Media(commands.Cog):
                 logger.error(await response.text())
                 response.raise_for_status()
 
-            if int(response.headers.get("content-length", max_filesize)) > max_filesize:
-                return f"\n{media_url}"
-            else:
+            content_length = response.headers.get("Content-Length")
+            if content_length and int(content_length) < max_filesize:
                 buffer = io.BytesIO(await response.read())
                 return discord.File(fp=buffer, filename=filename)
+            elif content_length and int(content_length) >= max_filesize:
+                return media_url
+            else:
+                logger.warning(f"No content type header for {media_url}")
+                # there is no Content-Length header
+                # try to stream until we hit our limit
+                try:
+                    amount_read = 0
+                    buffer = b""
+                    async for chunk in response.content.iter_chunked(1024):
+                        amount_read += len(chunk)
+                        buffer += chunk
+                        if amount_read > max_filesize:
+                            raise ValueError
+                    return discord.File(fp=io.BytesIO(buffer), filename=filename)
+                except ValueError:
+                    return media_url
 
     @commands.command(aliases=["ig", "insta"], usage="<links...> '-e'")
     async def instagram(self, ctx: commands.Context, *links: str):
@@ -194,6 +212,12 @@ class Media(commands.Cog):
         except (discord.Forbidden, discord.NotFound):
             pass
 
+    @staticmethod
+    def sort_videos(video: dict) -> int:
+        width, height = re.findall(r"[/](\d*)x(\d*)[/]", video["src"])[0]
+        res = int(width) * int(height)
+        return res
+
     @commands.command(aliases=["twt"], usage="<links...> '-e'")
     async def twitter(self, ctx: commands.Context, *links: str):
         """Retrieve images from one or more tweets"""
@@ -222,100 +246,85 @@ class Media(commands.Cog):
             else:
                 tweet_id = tweet_url
 
-            try:
-                tweet = await ctx.bot.loop.run_in_executor(
-                    None,
-                    lambda: self.twitter_api.get_status(str(tweet_id), tweet_mode="extended"),
+            async with self.bot.session.get(
+                f"https://cdn.syndication.twimg.com/tweet?id={tweet_id}"
+            ) as response:
+                try:
+                    response.raise_for_status()
+                except ClientResponseError as e:
+                    raise exceptions.CommandError(
+                        f'Error getting tweet id "{tweet_id}": {e.status} {e.message}'
+                    )
+                tweet = await response.json()
+
+            media_urls = []
+            if tweet.get("video"):
+                videos = list(
+                    filter(lambda x: x["type"] == "video/mp4", tweet["video"]["variants"])
+                )
+                if len(videos) > 1:
+                    best_src = sorted(videos, key=self.sort_videos)[-1]["src"]
+                else:
+                    best_src = videos[0]["src"]
+                media_urls.append(("mp4", best_src))
+
+            for photo in tweet.get("photos", []):
+                base, extension = photo["url"].rsplit(".", 1)
+                media_urls.append(("jpg", base + "?format=" + extension + "&name=orig"))
+
+            if not media_urls:
+                raise exceptions.CommandWarning(
+                    f"Could not find any media from tweet id `{tweet_id}`"
                 )
 
-            except Exception:
-                await ctx.send(f":warning: Could not get tweet `{tweet_url}`")
-                continue
-
-            media_files = []
-            try:
-                media = tweet.extended_entities.get("media", [])
-            except AttributeError:
-                media = []
-
-            if not media:
-                await ctx.send(f":warning: Could not find any images from tweet id `{tweet_id}`")
-                continue
-
-            for resource in media:
-                media_url = resource["media_url"]
-                video_url = None
-                if not resource["type"] == "photo":
-                    video_variants = resource["video_info"]["variants"]
-                    largest_rate = -1
-                    for video in video_variants:
-                        if (
-                            video["content_type"] == "video/mp4"
-                            and video["bitrate"] > largest_rate
-                        ):
-                            largest_rate = video["bitrate"]
-                            video_url = video["url"]
-                            media_url = video["url"]
-
-                media_files.append((media_url, video_url))
-
-            content = discord.Embed(colour=int(tweet.user.profile_link_color, 16))
-            content.set_author(
-                icon_url=tweet.user.profile_image_url,
-                name=f"@{tweet.user.screen_name}",
-                url=f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}",
-            )
+            screen_name = tweet["user"]["screen_name"]
+            tweet_url = f"https://twitter.com/{screen_name}/status/{tweet_id}"
+            timestamp = arrow.get(tweet["created_at"])
 
             if use_embeds:
+                content = discord.Embed(colour=int(tweet["user"]["profile_link_color"], 16))
+                content.set_author(
+                    icon_url=tweet["user"]["profile_image_url"],
+                    name=f"@{screen_name}",
+                    url=tweet_url,
+                )
                 # just send link in embed
                 embeds = []
                 videos = []
-                for n, (media_url, video_url) in enumerate(media_files, start=1):
-                    url = media_url.replace(".jpg", "?format=jpg&name=orig")
-                    content.set_image(url=url)
-                    if n == len(media_files):
-                        content.timestamp = tweet.created_at
-                    embeds.append(content.copy())
-                    if video_url is not None:
-                        # contains a video/gif, send it separately
-                        videos.append(video_url)
-                    content._author = None
+                for n, (extension, media_url) in enumerate(media_urls, start=1):
+                    if extension == "mp4":
+                        videos.append(media_url)
+                    else:
+                        content.set_image(url=media_url)
+                        embeds.append(content.copy())
+                        content._author = None
 
+                content.timestamp = timestamp.timestamp()
                 if embeds:
                     await ctx.send(embeds=embeds)
                 if videos:
                     await ctx.send("\n".join(videos))
             else:
-                # download file and rename, upload to discord
-                tweet_link = "https://" + tweet.full_text.split(" ")[-1].split("https://")[-1]
-                timestamp = arrow.get(tweet.created_at).timestamp()
-                username = discord.utils.escape_markdown(tweet.user.screen_name)
-                caption = f"<:twitter:937425165241946162> **@{username}** <t:{int(timestamp)}:d>"
                 tasks = []
-                for n, (media_url, video_url) in enumerate(media_files, start=1):
-                    # is image not video
-                    if video_url is None:
-                        extension = "jpg"
-                    else:
-                        extension = "mp4"
+                max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
+                for n, (extension, media_url) in enumerate(media_urls, start=1):
+                    filename = f"{timestamp.format('YYMMDD')}-@{screen_name}-{tweet['id_str']}-{n}.{extension}"
+                    tasks.append(self.download_media(media_url, filename, max_filesize))
 
-                    filename = f"{timestamp}-@{tweet.user.screen_name}-{tweet.id}-{n}.{extension}"
-                    # discord normally has 8MB file size limit, but it can be increased in some guilds
-                    max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
-                    url = media_url.replace(".jpg", "?format=jpg&name=orig")
-                    tasks.append(self.download_media(url, filename, max_filesize))
+                username = discord.utils.escape_markdown(screen_name)
+                caption = f"<:twitter:937425165241946162> **@{username}** <t:{int(timestamp.timestamp())}:d>"
 
                 files = []
+                too_big_files = []
                 results = await asyncio.gather(*tasks)
                 for result in results:
                     if isinstance(result, discord.File):
                         files.append(result)
                     else:
-                        caption += result
+                        too_big_files.append(result)
 
-                await ctx.send(
-                    caption, files=files, view=LinkButton("View on twitter", tweet_link)
-                )
+                caption = "\n".join([caption] + too_big_files)
+                await ctx.send(caption, files=files, view=LinkButton("View on Twitter", tweet_url))
 
         try:
             # delete discord automatic embed
