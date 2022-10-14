@@ -82,20 +82,21 @@ class Media(commands.Cog):
             elif content_length and int(content_length) >= max_filesize:
                 return media_url
             else:
-                logger.warning(f"No content type header for {media_url}")
+                logger.warning(f"No content length header for {media_url}")
+                return media_url
                 # there is no Content-Length header
                 # try to stream until we hit our limit
-                try:
-                    amount_read = 0
-                    buffer = b""
-                    async for chunk in response.content.iter_chunked(1024):
-                        amount_read += len(chunk)
-                        buffer += chunk
-                        if amount_read > max_filesize:
-                            raise ValueError
-                    return discord.File(fp=io.BytesIO(buffer), filename=filename)
-                except ValueError:
-                    return media_url
+                # try:
+                #     amount_read = 0
+                #     buffer = b""
+                #     async for chunk in response.content.iter_chunked(1024):
+                #         amount_read += len(chunk)
+                #         buffer += chunk
+                #         if amount_read > max_filesize:
+                #             raise ValueError
+                #     return discord.File(fp=io.BytesIO(buffer), filename=filename)
+                # except ValueError:
+                #     return media_url
 
     @commands.command(aliases=["ig", "insta"], usage="<links...> '-e'")
     async def instagram(self, ctx: commands.Context, *links: str):
