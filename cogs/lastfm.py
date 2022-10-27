@@ -17,6 +17,7 @@ from PIL import Image
 
 from modules import emojis, exceptions, log, util
 from modules.genius import Genius
+from modules.misobot import MisoBot
 
 MISSING_IMAGE_HASH = "2a96cbd8b46e442fc41c2b86b821562f"
 
@@ -36,7 +37,7 @@ def is_small_server():
             [user.id for user in ctx.guild.members],
             one_value=True,
         )
-        if users > 150:
+        if users > 200:
             raise exceptions.ServerTooBig(ctx.guild.member_count)
         return True
 
@@ -65,7 +66,7 @@ class LastFm(commands.Cog):
     """LastFM commands"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "🎵"
         self.lastfm_red = "b90000"
         self.cover_base_urls = [
@@ -85,6 +86,57 @@ class LastFm(commands.Cog):
             await util.command_group_help(ctx)
         else:
             await username_to_ctx(ctx)
+
+    @fm.group(name="blacklist")
+    @commands.has_permissions(manage_guild=True)
+    async def fm_blacklist(self, ctx: commands.Context):
+        """Blacklist members from appearing on whoknows and other server wide lists"""
+        if ctx.invoked_subcommand is None:
+            data = await self.bot.db.execute(
+                """
+                SELECT user_id FROM lastfm_blacklist WHERE guild_id = %s
+                """,
+                ctx.guild.id,
+                as_list=True,
+            )
+            rows = ["> Use `add` and `remove` subcommands to manage", ""]
+            for user_id in data:
+                user = self.bot.get_user(user_id)
+                rows.append(f"{user.mention} ({user or user_id})")
+            content = discord.Embed(
+                title=":no_entry_sign: Current LastFM blacklist",
+                color=int(self.lastfm_red, 16),
+            )
+            await util.send_as_pages(ctx, content, rows)
+
+    @fm_blacklist.command(name="add")
+    async def fm_blacklist_add(self, ctx: commands.Context, *, member: discord.Member):
+        """Add a member to the blacklist"""
+        await self.bot.db.execute(
+            """
+            INSERT INTO lastfm_blacklist (user_id, guild_id)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                user_id = VALUES(user_id)
+            """,
+            member.id,
+            ctx.guild.id,
+        )
+        await util.send_success(
+            ctx, f"{member.mention} will no longer appear on the lastFM leaderboards."
+        )
+
+    @fm_blacklist.command(name="remove")
+    async def fm_blacklist_remove(self, ctx: commands.Context, *, member: discord.Member):
+        """Remove a member from the blacklist"""
+        await self.bot.db.execute(
+            """
+            DELETE FROM lastfm_blacklist WHERE user_id = %s AND guild_id = %s
+            """,
+            member.id,
+            ctx.guild.id,
+        )
+        await util.send_success(ctx, f"{member.mention} is no longer blacklisted.")
 
     @fm.command()
     async def set(self, ctx: commands.Context, username):
@@ -1147,19 +1199,22 @@ class LastFm(commands.Cog):
 
         return await util.render_html(self.bot, payload)
 
-    async def server_lastfm_usernames(self, ctx: commands.Context, filter_cheaters=False):
+    async def server_lastfm_usernames(self, ctx: commands.Context, filter_blacklisted=False):
         guild_user_ids = [user.id for user in ctx.guild.members]
+        args = [guild_user_ids]
+        if filter_blacklisted:
+            args.append(ctx.guild.id)
         data = await self.bot.db.execute(
             """
             SELECT user_id, lastfm_username FROM user_settings WHERE user_id IN %s
             AND lastfm_username IS NOT NULL
             """
             + (
-                " AND lastfm_username not in (SELECT lastfm_username FROM lastfm_cheater)"
-                if filter_cheaters
+                " AND user_id not in (SELECT user_id FROM lastfm_blacklist WHERE guild_id = %s)"
+                if filter_blacklisted
                 else ""
             ),
-            guild_user_ids,
+            *args,
         )
         return data
 
@@ -1191,7 +1246,7 @@ class LastFm(commands.Cog):
 
         tasks = []
         for user_id, lastfm_username in await self.server_lastfm_usernames(
-            ctx, filter_cheaters=True
+            ctx, filter_blacklisted=True
         ):
             member = ctx.guild.get_member(user_id)
             if member is None:
@@ -1391,7 +1446,7 @@ class LastFm(commands.Cog):
         total_plays = 0
         arguments = parse_arguments(args)
         for user_id, lastfm_username in await self.server_lastfm_usernames(
-            ctx, filter_cheaters=True
+            ctx, filter_blacklisted=True
         ):
             member = ctx.guild.get_member(user_id)
             if member is None:
@@ -1449,7 +1504,7 @@ class LastFm(commands.Cog):
         total_plays = 0
         arguments = parse_arguments(args)
         for user_id, lastfm_username in await self.server_lastfm_usernames(
-            ctx, filter_cheaters=True
+            ctx, filter_blacklisted=True
         ):
             member = ctx.guild.get_member(user_id)
             if member is None:
@@ -1506,7 +1561,7 @@ class LastFm(commands.Cog):
         total_plays = 0
         arguments = parse_arguments(args)
         for user_id, lastfm_username in await self.server_lastfm_usernames(
-            ctx, filter_cheaters=True
+            ctx, filter_blacklisted=True
         ):
             member = ctx.guild.get_member(user_id)
             if member is None:
@@ -1611,7 +1666,7 @@ class LastFm(commands.Cog):
         listeners = []
         tasks = []
         for user_id, lastfm_username in await self.server_lastfm_usernames(
-            ctx, filter_cheaters=True
+            ctx, filter_blacklisted=True
         ):
             member = ctx.guild.get_member(user_id)
             if member is None:
@@ -1716,7 +1771,7 @@ class LastFm(commands.Cog):
         listeners = []
         tasks = []
         for user_id, lastfm_username in await self.server_lastfm_usernames(
-            ctx, filter_cheaters=True
+            ctx, filter_blacklisted=True
         ):
             member = ctx.guild.get_member(user_id)
             if member is None:
@@ -1792,7 +1847,7 @@ class LastFm(commands.Cog):
         listeners = []
         tasks = []
         for user_id, lastfm_username in await self.server_lastfm_usernames(
-            ctx, filter_cheaters=True
+            ctx, filter_blacklisted=True
         ):
             member = ctx.guild.get_member(user_id)
             if member is None:
@@ -2589,7 +2644,7 @@ async def username_to_ctx(ctx):
         ctx.usertarget.id,
         one_value=True,
     )
-    if not ctx.username and str(ctx.invoked_subcommand) not in ["fm set"]:
+    if not ctx.username and ctx.invoked_subcommand.name not in ["set", "blacklist"]:
         if not ctx.foreign_target:
             msg = f"No last.fm username saved! Please use `{ctx.prefix}fm set` to save your username (last.fm account required)"
         else:

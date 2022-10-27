@@ -42,6 +42,12 @@ CREATE TABLE IF NOT EXISTS lastfm_cheater (
     PRIMARY KEY (lastfm_username)
 );
 
+CREATE TABLE IF NOT EXISTS lastfm_blacklist (
+    user_id BIGINT,
+    guild_id BIGINT,
+    PRIMARY KEY (guild_id, user_id)
+);
+
 -- user data
 CREATE TABLE IF NOT EXISTS notification (
     guild_id BIGINT,
