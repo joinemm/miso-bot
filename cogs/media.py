@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 from discord.ext import commands
 
 from modules import exceptions, instagram, log, util
+from modules.misobot import MisoBot
 from modules.views import LinkButton
 
 # from tweepy import OAuthHandler
@@ -25,7 +26,7 @@ class Media(commands.Cog):
     """Fetch various media"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "🌐"
         # self.twitter_api = tweepy.API(
         #     OAuthHandler(
@@ -72,15 +73,20 @@ class Media(commands.Cog):
         # Thankfully you can plug your own yarl.URL with encoded=True so it wont get encoded twice
         async with self.bot.session.get(yarl.URL(media_url, encoded=True)) as response:
             if not response.ok:
-                logger.error(await response.text())
-                response.raise_for_status()
+                error_message = await response.text()
+                logger.error(error_message)
+                return f"`[{error_message}]`"
+                # raise exceptions.CommandError(error_message)
 
-            content_length = response.headers.get("Content-Length")
-            if content_length and int(content_length) < max_filesize:
-                buffer = io.BytesIO(await response.read())
-                return discord.File(fp=buffer, filename=filename)
-            elif content_length and int(content_length) >= max_filesize:
-                return media_url
+            content_length = response.headers.get("Content-Length") or response.headers.get(
+                "x-full-image-content-length"
+            )
+            if content_length:
+                if int(content_length) < max_filesize:
+                    buffer = io.BytesIO(await response.read())
+                    return discord.File(fp=buffer, filename=filename)
+                elif int(content_length) >= max_filesize:
+                    return media_url
             else:
                 logger.warning(f"No content length header for {media_url}")
                 # there is no Content-Length header
