@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 
 from modules import log, util
+from modules.misobot import MisoBot
 
 logger = log.get_logger(__name__)
 
@@ -13,7 +14,7 @@ class Owner(commands.Cog):
     """Bot owner only, you shouldn't be able to see this"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "👑"
 
     async def cog_check(self, ctx: commands.Context):
@@ -129,14 +130,21 @@ class Owner(commands.Cog):
     @donator.command(name="remove")
     async def donator_remove(self, ctx: commands.Context, user: discord.User):
         """Remove a donator"""
-        await self.bot.db.execute("DELETE FROM donator WHERE user_id = %s", user.id)
+        await self.bot.db.execute(
+            """
+            DELETE FROM donator WHERE user_id = %s
+            """,
+            user.id,
+        )
         await util.send_success(ctx, f"Removed **{user}** from the donators list.")
 
     @donator.command(name="toggle")
     async def donator_toggle(self, ctx: commands.Context, user: discord.User):
         """Toggle user's donator status"""
         await self.bot.db.execute(
-            "UPDATE donator SET currently_active = !currently_active WHERE user_id = %s",
+            """
+            UPDATE donator SET currently_active = !currently_active WHERE user_id = %s
+            """,
             user.id,
         )
         await util.send_success(ctx, f"**{user}** donator status changed.")
@@ -145,7 +153,9 @@ class Owner(commands.Cog):
     async def donator_tier(self, ctx: commands.Context, user: discord.User, new_tier: int):
         """Change user's donation tier"""
         await self.bot.db.execute(
-            "UPDATE donator SET donation_tier = %s WHERE user_id = %s",
+            """
+            UPDATE donator SET donation_tier = %s WHERE user_id = %s
+            """,
             new_tier,
             user.id,
         )
@@ -155,7 +165,7 @@ class Owner(commands.Cog):
     @commands.is_owner()
     async def database_query(self, ctx: commands.Context, *, statement):
         """Execute something against the local MariaDB instance"""
-        data = await self.bot.db.execute(statement)
+        data = await self.bot.db.fetch(statement)
         try:
             if data:
                 content = "\n".join(str(r) for r in data)

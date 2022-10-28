@@ -5,13 +5,14 @@ import regex
 from discord.ext import commands
 
 from modules import emojis, exceptions, util
+from modules.misobot import MisoBot
 
 
 class Notifications(commands.Cog):
     """Set keyword notifications"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "📨"
         self.keyword_regex = r"(?:^|\s|[\~\"\'\+\*\`\_\/])(\L<words>)(?:$|\W|\s|s)"
         self.notifications_cache = {}
@@ -20,7 +21,7 @@ class Notifications(commands.Cog):
         await self.create_cache()
 
     async def create_cache(self):
-        keywords = await self.bot.db.execute(
+        keywords = await self.bot.db.fetch(
             "SELECT guild_id, user_id, keyword FROM notification",
         )
         self.notifications_cache = {}
@@ -139,10 +140,9 @@ class Notifications(commands.Cog):
                 "Global notifications have been removed for performance reasons."
             )
 
-        amount = await self.bot.db.execute(
+        amount = await self.bot.db.fetch_value(
             "SELECT COUNT(*) FROM notification WHERE user_id = %s",
             ctx.author.id,
-            one_value=True,
         )
         if amount and amount >= 30:
             raise exceptions.CommandWarning(
@@ -156,7 +156,7 @@ class Notifications(commands.Cog):
         guild_id = ctx.guild.id
         keyword = keyword.lower().strip()
 
-        check = await self.bot.db.execute(
+        check = await self.bot.db.fetch(
             """
             SELECT * FROM notification WHERE guild_id = %s AND user_id = %s AND keyword = %s
             """,
@@ -210,7 +210,7 @@ class Notifications(commands.Cog):
         guild_id = ctx.guild.id
         keyword = keyword.lower().strip()
 
-        check = await self.bot.db.execute(
+        check = await self.bot.db.fetch(
             """
             SELECT * FROM notification WHERE guild_id = %s AND user_id = %s AND keyword = %s
             """,
@@ -247,7 +247,7 @@ class Notifications(commands.Cog):
     @notification.command(name="list")
     async def notification_list(self, ctx: commands.Context):
         """List your current notifications"""
-        words = await self.bot.db.execute(
+        words = await self.bot.db.fetch(
             """
             SELECT guild_id, keyword, times_triggered FROM notification WHERE user_id = %s ORDER BY keyword
             """,
@@ -288,11 +288,18 @@ class Notifications(commands.Cog):
         """
         dm = ctx.guild is None
         if dm:
-            await self.bot.db.execute("DELETE FROM notification WHERE user_id = %s", ctx.author.id)
+            await self.bot.db.execute(
+                """
+                DELETE FROM notification WHERE user_id = %s
+                """,
+                ctx.author.id,
+            )
             await util.send_success(ctx, "Cleared all of your notifications in all servers!")
         else:
             await self.bot.db.execute(
-                "DELETE FROM notification WHERE user_id = %s AND guild_id = %s",
+                """
+                DELETE FROM notification WHERE user_id = %s AND guild_id = %s
+                """,
                 ctx.author.id,
                 ctx.guild.id,
             )
@@ -321,10 +328,9 @@ class Notifications(commands.Cog):
             if ctx.author not in message.channel.members:
                 raise exceptions.CommandError("You cannot see this message.")
 
-            keywords = await self.bot.db.execute(
+            keywords = await self.bot.db.fetch_flattened(
                 "SELECT keyword FROM notification WHERE user_id = %s",
                 ctx.author.id,
-                as_list=True,
             )
 
             pattern = regex.compile(self.keyword_regex, words=keywords, flags=regex.IGNORECASE)

@@ -66,10 +66,9 @@ class Events(commands.Cog):
     async def on_guild_join(self, guild):
         """Called when the bot joins a new guild"""
         await self.bot.wait_until_ready()
-        blacklisted = await self.bot.db.execute(
+        blacklisted = await self.bot.db.fetch_value(
             "SELECT reason FROM blacklisted_guild WHERE guild_id = %s",
             guild.id,
-            one_value=True,
         )
         if blacklisted:
             logger.info(f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}")
@@ -140,10 +139,9 @@ class Events(commands.Cog):
                 pass
 
         # welcome message
-        greeter = await self.bot.db.execute(
+        greeter = await self.bot.db.fetch_row(
             "SELECT channel_id, is_enabled, message_format FROM greeter_settings WHERE guild_id = %s",
             member.guild.id,
-            one_row=True,
         )
         if greeter:
             channel_id, is_enabled, message_format = greeter
@@ -200,10 +198,9 @@ class Events(commands.Cog):
                     pass
 
         # goodbye message
-        goodbye = await self.bot.db.execute(
+        goodbye = await self.bot.db.fetch_row(
             "SELECT channel_id, is_enabled, message_format FROM goodbye_settings WHERE guild_id = %s",
             member.guild.id,
-            one_row=True,
         )
         if goodbye:
             channel_id, is_enabled, message_format = goodbye
@@ -253,10 +250,9 @@ class Events(commands.Cog):
             log_channel = message.guild.get_channel(channel_id)
             if log_channel is not None and message.channel != log_channel:
                 # ignored channels
-                ignored_channels = await self.bot.db.execute(
+                ignored_channels = await self.bot.db.fetch_flattened(
                     "SELECT channel_id FROM message_log_ignore WHERE guild_id = %s",
                     message.guild.id,
-                    as_list=True,
                 )
                 if message.channel.id not in ignored_channels:
                     try:
@@ -412,10 +408,9 @@ class Events(commands.Cog):
             if reaction_count < required_reaction_count:
                 return
 
-            board_message_id = await self.bot.db.execute(
+            board_message_id = await self.bot.db.fetch_value(
                 "SELECT starboard_message_id FROM starboard_message WHERE original_message_id = %s",
                 payload.message_id,
-                one_value=True,
             )
             emoji_display = (
                 "⭐" if emoji_type == "custom" else emoji_literals.NAME_TO_UNICODE[emoji_name]

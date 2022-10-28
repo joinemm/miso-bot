@@ -4,6 +4,7 @@ import math
 import random
 import re
 import urllib.parse
+from typing import Optional
 
 import aiohttp
 import arrow
@@ -25,19 +26,19 @@ logger = log.get_logger(__name__)
 
 
 def is_small_server():
-    async def predicate(ctx):
+    async def predicate(ctx: commands.Context):
         if ctx.guild is None:
             return True
         await util.require_chunked(ctx.guild)
-        users = await ctx.bot.db.execute(
+        bot: MisoBot = ctx.bot
+        users = await bot.db.fetch_value(
             """
             SELECT count(*) FROM user_settings WHERE user_id IN %s
             AND lastfm_username IS NOT NULL
             """,
             [user.id for user in ctx.guild.members],
-            one_value=True,
         )
-        if users > 200:
+        if users and users > 200:
             raise exceptions.ServerTooBig(ctx.guild.member_count)
         return True
 
@@ -91,18 +92,20 @@ class LastFm(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def fm_blacklist(self, ctx: commands.Context):
         """Blacklist members from appearing on whoknows and other server wide lists"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         if ctx.invoked_subcommand is None:
-            data = await self.bot.db.execute(
+            data = await self.bot.db.fetch_flattened(
                 """
                 SELECT user_id FROM lastfm_blacklist WHERE guild_id = %s
                 """,
                 ctx.guild.id,
-                as_list=True,
             )
             rows = ["> Use `add` and `remove` subcommands to manage", ""]
             for user_id in data:
                 user = self.bot.get_user(user_id)
-                rows.append(f"{user.mention} ({user or user_id})")
+                rows.append(f"{user.mention if user else '@?'} ({user or user_id})")
             content = discord.Embed(
                 title=":no_entry_sign: Current LastFM blacklist",
                 color=int(self.lastfm_red, 16),
@@ -112,6 +115,9 @@ class LastFm(commands.Cog):
     @fm_blacklist.command(name="add")
     async def fm_blacklist_add(self, ctx: commands.Context, *, member: discord.Member):
         """Add a member to the blacklist"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         await self.bot.db.execute(
             """
             INSERT INTO lastfm_blacklist (user_id, guild_id)
@@ -129,6 +135,9 @@ class LastFm(commands.Cog):
     @fm_blacklist.command(name="remove")
     async def fm_blacklist_remove(self, ctx: commands.Context, *, member: discord.Member):
         """Remove a member from the blacklist"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         await self.bot.db.execute(
             """
             DELETE FROM lastfm_blacklist WHERE user_id = %s AND guild_id = %s
@@ -141,7 +150,7 @@ class LastFm(commands.Cog):
     @fm.command()
     async def set(self, ctx: commands.Context, username):
         """Save your Last.fm username"""
-        if ctx.foreign_target:
+        if ctx.foreign_target:  # type: ignore
             raise exceptions.CommandWarning("You cannot set Last.fm username for someone else!")
 
         content = await self.get_userinfo_embed(username)
@@ -166,7 +175,7 @@ class LastFm(commands.Cog):
     @fm.command()
     async def unset(self, ctx: commands.Context):
         """Unlink your Last.fm"""
-        if ctx.foreign_target:
+        if ctx.foreign_target:  # type: ignore
             raise exceptions.CommandWarning("You cannot unset someone else's Last.fm username!")
 
         await self.bot.db.execute(
@@ -184,7 +193,7 @@ class LastFm(commands.Cog):
     @fm.command()
     async def profile(self, ctx: commands.Context):
         """See your Last.fm profile"""
-        await ctx.send(embed=await self.get_userinfo_embed(ctx.username))
+        await ctx.send(embed=await self.get_userinfo_embed(ctx.username))  # type: ignore
 
     @fm.command()
     async def milestone(self, ctx: commands.Context, n: int):
@@ -196,8 +205,9 @@ class LastFm(commands.Cog):
             )
         per_page = 100
         pre_data = await self.api_request(
-            {"user": ctx.username, "method": "user.getrecenttracks", "limit": per_page}
+            {"user": ctx.username, "method": "user.getrecenttracks", "limit": per_page}  # type: ignore
         )
+
         total = int(pre_data["recenttracks"]["@attr"]["total"])
         if n > total:
             raise exceptions.CommandWarning(
@@ -214,7 +224,7 @@ class LastFm(commands.Cog):
 
         final_data = await self.api_request(
             {
-                "user": ctx.username,
+                "user": ctx.username,  # type: ignore
                 "method": "user.getrecenttracks",
                 "limit": per_page,
                 "page": containing_page,
@@ -233,7 +243,7 @@ class LastFm(commands.Cog):
     async def youtube(self, ctx: commands.Context):
         """See your current song on youtube"""
         data = await self.api_request(
-            {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
+            {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}  # type: ignore
         )
 
         tracks = data["recenttracks"]["track"]
@@ -328,7 +338,7 @@ class LastFm(commands.Cog):
     async def nowplaying(self, ctx: commands.Context):
         """See your currently playing song"""
         data = await self.api_request(
-            {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}
+            {"user": ctx.username, "method": "user.getrecenttracks", "limit": 1}  # type: ignore
         )
 
         tracks = data["recenttracks"]["track"]
@@ -350,7 +360,7 @@ class LastFm(commands.Cog):
         # tags and playcount
         trackdata = await self.api_request(
             {
-                "user": ctx.username,
+                "user": ctx.username,  # type: ignore
                 "method": "track.getInfo",
                 "artist": artist,
                 "track": track,
@@ -383,13 +393,12 @@ class LastFm(commands.Cog):
 
         message = await ctx.send(embed=content)
 
-        voting_settings = await ctx.bot.db.execute(
+        voting_settings = await self.bot.db.fetch_row(
             """
             SELECT is_enabled, upvote_emoji, downvote_emoji
             FROM lastfm_vote_setting WHERE user_id = %s
             """,
             ctx.author.id,
-            one_row=True,
         )
         if voting_settings:
             (voting_mode, upvote, downvote) = voting_settings
@@ -406,7 +415,7 @@ class LastFm(commands.Cog):
         else:
             data = await self.api_request(
                 {
-                    "user": ctx.username,
+                    "user": ctx.username,  # type: ignore
                     "method": "user.gettopartists",
                     "period": arguments["period"],
                     "limit": arguments["amount"],
@@ -432,7 +441,7 @@ class LastFm(commands.Cog):
         content.set_thumbnail(url=image_url)
         content.set_footer(text=f"Total unique artists: {user_attr['total']}")
         content.set_author(
-            name=f"{util.displayname(ctx.usertarget, escape=False)} — {formatted_timeframe} top artists",
+            name=f"{util.displayname(ctx.usertarget, escape=False)} — {formatted_timeframe} top artists",  # type: ignore
             icon_url=ctx.usertarget.display_avatar.url,
         )
 
@@ -503,11 +512,9 @@ class LastFm(commands.Cog):
         if not tracks:
             raise exceptions.CommandInfo("You have not listened to anything yet!")
 
+        image_url = await self.get_artist_image(tracks[0]["artist"]["name"])
         rows = []
         for i, track in enumerate(tracks, start=1):
-            if i == 1:
-                image_url = await self.get_artist_image(tracks[0]["artist"]["name"])
-
             name = discord.utils.escape_markdown(track["name"])
             artist_name = discord.utils.escape_markdown(track["artist"]["name"])
             plays = track["playcount"]
@@ -720,8 +727,8 @@ class LastFm(commands.Cog):
             f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
             f"{albumname}?date_preset={period_http_format(period)}"
         )
-        data = await fetch(self.bot.session, url, handling="text")
-        if data is None:
+        data, error = await fetch_html(self.bot.session, url)
+        if error:
             raise exceptions.LastFMError(404, "Album page not found")
 
         soup = BeautifulSoup(data, "lxml")
@@ -749,8 +756,8 @@ class LastFm(commands.Cog):
             f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
             f"+{datatype}?date_preset={period_http_format(period)}"
         )
-        data = await fetch(self.bot.session, url, handling="text")
-        if data is None:
+        data, error = await fetch_html(self.bot.session, url)
+        if error:
             raise exceptions.LastFMError(404, "Artist page not found")
 
         soup = BeautifulSoup(data, "lxml")
@@ -779,8 +786,8 @@ class LastFm(commands.Cog):
             f"{urllib.parse.quote_plus(artistname)}"
             f"?date_preset={period_http_format(period)}"
         )
-        data = await fetch(self.bot.session, url, handling="text")
-        if data is None:
+        data, error = await fetch_html(self.bot.session, url)
+        if error:
             raise exceptions.LastFMError(404, "Artist page not found")
 
         soup = BeautifulSoup(data, "lxml")
@@ -841,13 +848,12 @@ class LastFm(commands.Cog):
 
         content.set_footer(text=f"{', '.join(tags)}")
 
-        crown_holder = await self.bot.db.execute(
+        crown_holder = await self.bot.db.fetch_value(
             """
             SELECT user_id FROM artist_crown WHERE guild_id = %s AND artist_name = %s
             """,
             ctx.guild.id,
             artist["formatted_name"],
-            one_value=True,
         )
 
         if crown_holder == ctx.usertarget.id:
@@ -978,15 +984,16 @@ class LastFm(commands.Cog):
             raise exceptions.CommandError("There was an unknown error while getting your albums!")
 
         to_fetch = []
-        albumcolors = await self.bot.db.execute(
+        albumcolors = await self.bot.db.fetch(
             """
             SELECT image_hash, r, g, b FROM image_color_cache WHERE image_hash IN %s
             """,
             tuple(albums),
         )
         albumcolors_dict = {}
-        for image_hash, r, g, b in albumcolors:
-            albumcolors_dict[image_hash] = (r, g, b)
+        if albumcolors:
+            for image_hash, r, g, b in albumcolors:
+                albumcolors_dict[image_hash] = (r, g, b)
         warn = None
 
         for image_id in albums:
@@ -1204,7 +1211,7 @@ class LastFm(commands.Cog):
         args = [guild_user_ids]
         if filter_blacklisted:
             args.append(ctx.guild.id)
-        data = await self.bot.db.execute(
+        data = await self.bot.db.fetch(
             """
             SELECT user_id, lastfm_username FROM user_settings WHERE user_id IN %s
             AND lastfm_username IS NOT NULL
@@ -1694,11 +1701,10 @@ class LastFm(commands.Cog):
         ):
             if i == 1:
                 rank = ":crown:"
-                old_king = await self.bot.db.execute(
+                old_king = await self.bot.db.fetch_value(
                     "SELECT user_id FROM artist_crown WHERE artist_name = %s AND guild_id = %s",
                     artistname,
                     ctx.guild.id,
-                    one_value=True,
                 )
                 await self.bot.db.execute(
                     """
@@ -1901,7 +1907,7 @@ class LastFm(commands.Cog):
         if user is None:
             user = ctx.author
 
-        crownartists = await self.bot.db.execute(
+        crownartists = await self.bot.db.fetch(
             """
             SELECT artist_name, cached_playcount FROM artist_crown
             WHERE guild_id = %s AND user_id = %s ORDER BY cached_playcount DESC
@@ -1997,10 +2003,9 @@ class LastFm(commands.Cog):
     async def cached_image_color(self, image_url):
         """Get image color, cache if new"""
         image_hash = image_url.split("/")[-1].split(".")[0]
-        cached_color = await self.bot.db.execute(
+        cached_color = await self.bot.db.fetch_value(
             "SELECT hex FROM image_color_cache WHERE image_hash = %s",
             image_hash,
-            one_value=True,
         )
         if cached_color:
             return int(cached_color, 16)
@@ -2030,7 +2035,7 @@ class LastFm(commands.Cog):
             return None
 
         username = data["user"]["name"]
-        blacklisted = await self.bot.db.execute(
+        blacklisted = await self.bot.db.fetch(
             "SELECT * from lastfm_cheater WHERE lastfm_username = %s", username.lower()
         )
         playcount = data["user"]["playcount"]
@@ -2122,10 +2127,9 @@ class LastFm(commands.Cog):
 
     async def get_artist_image(self, artist):
         image_life = 604800  # 1 week
-        cached = await self.bot.db.execute(
+        cached = await self.bot.db.fetch_row(
             "SELECT image_hash, scrape_date FROM artist_image_cache WHERE artist_name = %s",
             artist,
-            one_row=True,
         )
 
         if cached:
@@ -2166,7 +2170,7 @@ class LastFm(commands.Cog):
             async with self.bot.session.get(url, params=params) as response:
                 try:
                     content = await response.json(loads=orjson.loads)
-                except aiohttp.client_exceptions.ContentTypeError:
+                except aiohttp.ContentTypeError:
                     if ignore_errors:
                         return None
                     text = await response.text()
@@ -2440,15 +2444,15 @@ class LastFm(commands.Cog):
 
     async def scrape_artist_image(self, artist):
         url = f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
-        data = await fetch(self.bot.session, url, handling="text")
-        if data is None:
+        data, error = await fetch_html(self.bot.session, url)
+        if error:
             return None
 
         soup = BeautifulSoup(data, "lxml")
         image = soup.find("img", {"class": "image-list-image"})
         if image is None:
             try:
-                image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")
+                image = soup.find("li", {"class": "image-list-item-wrapper"}).find("a").find("img")  # type: ignore
             except AttributeError:
                 image = None
 
@@ -2459,15 +2463,18 @@ class LastFm(commands.Cog):
         url = f"https://www.last.fm/user/{username}/library/artists"
         for i in range(1, math.ceil(amount / 50) + 1):
             params = {"date_preset": period_http_format(period), "page": i}
-            task = asyncio.ensure_future(fetch(self.bot.session, url, params, handling="text"))
+            task = asyncio.ensure_future(fetch_html(self.bot.session, url, params))
             tasks.append(task)
 
         responses = await asyncio.gather(*tasks)
 
         images = []
-        for data in responses:
+        for data, error in responses:
             if len(images) >= amount:
                 break
+
+            if error:
+                raise exceptions.LastFMError(0, error)
 
             soup = BeautifulSoup(data, "lxml")
             imagedivs = soup.findAll("td", {"class": "chartlist-image"})
@@ -2606,17 +2613,15 @@ def parse_chart_arguments(args, server_version=False):
     return parsed
 
 
-async def fetch(session, url, params=None, handling="json"):
+async def fetch_html(session: aiohttp.ClientSession, url: str, params: Optional[dict] = None):
+    """Returns tuple of (data, error)"""
     async with session.get(url, params=params) as response:
-        if response.status != 200:
-            data = await response.text()
+        data: str = await response.text()
+        if not response.ok:
             logger.error(f"Lastfm error {response.status}, {data}")
-            return None
-        if handling == "json":
-            return await response.json(loads=orjson.loads)
-        if handling == "text":
-            return await response.text()
-        return await response
+            return "", data
+        else:
+            return data, None
 
 
 def period_http_format(period):
@@ -2631,7 +2636,7 @@ def period_http_format(period):
     return period_format_map.get(period)
 
 
-async def username_to_ctx(ctx):
+async def username_to_ctx(ctx: commands.Context):
     if ctx.message.mentions:
         ctx.foreign_target = True
         ctx.usertarget = ctx.message.mentions[0]
@@ -2639,10 +2644,10 @@ async def username_to_ctx(ctx):
         ctx.foreign_target = False
         ctx.usertarget = ctx.author
 
-    ctx.username = await ctx.bot.db.execute(
+    bot: MisoBot = ctx.bot
+    ctx.username = await bot.db.fetch_value(
         "SELECT lastfm_username FROM user_settings WHERE user_id = %s",
         ctx.usertarget.id,
-        one_value=True,
     )
     if not ctx.username and ctx.invoked_subcommand.name not in ["set", "blacklist"]:
         if not ctx.foreign_target:
@@ -2691,7 +2696,9 @@ async def get_additional_pages(session, soup, url):
 
     async def get_additional_page(n):
         new_url = url + f"&page={n}"
-        data = await fetch(session, new_url, handling="text")
+        data, error = await fetch_html(session, new_url)
+        if error:
+            raise exceptions.LastFMError(error_code=0, message=error)
         soup = BeautifulSoup(data, "lxml")
         return get_list_contents(soup)
 

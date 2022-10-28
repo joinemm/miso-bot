@@ -43,13 +43,12 @@ class Rolepicker(commands.Cog):
     @rolepicker.command(name="remove")
     async def rolepicker_remove(self, ctx: commands.Context, *, name):
         """Remove a role from the rolepicker"""
-        role_id = await self.bot.db.execute(
+        role_id = await self.bot.db.fetch_value(
             """
             SELECT role_id FROM rolepicker_role WHERE guild_id = %s AND role_name = %s
             """,
             ctx.guild.id,
             name.lower(),
-            one_value=True,
         )
         if not role_id:
             raise exceptions.CommandWarning(
@@ -82,12 +81,15 @@ class Rolepicker(commands.Cog):
     @rolepicker.command(name="list")
     async def rolepicker_list(self, ctx: commands.Context):
         """List all the roles currently available for picking"""
-        data = await self.bot.db.execute(
-            """
+        data = (
+            await self.bot.db.fetch(
+                """
             SELECT role_name, role_id FROM rolepicker_role
             WHERE guild_id = %s
             """,
-            ctx.guild.id,
+                ctx.guild.id,
+            )
+            or []
         )
         content = discord.Embed(
             title=f":scroll: Available roles in {ctx.guild.name}",
@@ -120,13 +122,12 @@ class Rolepicker(commands.Cog):
         if message.channel.id not in self.bot.cache.rolepickers:
             return
 
-        is_enabled = await self.bot.db.execute(
+        is_enabled = await self.bot.db.fetch_value(
             """
             SELECT is_enabled FROM rolepicker_settings WHERE guild_id = %s AND channel_id = %s
             """,
             message.guild.id,
             message.channel.id,
-            one_value=True,
         )
         if not is_enabled:
             return
@@ -144,13 +145,12 @@ class Rolepicker(commands.Cog):
         rolename = message.content[1:].strip()
         errorhandler = self.bot.get_cog("ErrorHander")
         if command in ["+", "-"]:
-            role_id = await self.bot.db.execute(
+            role_id = await self.bot.db.fetch_value(
                 """
                 SELECT role_id FROM rolepicker_role WHERE guild_id = %s AND role_name = %s
                 """,
                 message.guild.id,
                 rolename.lower(),
-                one_value=True,
             )
             role = message.guild.get_role(role_id)
             if role is None:

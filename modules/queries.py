@@ -36,21 +36,20 @@ async def is_donator(ctx, user, unlock_tier=1):
     if user.id == ctx.bot.owner_id:
         return True
 
-    tier = await ctx.bot.db.execute(
+    tier = await ctx.bot.db.fetch_value(
         """
         SELECT donation_tier FROM donator
         WHERE user_id = %s
           AND currently_active
         """,
         user.id,
-        one_value=True,
     )
     return tier and tier >= unlock_tier
 
 
 async def is_blacklisted(ctx):
     """Check command invocation context for blacklist triggers"""
-    data = await ctx.bot.db.execute(
+    data = await ctx.bot.db.fetch_row(
         """
         SELECT
         EXISTS (
@@ -76,7 +75,6 @@ async def is_blacklisted(ctx):
         ctx.command.qualified_name,
         ctx.guild.id if ctx.guild is not None else None,
         ctx.channel.id,
-        one_row=True,
     )
 
     if data[0]:

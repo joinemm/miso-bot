@@ -312,10 +312,9 @@ class Miscellaneous(commands.Cog):
             )
 
         if address is None:
-            data = await self.bot.db.execute(
+            data = await self.bot.db.fetch_row(
                 "SELECT server_address, port FROM minecraft_server WHERE guild_id = %s",
                 ctx.guild.id,
-                one_row=True,
             )
             if not data:
                 raise exceptions.CommandInfo(
@@ -369,10 +368,9 @@ class Miscellaneous(commands.Cog):
         await self.send_hs(ctx, "yesterday")
 
     async def send_hs(self, ctx: commands.Context, day):
-        sunsign = await self.bot.db.execute(
+        sunsign = await self.bot.db.fetch_value(
             "SELECT sunsign FROM user_settings WHERE user_id = %s",
             ctx.author.id,
-            one_value=True,
         )
         if not sunsign or sunsign is None:
             raise exceptions.CommandInfo(

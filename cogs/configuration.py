@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from libraries import emoji_literals
 from modules import exceptions, queries, util
+from modules.misobot import MisoBot
 
 
 class ChannelSetting(commands.TextChannelConverter):
@@ -20,7 +21,7 @@ class Configuration(commands.Cog):
     """Configure how the bot behaves"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "⚙️"
 
     @commands.command()
@@ -273,13 +274,12 @@ class Configuration(commands.Cog):
             raise exceptions.CommandError("Unable to get current guild")
 
         await queries.update_setting(ctx, "starboard_settings", "reaction_count", amount)
-        emoji_name, emoji_id, emoji_type = await self.bot.db.execute(
+        emoji_name, emoji_id, emoji_type = await self.bot.db.fetch_row(
             """
             SELECT emoji_name, emoji_id, emoji_type
             FROM starboard_settings WHERE guild_id = %s
             """,
             ctx.guild.id,
-            one_row=True,
         )
         if emoji_type == "custom":
             emoji = self.bot.get_emoji(emoji_id)
@@ -427,12 +427,11 @@ class Configuration(commands.Cog):
         else:
             emoji = emoji_name
 
-        blacklisted_channels = await self.bot.db.execute(
+        blacklisted_channels: list[int] = await self.bot.db.fetch_flattened(
             """
             SELECT channel_id FROM starboard_blacklist WHERE guild_id = %s
             """,
             ctx.guild.id,
-            as_list=True,
         )
 
         content = discord.Embed(title=":star: Current starboard settings", color=int("ffac33", 16))
@@ -526,7 +525,7 @@ class Configuration(commands.Cog):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        channels = await self.bot.db.execute(
+        channels = await self.bot.db.fetch(
             """
             SELECT channel_id, voting_type FROM voting_channel WHERE guild_id = %s
             """,
@@ -597,10 +596,9 @@ class Configuration(commands.Cog):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        roles = await self.bot.db.execute(
+        roles: list[int] = await self.bot.db.fetch_flattened(
             "SELECT role_id FROM autorole WHERE guild_id = %s",
             ctx.guild.id,
-            as_list=True,
         )
         content = discord.Embed(
             title=f":scroll: Autoroles in {ctx.guild.name}", color=int("ffd983", 16)
@@ -655,26 +653,23 @@ class Configuration(commands.Cog):
             title=f":scroll: {ctx.guild.name} Blacklist", color=int("ffd983", 16)
         )
 
-        blacklisted_channels = await self.bot.db.execute(
+        blacklisted_channels: list[int] = await self.bot.db.fetch_flattened(
             """
             SELECT channel_id FROM blacklisted_channel WHERE guild_id = %s
             """,
             ctx.guild.id,
-            as_list=True,
         )
-        blacklisted_members = await self.bot.db.execute(
+        blacklisted_members: list[int] = await self.bot.db.fetch_flattened(
             """
             SELECT user_id FROM blacklisted_member WHERE guild_id = %s
             """,
             ctx.guild.id,
-            as_list=True,
         )
-        blacklisted_commands = await self.bot.db.execute(
+        blacklisted_commands: list[int] = await self.bot.db.fetch_flattened(
             """
             SELECT command_name FROM blacklisted_command WHERE guild_id = %s
             """,
             ctx.guild.id,
-            as_list=True,
         )
 
         def length_limited_value(rows):
@@ -901,7 +896,9 @@ class Configuration(commands.Cog):
             raise exceptions.CommandWarning(f"Command `{ctx.prefix}{command}` not found.")
 
         await self.bot.db.execute(
-            "DELETE FROM blacklisted_command WHERE guild_id = %s AND command_name = %s",
+            """
+            DELETE FROM blacklisted_command WHERE guild_id = %s AND command_name = %s
+            """,
             ctx.guild.id,
             cmd.qualified_name,
         )
@@ -912,7 +909,12 @@ class Configuration(commands.Cog):
     @commands.is_owner()
     async def unblacklist_global(self, ctx: commands.Context, *, user: discord.User):
         """Unblacklist someone globally"""
-        await self.bot.db.execute("DELETE FROM blacklisted_user WHERE user_id = %s", user.id)
+        await self.bot.db.execute(
+            """
+            DELETE FROM blacklisted_user WHERE user_id = %s
+            """,
+            user.id,
+        )
         self.bot.cache.blacklist["global"]["user"].discard(user.id)
         await util.send_success(ctx, f"**{user}** can now use Miso Bot again!")
 
@@ -920,7 +922,12 @@ class Configuration(commands.Cog):
     @commands.is_owner()
     async def unblacklist_guild(self, ctx: commands.Context, guild_id: int):
         """unblacklist a guild"""
-        await self.bot.db.execute("DELETE FROM blacklisted_guild WHERE guild_id = %s", guild_id)
+        await self.bot.db.execute(
+            """
+            DELETE FROM blacklisted_guild WHERE guild_id = %s
+            """,
+            guild_id,
+        )
         self.bot.cache.blacklist["global"]["guild"].discard(guild_id)
         await util.send_success(ctx, f"Guild with id `{guild_id}` can use Miso Bot again!")
 

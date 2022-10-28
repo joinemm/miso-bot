@@ -65,12 +65,16 @@ class Information(commands.Cog):
     @commands.command(aliases=["patrons", "supporters", "sponsors"])
     async def donators(self, ctx: commands.Context):
         """See who is donating!"""
-        patrons = await self.bot.db.execute(
+        patrons = await self.bot.db.fetch(
             """
             SELECT user_id, currently_active, amount, donating_since
             FROM donator
             """
         )
+        if not patrons:
+            raise exceptions.CommandInfo(
+                "There are no donators :thinking: Maybe you should be the first one"
+            )
         description = " | ".join(
             [
                 "[github](https://github.com/sponsors/joinemm)",
@@ -298,7 +302,7 @@ class Information(commands.Cog):
         if user is not None:
             opt = [user.id]
 
-        data = await self.bot.db.execute(
+        data = await self.bot.db.fetch(
             f"""
             SELECT command_name, SUM(use_sum) as total FROM (
                 SELECT command_name, SUM(uses) as use_sum, user_id FROM command_usage
@@ -313,6 +317,9 @@ class Information(commands.Cog):
             ctx.guild.id,
             *opt,
         )
+        if not data:
+            raise exceptions.CommandWarning("No commands have been used yet!")
+
         rows = []
         total = 0
         for i, (command_name, count) in enumerate(data, start=1):
@@ -341,7 +348,7 @@ class Information(commands.Cog):
         if user is not None:
             opt = [user.id]
 
-        data = await self.bot.db.execute(
+        data = await self.bot.db.fetch(
             f"""
             SELECT command_name, SUM(use_sum) as total FROM (
                 SELECT command_name, SUM(uses) as use_sum, user_id FROM command_usage
@@ -354,6 +361,9 @@ class Information(commands.Cog):
             """,
             *opt,
         )
+        if not data:
+            raise exceptions.CommandWarning("No commands have been used yet!")
+
         rows = []
         total = 0
         for i, (command_name, count) in enumerate(data, start=1):
@@ -392,7 +402,7 @@ class Information(commands.Cog):
         most_used_by_guild_amount: int = 0
         most_used_by_guild_id: Optional[int] = None
 
-        global_use_data = await self.bot.db.execute(
+        global_use_data = await self.bot.db.fetch_row(
             f"""
             SELECT SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
                 SELECT SUM(uses) as use_sum, user_id FROM command_usage
@@ -402,14 +412,13 @@ class Information(commands.Cog):
             ) as subq
             """,
             command_name,
-            one_row=True,
         )
         if global_use_data:
             total_uses, most_used_by_user_id, most_used_by_user_amount = global_use_data
 
         content.add_field(name="Uses", value=total_uses)
 
-        uses_by_guild_data = await self.bot.db.execute(
+        uses_by_guild_data = await self.bot.db.fetch_row(
             f"""
             SELECT guild_id, MAX(use_sum) FROM (
                 SELECT guild_id, SUM(uses) as use_sum FROM command_usage
@@ -419,14 +428,13 @@ class Information(commands.Cog):
             ) as subq
             """,
             command_name,
-            one_row=True,
         )
         if uses_by_guild_data:
             most_used_by_guild_id, most_used_by_guild_amount = uses_by_guild_data
 
         if ctx.guild:
             uses_in_this_server = (
-                await self.bot.db.execute(
+                await self.bot.db.fetch_value(
                     f"""
                     SELECT SUM(uses) FROM command_usage
                         WHERE command_type = 'internal'
@@ -436,28 +444,30 @@ class Information(commands.Cog):
                     """,
                     command_name,
                     ctx.guild.id,
-                    one_value=True,
                 )
                 or 0
             )
             content.add_field(name="on this server", value=uses_in_this_server)
 
         # show the data in embed fields
-        content.add_field(
-            name="Server most used in",
-            value=f"{self.bot.get_guild(most_used_by_guild_id)} ({most_used_by_guild_amount or 0})",
-            inline=False,
-        )
-        content.add_field(
-            name="Most total uses by",
-            value=f"{self.bot.get_user(most_used_by_user_id)} ({most_used_by_user_amount or 0})",
-        )
+        if most_used_by_guild_id:
+            content.add_field(
+                name="Server most used in",
+                value=f"{self.bot.get_guild(most_used_by_guild_id)} ({most_used_by_guild_amount})",
+                inline=False,
+            )
+
+        if most_used_by_user_id:
+            content.add_field(
+                name="Most total uses by",
+                value=f"{self.bot.get_user(most_used_by_user_id)} ({most_used_by_user_amount})",
+            )
 
         # additional data for command groups
         if group:
             content.description = "Command Group"
-            subcommands_tuple = tuple([f"{command.name} {x.name}" for x in command.commands])
-            subcommand_usage = await self.bot.db.execute(
+            subcommands_tuple = tuple([f"{command.name} {x.name}" for x in command.commands])  # type: ignore
+            subcommand_usage = await self.bot.db.fetch(
                 """
                 SELECT command_name, SUM(uses) FROM command_usage
                     WHERE command_type = 'internal'
@@ -466,11 +476,12 @@ class Information(commands.Cog):
                 """,
                 subcommands_tuple,
             )
-            content.add_field(
-                name="Subcommand usage",
-                value="\n".join(f"{s[0]} - **{s[1]}**" for s in subcommand_usage),
-                inline=False,
-            )
+            if subcommand_usage:
+                content.add_field(
+                    name="Subcommand usage",
+                    value="\n".join(f"{s[0]} - **{s[1]}**" for s in subcommand_usage),
+                    inline=False,
+                )
 
         await ctx.send(embed=content)
 

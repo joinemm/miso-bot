@@ -8,13 +8,14 @@ import discord
 from discord.ext import commands
 
 from modules import exceptions, util
+from modules.misobot import MisoBot
 
 
 class Typings(commands.Cog):
     """Test your typing speed"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "⌨️"
         self.separators = [" ", " ", " ", "  ", "  ", " "]
         self.font = "𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣"
@@ -264,7 +265,7 @@ class Typings(commands.Cog):
         if member is None:
             member = ctx.author
 
-        data = await self.bot.db.execute(
+        data = await self.bot.db.fetch(
             """
             SELECT test_date, wpm, accuracy, word_count, test_language FROM typing_stats
             WHERE user_id = %s ORDER BY test_date DESC
@@ -301,8 +302,18 @@ class Typings(commands.Cog):
         msg = await ctx.send(embed=content)
 
         async def confirm():
-            await self.bot.db.execute("DELETE FROM typing_stats WHERE user_id = %s", ctx.author.id)
-            await self.bot.db.execute("DELETE FROM typing_race WHERE user_id = %s", ctx.author.id)
+            await self.bot.db.execute(
+                """
+                DELETE FROM typing_stats WHERE user_id = %s
+                """,
+                ctx.author.id,
+            )
+            await self.bot.db.execute(
+                """
+                DELETE FROM typing_race WHERE user_id = %s
+                """,
+                ctx.author.id,
+            )
             content.title = ":white_check_mark: Cleared your data"
             content.color = int("77b255", 16)
             content.description = ""
@@ -325,7 +336,7 @@ class Typings(commands.Cog):
         if user is None:
             user = ctx.author
 
-        data = await self.bot.db.execute(
+        data = await self.bot.db.fetch_row(
             """
             SELECT COUNT(test_date), MAX(wpm), AVG(wpm), AVG(accuracy), race_count, win_count
                 FROM typing_stats LEFT JOIN typing_race
@@ -334,7 +345,6 @@ class Typings(commands.Cog):
             GROUP BY typing_stats.user_id
             """,
             user.id,
-            one_row=True,
         )
         if not data:
             raise exceptions.CommandInfo(

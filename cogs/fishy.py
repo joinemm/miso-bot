@@ -6,6 +6,7 @@ import humanize
 from discord.ext import commands
 
 from modules import util
+from modules.misobot import MisoBot
 
 
 class Fishy(commands.Cog):
@@ -86,7 +87,7 @@ class Fishy(commands.Cog):
     ]
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "🐟"
         self.ts_lock = {}
         self.fishtypes = {
@@ -108,10 +109,9 @@ class Fishy(commands.Cog):
 
         cached_last_fishy = self.ts_lock.get(str(ctx.author.id))
         if cached_last_fishy is None:
-            last_fishy = await self.bot.db.execute(
+            last_fishy = await self.bot.db.fetch_value(
                 "SELECT last_fishy FROM fishy WHERE user_id = %s",
                 ctx.author.id,
-                one_value=True,
             )
             # try again to fix race condition maybe
             cached_last_fishy = self.ts_lock.get(str(ctx.author.id))
@@ -171,10 +171,9 @@ class Fishy(commands.Cog):
     @commands.command(aliases=["fintimer", "fisytimer", "foshytimer", "ft"])
     async def fishytimer(self, ctx: commands.Context):
         """Check your fishy timer"""
-        last_fishy = await self.bot.db.execute(
+        last_fishy = await self.bot.db.fetch_value(
             "SELECT last_fishy FROM fishy WHERE user_id = %s",
             ctx.author.id,
-            one_value=True,
         )
         if last_fishy:
             time_since_fishy = ctx.message.created_at.timestamp() - last_fishy.timestamp()
@@ -195,7 +194,7 @@ class Fishy(commands.Cog):
         if not globaldata:
             user = await util.get_user(ctx, user, fallback=ctx.author)
             owner = user
-            data = await self.bot.db.execute(
+            data = await self.bot.db.fetch_row(
                 """
                 SELECT fishy_count, fishy_gifted_count, biggest_fish,
                     trash, common, uncommon, rare, legendary
@@ -204,19 +203,17 @@ class Fishy(commands.Cog):
                     WHERE fishy.user_id = %s
                 """,
                 user.id,
-                one_row=True,
             )
 
         else:
             owner = "Global"
-            data = await self.bot.db.execute(
+            data = await self.bot.db.fetch_row(
                 """
                 SELECT SUM(fishy_count), SUM(fishy_gifted_count), MAX(biggest_fish),
                     SUM(trash), SUM(common), SUM(uncommon), SUM(rare), SUM(legendary)
                     FROM fishy JOIN fish_type
                         ON fishy.user_id = fish_type.user_id
                 """,
-                one_row=True,
             )
 
         if not data:
@@ -228,11 +225,11 @@ class Fishy(commands.Cog):
             color=int("55acee", 16),
             description="\n".join(
                 [
-                    f"Fishy owned: **{data[0]}**",
+                    f"Fishy held: **{data[0]}**",
                     f"Fishy gifted: **{data[1]}**",
                     f"Times fished: **{total}**",
-                    f"Biggest fish: **{data[2]}**",
-                    f"Average fish: **{data[0] / total:.2f}**",
+                    f"Biggest fishy: **{data[2]}**",
+                    f"Average fishy: **{data[0] / total:.2f}**",
                 ]
             ),
         )

@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 
 from modules import exceptions, log, queries, util
+from modules.misobot import MisoBot
 
 command_logger = log.get_command_logger()
 
@@ -13,7 +14,7 @@ class CustomCommands(commands.Cog, name="Commands"):
     """Custom server commands"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "📌"
 
     def bot_command_list(self, match=""):
@@ -49,13 +50,12 @@ class CustomCommands(commands.Cog, name="Commands"):
     async def custom_command_list(self, guild_id, match=""):
         """Returns a list of custom commands on server"""
         command_list = set()
-        data = await self.bot.db.execute(
+        data = await self.bot.db.fetch_flattened(
             "SELECT command_trigger FROM custom_command WHERE guild_id = %s", guild_id
         )
-        for command_name in data:
-            command_name = command_name[0]
-            if match == "" or match in command_name:
-                command_list.add(command_name)
+        for command_trigger in data:
+            if match == "" or match in command_trigger:
+                command_list.add(command_trigger)
 
         return command_list
 
@@ -69,11 +69,10 @@ class CustomCommands(commands.Cog, name="Commands"):
         error = getattr(error, "original", error)
         if isinstance(error, commands.CommandNotFound):
             keyword = ctx.message.content[len(ctx.prefix or "") :].split(" ", 1)[0]
-            response = await self.bot.db.execute(
+            response = await self.bot.db.fetch_value(
                 "SELECT content FROM custom_command WHERE guild_id = %s AND command_trigger = %s",
                 ctx.guild.id,
                 keyword,
-                one_value=True,
             )
             if response:
                 command_logger.info(log.custom_command_format(ctx, keyword))
@@ -106,20 +105,18 @@ class CustomCommands(commands.Cog, name="Commands"):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        if not ctx.author.guild_permissions.manage_guild and await self.bot.db.execute(
+        if not ctx.author.guild_permissions.manage_guild and await self.bot.db.fetch_value(
             "SELECT restrict_custom_commands FROM guild_settings WHERE guild_id = %s",
             ctx.guild.id,
-            one_value=True,
         ):
             raise commands.MissingPermissions(["manage_server"])
 
         if name in self.bot_command_list():
             raise exceptions.CommandWarning(f"`{ctx.prefix}{name}` is already a built in command!")
-        if await self.bot.db.execute(
+        if await self.bot.db.fetch_value(
             "SELECT content FROM custom_command WHERE guild_id = %s AND command_trigger = %s",
             ctx.guild.id,
             name,
-            one_value=True,
         ):
             raise exceptions.CommandWarning(
                 f"Custom command `{ctx.prefix}{name}` already exists on this server!"
@@ -148,11 +145,10 @@ class CustomCommands(commands.Cog, name="Commands"):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        owner_id = await self.bot.db.execute(
+        owner_id = await self.bot.db.fetch_value(
             "SELECT added_by FROM custom_command WHERE command_trigger = %s AND guild_id = %s",
             name,
             ctx.guild.id,
-            one_value=True,
         )
         if not owner_id:
             raise exceptions.CommandWarning(f"Custom command `{ctx.prefix}{name}` does not exist")
@@ -240,10 +236,9 @@ class CustomCommands(commands.Cog, name="Commands"):
         guild = ctx.guild
 
         count = (
-            await self.bot.db.execute(
+            await self.bot.db.fetch_value(
                 "SELECT COUNT(*) FROM custom_command WHERE guild_id = %s",
                 guild.id,
-                one_value=True,
             )
             or 0
         )

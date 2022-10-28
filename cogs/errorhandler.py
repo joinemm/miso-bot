@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 
 from modules import emojis, exceptions, log, queries, util
+from modules.misobot import MisoBot
 
 logger = log.get_logger(__name__)
 command_logger = log.get_command_logger()
@@ -14,7 +15,7 @@ class ErrorHander(commands.Cog):
     """Any errors during command invocation will propagate here"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.message_levels = {
             "info": {
                 "description_prefix": ":information_source:",
@@ -205,15 +206,16 @@ class ErrorHander(commands.Cog):
                         except Exception as e:
                             return await self.on_command_error(ctx, e)
 
-            delete: bool = (
-                await self.bot.db.execute(
-                    "SELECT delete_blacklisted_usage FROM guild_settings WHERE guild_id = %s",
+            if ctx.guild:
+                delete = await self.bot.db.fetch_value(
+                    """
+                    SELECT delete_blacklisted_usage FROM guild_settings WHERE guild_id = %s
+                    """,
                     ctx.guild.id,
-                    one_value=True,
                 )
-                if ctx.guild
-                else False
-            )
+            else:
+                delete = False
+
             await self.send(ctx, "error", error.message, delete_after=(5 if delete else None))
             if delete:
                 await asyncio.sleep(5)

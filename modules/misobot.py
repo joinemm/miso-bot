@@ -53,7 +53,7 @@ class MisoBot(commands.AutoShardedBot):
         self.logger = log.get_logger("MisoBot")
         self.start_time = time()
         self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
-        self.db = maria.MariaDB(self)
+        self.db = maria.MariaDB()
         self.cache = cache.Cache(self)
         self.keychain = Keychain()
         self.version = "5.1"
@@ -111,8 +111,9 @@ class MisoBot(commands.AutoShardedBot):
     @staticmethod
     async def before_any_command(ctx: commands.Context):
         """Runs before any command"""
-        await util.require_chunked(ctx.guild)
-        ctx.timer = time()
+        if ctx.guild:
+            await util.require_chunked(ctx.guild)
+        ctx.timer = time()  # type: ignore
         try:
             await ctx.typing()
         except Forbidden:
@@ -138,7 +139,7 @@ class MisoBot(commands.AutoShardedBot):
 
     @property
     def member_count(self) -> int:
-        return sum(guild.member_count for guild in self.guilds)
+        return sum(guild.member_count or 0 for guild in self.guilds)
 
     @property
     def guild_count(self) -> int:

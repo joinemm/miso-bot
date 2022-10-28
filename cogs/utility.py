@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
 
 from modules import emojis, exceptions, log, queries, util
+from modules.misobot import MisoBot
 
 command_logger = log.get_command_logger()
 
@@ -57,7 +58,7 @@ class Utility(commands.Cog):
     """Utility commands"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "🔧"
         self.reminder_list = []
         self.cache_needs_refreshing = True
@@ -85,7 +86,7 @@ class Utility(commands.Cog):
         """Check all current reminders"""
         if self.cache_needs_refreshing:
             self.cache_needs_refreshing = False
-            self.reminder_list = await self.bot.db.execute(
+            self.reminder_list = await self.bot.db.fetch(
                 """
                 SELECT user_id, guild_id, created_on, reminder_date, content, original_message_url
                 FROM reminder
@@ -274,10 +275,9 @@ class Utility(commands.Cog):
         if ctx.invoked_subcommand is None:
             await util.command_group_help(ctx)
         else:
-            ctx.location = await self.bot.db.execute(
+            ctx.location = await self.bot.db.fetch_value(
                 "SELECT location_string FROM user_settings WHERE user_id = %s",
                 ctx.author.id,
-                one_value=True,
             )
 
     @weather.command(name="now")
@@ -862,10 +862,9 @@ class Utility(commands.Cog):
         if member is None:
             member = ctx.author
 
-        tz_str = await self.bot.db.execute(
+        tz_str = await self.bot.db.fetch_value(
             "SELECT timezone FROM user_settings WHERE user_id = %s",
             member.id,
-            one_value=True,
         )
         if tz_str:
             dt = arrow.now(tz_str)
@@ -925,7 +924,7 @@ class Utility(commands.Cog):
         )
         rows = []
         user_ids = [user.id for user in ctx.guild.members]
-        data = await self.bot.db.execute(
+        data = await self.bot.db.fetch(
             "SELECT user_id, timezone FROM user_settings WHERE user_id IN %s AND timezone IS NOT NULL",
             user_ids,
         )

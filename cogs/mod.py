@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands, tasks
 
 from modules import exceptions, log, util
+from modules.misobot import MisoBot
 
 logger = log.get_logger(__name__)
 
@@ -13,7 +14,7 @@ class Mod(commands.Cog):
     """Moderation commands"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "🔨"
         self.unmute_list = []
         self.cache_needs_refreshing = True
@@ -39,7 +40,7 @@ class Mod(commands.Cog):
         """Check all current mutes"""
         if self.cache_needs_refreshing:
             self.cache_needs_refreshing = False
-            self.unmute_list = await self.bot.db.execute(
+            self.unmute_list = await self.bot.db.fetch(
                 "SELECT user_id, guild_id, channel_id, unmute_on FROM muted_user WHERE unmute_on IS NOT NULL"
             )
 
@@ -59,12 +60,11 @@ class Mod(commands.Cog):
             else:
                 user = None
             if user is not None:
-                mute_role_id = await self.bot.db.execute(
+                mute_role_id = await self.bot.db.fetch_value(
                     """
                     SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
                     """,
                     guild.id,
-                    one_value=True,
                 )
                 mute_role = guild.get_role(mute_role_id)
                 if not mute_role:
@@ -185,12 +185,11 @@ class Mod(commands.Cog):
     @commands.has_permissions(manage_roles=True)
     async def mute(self, ctx: commands.Context, member: discord.Member, *, duration=None):
         """Mute user"""
-        mute_role_id = await self.bot.db.execute(
+        mute_role_id = await self.bot.db.fetch_value(
             """
             SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
             """,
             ctx.guild.id,
-            one_value=True,
         )
         mute_role = ctx.guild.get_role(mute_role_id)
         if not mute_role:
@@ -252,12 +251,11 @@ class Mod(commands.Cog):
     @commands.has_permissions(manage_roles=True)
     async def unmute(self, ctx: commands.Context, member: discord.Member):
         """Unmute user"""
-        mute_role_id = await self.bot.db.execute(
+        mute_role_id = await self.bot.db.fetch_value(
             """
             SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
             """,
             ctx.guild.id,
-            one_value=True,
         )
         mute_role = ctx.guild.get_role(mute_role_id)
         if not mute_role:
