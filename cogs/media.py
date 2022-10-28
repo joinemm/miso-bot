@@ -271,7 +271,7 @@ class Media(commands.Cog):
             media_urls = []
 
             media: tweepy.Media
-            for media in response.includes.get("media"):  # type: ignore
+            for media in response.includes.get("media", []):  # type: ignore
                 if media.type == "photo":
                     base, extension = media.url.rsplit(".", 1)
                     media_urls.append(("jpg", base + "?format=" + extension + "&name=orig"))
