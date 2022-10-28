@@ -23,6 +23,9 @@ from modules import emojis, exceptions, log, queries
 logger = log.get_logger(__name__)
 
 
+IMAGE_SERVER_HOST = os.environ.get("IMAGE_SERVER_HOST")
+
+
 class ErrorMessage(Exception):
     pass
 
@@ -791,9 +794,10 @@ def format_html(template, replacements):
 
 
 async def render_html(bot, payload, endpoint="html"):
-    IMAGE_SERVER_HOST = os.environ.get("IMAGE_SERVER_HOST")
     try:
-        async with bot.session.post(f"{IMAGE_SERVER_HOST}/{endpoint}", data=payload) as response:
+        async with bot.session.post(
+            f"http://{IMAGE_SERVER_HOST}:3000/{endpoint}", data=payload
+        ) as response:
             if response.status == 200:
                 buffer = io.BytesIO(await response.read())
                 return buffer

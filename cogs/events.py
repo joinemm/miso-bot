@@ -66,6 +66,8 @@ class Events(commands.Cog):
     async def on_guild_join(self, guild):
         """Called when the bot joins a new guild"""
         await self.bot.wait_until_ready()
+        if not guild:
+            return
         blacklisted = await self.bot.db.fetch_value(
             "SELECT reason FROM blacklisted_guild WHERE guild_id = %s",
             guild.id,
@@ -87,12 +89,17 @@ class Events(commands.Cog):
         content.set_footer(text=f"#{guild.id}")
         content.timestamp = arrow.utcnow().datetime
         logchannel = self.bot.get_partial_messageable(self.guildlog)
-        await logchannel.send(embed=content)
+        try:
+            await logchannel.send(embed=content)
+        except (discord.Forbidden, discord.HTTPException):
+            logger.error("Cannot send message to guild log channel")
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         """Called when the bot leaves a guild"""
         await self.bot.wait_until_ready()
+        if not guild:
+            return
         logger.info(f"Left guild {guild}")
         content = discord.Embed(color=discord.Color.red())
         content.title = "Left guild!"
@@ -106,7 +113,10 @@ class Events(commands.Cog):
         content.set_footer(text=f"#{guild.id}")
         content.timestamp = arrow.utcnow().datetime
         logchannel = self.bot.get_partial_messageable(self.guildlog)
-        await logchannel.send(embed=content)
+        try:
+            await logchannel.send(embed=content)
+        except (discord.Forbidden, discord.HTTPException):
+            logger.error("Cannot send message to guild log channel")
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -362,8 +372,8 @@ class Events(commands.Cog):
         if not is_enabled:
             return
 
-        board_channel = self.bot.get_partial_messageable(board_channel_id)
-        if board_channel is None:
+        board_channel = self.bot.get_channel(board_channel_id)
+        if not isinstance(board_channel, (discord.TextChannel, discord.Thread)):
             return
 
         if (
@@ -468,8 +478,8 @@ class Events(commands.Cog):
                     content.add_field(name="Most recent reaction by", value=str(user))
                     try:
                         await log_channel.send(embed=content)
-                    except Exception as e:
-                        await log_channel.send(f"`error in starboard log: {e}`")
+                    except (discord.Forbidden, discord.HTTPException):
+                        pass
 
             else:
                 # message is on board, update star count

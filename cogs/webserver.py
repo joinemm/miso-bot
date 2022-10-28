@@ -100,7 +100,6 @@ class WebServer(commands.Cog):
                     host=HOST,
                     port=PORT,
                     access_log=logger,
-                    print=lambda: None,
                     ssl_context=self.ssl_context,
                 )
             except OSError as e:
