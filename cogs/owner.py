@@ -1,4 +1,5 @@
 import asyncio
+from typing import Union
 
 import arrow
 import discord
@@ -22,13 +23,30 @@ class Owner(commands.Cog):
         return await self.bot.is_owner(ctx.author)
 
     @commands.command(rest_is_raw=True)
-    async def say(self, ctx: commands.Context, channel_id: int, *, message):
-        """Make the bot say something in a given channel"""
-        channel = self.bot.get_channel(channel_id)
-        guild = channel.guild
-
-        await ctx.send(f"Sending message to **{guild}** <#{channel.id}>\n> {message}")
+    async def say(
+        self,
+        ctx: commands.Context,
+        channel: Union[discord.TextChannel, discord.Thread],
+        *,
+        message,
+    ):
+        """Makes the bot say something in the given channel"""
+        await ctx.send(f"Sending message to **{channel.guild}** <#{channel.id}>\n> {message}")
         await channel.send(message)
+
+    @commands.command(rest_is_raw=True)
+    async def dm(
+        self,
+        ctx: commands.Context,
+        user: discord.User,
+        *,
+        message,
+    ):
+        """Makes the bot dm something to the given user"""
+        await ctx.send(
+            f"Sending message to **{user}** <@{user.id}>\n> {message}", allowed_mentions=None
+        )
+        await user.send(message)
 
     @commands.command()
     async def guilds(self, ctx: commands.Context):
@@ -38,7 +56,7 @@ class Owner(commands.Cog):
         )
 
         rows = []
-        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
+        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True):
             rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
 
         await util.send_as_pages(ctx, content, rows)
@@ -47,7 +65,7 @@ class Owner(commands.Cog):
     async def findguild(self, ctx: commands.Context, *, search_term):
         """Find a guild by name"""
         rows = []
-        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
+        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True):
             if search_term.lower() in guild.name.lower():
                 rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
 
@@ -58,7 +76,7 @@ class Owner(commands.Cog):
     async def userguilds(self, ctx: commands.Context, user: discord.User):
         """Get all guilds user is part of"""
         rows = []
-        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count, reverse=True):
+        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True):
             guildmember = guild.get_member(user.id)
             if guildmember is not None:
                 rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
@@ -165,13 +183,13 @@ class Owner(commands.Cog):
     @commands.is_owner()
     async def database_query(self, ctx: commands.Context, *, statement):
         """Execute something against the local MariaDB instance"""
-        data = await self.bot.db.fetch(statement)
+        changes, data = await self.bot.db.run_sql(statement)
+        if changes:
+            await ctx.send(f":white_check_mark: {changes} rows changed")
         try:
             if data:
                 content = "\n".join(str(r) for r in data)
                 await ctx.send(f"```py\n{content}\n```")
-            else:
-                await ctx.send(":white_check_mark:")
         except discord.errors.HTTPException:
             # too long, page it
             pages = []

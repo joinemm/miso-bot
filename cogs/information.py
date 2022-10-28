@@ -505,8 +505,8 @@ class Information(commands.Cog):
         color = await util.color_from_image_url(
             self.bot.session, str(guild.icon.replace(size=64, format="png"))
         )
-        content.colour = int(color, 16)
-        if stats is not None:
+        content.colour = int(str(color), 16)
+        if stats:
             content.set_footer(
                 text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
             )

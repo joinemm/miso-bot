@@ -6,6 +6,7 @@ from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 
 from modules import util
+from modules.misobot import MisoBot
 
 
 class ImageObject:
@@ -102,7 +103,7 @@ class Images(commands.Cog):
     """Make memes"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "🖼️"
 
     @commands.group(case_insensitive=True, enabled=True)

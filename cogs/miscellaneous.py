@@ -280,7 +280,7 @@ class Miscellaneous(commands.Cog):
     @commands.guild_only()
     async def minecraft(self, ctx: commands.Context, address=None, port=None):
         """Get the status of a minecraft server"""
-        if address == "set":
+        if address == "set" and ctx.guild:
             if port is None:
                 return await ctx.send(
                     f"Save minecraft server address for this discord server:\n"
@@ -312,9 +312,13 @@ class Miscellaneous(commands.Cog):
             )
 
         if address is None:
-            data = await self.bot.db.fetch_row(
-                "SELECT server_address, port FROM minecraft_server WHERE guild_id = %s",
-                ctx.guild.id,
+            data = (
+                await self.bot.db.fetch_row(
+                    "SELECT server_address, port FROM minecraft_server WHERE guild_id = %s",
+                    ctx.guild.id,
+                )
+                if ctx.guild
+                else None
             )
             if not data:
                 raise exceptions.CommandInfo(
@@ -383,7 +387,7 @@ class Miscellaneous(commands.Cog):
         ) as response:
             data = await response.json(loads=orjson.loads)
 
-        sign = self.hs.get(sunsign)
+        sign = self.hs[sunsign]
         content = discord.Embed(
             color=int("9266cc", 16),
             title=f"{sign['emoji']} {sign['name']} - {data['current_date']}",
@@ -418,7 +422,7 @@ class Miscellaneous(commands.Cog):
             ctx.author.id,
             sign,
         )
-        await ctx.send(f"Zodiac saved as **{sign.capitalize()}** {self.hs.get(sign)['emoji']}")
+        await ctx.send(f"Zodiac saved as **{sign.capitalize()}** {self.hs[sign]['emoji']}")
 
     @horoscope.command(name="list")
     async def horoscope_list(self, ctx: commands.Context):
@@ -540,6 +544,8 @@ class Miscellaneous(commands.Cog):
 
         if len(colors) == 1:
             discord_color = await util.get_color(ctx, colors[0])
+            if discord_color is None:
+                raise exceptions.CommandError(f"Cound not get color `{colors[0]}`")
             hexvalue = colordata[0]["requestedHex"]
             rgbvalue = discord_color.to_rgb()
             name = colordata[0]["name"]
@@ -583,21 +589,24 @@ class Miscellaneous(commands.Cog):
         else:
             # unicode emoji
             emoji_name = emoji_literals.UNICODE_TO_NAME.get(emoji)
-            if emoji_name is None:
+            if emoji_name:
+                codepoint = "-".join(
+                    f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE[emoji_name]
+                )
+                emoji_name = emoji_name.strip(":")
+                emoji_url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
+            else:
                 raise exceptions.CommandWarning("I don't know this emoji!")
-
-            codepoint = "-".join(
-                f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE.get(emoji_name)
-            )
-            emoji_name = emoji_name.strip(":")
-            emoji_url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
 
         content = discord.Embed(title=f"`:{emoji_name}:`")
         content.set_image(url=emoji_url)
         stats = await util.image_info_from_url(self.bot.session, emoji_url)
-        content.set_footer(text=f"Type: {stats['filetype']}")
+        if stats:
+            content.set_footer(
+                text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
+            )
 
-        if isinstance(emoji, discord.Emoji):
+        if isinstance(emoji, discord.Emoji) and emoji.guild:
             emoji = await emoji.guild.fetch_emoji(emoji.id)
             desc = [f"Uploaded {arrow.get(emoji.created_at).format('D/M/YYYY')}"]
             if emoji.user:
@@ -607,9 +616,6 @@ class Miscellaneous(commands.Cog):
 
             content.description = "\n".join(desc)
 
-        content.set_footer(
-            text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
-        )
         await ctx.send(embed=content)
 
     @commands.command()

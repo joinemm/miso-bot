@@ -11,13 +11,14 @@ from bs4 import BeautifulSoup
 from discord.ext import commands
 
 from modules import exceptions, util
+from modules.misobot import MisoBot
 
 
 class Kpop(commands.Cog):
     """Kpop related commands"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.google_client = async_cse.Search(bot.keychain.GCS_DEVELOPER_KEY)
         self.icon = "💃"
         self.gender_icon = {
@@ -48,7 +49,7 @@ class Kpop(commands.Cog):
     @idol.command()
     async def birthdays(self, ctx: commands.Context, month: int, day: int):
         dt = datetime.date(month=month, day=day, year=2020)
-        idol_data = await self.bot.db.execute(
+        idol_data = await self.bot.db.fetch(
             """
             SELECT gender, group_name, stage_name, date_of_birth FROM kpop_idol WHERE
                 MONTH(date_of_birth)=MONTH(%s)
@@ -58,6 +59,11 @@ class Kpop(commands.Cog):
             dt,
             dt,
         )
+        if idol_data is None:
+            raise exceptions.CommandError(
+                "There was a problem fetching idol data from the database"
+            )
+
         rows = []
         for gender, group, name, dob in idol_data:
             rows.append(
@@ -75,19 +81,20 @@ class Kpop(commands.Cog):
         """Get a random kpop idol"""
         gender = get_gender(gender)
 
-        idol_id_list = await self.bot.db.execute(
+        idol_id_list = await self.bot.db.fetch_flattened(
             "SELECT idol_id FROM kpop_idol WHERE gender IN %s",
             gender,
-            as_list=True,
         )
         if not idol_id_list:
-            raise exceptions.CommandError("Looks like there are no idols in the database!")
+            raise exceptions.CommandError(
+                "There was a problem fetching idol data from the database"
+            )
 
         chosen_id = random.choice(idol_id_list)
         await self.send_idol(ctx, chosen_id)
 
     async def send_idol(self, ctx: commands.Context, idol_id):
-        idol_data = await self.bot.db.execute(
+        idol_data = await self.bot.db.fetch_row(
             """
             SELECT idol_id, full_name, stage_name, korean_name, korean_stage_name,
                    date_of_birth, country, group_name, height, weight, gender, image_url
@@ -95,10 +102,11 @@ class Kpop(commands.Cog):
             WHERE idol_id = %s
             """,
             idol_id,
-            one_row=True,
         )
         if not idol_data:
-            raise exceptions.CommandError("There was an error getting idol data.")
+            raise exceptions.CommandError(
+                "There was a problem fetching idol data from the database"
+            )
 
         (
             idol_id,
@@ -164,7 +172,7 @@ class Kpop(commands.Cog):
         """Get a random kpop artist to stan"""
         # fast random row
         # https://stackoverflow.com/questions/4329396/mysql-select-10-random-rows-from-600k-rows-fast
-        random_row = await self.bot.db.execute(
+        random_row = await self.bot.db.fetch_row(
             """
             SELECT * FROM stannable_artist AS t1
                 JOIN (
@@ -174,8 +182,10 @@ class Kpop(commands.Cog):
                 ) AS t2
             ON t1.id = t2.id
             """,
-            one_row=True,
         )
+        if not random_row:
+            raise exceptions.CommandError("Could not find an artist to stan")
+
         await ctx.send(f"stan **{random_row[1]}**")
 
     @commands.is_owner()
@@ -197,7 +207,7 @@ class Kpop(commands.Cog):
             async with self.bot.session.get(url) as response:
                 soup = BeautifulSoup(await response.text(), "lxml")
                 content = soup.find("div", {"class": "entry-content herald-entry-content"})
-                outer = content.find_all("p")
+                outer = content.find_all("p")  # type: ignore
                 for p in outer:
                     for artist in p.find_all("a"):
                         artist = artist.text.replace("Profile", "").replace("profile", "").strip()
@@ -225,10 +235,12 @@ class Kpop(commands.Cog):
 
     @commands.is_owner()
     @commands.command(name="rebuildkpopdb", hidden=True)
-    async def parse_kpop_sheets(self, groups: bool = True, idols: bool = True):
+    async def parse_kpop_sheets(
+        self, ctx: commands.Context, groups: bool = True, idols: bool = True
+    ):
         """Rebuild the kpop idol database"""
         if groups:
-            await self.bot.db.execute("DELETE FROM kpop_group")
+            await self.bot.db.execute("""DELETE FROM kpop_group""")
             with open("data/kpopdb_girlgroups.tsv") as tsv_file:
                 values = []
                 read_tsv_gg = csv.reader(tsv_file, delimiter="\t")
@@ -258,7 +270,7 @@ class Kpop(commands.Cog):
                                 debut_date,
                                 company,
                                 fanclub,
-                                active.lower(),
+                                active.lower() if active else active,
                                 gender,
                             ]
                             values.append(value)
@@ -273,9 +285,10 @@ class Kpop(commands.Cog):
                     """,
                     values,
                 )
+            await ctx.send("Groups :thumbs_up")
 
         if idols:
-            await self.bot.db.execute("DELETE FROM kpop_idol")
+            await self.bot.db.execute("""DELETE FROM kpop_idol""")
             values = []
             with open("data/kpopdb_idols.tsv") as tsv_file:
                 read_tsv = csv.reader(tsv_file, delimiter="\t")
@@ -344,6 +357,7 @@ class Kpop(commands.Cog):
                     """,
                     values,
                 )
+            await ctx.send("Idols :thumbs_up")
 
 
 async def setup(bot):

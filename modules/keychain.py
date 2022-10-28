@@ -6,46 +6,52 @@ logger = get_logger(__name__)
 
 
 class Keychain:
-
-    KEYS = [
-        "TWITTER_BEARER_TOKEN",
-        "NAVER_APPID",
-        "NAVER_TOKEN",
-        "LASTFM_API_KEY",
-        "LASTFM_SECRET",
-        "TIMEZONEDB_API_KEY",
-        "GCS_DEVELOPER_KEY",
-        "WOLFRAM_APPID",
-        "GFYCAT_CLIENT_ID",
-        "GFYCAT_SECRET",
-        "STREAMABLE_USER",
-        "STREAMABLE_PASSWORD",
-        "THESAURUS_KEY",
-        "THESAURUS_INTERMEDIATE_KEY",
-        "FINNHUB_TOKEN",
-        "REDDIT_CLIENT_ID",
-        "REDDIT_CLIENT_SECRET",
-        "RAPIDAPI_KEY",
-        "TOMORROWIO_TOKEN",
-        "AWS_ACCESS_KEY",
-        "AWS_ACCESS_SECRET",
-        "PROXY_URL",
-        "PROXY_USER",
-        "PROXY_PASS",
-        "IG_COOKIE",
-        "DATALAMA_ACCESS_KEY",
-    ]
-
-    OPTIONAL = [
-        "PROXY_URL",
-        "PROXY_USER",
-        "PROXY_PASS",
-    ]
-
     def __init__(self):
-        for name in self.KEYS:
+
+        self.TWITTER_BEARER_TOKEN: str = ""
+        self.NAVER_APPID: str = ""
+        self.NAVER_TOKEN: str = ""
+        self.LASTFM_API_KEY: str = ""
+        self.LASTFM_SECRET: str = ""
+        self.TIMEZONEDB_API_KEY: str = ""
+        self.GCS_DEVELOPER_KEY: str = ""
+        self.WOLFRAM_APPID: str = ""
+        self.GFYCAT_CLIENT_ID: str = ""
+        self.GFYCAT_SECRET: str = ""
+        self.STREAMABLE_USER: str = ""
+        self.STREAMABLE_PASSWORD: str = ""
+        self.THESAURUS_KEY: str = ""
+        self.THESAURUS_INTERMEDIATE_KEY: str = ""
+        self.FINNHUB_TOKEN: str = ""
+        self.REDDIT_CLIENT_ID: str = ""
+        self.REDDIT_CLIENT_SECRET: str = ""
+        self.RAPIDAPI_KEY: str = ""
+        self.TOMORROWIO_TOKEN: str = ""
+        self.AWS_ACCESS_KEY: str = ""
+        self.AWS_ACCESS_SECRET: str = ""
+        self.DATALAMA_ACCESS_KEY: str = ""
+        self.PROXY_URL: str = ""
+        self.PROXY_USER: str = ""
+        self.PROXY_PASS: str = ""
+        self.IG_COOKIE: str = ""
+
+        self.OPTIONAL = [
+            "PROXY_URL",
+            "PROXY_USER",
+            "PROXY_PASS",
+            "IG_COOKIE",
+        ]
+
+        print(self.__dict__)
+        for name in self.__dict__.keys():
             value = os.environ.get(name)
-            if not value and name not in self.OPTIONAL:
+            optional = [
+                "PROXY_URL",
+                "PROXY_USER",
+                "PROXY_PASS",
+                "IG_COOKIE",
+            ]
+            if not value and name not in optional:
                 logger.warning(f'No value set for env variable "{name}"')
 
             setattr(self, name, value)

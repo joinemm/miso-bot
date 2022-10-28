@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional
 
 import discord
 import regex
@@ -24,7 +25,9 @@ class Notifications(commands.Cog):
         keywords = await self.bot.db.fetch(
             "SELECT guild_id, user_id, keyword FROM notification",
         )
-        self.notifications_cache = {}
+        if not keywords:
+            return
+
         for guild_id, user_id, keyword in keywords:
             if self.notifications_cache.get(str(guild_id)) is None:
                 self.notifications_cache[str(guild_id)] = {}
@@ -81,7 +84,7 @@ class Notifications(commands.Cog):
         if message.author.bot:
             return
 
-        keywords = self.notifications_cache.get(str(message.guild.id), [])
+        keywords = self.notifications_cache.get(str(message.guild.id), {})
 
         if not keywords:
             return
@@ -116,10 +119,10 @@ class Notifications(commands.Cog):
                     f"User {user_id} not found, deleting their notification for {users_words}"
                 )
                 await self.bot.db.execute(
-                    """DELETE FROM notification WHERE guild_id = %s AND user_id = %s AND keyword = %s""",
+                    """DELETE FROM notification WHERE guild_id = %s AND user_id = %s AND keyword IN %s""",
                     message.guild.id,
                     user_id,
-                    keyword,
+                    users_words,
                 )
                 await self.create_cache()
                 continue
@@ -286,8 +289,7 @@ class Notifications(commands.Cog):
         Clears all your notifications on this server
         Use in DMs to clear every server.
         """
-        dm = ctx.guild is None
-        if dm:
+        if ctx.guild is None:
             await self.bot.db.execute(
                 """
                 DELETE FROM notification WHERE user_id = %s
@@ -309,7 +311,9 @@ class Notifications(commands.Cog):
         await self.create_cache()
 
     @notification.command(name="test")
-    async def notification_test(self, ctx: commands.Context, message: discord.Message = None):
+    async def notification_test(
+        self, ctx: commands.Context, message: Optional[discord.Message] = None
+    ):
         """
         Test if Miso can send you a notification
         If supplied with a message id, will check if you would have been notified by it.
@@ -325,7 +329,10 @@ class Notifications(commands.Cog):
                     "I was unable to send you a DM! Please check your privacy settings."
                 )
         else:
-            if ctx.author not in message.channel.members:
+            if (
+                isinstance(message.channel, (discord.abc.GuildChannel))
+                and ctx.author not in message.channel.members
+            ):
                 raise exceptions.CommandError("You cannot see this message.")
 
             keywords = await self.bot.db.fetch_flattened(

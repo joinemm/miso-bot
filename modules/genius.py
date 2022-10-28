@@ -16,7 +16,7 @@ class Genius:
     API_BASE_URL: str = "genius.p.rapidapi.com"
 
     def __init__(self, bot: MisoBot):
-        self.bot = bot
+        self.bot: MisoBot = bot
 
     async def search(self, query: str):
         """Search Genius for songs"""

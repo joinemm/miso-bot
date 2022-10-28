@@ -17,9 +17,6 @@ from modules import exceptions, instagram, log, util
 from modules.misobot import MisoBot
 from modules.views import LinkButton
 
-# from tweepy import OAuthHandler
-# import tweepy
-
 logger = log.get_logger(__name__)
 
 
@@ -29,7 +26,7 @@ class Media(commands.Cog):
     def __init__(self, bot):
         self.bot: MisoBot = bot
         self.icon = "🌐"
-        self.tweepy = TweepyClient(
+        self.tweepy: TweepyClient = TweepyClient(
             self.bot.keychain.TWITTER_BEARER_TOKEN,
             wait_on_rate_limit=True,
         )
@@ -149,6 +146,9 @@ class Media(commands.Cog):
                 elif story_pk:
                     post_url = f"https://www.instagram.com/stories/{username}/{story_pk}"
                     post = await instagram.Datalama(self.bot).get_story(story_pk)
+                else:
+                    raise exceptions.CommandError("Could not find anything to show")
+
             except instagram.ExpiredCookie as exc:
                 raise exceptions.CommandError(
                     "The Instagram login session has expired, please ask my developer to reauthenticate!"
@@ -161,23 +161,22 @@ class Media(commands.Cog):
             if use_embeds:
                 # send as embeds
                 content = discord.Embed(color=self.ig.color)
-                content.set_author(
-                    name=f"@{post.user.username}",
-                    icon_url=post.user.avatar_url,
-                    url=post_url,
-                )
                 embeds = []
                 videos = []
                 for n, media in enumerate(post.media, start=1):
-                    if n == len(post.media):
-                        content.timestamp = arrow.get(post.timestamp).datetime
                     if media.media_type == instagram.MediaType.VIDEO:
                         videos.append(media.url)
                     else:
                         content.set_image(url=media.url)
                         embeds.append(content.copy())
-                    content._author = None
+
                 if embeds:
+                    embeds[0].set_author(
+                        name=f"@{post.user.username}",
+                        icon_url=post.user.avatar_url,
+                        url=post_url,
+                    )
+                    embeds[-1].timestamp = arrow.get(post.timestamp).datetime
                     await ctx.send(embeds=embeds)
                 for video in videos:
                     await ctx.send(video)
@@ -244,10 +243,11 @@ class Media(commands.Cog):
             raise exceptions.CommandWarning("Only 5 links at a time please!")
 
         for tweet_url in urls:
+            tweet_id = tweet_url
             if "status" in tweet_url:
-                tweet_id = re.search(r"status/(\d+)", tweet_url).group(1)
-            else:
-                tweet_id = tweet_url
+                match = re.search(r"status/(\d+)", tweet_url)
+                if match:
+                    tweet_id = match.group(1)
 
             try:
                 tweet_id = int(tweet_id)
@@ -262,12 +262,12 @@ class Media(commands.Cog):
                 user_fields=["profile_image_url"],
             )
 
-            tweet: tweepy.Tweet = response.data
+            tweet: tweepy.Tweet = response.data  # type: ignore
 
             media_urls = []
 
             media: tweepy.Media
-            for media in response.includes.get("media"):
+            for media in response.includes.get("media"):  # type: ignore
                 if media.type == "photo":
                     base, extension = media.url.rsplit(".", 1)
                     media_urls.append(("jpg", base + "?format=" + extension + "&name=orig"))
@@ -284,7 +284,7 @@ class Media(commands.Cog):
                     f"Could not find any media from tweet ID `{tweet_id}`"
                 )
 
-            user = response.includes["users"][0]
+            user = response.includes["users"][0]  # type: ignore
             screen_name = user.username
             tweet_url = f"https://twitter.com/{screen_name}/status/{tweet.id}"
             timestamp = arrow.get(tweet.created_at)
@@ -439,7 +439,7 @@ class Media(commands.Cog):
                 "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0",
             }
             async with self.bot.session.get(url, headers=headers) as response:
-                location = response.url
+                location = str(response.url)
         else:
             location = f"https://xkcd.com/{comic_id}/"
         await ctx.send(location)
@@ -454,59 +454,3 @@ async def extract_scripts(session, url):
         data = await response.text()
         soup = BeautifulSoup(data, "lxml")
         return soup.find_all("script", {"type": "application/ld+json"})
-
-
-class GGSoup:
-    def __init__(self):
-        self.soup = None
-
-    async def create(self, region, summoner_name, sub_url=""):
-        async with self.bot.session.get(
-            f"https://{region}.op.gg/summoner/{sub_url}userName={summoner_name}"
-        ) as response:
-            data = await response.text()
-            self.soup = BeautifulSoup(data, "lxml")
-
-    def text(self, obj, classname, source=None):
-        if source is None:
-            source = self.soup
-        a = source.find(obj, {"class": classname})
-        return a.text.strip() if a else a
-
-    def src(self, obj, classname, source=None):
-        if source is None:
-            source = self.soup
-        a = source.find(obj, {"class": classname})
-        return "https:" + a.get("src") if a else a
-
-
-class InstagramIdCodec:
-    ENCODING_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-
-    @staticmethod
-    def encode(num, alphabet=ENCODING_CHARS):
-        """Covert a numeric value to a shortcode."""
-        num = int(num)
-        if num == 0:
-            return alphabet[0]
-        arr = []
-        base = len(alphabet)
-        while num:
-            rem = num % base
-            num //= base
-            arr.append(alphabet[rem])
-        arr.reverse()
-        return "".join(arr)
-
-    @staticmethod
-    def decode(shortcode, alphabet=ENCODING_CHARS):
-        """Covert a shortcode to a numeric value."""
-        base = len(alphabet)
-        strlen = len(shortcode)
-        num = 0
-        idx = 0
-        for char in shortcode:
-            power = strlen - (idx + 1)
-            num += alphabet.index(char) * (base**power)
-            idx += 1
-        return num

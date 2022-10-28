@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import Optional
 
 import aiohttp
 import arrow
@@ -26,6 +27,7 @@ class MediaType(Enum):
     PHOTO = 1
     VIDEO = 2
     ALBUM = 8
+    NONE = 0
 
 
 @dataclass
@@ -118,6 +120,8 @@ class Datalama:
                     display_url = resource["image_versions"][0]["url"]
                 elif resource_media_type == MediaType.VIDEO:
                     display_url = resource["video_url"]
+                else:
+                    display_url = ""
                 media.append(IgMedia(resource_media_type, display_url))
         elif post_media_type == MediaType.VIDEO:
             media.append(IgMedia(post_media_type, data["video_url"]))
@@ -164,7 +168,7 @@ class Instagram:
         bot: MisoBot,
         use_proxy: bool = False,
     ):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.jar = aiohttp.CookieJar(unsafe=True)
         self.session = aiohttp.ClientSession(cookie_jar=self.jar)
 
@@ -199,6 +203,8 @@ class Instagram:
         elif resource_media_type == MediaType.VIDEO:
             res = resource["video_versions"][0]
             return IgMedia(resource_media_type, res["url"])
+        else:
+            return IgMedia(resource_media_type, "")
 
     async def graphql_request(self, shortcode: str):
         url = "https://www.instagram.com/graphql/query/"
@@ -248,7 +254,7 @@ class Instagram:
 
         return data
 
-    async def v1_api_request(self, endpoint: str, params: dict = None):
+    async def v1_api_request(self, endpoint: str, params: Optional[dict] = None):
         headers = {
             "Cookie": self.bot.keychain.IG_COOKIE,
             "Host": "i.instagram.com",
@@ -370,3 +376,5 @@ def to_mediatype(typename: str):
             return MediaType.PHOTO
         case "GraphSidecar":
             return MediaType.ALBUM
+        case _:
+            return MediaType.NONE

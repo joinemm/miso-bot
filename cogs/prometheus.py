@@ -84,7 +84,8 @@ class Prometheus(commands.Cog):
     async def log_system_metrics(self):
         ram = psutil.Process().memory_info().rss
         self.ram_gauge.set(ram)
-        for core, usage in enumerate(psutil.cpu_percent(interval=None, percpu=True)):
+        cpus: list = psutil.cpu_percent(interval=None, percpu=True)  # type: ignore
+        for core, usage in enumerate(cpus):
             self.cpu_gauge.labels(core).set(usage)
 
     @log_shard_latencies.before_loop

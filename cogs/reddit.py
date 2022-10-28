@@ -1,10 +1,13 @@
 import arrow
 import asyncpraw
+import asyncpraw.exceptions
 import asyncprawcore
 import discord
+from asyncpraw.models import Submission, Subreddit
 from discord.ext import commands
 
 from modules import emojis, util
+from modules.misobot import MisoBot
 
 
 class RedditError(commands.CommandError):
@@ -15,7 +18,7 @@ class Reddit(commands.Cog):
     """Get reddit content"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "🪧"
         self.timespans = ["all", "day", "hour", "week", "month", "year"]
         self.human_ts = {
@@ -119,7 +122,7 @@ class Reddit(commands.Cog):
             ctx,
             subreddit,
             post,
-            f"#{number} top {self.human_ts[timespan]} post from r/{subreddit}",
+            f"#{number} top {self.human_ts[str(timespan)]} post from r/{subreddit}",
         )
 
     @reddit.command(name="new", aliases=["n"])
@@ -139,7 +142,7 @@ class Reddit(commands.Cog):
         """Checks for eligibility for sending submission and sends it"""
         try:
             await subreddit.load()
-        except asyncpraw.exceptions.NotFound as e:
+        except asyncpraw.exceptions.AsyncPRAWException as e:
             if str(subreddit) != "all":
                 raise e
 
@@ -148,7 +151,10 @@ class Reddit(commands.Cog):
                 ":underage: NSFW subreddits can only be viewed in an NSFW channel!"
             )
 
-        content, message_content = await self.render_submission(post, not ctx.channel.is_nsfw())
+        censor = (
+            ctx.channel.is_nsfw() if isinstance(ctx.channel, discord.abc.GuildChannel) else False
+        )
+        content, message_content = await self.render_submission(post, censor)
         content.set_footer(text=footer)
         await ctx.send(embed=content)
         if message_content is not None:
@@ -216,7 +222,7 @@ class Reddit(commands.Cog):
         if submission.is_self and ((censor and submission.over_18) or submission.spoiler):
             content.description = "||" + content.description + "||"
 
-        content.description += suffix
+        content.description = (content.description or "") + suffix
         return content, message_text
 
     async def check_ts(self, ctx: commands.Context, timespan):
@@ -280,9 +286,9 @@ def self_embeds(url):
 
 def can_send_nsfw(ctx, content):
     """Checks whether content is NSFW and if so whether it can be sent in current channel"""
-    if isinstance(content, asyncpraw.models.Submission):
+    if isinstance(content, Submission):
         is_nsfw = content.over_18
-    elif isinstance(content, asyncpraw.models.Subreddit):
+    elif isinstance(content, Subreddit):
         is_nsfw = content.over18
     else:
         return True

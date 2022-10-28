@@ -7,6 +7,7 @@ from discord.ext import commands, tasks
 from prometheus_async import aio
 
 from modules import log
+from modules.misobot import MisoBot
 
 logger = log.get_logger(__name__)
 
@@ -21,7 +22,7 @@ class WebServer(commands.Cog):
     """Internal web server to provice realtime statistics to the website"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.app = web.Application()
         self.cached = {
             "guilds": 0,
@@ -53,7 +54,7 @@ class WebServer(commands.Cog):
             self.cors.add(route)
 
         # https
-        if USE_HTTPS == "yes":
+        if USE_HTTPS == "yes" and SSL_CERT and SSL_KEY:
             self.ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
             self.ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)
         else:
@@ -70,8 +71,8 @@ class WebServer(commands.Cog):
 
     @tasks.loop(minutes=1)
     async def cache_stats(self):
-        self.cached["commands"] = int(
-            await self.bot.db.execute("SELECT SUM(uses) FROM command_usage", one_value=True)
+        self.cached["commands"] = await self.bot.db.fetch_value(
+            "SELECT SUM(uses) FROM command_usage"
         )
         self.cached["guilds"] = self.bot.guild_count
         self.cached["users"] = self.bot.member_count
@@ -99,7 +100,7 @@ class WebServer(commands.Cog):
                     host=HOST,
                     port=PORT,
                     access_log=logger,
-                    print=None,
+                    print=lambda: None,
                     ssl_context=self.ssl_context,
                 )
             except OSError as e:
@@ -111,17 +112,18 @@ class WebServer(commands.Cog):
 
     async def update_donator_list(self):
         donators = []
-        data = await self.bot.db.execute(
+        data = await self.bot.db.fetch(
             """
             SELECT user_id, amount
             FROM donator WHERE currently_active = 1
             """
         )
-        for user_id, amount in sorted(data, key=lambda x: x[1], reverse=True):
-            user = await self.bot.fetch_user(user_id)
-            donators.append(
-                {"name": user.name, "avatar": user.display_avatar.url, "amount": amount}
-            )
+        if data:
+            for user_id, amount in sorted(data, key=lambda x: x[1], reverse=True):
+                user = await self.bot.fetch_user(user_id)
+                donators.append(
+                    {"name": user.name, "avatar": user.display_avatar.url, "amount": amount}
+                )
         return donators
 
     async def donator_list(self, request):

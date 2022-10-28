@@ -54,22 +54,21 @@ class Mod(commands.Cog):
                 continue
 
             guild = self.bot.get_guild(guild_id)
-            if guild is not None:
-                await util.require_chunked(guild)
-                user = guild.get_member(user_id)
-            else:
-                user = None
-            if user is not None:
+            if guild is None:
+                continue
+            await util.require_chunked(guild)
+            user = guild.get_member(user_id)
+            if user:
                 mute_role_id = await self.bot.db.fetch_value(
                     """
                     SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
                     """,
                     guild.id,
                 )
-                mute_role = guild.get_role(mute_role_id)
+                mute_role = guild.get_role(mute_role_id) if mute_role_id else None
                 if not mute_role:
                     return logger.warning("Mute role not set in unmuting loop")
-                channel = guild.get_channel(channel_id)
+                channel = self.bot.get_partial_messageable(channel_id, guild_id=guild.id)
                 if channel is not None:
                     try:
                         await user.remove_roles(mute_role)
@@ -113,6 +112,9 @@ class Mod(commands.Cog):
         Usage:
             >purge <amount> [mentions...]
         """
+        if not isinstance(ctx.channel, (discord.abc.GuildChannel)):
+            raise exceptions.CommandWarning("This command cannot be used here.")
+
         if amount > 100:
             raise exceptions.CommandWarning("You cannot delete more than 100 messages at a time.")
 
@@ -163,6 +165,7 @@ class Mod(commands.Cog):
     @commands.has_permissions(moderate_members=True)
     async def timeout(self, ctx: commands.Context, member: discord.Member, *, duration="1 hour"):
         """Timeout user. Pass 'remove' as the duration to remove"""
+        # TODO: rewrite
         if member.timeout is not None:
             seconds = member.timeout.timestamp() - arrow.now().int_timestamp
             if duration and duration.strip().lower() == "remove":
@@ -185,13 +188,16 @@ class Mod(commands.Cog):
     @commands.has_permissions(manage_roles=True)
     async def mute(self, ctx: commands.Context, member: discord.Member, *, duration=None):
         """Mute user"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         mute_role_id = await self.bot.db.fetch_value(
             """
             SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
             """,
             ctx.guild.id,
         )
-        mute_role = ctx.guild.get_role(mute_role_id)
+        mute_role = ctx.guild.get_role(mute_role_id) if mute_role_id else None
         if not mute_role:
             raise exceptions.CommandWarning(
                 "Mute role for this server has been deleted or is not set, "
@@ -251,13 +257,16 @@ class Mod(commands.Cog):
     @commands.has_permissions(manage_roles=True)
     async def unmute(self, ctx: commands.Context, member: discord.Member):
         """Unmute user"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         mute_role_id = await self.bot.db.fetch_value(
             """
             SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
             """,
             ctx.guild.id,
         )
-        mute_role = ctx.guild.get_role(mute_role_id)
+        mute_role = ctx.guild.get_role(mute_role_id) if mute_role_id else None
         if not mute_role:
             raise exceptions.CommandWarning(
                 "Mute role for this server has been deleted or is not set, "
@@ -312,6 +321,9 @@ class Mod(commands.Cog):
     @commands.has_permissions(ban_members=True)
     async def fastban(self, ctx: commands.Context, *discord_users):
         """Ban many users without confirmation"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         if not discord_users:
             return await util.send_command_help(ctx)
 
@@ -346,6 +358,9 @@ class Mod(commands.Cog):
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx: commands.Context, *discord_users):
         """Ban user(s)"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         if not discord_users:
             return await util.send_command_help(ctx)
 
@@ -408,6 +423,7 @@ class Mod(commands.Cog):
 
         async def confirm_ban():
             try:
+                assert isinstance(ctx.guild, discord.Guild)
                 await ctx.guild.ban(user, delete_message_days=0)
                 content.title = ":white_check_mark: Banned user"
             except discord.errors.Forbidden:
@@ -429,6 +445,9 @@ class Mod(commands.Cog):
     @commands.has_permissions(ban_members=True)
     async def unban(self, ctx: commands.Context, *discord_users):
         """Unban user(s)"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         if not discord_users:
             return await util.send_command_help(ctx)
 
@@ -436,7 +455,7 @@ class Mod(commands.Cog):
             user = await util.get_user(ctx, discord_users[0])
             if user is None:
                 try:
-                    user = await self.bot.fetch_user(int(user))
+                    user = await self.bot.fetch_user(int(discord_users[0]))
                 except (ValueError, discord.NotFound):
                     raise exceptions.CommandError(f"Invalid user or id `{user}`")
             try:

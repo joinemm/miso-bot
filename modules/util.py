@@ -5,6 +5,7 @@ import math
 import os
 import re
 from time import time
+from typing import Optional
 
 import aiohttp
 import arrow
@@ -19,7 +20,6 @@ from PIL import Image, UnidentifiedImageError
 from libraries import emoji_literals
 from modules import emojis, exceptions, log, queries
 
-IMAGE_SERVER_HOST = os.environ.get("IMAGE_SERVER_HOST")
 logger = log.get_logger(__name__)
 
 
@@ -44,8 +44,8 @@ def displayname(member, escape=True):
     return name
 
 
-async def send_success(ctx: commands.Context, message: str):
-    await ctx.send(
+async def send_success(target: discord.abc.Messageable, message: str):
+    await target.send(
         embed=discord.Embed(description=":white_check_mark: " + message, color=int("77b255", 16))
     )
 
@@ -230,22 +230,22 @@ async def paginate_list(ctx, items, use_locking=False, only_author=False, index_
     else:
         msg = await ctx.send(pages.current())
 
-    async def next_result():
+    async def next_result() -> bool:
         new_content = pages.next()
-        if new_content is None:
-            return
-        if index_entries:
-            await msg.edit(content=f"`{pages.index + 1}.` {new_content}", embed=None)
-        else:
-            await msg.edit(content=new_content, embed=None)
+        if new_content:
+            if index_entries:
+                await msg.edit(content=f"`{pages.index + 1}.` {new_content}", embed=None)
+            else:
+                await msg.edit(content=new_content, embed=None)
+        return False
 
-    async def previous_result():
+    async def previous_result() -> bool:
         new_content = pages.previous()
-        if new_content is None:
-            return
-        await msg.edit(content=new_content, embed=None)
+        if new_content:
+            await msg.edit(content=new_content, embed=None)
+        return False
 
-    async def done():
+    async def done() -> bool:
         await msg.edit(content=f"{pages.current()}")
         return True
 
@@ -411,7 +411,7 @@ def xp_from_message(message):
     return min(xp, 50)
 
 
-async def get_user(ctx, argument, fallback=None):
+async def get_user(ctx, argument, fallback=None) -> discord.User | None:
     """
     :param argument : name, nickname, id, mention
     :param fallback : return this if not found
@@ -425,7 +425,9 @@ async def get_user(ctx, argument, fallback=None):
         return fallback
 
 
-async def get_member(ctx, argument, fallback=None, try_user=False):
+async def get_member(
+    ctx, argument, fallback=None, try_user=False
+) -> discord.Member | discord.User | None:
     """
     :param argument : name, nickname, id, mention
     :param fallback : return this if not found
@@ -568,7 +570,7 @@ def rgb_to_hex(rgb):
 async def color_from_image_url(
     session,
     url,
-    fallback="E74C3C",
+    fallback: Optional[str] = "E74C3C",
     return_color_object=False,
     size_limit=False,
     ignore_errors=True,
@@ -630,7 +632,7 @@ def find_custom_emojis(text):
     return emoji_list
 
 
-async def image_info_from_url(session, url):
+async def image_info_from_url(session, url) -> Optional[dict]:
     """Return dictionary containing filesize, filetype and dimensions of an image"""
     async with session.get(str(url)) as response:
         filesize = int(response.headers.get("Content-Length")) / 1024
@@ -701,9 +703,9 @@ def create_goodbye_message(user, guild, messageformat):
 
 class UserActivity:
     def __init__(self, activities):
-        self.emoji: discord.PartialEmoji = None
-        self.status_text: str = None
-        self.base: str = None
+        self.emoji: Optional[discord.PartialEmoji] = None
+        self.status_texts: Optional[str] = None
+        self.base: str = ""
         self.spotify: bool = False
 
         if activities is None:
@@ -714,7 +716,8 @@ class UserActivity:
                 self.emoji = activity.emoji
                 self.status_text = activity.name
 
-            elif isinstance(activity, discord.BaseActivity):
+            elif isinstance(activity, discord.Activity):
+                prefix = None
                 if activity.type == discord.ActivityType.playing:
                     prefix = "Playing"
                 elif activity.type == discord.ActivityType.streaming:
@@ -726,7 +729,9 @@ class UserActivity:
                 elif activity.type == discord.ActivityType.streaming:
                     prefix = "Streaming"
 
-                self.base = prefix + " " + (f"**{activity.name}**")
+                if prefix:
+                    self.base = prefix + " "
+                self.base += f"**{activity.name}**"
 
             elif isinstance(activity, discord.Spotify):
                 self.spotify = True
@@ -785,16 +790,15 @@ def format_html(template, replacements):
     return re.sub(r"\$(\S*?)\$", dictsub, template)
 
 
-async def render_html(bot, payload):
+async def render_html(bot, payload, endpoint="html"):
+    IMAGE_SERVER_HOST = os.environ.get("IMAGE_SERVER_HOST")
     try:
-        async with bot.session.post(
-            f"http://{IMAGE_SERVER_HOST}:3000/html", data=payload
-        ) as response:
+        async with bot.session.post(f"{IMAGE_SERVER_HOST}/{endpoint}", data=payload) as response:
             if response.status == 200:
                 buffer = io.BytesIO(await response.read())
                 return buffer
             raise exceptions.RendererError(f"{response.status} : {await response.text()}")
-    except aiohttp.client_exceptions.ClientConnectorError:
+    except aiohttp.ClientConnectorError:
         raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
 
 

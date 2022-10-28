@@ -1,7 +1,7 @@
 import asyncio
 import os
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Any, Optional
 
 import aiomysql
 from aiomysql import Connection, Cursor, Pool
@@ -72,7 +72,7 @@ class MariaDB:
             await self.pool.wait_closed()
             logger.info("Closed MariaDB connection pool")
 
-    async def _execute(self, sql: str, params, return_data=False) -> Union[list, int]:
+    async def run_sql(self, sql: str, params: tuple = tuple()) -> tuple[int, Any]:
         """Internal executor, handles connection logic and returns data or changed rows"""
         if await self.wait_for_pool() and self.pool:
             conn: Connection
@@ -80,45 +80,39 @@ class MariaDB:
                 cur: Cursor
                 async with conn.cursor() as cur:
                     changed: int = await cur.execute(sql, params)
-                    if return_data:
-                        return await cur.fetchall()
-                    else:
-                        return changed
+                    return changed, await cur.fetchall()
         raise exceptions.CommandError("Could not connect to the local MariaDB instance!")
 
     async def execute(self, statement: str, *params) -> int:
         """Executes sql and returns the number of rows affected"""
-        changes = await self._execute(statement, params)
-        if isinstance(changes, int):
-            return changes
-        else:
-            return 0
+        changes, _ = await self.run_sql(statement, params)
+        return changes
 
     async def fetch(self, statement: str, *params):
         """Fetch data"""
-        data = await self._execute(statement, params, return_data=True)
-        if data and not isinstance(data, int):
+        _, data = await self.run_sql(statement, params)
+        if data:
             return data
         return None
 
     async def fetch_value(self, statement: str, *params):
         """Fetches the first value of the first row of the query"""
-        data = await self._execute(statement, params, return_data=True)
-        if data and not isinstance(data, int):
+        _, data = await self.run_sql(statement, params)
+        if data:
             return data[0][0]
         return None
 
     async def fetch_row(self, statement: str, *params) -> list:
         """Fetches the first row of the query"""
-        data = await self._execute(statement, params, return_data=True)
-        if data and not isinstance(data, int):
+        _, data = await self.run_sql(statement, params)
+        if data:
             return data[0]
         return []
 
     async def fetch_flattened(self, statement: str, *params) -> list:
         """Fetches the first element of every row as a flattened list"""
-        data = await self._execute(statement, params, return_data=True)
-        if data and not isinstance(data, int):
+        _, data = await self.run_sql(statement, params)
+        if data:
             return [row[0] for row in data]
         return []
 

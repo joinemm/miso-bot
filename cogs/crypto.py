@@ -5,13 +5,14 @@ import orjson
 from discord.ext import commands
 
 from modules import emojis, exceptions, util
+from modules.misobot import MisoBot
 
 
 class Cryptocurrency(commands.Cog):
     """Cryptocurrency commands"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "🪙"
         self.binance_icon = "https://i.imgur.com/i7vdQjQ.png"
         with open("html/candlestick_chart.html", "r", encoding="utf-8") as file:
