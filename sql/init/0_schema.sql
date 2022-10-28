@@ -205,7 +205,8 @@ CREATE TABLE IF NOT EXISTS user_profile (
     description VARCHAR(500) DEFAULT NULL,
     background_url VARCHAR(255) DEFAULT NULL,
     background_color VARCHAR(6) DEFAULT NULL,
-    show_graph BOOLEAN DEFAULT TRUE,
+    border INT DEFAULT 0,
+    theme ENUM('dark', 'light') DEFAULT 'dark',
     PRIMARY KEY (user_id)
 );
 
@@ -359,6 +360,14 @@ CREATE TABLE IF NOT EXISTS stats (
     lastfm_api_requests INT NOT NULL DEFAULT 0,
     html_rendered INT NOT NULL DEFAULT 0,
     PRIMARY KEY (ts)
+);
+
+CREATE TABLE IF NOT EXISTS stannable_artist (
+    id INT NOT NULL AUTO_INCREMENT,
+    artist_name VARCHAR(128),
+    category VARCHAR(64) NOT NULL,
+    UNIQUE(artist_name),
+    PRIMARY KEY (id)
 );
 
 -- activity
