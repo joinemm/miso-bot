@@ -106,7 +106,7 @@ class Information(commands.Cog):
         owner = await self.bot.fetch_user(self.bot.owner_id)
         content.description = (
             f"Created by **{owner}** {owner.mention} \n"
-            f"using *discord.py {discord.__version__}\n\n*"
+            f"using *discord.py* {discord.__version__}\n\n"
             f"Use `{ctx.prefix}help` to get help on any commands, \n"
             f"or visit the website for more detailed instructions.\n\n"
             f"Currently in **{self.bot.guild_count}** servers "

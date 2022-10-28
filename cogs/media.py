@@ -1,5 +1,6 @@
 import asyncio
 import io
+import json
 import random
 import re
 
@@ -7,12 +8,14 @@ import arrow
 import discord
 import orjson
 import regex
+import tweepy
 import yarl
-from aiohttp import ClientResponseError
 from bs4 import BeautifulSoup
 from discord.ext import commands
+from tweepy.asynchronous import AsyncClient as TweepyClient
 
 from modules import exceptions, instagram, log, util
+from modules.misobot import MisoBot
 from modules.views import LinkButton
 
 # from tweepy import OAuthHandler
@@ -25,14 +28,12 @@ class Media(commands.Cog):
     """Fetch various media"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "🌐"
-        # self.twitter_api = tweepy.API(
-        #     OAuthHandler(
-        #         self.bot.keychain.TWITTER_CONSUMER_KEY,
-        #         self.bot.keychain.TWITTER_CONSUMER_SECRET,
-        #     )
-        # )
+        self.tweepy = TweepyClient(
+            self.bot.keychain.TWITTER_BEARER_TOKEN,
+            wait_on_rate_limit=True,
+        )
         self.ig = instagram.Instagram(self.bot, use_proxy=True)
 
     async def cog_unload(self):
@@ -72,31 +73,33 @@ class Media(commands.Cog):
         # Thankfully you can plug your own yarl.URL with encoded=True so it wont get encoded twice
         async with self.bot.session.get(yarl.URL(media_url, encoded=True)) as response:
             if not response.ok:
-                logger.error(await response.text())
-                response.raise_for_status()
+                error_message = await response.text()
+                logger.error(error_message)
+                return f"`[{error_message}]`"
+                # raise exceptions.CommandError(error_message)
 
-            content_length = response.headers.get("Content-Length")
-            if content_length and int(content_length) < max_filesize:
-                buffer = io.BytesIO(await response.read())
-                return discord.File(fp=buffer, filename=filename)
-            elif content_length and int(content_length) >= max_filesize:
-                return media_url
+            content_length = response.headers.get("Content-Length") or response.headers.get(
+                "x-full-image-content-length"
+            )
+            if content_length:
+                if int(content_length) < max_filesize:
+                    buffer = io.BytesIO(await response.read())
+                    return discord.File(fp=buffer, filename=filename)
+                elif int(content_length) >= max_filesize:
+                    return media_url
             else:
                 logger.warning(f"No content length header for {media_url}")
-                return media_url
                 # there is no Content-Length header
                 # try to stream until we hit our limit
-                # try:
-                #     amount_read = 0
-                #     buffer = b""
-                #     async for chunk in response.content.iter_chunked(1024):
-                #         amount_read += len(chunk)
-                #         buffer += chunk
-                #         if amount_read > max_filesize:
-                #             raise ValueError
-                #     return discord.File(fp=io.BytesIO(buffer), filename=filename)
-                # except ValueError:
-                #     return media_url
+                try:
+                    buffer = b""
+                    async for chunk in response.content.iter_chunked(1024):
+                        buffer += chunk
+                        if len(buffer) > max_filesize:
+                            raise ValueError
+                    return discord.File(fp=io.BytesIO(buffer), filename=filename)
+                except ValueError:
+                    return media_url
 
     @commands.command(aliases=["ig", "insta"], usage="<links...> '-e'")
     async def instagram(self, ctx: commands.Context, *links: str):
@@ -198,7 +201,7 @@ class Media(commands.Cog):
                     if isinstance(result, discord.File):
                         files.append(result)
                     else:
-                        caption += result
+                        caption += "\n" + result
 
                 # send files to discord
                 await ctx.send(
@@ -247,45 +250,52 @@ class Media(commands.Cog):
             else:
                 tweet_id = tweet_url
 
-            async with self.bot.session.get(
-                f"https://cdn.syndication.twimg.com/tweet?id={tweet_id}"
-            ) as response:
-                try:
-                    response.raise_for_status()
-                except ClientResponseError as e:
-                    raise exceptions.CommandError(
-                        f'Error getting tweet id "{tweet_id}": {e.status} {e.message}'
-                    )
-                tweet = await response.json()
+            try:
+                tweet_id = int(tweet_id)
+            except ValueError:
+                raise exceptions.CommandError(f"Tweet ID must be a number, not `{tweet_id}`")
+
+            response = await self.tweepy.get_tweet(
+                tweet_id,
+                tweet_fields=["attachments", "created_at"],
+                expansions=["attachments.media_keys", "author_id"],
+                media_fields=["variants", "url", "alt_text"],
+                user_fields=["profile_image_url"],
+            )
+
+            tweet: tweepy.Tweet = response.data
+
+            print(json.dumps(tweet.data, indent=2))
 
             media_urls = []
-            if tweet.get("video"):
-                videos = list(
-                    filter(lambda x: x["type"] == "video/mp4", tweet["video"]["variants"])
-                )
-                if len(videos) > 1:
-                    best_src = sorted(videos, key=self.sort_videos)[-1]["src"]
-                else:
-                    best_src = videos[0]["src"]
-                media_urls.append(("mp4", best_src))
 
-            for photo in tweet.get("photos", []):
-                base, extension = photo["url"].rsplit(".", 1)
-                media_urls.append(("jpg", base + "?format=" + extension + "&name=orig"))
+            media: tweepy.Media
+            for media in response.includes.get("media"):
+                if media.type == "photo":
+                    base, extension = media.url.rsplit(".", 1)
+                    media_urls.append(("jpg", base + "?format=" + extension + "&name=orig"))
+                else:
+                    variants = sorted(
+                        filter(lambda x: x["content_type"] == "video/mp4", media.data["variants"]),
+                        key=lambda y: y["bit_rate"],
+                        reverse=True,
+                    )
+                    media_urls.append(("mp4", variants[0]["url"]))
 
             if not media_urls:
                 raise exceptions.CommandWarning(
-                    f"Could not find any media from tweet id `{tweet_id}`"
+                    f"Could not find any media from tweet ID `{tweet_id}`"
                 )
 
-            screen_name = tweet["user"]["screen_name"]
-            tweet_url = f"https://twitter.com/{screen_name}/status/{tweet_id}"
-            timestamp = arrow.get(tweet["created_at"])
+            user = response.includes["users"][0]
+            screen_name = user.username
+            tweet_url = f"https://twitter.com/{screen_name}/status/{tweet.id}"
+            timestamp = arrow.get(tweet.created_at)
 
             if use_embeds:
-                content = discord.Embed(colour=int(tweet["user"]["profile_link_color"], 16))
+                content = discord.Embed(colour=int("1d9bf0", 16))
                 content.set_author(
-                    icon_url=tweet["user"]["profile_image_url"],
+                    icon_url=user.profile_image_url,
                     name=f"@{screen_name}",
                     url=tweet_url,
                 )
@@ -300,8 +310,8 @@ class Media(commands.Cog):
                         embeds.append(content.copy())
                         content._author = None
 
-                content.timestamp = timestamp.timestamp()
                 if embeds:
+                    embeds[-1].timestamp = timestamp.datetime
                     await ctx.send(embeds=embeds)
                 if videos:
                     await ctx.send("\n".join(videos))
@@ -309,7 +319,9 @@ class Media(commands.Cog):
                 tasks = []
                 max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
                 for n, (extension, media_url) in enumerate(media_urls, start=1):
-                    filename = f"{timestamp.format('YYMMDD')}-@{screen_name}-{tweet['id_str']}-{n}.{extension}"
+                    filename = (
+                        f"{timestamp.format('YYMMDD')}-@{screen_name}-{tweet.id}-{n}.{extension}"
+                    )
                     tasks.append(self.download_media(media_url, filename, max_filesize))
 
                 username = discord.utils.escape_markdown(screen_name)

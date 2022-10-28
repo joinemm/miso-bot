@@ -44,7 +44,7 @@ def displayname(member, escape=True):
     return name
 
 
-async def send_success(ctx, message):
+async def send_success(ctx: commands.Context, message: str):
     await ctx.send(
         embed=discord.Embed(description=":white_check_mark: " + message, color=int("77b255", 16))
     )

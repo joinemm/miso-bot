@@ -8,8 +8,7 @@ logger = get_logger(__name__)
 class Keychain:
 
     KEYS = [
-        "TWITTER_CONSUMER_KEY",
-        "TWITTER_CONSUMER_SECRET",
+        "TWITTER_BEARER_TOKEN",
         "NAVER_APPID",
         "NAVER_TOKEN",
         "LASTFM_API_KEY",
