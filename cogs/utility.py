@@ -3,6 +3,7 @@ import html
 import json
 import random
 from time import time
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 import aiohttp
@@ -178,7 +179,7 @@ class Utility(commands.Cog):
                     response = deeper_response
                     location = response.headers.get("location")
 
-            content = response.url
+            content = str(response.url)
         await ctx.send(content)
 
     @commands.command(name="!", usage="<bang> <query...>")
@@ -203,7 +204,7 @@ class Utility(commands.Cog):
         command_logger.info(log.log_command(ctx))
         await queries.save_command_usage(ctx)
         try:
-            bang, args = ctx.message.content[len(ctx.prefix) + 1 :].split(" ", 1)
+            bang, args = ctx.message.content[len(ctx.prefix or "") + 1 :].split(" ", 1)
             if len(bang) != 0:
                 await self.resolve_bang(ctx, bang, args)
         except ValueError:
@@ -218,6 +219,9 @@ class Utility(commands.Cog):
             >remindme in <some time> to <something>
             >remindme on <YYYY/MM/DD> [HH:mm:ss] to <something>
         """
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         try:
             reminder_time, content = arguments.split(" to ", 1)
         except ValueError:
@@ -232,7 +236,7 @@ class Utility(commands.Cog):
 
         elif pre == "in":
             # user inputs time delta
-            seconds = util.timefromstring(reminder_time)
+            seconds = util.timefromstring(reminder_time) or 0
             date = now.shift(seconds=+seconds)
 
         else:
@@ -281,7 +285,7 @@ class Utility(commands.Cog):
             )
 
     @weather.command(name="now")
-    async def weather_now(self, ctx: commands.Context, *, location: str = None):
+    async def weather_now(self, ctx: commands.Context, *, location: Optional[str] = None):
         if location is None:
             location = ctx.location
             if ctx.location is None:
@@ -380,7 +384,7 @@ class Utility(commands.Cog):
         await WeatherUnitToggler(render, False).run(ctx)
 
     @weather.command(name="forecast")
-    async def weather_forecast(self, ctx: commands.Context, *, location: str = None):
+    async def weather_forecast(self, ctx: commands.Context, *, location: Optional[str] = None):
         if location is None:
             location = ctx.location
             if ctx.location is None:
@@ -621,6 +625,8 @@ class Utility(commands.Cog):
                 "Sorry, the maximum length of text i can translate is 1000 characters!"
             )
 
+        source = ""
+        target = ""
         languages = text.partition(" ")[0]
         if "/" in languages or "->" in languages:
             if "/" in languages:
@@ -749,7 +755,7 @@ class Utility(commands.Cog):
         )
 
         async with self.bot.session.get(url, params=params, auth=auth) as response:
-            if response.status != 200:
+            if not response.ok:
                 try:
                     data = await response.json(loads=orjson.loads)
                     messages = []
@@ -757,7 +763,7 @@ class Utility(commands.Cog):
                         for msg in data["messages"][category]:
                             messages.append(msg)
                     messages = " | ".join(messages)
-                    errormsg = f"ERROR {response.status_code}: {messages}"
+                    errormsg = f"ERROR {response.status}: {messages}"
                 except (aiohttp.ContentTypeError, KeyError):
                     errormsg = await response.text()
 
@@ -782,7 +788,10 @@ class Utility(commands.Cog):
                     )
                     break
 
-                status = soup.find("h1").text
+                header = soup.find("h1")
+                status = ""
+                if header:
+                    status = header.text
                 if status != "Processing Video":
                     await message.edit(content=f":warning: {status}")
                     break
@@ -857,10 +866,13 @@ class Utility(commands.Cog):
         await util.command_group_help(ctx)
 
     @timezone.command(name="now")
-    async def tz_now(self, ctx: commands.Context, member: discord.Member = None):
+    async def tz_now(self, ctx: commands.Context, member: Optional[discord.Member] = None):
         """Get current time for a member"""
         if member is None:
-            member = ctx.author
+            if isinstance(ctx.author, discord.Member):
+                member = ctx.author
+            else:
+                raise exceptions.CommandWarning("Please give user to check")
 
         tz_str = await self.bot.db.fetch_value(
             "SELECT timezone FROM user_settings WHERE user_id = %s",
@@ -918,6 +930,9 @@ class Utility(commands.Cog):
     @timezone.command(name="list")
     async def tz_list(self, ctx: commands.Context):
         """List current time of all server members who have it saved"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         content = discord.Embed(
             title=f":clock2: Current time in {ctx.guild}",
             color=int("3b88c3", 16),
@@ -1009,6 +1024,7 @@ class WeatherUnitToggler(discord.ui.View):
 
     async def on_timeout(self):
         for item in self.children:
-            item.disabled = True
+            item.disabled = True  # type: ignore
 
-        await self.message.edit(view=None)
+        if self.message:
+            await self.message.edit(view=None)

@@ -5,7 +5,7 @@ import discord
 import humanize
 from discord.ext import commands
 
-from modules import util
+from modules import exceptions, util
 from modules.misobot import MisoBot
 
 
@@ -193,6 +193,8 @@ class Fishy(commands.Cog):
         globaldata = user == "global"
         if not globaldata:
             user = await util.get_user(ctx, user, fallback=ctx.author)
+            if user is None:
+                raise exceptions.CommandWarning(f"Cannot find user `{user}`")
             owner = user
             data = await self.bot.db.fetch_row(
                 """

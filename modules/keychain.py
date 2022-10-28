@@ -35,14 +35,6 @@ class Keychain:
         self.PROXY_PASS: str = ""
         self.IG_COOKIE: str = ""
 
-        self.OPTIONAL = [
-            "PROXY_URL",
-            "PROXY_USER",
-            "PROXY_PASS",
-            "IG_COOKIE",
-        ]
-
-        print(self.__dict__)
         for name in self.__dict__.keys():
             value = os.environ.get(name)
             optional = [

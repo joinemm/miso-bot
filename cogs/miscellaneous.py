@@ -487,7 +487,7 @@ class Miscellaneous(commands.Cog):
                         url_color = await util.color_from_image_url(
                             self.bot.session,
                             source,
-                            fallback=None,
+                            fallback="",
                             size_limit=True,
                             ignore_errors=False,
                         )
@@ -496,7 +496,7 @@ class Miscellaneous(commands.Cog):
                     except UnidentifiedImageError:
                         await ctx.send("Supplied url is not an image!")
                     else:
-                        if url_color is not None:
+                        if url_color:
                             colors.append(url_color)
 
                 # random
@@ -520,7 +520,7 @@ class Miscellaneous(commands.Cog):
                 url_color = await util.color_from_image_url(
                     self.bot.session,
                     a.url,
-                    fallback=None,
+                    fallback="",
                     size_limit=True,
                     ignore_errors=False,
                 )

@@ -19,7 +19,7 @@ class Cache:
         self.blacklist = {}
         self.logging_settings = {}
         self.autoroles = {}
-        self.marriages = set()
+        self.marriages = []
         self.starboard_settings = {}
         self.starboard_blacklisted_channels = set()
 

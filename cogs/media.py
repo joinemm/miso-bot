@@ -69,10 +69,14 @@ class Media(commands.Cog):
         # Thankfully you can plug your own yarl.URL with encoded=True so it wont get encoded twice
         async with self.bot.session.get(yarl.URL(media_url, encoded=True)) as response:
             if not response.ok:
-                error_message = await response.text()
+                if response.headers.get("Content-Type") == "text/plain":
+                    content = await response.text()
+                    error_message = f"{response.status} {response.reason} | {content}"
+                else:
+                    error_message = f"{response.status} {response.reason}"
+
                 logger.error(error_message)
                 return f"`[{error_message}]`"
-                # raise exceptions.CommandError(error_message)
 
             content_length = response.headers.get("Content-Length") or response.headers.get(
                 "x-full-image-content-length"

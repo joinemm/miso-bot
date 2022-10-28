@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional, Union
 
 import arrow
 import bleach
@@ -7,13 +8,14 @@ import humanize
 from discord.ext import commands
 
 from modules import emojis, exceptions, queries, util
+from modules.misobot import MisoBot
 
 
 class User(commands.Cog):
     """User related commands"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: MisoBot = bot
         self.icon = "👤"
         self.proposals = set()
         self.medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
@@ -21,15 +23,19 @@ class User(commands.Cog):
             self.profile_html = file.read()
 
     @commands.command(aliases=["dp", "av", "pfp"])
-    async def avatar(self, ctx: commands.Context, *, user: discord.User = None):
+    async def avatar(
+        self, ctx: commands.Context, *, user: Optional[Union[discord.User, discord.Member]] = None
+    ):
         """Get user's profile picture"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         if user is None:
             user = ctx.author
 
         assets = []
-        member = ctx.guild.get_member(user.id)
-        if member and member.guild_avatar:
-            assets.append((member.guild_avatar, "Server avatar"))
+        if isinstance(user, discord.Member) and user.guild_avatar:
+            assets.append((user.guild_avatar, "Server avatar"))
         if user.avatar:
             assets.append((user.avatar, "Avatar"))
         else:
@@ -65,16 +71,19 @@ class User(commands.Cog):
 
         functions = {"↔️": switch}
 
-        await util.reaction_buttons(ctx, msg, functions)
+        asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions))
 
     @commands.command(aliases=["uinfo"])
     @commands.cooldown(3, 30, type=commands.BucketType.user)
-    async def userinfo(self, ctx: commands.Context, *, user: discord.User = None):
+    async def userinfo(
+        self, ctx: commands.Context, *, user: Optional[Union[discord.User, discord.Member]] = None
+    ):
         """Get information about discord user"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         if user is None:
             user = ctx.author
-        else:
-            user = ctx.guild.get_member(user.id) or user
 
         content = discord.Embed(
             title=f"{':robot: ' if user.bot else ''}{user.name}#{user.discriminator}"
@@ -90,7 +99,7 @@ class User(commands.Cog):
 
             member_number = 1
             for member in ctx.guild.members:
-                if member.joined_at < user.joined_at:
+                if member.joined_at and user.joined_at and member.joined_at < user.joined_at:
                     member_number += 1
 
             boosting_date = None
@@ -101,8 +110,10 @@ class User(commands.Cog):
             content.add_field(
                 name="Boosting", value=f"For {boosting_date}" if boosting_date else "No"
             )
+
             content.add_field(
-                name="Joined server", value=user.joined_at.strftime("%d/%m/%Y %H:%M")
+                name="Joined server",
+                value=user.joined_at.strftime("%d/%m/%Y %H:%M") if user.joined_at else "Unknown",
             )
 
             if self.bot.intents.presences:
@@ -150,24 +161,25 @@ class User(commands.Cog):
     @commands.command()
     async def members(self, ctx: commands.Context):
         """Show the newest members of this server"""
-        sorted_members = sorted(ctx.guild.members, key=lambda x: x.joined_at, reverse=True)
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
+        sorted_members = sorted(ctx.guild.members, key=lambda x: x.joined_at or 0, reverse=True)
         membercount = len(sorted_members)
         content = discord.Embed(title=f"{ctx.guild.name} members")
         rows = []
         for i, member in enumerate(sorted_members):
-            jointime = member.joined_at.strftime("%y%m%d %H:%M")
-            rows.append(f"[`{jointime}`] **#{membercount-i}** : **{member}**")
+            if member.joined_at:
+                jointime = member.joined_at.strftime("%y%m%d %H:%M")
+                rows.append(f"[`{jointime}`] **#{membercount-i}** : **{member}**")
 
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
-    async def banner(self, ctx: commands.Context, *, user: discord.User = None):
+    async def banner(self, ctx: commands.Context, *, user: Optional[discord.User] = None):
         """Get user's banner"""
-        if user is None:
-            user = ctx.author
-
         # banners are not cached so an api call is required
-        user = await self.bot.fetch_user(user.id)
+        user = await self.bot.fetch_user(user.id if user else ctx.author.id)
 
         content = discord.Embed()
 
@@ -198,8 +210,14 @@ class User(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["sbanner", "guildbanner"])
-    async def serverbanner(self, ctx: commands.Context):
+    async def serverbanner(self, ctx: commands.Context, *, guild: Optional[discord.Guild] = None):
         """Get server's banner"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
+        if guild is None:
+            guild = ctx.guild
+
         guild = ctx.guild
         content = discord.Embed()
 
@@ -226,8 +244,11 @@ class User(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["sinfo", "guildinfo"])
-    async def serverinfo(self, ctx: commands.Context, *, guild: discord.Guild = None):
+    async def serverinfo(self, ctx: commands.Context, *, guild: Optional[discord.Guild] = None):
         """Get various information on server"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         if guild is None:
             guild = ctx.guild
 
@@ -272,9 +293,12 @@ class User(commands.Cog):
     @commands.command(aliases=["roles"])
     async def roleslist(self, ctx: commands.Context):
         """List the roles of this server"""
-        content = discord.Embed(title=f"Roles in {ctx.message.guild.name}")
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
+        content = discord.Embed(title=f"Roles in {ctx.guild.name}")
         rows = []
-        for role in reversed(ctx.message.guild.roles):
+        for role in reversed(ctx.guild.roles):
             rows.append(
                 f"[`{role.id} | {str(role.color)}`] **x{len(role.members)}**"
                 f"{':warning:' if len(role.members) == 0 else ''}: {role.mention}"
@@ -290,31 +314,34 @@ class User(commands.Cog):
     @leaderboard.command(name="fishy")
     async def leaderboard_fishy(self, ctx: commands.Context, scope=""):
         """Fishy leaderboard"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         global_data = scope.lower() == "global"
-        data = await self.bot.db.execute(
+        data = await self.bot.db.fetch(
             "SELECT user_id, fishy_count FROM fishy ORDER BY fishy_count DESC"
         )
 
         rows = []
         medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
         i = 1
-        for user_id, fishy_count in data:
-            if global_data:
-                user = self.bot.get_user(user_id)
-            else:
-                user = ctx.guild.get_member(user_id)
+        if data:
+            for user_id, fishy_count in data:
+                if global_data:
+                    user = self.bot.get_user(user_id)
+                else:
+                    user = ctx.guild.get_member(user_id)
 
-            if user is None or fishy_count == 0:
-                continue
+                if user is None or fishy_count == 0:
+                    continue
 
-            if i <= len(medal_emoji):
-                ranking = medal_emoji[i - 1]
-            else:
-                ranking = f"`#{i:2}`"
+                if i <= len(medal_emoji):
+                    ranking = medal_emoji[i - 1]
+                else:
+                    ranking = f"`#{i:2}`"
 
-            rows.append(f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy")
-            i += 1
-
+                rows.append(f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy")
+                i += 1
         if not rows:
             raise exceptions.CommandInfo("Nobody has any fish yet!")
 
@@ -327,9 +354,12 @@ class User(commands.Cog):
     @leaderboard.command(name="wpm", aliases=["typing"])
     async def leaderboard_wpm(self, ctx: commands.Context, scope=""):
         """Typing speed leaderboard"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         _global_ = scope == "global"
 
-        data = await self.bot.db.execute(
+        data = await self.bot.db.fetch(
             """
             SELECT user_id, MAX(wpm) as wpm, test_date, word_count FROM typing_stats
             GROUP BY user_id ORDER BY wpm DESC
@@ -338,24 +368,25 @@ class User(commands.Cog):
 
         rows = []
         i = 1
-        for userid, wpm, test_date, word_count in data:
-            if _global_:
-                user = self.bot.get_user(userid)
-            else:
-                user = ctx.guild.get_member(userid)
+        if data:
+            for userid, wpm, test_date, word_count in data:
+                if _global_:
+                    user = self.bot.get_user(userid)
+                else:
+                    user = ctx.guild.get_member(userid)
 
-            if user is None:
-                continue
+                if user is None:
+                    continue
 
-            if i <= len(self.medal_emoji):
-                ranking = self.medal_emoji[i - 1]
-            else:
-                ranking = f"`#{i:2}`"
+                if i <= len(self.medal_emoji):
+                    ranking = self.medal_emoji[i - 1]
+                else:
+                    ranking = f"`#{i:2}`"
 
-            rows.append(
-                f"{ranking} **{util.displayname(user)}** — **{int(wpm)}** WPM ({word_count} words, {arrow.get(test_date).to('utc').humanize()})"
-            )
-            i += 1
+                rows.append(
+                    f"{ranking} **{util.displayname(user)}** — **{int(wpm)}** WPM ({word_count} words, {arrow.get(test_date).to('utc').humanize()})"
+                )
+                i += 1
 
         if not rows:
             rows = ["No data."]
@@ -369,7 +400,10 @@ class User(commands.Cog):
     @leaderboard.command(name="crowns")
     async def leaderboard_crowns(self, ctx: commands.Context):
         """Last.fm artist crowns leaderboard"""
-        data = await self.bot.db.execute(
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
+        data = await self.bot.db.fetch(
             """
             SELECT user_id, COUNT(1) as amount FROM artist_crown
             WHERE guild_id = %s GROUP BY user_id ORDER BY amount DESC
@@ -377,29 +411,32 @@ class User(commands.Cog):
             ctx.guild.id,
         )
         rows = []
-        for i, (user_id, amount) in enumerate(data, start=1):
-            user = ctx.guild.get_member(user_id)
-            if user is None:
-                continue
+        if data:
+            for i, (user_id, amount) in enumerate(data, start=1):
+                user = ctx.guild.get_member(user_id)
+                if user is None:
+                    continue
 
-            if i <= len(self.medal_emoji):
-                ranking = self.medal_emoji[i - 1]
-            else:
-                ranking = f"`#{i:2}`"
+                if i <= len(self.medal_emoji):
+                    ranking = self.medal_emoji[i - 1]
+                else:
+                    ranking = f"`#{i:2}`"
 
-            rows.append(f"{ranking} **{util.displayname(user)}** — **{amount}** crowns")
+                rows.append(f"{ranking} **{util.displayname(user)}** — **{amount}** crowns")
+        if not rows:
+            rows = ["No data."]
 
         content = discord.Embed(
             color=int("ffcc4d", 16),
             title=f":crown: {ctx.guild.name} artist crowns leaderboard",
         )
-        if not rows:
-            rows = ["No data."]
 
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
-    async def profile(self, ctx: commands.Context, user: discord.Member = None):
+    async def profile(
+        self, ctx: commands.Context, user: Optional[Union[discord.Member, discord.User]] = None
+    ):
         """Your personal customizable user profile"""
         if user is None:
             user = ctx.author
@@ -436,10 +473,9 @@ class User(commands.Cog):
         if await queries.is_donator(ctx, user):
             badges.append(make_badge(badge_classes["patreon"]))
 
-        user_settings = await self.bot.db.execute(
+        user_settings = await self.bot.db.fetch_row(
             "SELECT lastfm_username, sunsign, location_string FROM user_settings WHERE user_id = %s",
             user.id,
-            one_row=True,
         )
         if user_settings:
             if user_settings[0] is not None:
@@ -454,21 +490,19 @@ class User(commands.Cog):
         else:
             description = "You should change this by using<br>>editprofile description"
 
-        profile_data = await self.bot.db.execute(
+        profile_data = await self.bot.db.fetch_row(
             """
             SELECT description, background_url, background_color, show_graph
             FROM user_profile WHERE user_id = %s
             """,
             user.id,
-            one_row=True,
         )
 
-        fishy = await self.bot.db.execute(
+        fishy = await self.bot.db.fetch_value(
             """
             SELECT fishy_count FROM fishy WHERE user_id = %s
             """,
             user.id,
-            one_value=True,
         )
 
         if profile_data:
@@ -486,13 +520,12 @@ class User(commands.Cog):
             background_color = user.color
             background_url = ""
 
-        command_uses = await self.bot.db.execute(
+        command_uses = await self.bot.db.fetch_value(
             """
             SELECT SUM(uses) FROM command_usage WHERE user_id = %s
             GROUP BY user_id
             """,
             user.id,
-            one_value=True,
         )
 
         replacements = {
@@ -526,102 +559,12 @@ class User(commands.Cog):
         buffer = await util.render_html(self.bot, payload)
         await ctx.send(file=discord.File(fp=buffer, filename=f"profile_{user.name}.png"))
 
-    @commands.group()
-    async def editprofile(self, ctx: commands.Context):
-        """Edit your profile"""
-        await util.command_group_help(ctx)
-
-    @editprofile.command(name="description", rest_is_raw=True)
-    async def editprofile_description(self, ctx: commands.Context, *, text):
-        """Change the description on your profile"""
-        if text.strip() == "":
-            return await util.send_command_help(ctx)
-
-        if len(text) > 500:
-            raise exceptions.CommandWarning(
-                f"Description cannot be more than 500 characters ({len(text)})"
-            )
-
-        await self.bot.db.execute(
-            """
-            INSERT INTO user_profile (user_id, description)
-                VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE
-                description = VALUES(description)
-            """,
-            ctx.author.id,
-            text,
-        )
-        await util.send_success(ctx, "Profile description updated!")
-
-    @util.patrons_only()
-    @editprofile.command(name="background")
-    async def editprofile_background(self, ctx: commands.Context, url):
-        """Set a custom background image. Only works with direct link to image"""
-        await self.bot.db.execute(
-            """
-            INSERT INTO user_profile (user_id, background_url)
-                VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE
-                background_url = VALUES(background_url)
-            """,
-            ctx.author.id,
-            url,
-        )
-        await util.send_success(ctx, "Profile background image updated!")
-
-    @util.patrons_only()
-    @editprofile.command(name="graph", hidden=True, enabled=False)
-    async def editprofile_graph(self, ctx: commands.Context, value: bool):
-        """Toggle whether to show activity graph on your profile or not"""
-        await self.bot.db.execute(
-            """
-            INSERT INTO user_profile (user_id, show_graph)
-                VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE
-                show_graph = VALUES(show_graph)
-            """,
-            ctx.author.id,
-            value,
-        )
-        if value:
-            await util.send_success(ctx, "Now showing activity graph on your profile.")
-        else:
-            await util.send_success(ctx, "Activity graph on your profile is now hidden.")
-
-    @editprofile.command(name="color", aliases=["colour"])
-    async def editprofile_color(self, ctx: commands.Context, color):
-        """
-        Set a background color to be used instead of your role color.
-        Set as default to use role color again.
-        """
-        if color.lower() == "default":
-            color_value = None
-        else:
-            color = "#" + color.strip("#")
-            color_hex = await util.get_color(ctx, color)
-            if color_hex is None:
-                raise exceptions.CommandWarning(f"Invalid color {color}")
-
-            color_value = str(color_hex).strip("#")
-
-        await self.bot.db.execute(
-            """
-            INSERT INTO user_profile (user_id, background_color)
-                VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE
-                background_color = VALUES(background_color)
-            """,
-            ctx.author.id,
-            color_value,
-        )
-        await util.send_success(
-            ctx, f"Profile background color set to `{color_value or 'default'}`!"
-        )
-
     @commands.command()
     async def marry(self, ctx: commands.Context, user: discord.Member):
         """Marry someone"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         if user == ctx.author:
             return await ctx.send("You cannot marry yourself...")
         if {user.id, ctx.author.id} in self.bot.cache.marriages:
@@ -672,6 +615,9 @@ class User(commands.Cog):
     @commands.command()
     async def divorce(self, ctx: commands.Context):
         """End your marriage"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         partner = ""
         to_remove = []
         for el in self.bot.cache.marriages:
@@ -718,14 +664,16 @@ class User(commands.Cog):
     @commands.command()
     async def marriage(self, ctx: commands.Context):
         """Check your marriage status"""
-        data = await self.bot.db.execute(
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
+        data = await self.bot.db.fetch_row(
             """
             SELECT first_user_id, second_user_id, marriage_date
                 FROM marriage
             WHERE first_user_id = %s OR second_user_id = %s""",
             ctx.author.id,
             ctx.author.id,
-            one_row=True,
         )
         if data:
             if data[0] == ctx.author.id:

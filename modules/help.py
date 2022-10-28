@@ -106,7 +106,7 @@ class EmbedHelpCommand(commands.HelpCommand):
 
     async def group_help_brief(self, ctx: commands.Context, group):
         embed = discord.Embed(colour=self.COLOUR)
-        embed.description = "`" + ctx.prefix + group.qualified_name
+        embed.description = "`" + (ctx.prefix or ">") + group.qualified_name
         embed.description += f" [{' | '.join(c.name for c in group.commands)}]`"
         embed.set_footer(text=f"{ctx.prefix}help {group.qualified_name} for more detailed help")
         await ctx.send(embed=embed)

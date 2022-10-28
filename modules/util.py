@@ -570,7 +570,7 @@ def rgb_to_hex(rgb):
 async def color_from_image_url(
     session,
     url,
-    fallback: Optional[str] = "E74C3C",
+    fallback="202225",
     return_color_object=False,
     size_limit=False,
     ignore_errors=True,

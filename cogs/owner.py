@@ -185,11 +185,13 @@ class Owner(commands.Cog):
         """Execute something against the local MariaDB instance"""
         changes, data = await self.bot.db.run_sql(statement)
         if changes:
-            await ctx.send(f":white_check_mark: {changes} rows changed")
+            await ctx.send(f":white_check_mark: {changes} rows returned/affected")
+
+        if not data:
+            return await ctx.send("Query returned no data")
         try:
-            if data:
-                content = "\n".join(str(r) for r in data)
-                await ctx.send(f"```py\n{content}\n```")
+            content = "\n".join(str(r) for r in data)
+            await ctx.send(f"```py\n{content}\n```")
         except discord.errors.HTTPException:
             # too long, page it
             pages = []
