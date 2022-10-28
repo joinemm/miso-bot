@@ -59,17 +59,6 @@ class CustomCommands(commands.Cog, name="Commands"):
 
         return command_list
 
-    async def can_add_commands(self, ctx: commands.Context):
-        """Checks if guild is restricting command adding and whether the current user can add commands"""
-        if not ctx.author.guild_permissions.manage_guild and await self.bot.db.execute(
-            "SELECT restrict_custom_commands FROM guild_settings WHERE guild_id = %s",
-            ctx.guild.id,
-            one_value=True,
-        ):
-            return False
-
-        return True
-
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error):
         """Check for custom commands on CommandNotFound"""
@@ -79,7 +68,7 @@ class CustomCommands(commands.Cog, name="Commands"):
 
         error = getattr(error, "original", error)
         if isinstance(error, commands.CommandNotFound):
-            keyword = ctx.message.content[len(ctx.prefix) :].split(" ", 1)[0]
+            keyword = ctx.message.content[len(ctx.prefix or "") :].split(" ", 1)[0]
             response = await self.bot.db.execute(
                 "SELECT content FROM custom_command WHERE guild_id = %s AND command_trigger = %s",
                 ctx.guild.id,
@@ -111,7 +100,17 @@ class CustomCommands(commands.Cog, name="Commands"):
     @command.command()
     async def add(self, ctx: commands.Context, name, *, response):
         """Add a new custom command"""
-        if not await self.can_add_commands(ctx):
+        if not isinstance(ctx.author, discord.Member):
+            raise exceptions.CommandError("Unable to get author member.")
+
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
+        if not ctx.author.guild_permissions.manage_guild and await self.bot.db.execute(
+            "SELECT restrict_custom_commands FROM guild_settings WHERE guild_id = %s",
+            ctx.guild.id,
+            one_value=True,
+        ):
             raise commands.MissingPermissions(["manage_server"])
 
         if name in self.bot_command_list():
@@ -142,6 +141,13 @@ class CustomCommands(commands.Cog, name="Commands"):
     @command.command(name="remove")
     async def command_remove(self, ctx: commands.Context, name):
         """Remove a custom command"""
+
+        if not isinstance(ctx.author, discord.Member):
+            raise exceptions.CommandError("Unable to get author member.")
+
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         owner_id = await self.bot.db.execute(
             "SELECT added_by FROM custom_command WHERE command_trigger = %s AND guild_id = %s",
             name,
@@ -171,6 +177,9 @@ class CustomCommands(commands.Cog, name="Commands"):
     @command.command(name="search")
     async def command_search(self, ctx: commands.Context, name):
         """Search for a command"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         content = discord.Embed()
 
         internal_rows = []
@@ -193,6 +202,9 @@ class CustomCommands(commands.Cog, name="Commands"):
     @command.command(name="list")
     async def command_list(self, ctx: commands.Context):
         """List all commands on this server"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         rows = []
         for command in await self.custom_command_list(ctx.guild.id):
             rows.append(f"{ctx.prefix}{command}")
@@ -222,10 +234,15 @@ class CustomCommands(commands.Cog, name="Commands"):
     @commands.has_permissions(manage_guild=True)
     async def command_clear(self, ctx: commands.Context):
         """Delete all custom commands on this server"""
+
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+        guild = ctx.guild
+
         count = (
             await self.bot.db.execute(
                 "SELECT COUNT(*) FROM custom_command WHERE guild_id = %s",
-                ctx.guild.id,
+                guild.id,
                 one_value=True,
             )
             or 0
@@ -240,9 +257,9 @@ class CustomCommands(commands.Cog, name="Commands"):
         async def confirm():
             await self.bot.db.execute(
                 "DELETE FROM custom_command WHERE guild_id = %s",
-                ctx.guild.id,
+                guild.id,
             )
-            content.title = f":white_check_mark: Cleared commands in {ctx.guild}"
+            content.title = f":white_check_mark: Cleared commands in {guild}"
             content.description = ""
             content.color = int("77b255", 16)
             await msg.edit(embed=content)

@@ -3,6 +3,7 @@ import math
 import os
 import time
 from datetime import datetime
+from typing import Optional
 
 import arrow
 import discord
@@ -25,7 +26,11 @@ class Information(commands.Cog):
     @commands.command()
     async def invite(self, ctx: commands.Context):
         """Invite Miso to your server!"""
-        url = discord.utils.oauth_url(self.bot.client_id, permissions=discord.Permissions(8))
+        if not self.bot.user:
+            raise exceptions.CommandError("Not logged in! This shouldn't happen...")
+        url = discord.utils.oauth_url(
+            self.bot.user.id, permissions=discord.Permissions(1515318537286)
+        )
         content = discord.Embed(title="Invite me to your server!")
         content.set_thumbnail(url=self.bot.user.display_avatar.url)
         content.description = f"[Click here]({url})"
@@ -66,16 +71,12 @@ class Information(commands.Cog):
             FROM donator
             """
         )
-        content = discord.Embed(
-            title=":heart: Miso Bot supporters",
-            color=int("dd2e44", 16),
-            description=" | ".join(
-                [
-                    "[github](https://github.com/sponsors/joinemm)",
-                    "[ko-fi](https://ko-fi.com/joinemm)",
-                    "[patreon](https://patreon.com/joinemm)",
-                ]
-            ),
+        description = " | ".join(
+            [
+                "[github](https://github.com/sponsors/joinemm)",
+                "[ko-fi](https://ko-fi.com/joinemm)",
+                "[patreon](https://patreon.com/joinemm)",
+            ]
         )
 
         current = []
@@ -87,18 +88,26 @@ class Information(commands.Cog):
                 continue
 
             if is_active:
-                current.append(
-                    f"**${int(amount)}** by **{user}** (*for {humanize.naturaldelta(datetime.now() - donating_since)}*)"
-                )
+                how_long = humanize.naturaldelta(datetime.now() - donating_since)
+                current.append(f"**${int(amount)}** by **{user}** (*for {how_long}*)")
 
         if current:
-            content.description += "\n\n" + ("\n".join(current))
+            description += "\n\n" + ("\n".join(current))
+
+        content = discord.Embed(
+            title=":heart: Miso Bot supporters",
+            color=int("dd2e44", 16),
+            description=description,
+        )
 
         await ctx.send(embed=content)
 
     @commands.command(name="info")
     async def info(self, ctx: commands.Context):
         """Get information about the bot"""
+        if not self.bot.user or not self.bot.owner_id:
+            raise exceptions.CommandError("Not logged in! This shouldn't happen...")
+
         content = discord.Embed(
             title=f"Miso Bot | version {self.bot.version}",
             colour=int("E46A92", 16),
@@ -170,7 +179,7 @@ class Information(commands.Cog):
             emoji = emojis.Status["offline"] if shard.is_closed() else emojis.Status["online"]
             shards.append(
                 f"{emoji.value} **Shard `{shard.id}`** - `{shard.latency * 1000:.2f}` ms"
-                + (" :point_left:" if ctx.guild.shard_id == shard.id else "")
+                + (" :point_left:" if ctx.guild and ctx.guild.shard_id == shard.id else "")
             )
 
         content.description = "\n".join(shards)
@@ -215,9 +224,16 @@ class Information(commands.Cog):
     @commands.command()
     async def roleinfo(self, ctx: commands.Context, *, role: discord.Role):
         """Get information about a role"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         content = discord.Embed(title=f"@{role.name} | #{role.id}")
 
         content.colour = role.color
+        member_count = len(role.members)
+        percentage = (
+            int(member_count / ctx.guild.member_count * 100) if ctx.guild.member_count else None
+        )
 
         if isinstance(role.icon, discord.Asset):
             content.set_thumbnail(url=role.icon.url)
@@ -225,15 +241,20 @@ class Information(commands.Cog):
             content.title = f"{role.icon} @{role.name} | #{role.id}"
 
         content.add_field(name="Color", value=str(role.color).upper())
-        content.add_field(name="Member count", value=len(role.members))
+        content.add_field(
+            name="Member count",
+            value=f"{member_count} / {ctx.guild.member_count} ({percentage}%)"
+            if ctx.guild.member_count
+            else member_count,
+        )
         content.add_field(name="Created at", value=role.created_at.strftime("%d/%m/%Y %H:%M"))
         content.add_field(name="Hoisted", value=str(role.hoist))
         content.add_field(name="Mentionable", value=role.mentionable)
         content.add_field(name="Mention", value=role.mention)
-        if role.managed:
-            if role.tags.is_bot_managed():
+        if role.managed and role.tags:
+            if role.tags.is_bot_managed() and role.tags.bot_id:
                 manager = ctx.guild.get_member(role.tags.bot_id)
-            elif role.tags.is_integration():
+            elif role.tags.is_integration() and role.tags.integration_id:
                 manager = ctx.guild.get_member(role.tags.integration_id)
             elif role.tags.is_premium_subscriber():
                 manager = "Server boosting"
@@ -262,8 +283,13 @@ class Information(commands.Cog):
                 await self.commandstats_single(ctx, " ".join(args))
 
     @commandstats.command(name="server")
-    async def commandstats_server(self, ctx: commands.Context, user: discord.Member = None):
+    async def commandstats_server(
+        self, ctx: commands.Context, user: Optional[discord.Member] = None
+    ):
         """Most used commands in this server"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         content = discord.Embed(
             title=f":bar_chart: Most used commands in {ctx.guild.name}"
             + ("" if user is None else f" by {user}")
@@ -304,7 +330,9 @@ class Information(commands.Cog):
 
     @commandstats.command(name="global")
     @commands.is_owner()
-    async def commandstats_global(self, ctx: commands.Context, user: discord.Member = None):
+    async def commandstats_global(
+        self, ctx: commands.Context, user: Optional[discord.Member] = None
+    ):
         """Most used commands globally"""
         content = discord.Embed(
             title=":bar_chart: Most used commands" + ("" if user is None else f" by {user}")
@@ -353,12 +381,18 @@ class Information(commands.Cog):
         group = hasattr(command, "commands")
         if group:
             command_name = tuple(
-                [f"{command.name} {x.name}" for x in command.commands] + [command_name]
+                [f"{command.name} {x.name}" for x in command.commands] + [command_name]  # type: ignore
             )
         else:
             command_name = command.qualified_name
 
-        (total_uses, most_used_by_user_id, most_used_by_user_amount,) = await self.bot.db.execute(
+        total_uses: int = 0
+        most_used_by_user_id: Optional[int] = None
+        most_used_by_user_amount: int = 0
+        most_used_by_guild_amount: int = 0
+        most_used_by_guild_id: Optional[int] = None
+
+        global_use_data = await self.bot.db.execute(
             f"""
             SELECT SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
                 SELECT SUM(uses) as use_sum, user_id FROM command_usage
@@ -370,8 +404,12 @@ class Information(commands.Cog):
             command_name,
             one_row=True,
         )
+        if global_use_data:
+            total_uses, most_used_by_user_id, most_used_by_user_amount = global_use_data
 
-        most_used_by_guild_id, most_used_by_guild_amount = await self.bot.db.execute(
+        content.add_field(name="Uses", value=total_uses)
+
+        uses_by_guild_data = await self.bot.db.execute(
             f"""
             SELECT guild_id, MAX(use_sum) FROM (
                 SELECT guild_id, SUM(uses) as use_sum FROM command_usage
@@ -383,26 +421,28 @@ class Information(commands.Cog):
             command_name,
             one_row=True,
         )
+        if uses_by_guild_data:
+            most_used_by_guild_id, most_used_by_guild_amount = uses_by_guild_data
 
-        uses_in_this_server = (
-            await self.bot.db.execute(
-                f"""
-                SELECT SUM(uses) FROM command_usage
-                    WHERE command_type = 'internal'
-                      AND command_name {'IN %s' if group else '= %s'}
-                      AND guild_id = %s
-                GROUP BY guild_id
-                """,
-                command_name,
-                ctx.guild.id,
-                one_value=True,
+        if ctx.guild:
+            uses_in_this_server = (
+                await self.bot.db.execute(
+                    f"""
+                    SELECT SUM(uses) FROM command_usage
+                        WHERE command_type = 'internal'
+                        AND command_name {'IN %s' if group else '= %s'}
+                        AND guild_id = %s
+                    GROUP BY guild_id
+                    """,
+                    command_name,
+                    ctx.guild.id,
+                    one_value=True,
+                )
+                or 0
             )
-            or 0
-        )
+            content.add_field(name="on this server", value=uses_in_this_server)
 
         # show the data in embed fields
-        content.add_field(name="Uses", value=total_uses or 0)
-        content.add_field(name="on this server", value=uses_in_this_server)
         content.add_field(
             name="Server most used in",
             value=f"{self.bot.get_guild(most_used_by_guild_id)} ({most_used_by_guild_amount or 0})",
@@ -435,12 +475,14 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["serverdp", "sdp", "guildicon"])
-    async def servericon(self, ctx: commands.Context, guild: int = None):
+    async def servericon(self, ctx: commands.Context, guild_id: Optional[int] = None):
         """Get the icon of the server"""
-        if guild is not None:
-            guild = self.bot.get_guild(guild)
+        guild = ctx.guild
+        if guild_id:
+            guild = self.bot.get_guild(guild_id)
+
         if guild is None:
-            guild = ctx.guild
+            raise exceptions.CommandError("Can't get guild")
 
         if guild.icon is None:
             raise exceptions.CommandWarning("This server has no icon.")

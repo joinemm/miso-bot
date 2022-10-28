@@ -87,7 +87,7 @@ class Events(commands.Cog):
             pass
         content.set_footer(text=f"#{guild.id}")
         content.timestamp = arrow.utcnow().datetime
-        logchannel = self.bot.get_channel(self.guildlog)
+        logchannel = self.bot.get_partial_messageable(self.guildlog)
         await logchannel.send(embed=content)
 
     @commands.Cog.listener()
@@ -106,7 +106,7 @@ class Events(commands.Cog):
             pass
         content.set_footer(text=f"#{guild.id}")
         content.timestamp = arrow.utcnow().datetime
-        logchannel = self.bot.get_channel(self.guildlog)
+        logchannel = self.bot.get_partial_messageable(self.guildlog)
         await logchannel.send(embed=content)
 
     @commands.Cog.listener()
@@ -339,6 +339,10 @@ class Events(commands.Cog):
         await self.bot.wait_until_ready()
 
         user = self.bot.get_user(payload.user_id)
+
+        if not user:
+            return
+
         if user.bot:
             return
 
@@ -362,7 +366,7 @@ class Events(commands.Cog):
         if not is_enabled:
             return
 
-        board_channel = self.bot.get_channel(board_channel_id)
+        board_channel = self.bot.get_partial_messageable(board_channel_id)
         if board_channel is None:
             return
 
@@ -375,7 +379,7 @@ class Events(commands.Cog):
             (emoji_type == "unicode" or emoji_type is None)
             and emoji_literals.UNICODE_TO_NAME.get(payload.emoji.name) == emoji_name
         ):
-            message_channel = self.bot.get_channel(payload.channel_id)
+            message_channel = self.bot.get_partial_messageable(payload.channel_id)
 
             # trying to star a starboard message
             if message_channel.id == board_channel_id:
@@ -418,7 +422,7 @@ class Events(commands.Cog):
             )
 
             board_message = None
-            if board_message_id:
+            if isinstance(board_message_id, int):
                 try:
                     board_message = await board_channel.fetch_message(board_message_id)
                 except discord.errors.NotFound:
@@ -433,9 +437,7 @@ class Events(commands.Cog):
                 jump = f"\n\n[context]({message.jump_url})"
                 content.description = message.content[: 2048 - len(jump)] + jump
                 content.timestamp = message.created_at
-                content.set_footer(
-                    text=f"{reaction_count} {emoji_display} #{message.channel.name}"
-                )
+                content.set_footer(text=f"{reaction_count} {emoji_display} #{message.channel}")
                 if len(message.attachments) > 0:
                     content.set_image(url=message.attachments[0].url)
 
@@ -450,7 +452,7 @@ class Events(commands.Cog):
                     payload.message_id,
                     board_message.id,
                 )
-                log_channel = self.bot.get_channel(log_channel_id)
+                log_channel = self.bot.get_partial_messageable(log_channel_id)
                 if log_channel is not None:
                     content = discord.Embed(
                         color=int("ffac33", 16), title="Message added to starboard"
@@ -477,9 +479,7 @@ class Events(commands.Cog):
             else:
                 # message is on board, update star count
                 content = board_message.embeds[0]
-                content.set_footer(
-                    text=f"{reaction_count} {emoji_display} #{message.channel.name}"
-                )
+                content.set_footer(text=f"{reaction_count} {emoji_display} #{message.channel}")
                 await board_message.edit(embed=content)
 
 

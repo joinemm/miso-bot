@@ -1,6 +1,5 @@
 import asyncio
 import io
-import json
 import random
 import re
 
@@ -147,17 +146,17 @@ class Media(commands.Cog):
                 if shortcode:
                     post_url = f"https://www.instagram.com/p/{shortcode}"
                     post = await instagram.Datalama(self.bot).get_post(shortcode)
-                else:
+                elif story_pk:
                     post_url = f"https://www.instagram.com/stories/{username}/{story_pk}"
                     post = await instagram.Datalama(self.bot).get_story(story_pk)
-            except instagram.ExpiredCookie:
+            except instagram.ExpiredCookie as exc:
                 raise exceptions.CommandError(
                     "The Instagram login session has expired, please ask my developer to reauthenticate!"
-                )
-            except instagram.ExpiredStory:
-                raise exceptions.CommandError("This story is no longer available.")
-            except instagram.InstagramError as e:
-                raise exceptions.CommandError(e.message)
+                ) from exc
+            except instagram.ExpiredStory as exc:
+                raise exceptions.CommandError("This story is no longer available.") from exc
+            except instagram.InstagramError as exc:
+                raise exceptions.CommandError(exc.message)
 
             if use_embeds:
                 # send as embeds
@@ -265,8 +264,6 @@ class Media(commands.Cog):
 
             tweet: tweepy.Tweet = response.data
 
-            print(json.dumps(tweet.data, indent=2))
-
             media_urls = []
 
             media: tweepy.Media
@@ -294,11 +291,6 @@ class Media(commands.Cog):
 
             if use_embeds:
                 content = discord.Embed(colour=int("1d9bf0", 16))
-                content.set_author(
-                    icon_url=user.profile_image_url,
-                    name=f"@{screen_name}",
-                    url=tweet_url,
-                )
                 # just send link in embed
                 embeds = []
                 videos = []
@@ -308,10 +300,14 @@ class Media(commands.Cog):
                     else:
                         content.set_image(url=media_url)
                         embeds.append(content.copy())
-                        content._author = None
 
                 if embeds:
                     embeds[-1].timestamp = timestamp.datetime
+                    embeds[0].set_author(
+                        icon_url=user.profile_image_url,
+                        name=f"@{screen_name}",
+                        url=tweet_url,
+                    )
                     await ctx.send(embeds=embeds)
                 if videos:
                     await ctx.send("\n".join(videos))

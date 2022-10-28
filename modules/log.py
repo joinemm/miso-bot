@@ -1,5 +1,6 @@
 import logging
 from time import time
+from typing import Any
 
 
 def get_logger(logger_name):
@@ -40,7 +41,7 @@ def get_command_logger():
     return logger
 
 
-def log_command(ctx, extra=""):
+def log_command(ctx, extra: Any = ""):
     try:
         took = time() - ctx.timer
     except AttributeError:

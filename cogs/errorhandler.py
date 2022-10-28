@@ -44,10 +44,17 @@ class ErrorHander(commands.Cog):
         }
 
     async def send(
-        self, ctx: commands.Context, level, message, help_footer=None, codeblock=False, **kwargs
+        self,
+        ctx: commands.Context,
+        level,
+        message,
+        help_footer=None,
+        codeblock=False,
+        dm=False,
+        **kwargs,
     ):
         """Send error message to chat"""
-        settings = self.message_levels.get(level)
+        settings = self.message_levels[level]
         if codeblock:
             message = f"`{message}`"
 
@@ -57,11 +64,12 @@ class ErrorHander(commands.Cog):
         )
 
         help_footer = help_footer or settings["help_footer"]
-        if help_footer:
+        if help_footer and ctx.command:
             embed.set_footer(text=f"Learn more: {ctx.prefix}help {ctx.command.qualified_name}")
 
         try:
-            await ctx.send(embed=embed, **kwargs)
+            target = ctx.author if dm else ctx
+            await target.send(embed=embed, **kwargs)
         except discord.errors.Forbidden:
             self.bot.logger.warning("Forbidden when trying to send error message embed")
 
@@ -111,11 +119,7 @@ class ErrorHander(commands.Cog):
 
         if isinstance(error, commands.NoPrivateMessage):
             try:
-                await self.send(
-                    ctx.author,
-                    "info",
-                    "This command cannot be used in DM",
-                )
+                await self.send(ctx, "info", "This command cannot be used in DM", dm=True)
             except (discord.HTTPException, discord.errors.Forbidden):
                 pass
 
@@ -183,6 +187,7 @@ class ErrorHander(commands.Cog):
 
         elif isinstance(error, exceptions.Blacklist):
             # admins can bypass these blacklists
+
             if isinstance(
                 error,
                 (
@@ -191,18 +196,23 @@ class ErrorHander(commands.Cog):
                     exceptions.BlacklistedCommand,
                 ),
             ):
-                perms = ctx.channel.permissions_for(ctx.author)
-                if perms.administrator or ctx.author.id == ctx.bot.owner_id:
-                    try:
-                        await ctx.reinvoke()
-                        return
-                    except Exception as e:
-                        return await self.on_command_error(ctx, e)
+                if isinstance(ctx.author, discord.Member):
+                    perms = ctx.channel.permissions_for(ctx.author)
+                    if perms.administrator or ctx.author.id == ctx.bot.owner_id:
+                        try:
+                            await ctx.reinvoke()
+                            return
+                        except Exception as e:
+                            return await self.on_command_error(ctx, e)
 
-            delete = await self.bot.db.execute(
-                "SELECT delete_blacklisted_usage FROM guild_settings WHERE guild_id = %s",
-                ctx.guild.id,
-                one_value=True,
+            delete: bool = (
+                await self.bot.db.execute(
+                    "SELECT delete_blacklisted_usage FROM guild_settings WHERE guild_id = %s",
+                    ctx.guild.id,
+                    one_value=True,
+                )
+                if ctx.guild
+                else False
             )
             await self.send(ctx, "error", error.message, delete_after=(5 if delete else None))
             if delete:

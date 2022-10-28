@@ -1,4 +1,5 @@
 import random
+from typing import Optional
 
 import discord
 import humanize
@@ -10,96 +11,97 @@ from modules import util
 class Fishy(commands.Cog):
     """Fishing commands"""
 
+    COOLDOWN = 7200
+    WEIGHTS = [9, 60, 20, 10, 1]
+    COOLDOWN_STRINGS = [
+        "Bro chill, you can't fish yet! Please wait {time}",
+        "You can't fish yet, fool! Please wait {time}",
+        "You're fishing too fast! Please wait {time}",
+        "You're still on cooldown buddy. Please wait {time}",
+        "Please wait {time} to fish again!",
+        "Sorry, but you have to wait {time} to fish again!",
+        "Not so fast! Please wait {time}",
+        "You must wait {time} to fish again!",
+    ]
+    TRASH_ICONS = [
+        ":moyai:",
+        ":stopwatch:",
+        ":wrench:",
+        ":pick:",
+        ":nut_and_bolt:",
+        ":gear:",
+        ":toilet:",
+        ":alembic:",
+        ":bathtub:",
+        ":scissors:",
+        ":boot:",
+        ":high_heel:",
+        ":saxophone:",
+        ":trumpet:",
+        ":anchor:",
+        ":shopping_cart:",
+        ":paperclips:",
+        ":paperclip:",
+        ":prayer_beads:",
+        ":oil:",
+        ":compression:",
+        ":radio:",
+        ":fax:",
+        ":movie_camera:",
+        ":projector:",
+        ":guitar:",
+        ":violin:",
+        ":telephone:",
+        ":alarm_clock:",
+        ":fire_extinguisher:",
+        ":screwdriver:",
+        ":wrench:",
+        ":magnet:",
+        ":coffin:",
+        ":urn:",
+        ":amphora:",
+        ":crystal_ball:",
+        ":telescope:",
+        ":microscope:",
+        ":microbe:",
+        ":broom:",
+        ":basket:",
+        ":sewing_needle:",
+        ":roll_of_paper:",
+        ":plunger:",
+        ":bucket:",
+        ":toothbrush:",
+        ":soap:",
+        ":razor:",
+        ":sponge:",
+        ":squeeze_bottle:",
+        ":key:",
+        ":teddy_bear:",
+        ":frame_photo:",
+        ":nesting_dolls:",
+        ":izakaya_lantern:",
+        ":wind_chime:",
+        ":safety_pin:",
+        ":newspaper2:",
+    ]
+
     def __init__(self, bot):
         self.bot = bot
         self.icon = "🐟"
-        self.COOLDOWN = 7200
         self.ts_lock = {}
-        self.FISHTYPES = {
+        self.fishtypes = {
             "trash": self.trash,
             "common": self.fish_common,
             "uncommon": self.fish_uncommon,
             "rare": self.fish_rare,
             "legendary": self.fish_legendary,
         }
-        self.WEIGHTS = [9, 60, 20, 10, 1]
-        self.COOLDOWN_STRINGS = [
-            "Bro chill, you can't fish yet! Please wait {time}",
-            "You can't fish yet, fool! Please wait {time}",
-            "You're fishing too fast! Please wait {time}",
-            "You're still on cooldown buddy. Please wait {time}",
-            "Please wait {time} to fish again!",
-            "Sorry, but you have to wait {time} to fish again!",
-            "Not so fast! Please wait {time}",
-            "You must wait {time} to fish again!",
-        ]
-        self.TRASH_ICONS = [
-            ":moyai:",
-            ":stopwatch:",
-            ":wrench:",
-            ":pick:",
-            ":nut_and_bolt:",
-            ":gear:",
-            ":toilet:",
-            ":alembic:",
-            ":bathtub:",
-            ":scissors:",
-            ":boot:",
-            ":high_heel:",
-            ":saxophone:",
-            ":trumpet:",
-            ":anchor:",
-            ":shopping_cart:",
-            ":paperclips:",
-            ":paperclip:",
-            ":prayer_beads:",
-            ":oil:",
-            ":compression:",
-            ":radio:",
-            ":fax:",
-            ":movie_camera:",
-            ":projector:",
-            ":guitar:",
-            ":violin:",
-            ":telephone:",
-            ":alarm_clock:",
-            ":fire_extinguisher:",
-            ":screwdriver:",
-            ":wrench:",
-            ":magnet:",
-            ":coffin:",
-            ":urn:",
-            ":amphora:",
-            ":crystal_ball:",
-            ":telescope:",
-            ":microscope:",
-            ":microbe:",
-            ":broom:",
-            ":basket:",
-            ":sewing_needle:",
-            ":roll_of_paper:",
-            ":plunger:",
-            ":bucket:",
-            ":toothbrush:",
-            ":soap:",
-            ":razor:",
-            ":sponge:",
-            ":squeeze_bottle:",
-            ":key:",
-            ":teddy_bear:",
-            ":frame_photo:",
-            ":nesting_dolls:",
-            ":izakaya_lantern:",
-            ":wind_chime:",
-            ":safety_pin:",
-            ":newspaper2:",
-        ]
 
     # idk why this doesnt work but it gets stuck all the time
     # @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.cooldown(1, 5, type=commands.BucketType.user)
     @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin", "fush"])
-    async def fishy(self, ctx: commands.Context, user: discord.Member = None):
+    async def fishy(self, ctx: commands.Context, user: Optional[discord.Member] = None):
         """Go fishing"""
         receiver = user or ctx.author
         gift = receiver is not ctx.author
@@ -124,13 +126,12 @@ class Fishy(commands.Cog):
         else:
             time_since_fishy = self.COOLDOWN
 
-        TESTING = False
-        if time_since_fishy < self.COOLDOWN and not TESTING:
+        if time_since_fishy < self.COOLDOWN:
             wait_time = f"**{humanize.precisedelta(self.COOLDOWN - time_since_fishy)}**"
             await ctx.send(random.choice(self.COOLDOWN_STRINGS).format(time=wait_time))
         else:
-            catch = random.choices(list(self.FISHTYPES.keys()), self.WEIGHTS)[0]
-            amount = await self.FISHTYPES[catch](ctx, receiver, gift)
+            catch = random.choices(list(self.fishtypes.keys()), self.WEIGHTS)[0]
+            amount = await self.fishtypes[catch](ctx, receiver, gift)
             self.ts_lock[str(ctx.author.id)] = ctx.message.created_at
             await self.bot.db.execute(
                 """

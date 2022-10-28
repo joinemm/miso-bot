@@ -1,3 +1,5 @@
+from typing import Annotated
+
 import discord
 from discord.ext import commands
 
@@ -40,6 +42,9 @@ class Configuration(commands.Cog):
 
         if len(prefix) > 32:
             raise exceptions.CommandWarning("Prefix cannot be over 32 characters.")
+
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
 
         prefix = prefix.lstrip()
         await self.bot.db.execute(
@@ -135,7 +140,8 @@ class Configuration(commands.Cog):
 
         preview = util.create_goodbye_message(ctx.author, ctx.guild, message)
         await ctx.send(
-            f":white_check_mark: New goodbye message format set:\n```{message}```Preview:\n\n{preview}"
+            f":white_check_mark: New goodbye message format set: \
+            \n```{message}```Preview:\n\n{preview}"
         )
 
     @commands.group(name="logger")
@@ -146,7 +152,9 @@ class Configuration(commands.Cog):
         await util.command_group_help(ctx)
 
     @logger.command(name="members", usage="<channel | none>")
-    async def logger_members(self, ctx: commands.Context, *, channel: ChannelSetting):
+    async def logger_members(
+        self, ctx: commands.Context, *, channel: Annotated[discord.TextChannel, ChannelSetting]
+    ):
         """
         Set channel for the membership log
 
@@ -165,7 +173,9 @@ class Configuration(commands.Cog):
             await util.send_success(ctx, f"Member changes will now be logged to {channel.mention}")
 
     @logger.command(name="bans", usage="<channel | none>")
-    async def logger_bans(self, ctx: commands.Context, *, channel: ChannelSetting):
+    async def logger_bans(
+        self, ctx: commands.Context, *, channel: Annotated[discord.TextChannel, ChannelSetting]
+    ):
         """
         Set channel where bans are logged
 
@@ -189,7 +199,9 @@ class Configuration(commands.Cog):
         await util.command_group_help(ctx)
 
     @logger_deleted.command(name="channel", usage="<channel | none>")
-    async def deleted_channel(self, ctx: commands.Context, *, channel: ChannelSetting):
+    async def deleted_channel(
+        self, ctx: commands.Context, *, channel: Annotated[discord.TextChannel, ChannelSetting]
+    ):
         """
         Set channel for message log
 
@@ -212,6 +224,9 @@ class Configuration(commands.Cog):
     @logger_deleted.command(name="ignore")
     async def deleted_ignore(self, ctx: commands.Context, *, channel: discord.TextChannel):
         """Ignore a channel from being logged in message log"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         await self.bot.db.execute(
             "INSERT IGNORE message_log_ignore (guild_id, channel_id) VALUES (%s, %s)",
             ctx.guild.id,
@@ -224,6 +239,9 @@ class Configuration(commands.Cog):
     @logger_deleted.command(name="unignore")
     async def deleted_unignore(self, ctx: commands.Context, *, channel: discord.TextChannel):
         """Unignore a channel from being logged in message log"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         await self.bot.db.execute(
             "DELETE FROM message_log_ignore WHERE guild_id = %s and channel_id = %s",
             ctx.guild.id,
@@ -251,6 +269,9 @@ class Configuration(commands.Cog):
     @starboard.command(name="amount")
     async def starboard_amount(self, ctx: commands.Context, amount: int):
         """Change the amount of reactions required to starboard a message"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         await queries.update_setting(ctx, "starboard_settings", "reaction_count", amount)
         emoji_name, emoji_id, emoji_type = await self.bot.db.execute(
             """
@@ -284,6 +305,9 @@ class Configuration(commands.Cog):
     @starboard.command(name="emoji")
     async def starboard_emoji(self, ctx: commands.Context, emoji):
         """Change the emoji to use for starboard"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         if emoji[0] == "<":
             # is custom emoji
             emoji_obj = await util.get_emoji(ctx, emoji)
@@ -331,7 +355,9 @@ class Configuration(commands.Cog):
         await self.bot.cache.cache_starboard_settings()
 
     @starboard.command(name="log", usage="<channel | none>")
-    async def starboard_log(self, ctx: commands.Context, channel: ChannelSetting):
+    async def starboard_log(
+        self, ctx: commands.Context, channel: Annotated[discord.TextChannel, ChannelSetting]
+    ):
         """Set starboard logging channel to log starring events"""
         if channel is None:
             await queries.update_setting(ctx, "starboard_settings", "log_channel_id", None)
@@ -344,6 +370,9 @@ class Configuration(commands.Cog):
     @starboard.command(name="blacklist")
     async def starboard_blacklist(self, ctx: commands.Context, channel: discord.TextChannel):
         """Blacklist a channel from being counted for starboard"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         await self.bot.db.execute(
             """
             INSERT INTO starboard_blacklist (guild_id, channel_id)
@@ -360,6 +389,9 @@ class Configuration(commands.Cog):
     @starboard.command(name="unblacklist")
     async def starboard_unblacklist(self, ctx: commands.Context, channel: discord.TextChannel):
         """Unblacklist a channel from being counted for starboard"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         await self.bot.db.execute(
             """
             DELETE FROM starboard_blacklist WHERE guild_id = %s AND channel_id = %s
@@ -373,6 +405,9 @@ class Configuration(commands.Cog):
     @starboard.command(name="current")
     async def starboard_current(self, ctx: commands.Context):
         """See the current starboard configuration"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         starboard_settings = self.bot.cache.starboard_settings.get(str(ctx.guild.id))
         if not starboard_settings:
             raise exceptions.CommandWarning("Nothing has been configured on this server yet!")
@@ -441,6 +476,9 @@ class Configuration(commands.Cog):
         Available types: [ vote | rate ]
         Defaults to vote.
         """
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         if reaction_type is None:
             channel_type = "voting"
         elif reaction_type.lower() in ["rate", "rating"]:
@@ -471,6 +509,9 @@ class Configuration(commands.Cog):
     @votechannel.command(name="remove")
     async def votechannel_remove(self, ctx: commands.Context, *, channel: discord.TextChannel):
         """Remove a voting channel"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         await self.bot.db.execute(
             "DELETE FROM voting_channel WHERE guild_id = %s and channel_id = %s",
             ctx.guild.id,
@@ -482,6 +523,9 @@ class Configuration(commands.Cog):
     @votechannel.command(name="list")
     async def votechannel_list(self, ctx: commands.Context):
         """List all current voting channels on this server"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         channels = await self.bot.db.execute(
             """
             SELECT channel_id, voting_type FROM voting_channel WHERE guild_id = %s
@@ -518,6 +562,9 @@ class Configuration(commands.Cog):
     @autorole.command(name="add")
     async def autorole_add(self, ctx: commands.Context, *, role: discord.Role):
         """Add an autorole"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         await self.bot.db.execute(
             "INSERT IGNORE autorole (guild_id, role_id) VALUES (%s, %s)",
             ctx.guild.id,
@@ -528,6 +575,9 @@ class Configuration(commands.Cog):
     @autorole.command(name="remove")
     async def autorole_remove(self, ctx: commands.Context, *, role):
         """Remove an autorole"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         existing_role = await util.get_role(ctx, role)
         if existing_role is None:
             role_id = int(role)
@@ -544,6 +594,9 @@ class Configuration(commands.Cog):
     @autorole.command(name="list")
     async def autorole_list(self, ctx: commands.Context):
         """List current autoroles"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         roles = await self.bot.db.execute(
             "SELECT role_id FROM autorole WHERE guild_id = %s",
             ctx.guild.id,
@@ -566,6 +619,9 @@ class Configuration(commands.Cog):
     @commands.has_permissions(manage_messages=True)
     async def autoresponses(self, ctx: commands.Context, value: bool):
         """Disable or enable automatic responses to certain message content"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         await queries.update_setting(ctx, "guild_settings", "autoresponses", value)
         self.bot.cache.autoresponse[str(ctx.guild.id)] = value
         if value:
@@ -592,6 +648,9 @@ class Configuration(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def blacklist_show(self, ctx: commands.Context):
         """Show everything that's currently blacklisted"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         content = discord.Embed(
             title=f":scroll: {ctx.guild.name} Blacklist", color=int("ffd983", 16)
         )
@@ -657,6 +716,9 @@ class Configuration(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def blacklist_channel(self, ctx: commands.Context, *channels):
         """Blacklist a channel"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         successes = []
         fails = []
         for channel_arg in channels:
@@ -684,6 +746,9 @@ class Configuration(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def blacklist_member(self, ctx: commands.Context, *members):
         """Blacklist a member of this server"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         successes = []
         fails = []
         for member_arg in members:
@@ -721,6 +786,9 @@ class Configuration(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def blacklist_command(self, ctx: commands.Context, *, command):
         """Blacklist a command"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         cmd = self.bot.get_command(command)
         if cmd is None:
             raise exceptions.CommandWarning(f"Command `{ctx.prefix}{command}` not found.")
@@ -775,6 +843,9 @@ class Configuration(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def unblacklist_channel(self, ctx: commands.Context, *channels):
         """Unblacklist a channel"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         successes = []
         fails = []
         for channel_arg in channels:
@@ -797,6 +868,9 @@ class Configuration(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def unblacklist_member(self, ctx: commands.Context, *members):
         """Unblacklist a member of this server"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         successes = []
         fails = []
         for member_arg in members:
@@ -819,6 +893,9 @@ class Configuration(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def unblacklist_command(self, ctx: commands.Context, *, command):
         """Unblacklist a command"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         cmd = self.bot.get_command(command)
         if cmd is None:
             raise exceptions.CommandWarning(f"Command `{ctx.prefix}{command}` not found.")
@@ -841,7 +918,7 @@ class Configuration(commands.Cog):
 
     @unblacklist.command(name="guild", hidden=True)
     @commands.is_owner()
-    async def Unblacklist_guild(self, ctx: commands.Context, guild_id: int):
+    async def unblacklist_guild(self, ctx: commands.Context, guild_id: int):
         """unblacklist a guild"""
         await self.bot.db.execute("DELETE FROM blacklisted_guild WHERE guild_id = %s", guild_id)
         self.bot.cache.blacklist["global"]["guild"].discard(guild_id)

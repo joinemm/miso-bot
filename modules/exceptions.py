@@ -43,7 +43,7 @@ class ServerTooBig(commands.CheckFailure):
 
 
 class Blacklist(commands.CommandError):
-    pass
+    message = ""
 
 
 class BlacklistedUser(Blacklist):

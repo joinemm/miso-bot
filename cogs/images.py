@@ -1,4 +1,5 @@
 import os
+from typing import Tuple
 
 import discord
 from discord.ext import commands
@@ -31,6 +32,7 @@ class ImageObject:
         while True:
             lines = []
             line = []
+            size = (0, 0)
             line_height = 0
             words = text.split(" ")
             for word in words:
@@ -78,6 +80,7 @@ class ImageObject:
         lines = [" ".join(line) for line in lines]
         font = ImageFont.truetype(self.font, font_size)
 
+        txt = None
         if angle != 0:
             txt = Image.new("RGBA", (self.image.size))
             txtd = ImageDraw.Draw(txt)
@@ -90,7 +93,7 @@ class ImageObject:
             txtd.text((x_left, height), line, font=font, fill=color)
             height += line_height
 
-        if angle != 0:
+        if angle != 0 and txt:
             txt = txt.rotate(angle, resample=Image.BILINEAR)
             self.image.paste(txt, mask=txt)
 
@@ -197,7 +200,7 @@ class Images(commands.Cog):
         self,
         ctx,
         filename,
-        boxdimensions,
+        boxdimensions: Tuple[int, int, int, int],
         text,
         color=(40, 40, 40),
         wm_size=30,

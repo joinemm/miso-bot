@@ -115,9 +115,11 @@ class Cryptocurrency(commands.Cog):
         else:
             direction = ":white_small_square:"
 
+        change_percent = Decimal(data.get("priceChangePercent")).normalize()
+
         content.add_field(
             name="24h Change",
-            value=f"{direction} {pricechange:,f} ({Decimal(data.get('priceChangePercent')).normalize():.2f}%)",
+            value=f"{direction} {pricechange:,f} ({change_percent:.2f}%)",
         )
         content.add_field(
             name=f"24h Volume ({coin.upper()})",
