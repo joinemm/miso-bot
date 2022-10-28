@@ -24,7 +24,7 @@ class User(commands.Cog):
 
     @commands.command(aliases=["dp", "av", "pfp"])
     async def avatar(
-        self, ctx: commands.Context, *, user: Optional[Union[discord.User, discord.Member]] = None
+        self, ctx: commands.Context, *, user: Union[discord.Member, discord.User, None] = None
     ):
         """Get user's profile picture"""
         if ctx.guild is None:
@@ -76,7 +76,7 @@ class User(commands.Cog):
     @commands.command(aliases=["uinfo"])
     @commands.cooldown(3, 30, type=commands.BucketType.user)
     async def userinfo(
-        self, ctx: commands.Context, *, user: Optional[Union[discord.User, discord.Member]] = None
+        self, ctx: commands.Context, *, user: Union[discord.Member, discord.User, None] = None
     ):
         """Get information about discord user"""
         if ctx.guild is None:
@@ -435,7 +435,7 @@ class User(commands.Cog):
 
     @commands.command()
     async def profile(
-        self, ctx: commands.Context, user: Optional[Union[discord.Member, discord.User]] = None
+        self, ctx: commands.Context, user: Union[discord.Member, discord.User, None] = None
     ):
         """Your personal customizable user profile"""
         if user is None:
