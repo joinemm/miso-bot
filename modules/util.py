@@ -46,7 +46,11 @@ def displayname(member: Optional[discord.User | discord.Member], escape=True):
     return discord.utils.escape_markdown(name) if escape else name
 
 
-def displaychannel(channel: Optional[discord.abc.MessageableChannel]):
+def displaychannel(
+    channel: Optional[
+        discord.TextChannel | discord.Thread | discord.DMChannel | discord.VoiceChannel
+    ],
+):
     match channel:
         case discord.Thread():
             return f"#{channel.parent}/{channel.name}"
