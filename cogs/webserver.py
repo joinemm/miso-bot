@@ -71,9 +71,8 @@ class WebServer(commands.Cog):
 
     @tasks.loop(minutes=1)
     async def cache_stats(self):
-        self.cached["commands"] = await self.bot.db.fetch_value(
-            "SELECT SUM(uses) FROM command_usage"
-        )
+        command_count = await self.bot.db.fetch_value("SELECT SUM(uses) FROM command_usage") or 0
+        self.cached["commands"] = int(command_count)
         self.cached["guilds"] = self.bot.guild_count
         self.cached["users"] = self.bot.member_count
         self.cached["donators"] = await self.update_donator_list()

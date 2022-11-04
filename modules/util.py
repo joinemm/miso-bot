@@ -5,7 +5,7 @@ import math
 import os
 import re
 from time import time
-from typing import Optional
+from typing import Callable, Optional
 
 import aiohttp
 import arrow
@@ -118,7 +118,12 @@ def flags_to_badges(user: discord.User | discord.Member):
 
 
 async def send_as_pages(
-    ctx: commands.Context, content: discord.Embed, rows: list[str], maxrows=15, maxpages=10
+    ctx: commands.Context,
+    content: discord.Embed,
+    rows: list[str],
+    maxrows=15,
+    maxpages=10,
+    send_to: Optional[discord.abc.Messageable] = None,
 ):
     """
     :param ctx     : Context
@@ -129,9 +134,9 @@ async def send_as_pages(
     """
     pages = create_pages(content, rows, maxrows, maxpages)
     if len(pages) > 1:
-        await page_switcher(ctx, pages)
+        await page_switcher(ctx, pages, send_to=send_to)
     else:
-        await ctx.send(embed=pages[0])
+        await (send_to or ctx).send(embed=pages[0])
 
 
 async def text_based_page_switcher(
@@ -176,13 +181,17 @@ async def text_based_page_switcher(
     asyncio.ensure_future(reaction_buttons(ctx, msg, functions))
 
 
-async def page_switcher(ctx: commands.Context, pages: list[discord.Embed]):
+async def page_switcher(
+    ctx: commands.Context,
+    pages: list[discord.Embed],
+    send_to: Optional[discord.abc.Messageable] = None,
+):
     """
     :param ctx   : Context
     :param pages : List of embeds to use as pages
     """
     if len(pages) == 1:
-        return await ctx.send(embed=pages[0])
+        return await (send_to or ctx).send(embed=pages[0])
 
     page_iterator = TwoWayIterator(pages)
 
@@ -194,7 +203,7 @@ async def page_switcher(ctx: commands.Context, pages: list[discord.Embed]):
             + (f" | {old_footer}" if old_footer is not None else "")
         )
 
-    msg = await ctx.send(embed=page_iterator.current())
+    msg = await (send_to or ctx).send(embed=page_iterator.current())
 
     async def switch_page(content):
         await msg.edit(embed=content)
@@ -284,13 +293,14 @@ async def paginate_list(ctx, items, use_locking=False, only_author=False, index_
 
 
 async def reaction_buttons(
-    ctx,
-    message,
-    functions,
+    ctx: commands.Context,
+    message: discord.Message,
+    functions: dict[str, Callable],
     timeout=300.0,
     only_author=False,
     single_use=False,
     only_owner=False,
+    send_to: Optional[discord.abc.Messageable] = None,
 ):
     """
     Handler for reaction buttons
@@ -336,7 +346,7 @@ async def reaction_buttons(
             except discord.errors.NotFound:
                 pass
             except discord.errors.Forbidden:
-                await ctx.send(
+                await (send_to or ctx).send(
                     "`error: I'm missing required discord permission [ manage messages ]`"
                 )
             if single_use or exits is True:
