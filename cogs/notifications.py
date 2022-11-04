@@ -16,12 +16,13 @@ class Notifications(commands.Cog):
         self.bot: MisoBot = bot
         self.icon = "📨"
         self.keyword_regex = r"(?:^|\s|[\~\"\'\+\*\`\_\/])(\L<words>)(?:$|\W|\s|s)"
-        self.notifications_cache = {}
+        self.notifications_cache: dict[int, dict[str, set]] = {}
 
     async def cog_load(self):
         await self.create_cache()
 
     async def create_cache(self):
+        self.notifications_cache = {}
         keywords = await self.bot.db.fetch(
             "SELECT guild_id, user_id, keyword FROM notification",
         )
@@ -29,13 +30,13 @@ class Notifications(commands.Cog):
             return
 
         for guild_id, user_id, keyword in keywords:
-            if self.notifications_cache.get(str(guild_id)) is None:
-                self.notifications_cache[str(guild_id)] = {}
+            if self.notifications_cache.get(guild_id) is None:
+                self.notifications_cache[guild_id] = {}
 
-            try:
-                self.notifications_cache[str(guild_id)][keyword.lower().strip()].append(user_id)
-            except KeyError:
-                self.notifications_cache[str(guild_id)][keyword.lower().strip()] = [user_id]
+            if self.notifications_cache[guild_id].get(keyword) is None:
+                self.notifications_cache[guild_id][keyword] = set()
+
+            self.notifications_cache[guild_id][keyword].add(user_id)
 
     async def send_notification(self, member, message, keywords, test=False):
         content = discord.Embed(color=message.author.color)
@@ -84,9 +85,8 @@ class Notifications(commands.Cog):
         if message.author.bot:
             return
 
-        keywords = self.notifications_cache.get(str(message.guild.id), {})
-
-        if not keywords:
+        keywords = self.notifications_cache.get(message.guild.id)
+        if keywords is None:
             return
 
         pattern = regex.compile(
@@ -102,14 +102,15 @@ class Notifications(commands.Cog):
         users_keywords = {}
         for keyword in set(finds):
             keyword = keyword.lower().strip()
-            users_to_notify = keywords.get(keyword, [])
+            users_to_notify = list(keywords.get(keyword) or [])
             for user_id in users_to_notify:
                 if user_id == message.author.id:
                     continue
-                try:
-                    users_keywords[user_id].append(keyword)
-                except KeyError:
-                    users_keywords[user_id] = [keyword]
+
+                if users_keywords.get(user_id) is None:
+                    users_keywords[user_id] = set()
+
+                users_keywords[user_id].add(keyword)
 
         for user_id, users_words in users_keywords.items():
             try:
@@ -189,13 +190,9 @@ class Notifications(commands.Cog):
             ctx.author.id,
             keyword,
         )
-        if self.notifications_cache.get(str(guild_id)) is None:
-            self.notifications_cache[str(guild_id)] = {}
-        try:
-            self.notifications_cache[str(guild_id)][keyword].append(ctx.author.id)
-        except KeyError:
-            self.notifications_cache[str(guild_id)][keyword] = [ctx.author.id]
 
+        # remake notification cache
+        await self.create_cache()
         await util.send_success(ctx, f"New notification set! Check your DM {emojis.VIVISMIRK}")
 
     @notification.command(name="remove")
