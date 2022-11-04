@@ -385,7 +385,9 @@ class Events(commands.Cog):
             (emoji_type == "unicode" or emoji_type is None)
             and emoji_literals.UNICODE_TO_NAME.get(payload.emoji.name) == emoji_name
         ):
-            message_channel = self.bot.get_partial_messageable(payload.channel_id)
+            message_channel = self.bot.get_channel(payload.channel_id)
+            if not isinstance(message_channel, (discord.TextChannel, discord.Thread)):
+                return
 
             # trying to star a starboard message
             if message_channel.id == board_channel_id:
@@ -442,7 +444,9 @@ class Events(commands.Cog):
                 jump = f"\n\n[context]({message.jump_url})"
                 content.description = message.content[: 2048 - len(jump)] + jump
                 content.timestamp = message.created_at
-                content.set_footer(text=f"{reaction_count} {emoji_display} #{message.channel}")
+                content.set_footer(
+                    text=f"{reaction_count} {emoji_display} {util.displaychannel(message.channel)}"
+                )
                 if len(message.attachments) > 0:
                     content.set_image(url=message.attachments[0].url)
 

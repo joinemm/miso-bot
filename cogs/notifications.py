@@ -38,7 +38,15 @@ class Notifications(commands.Cog):
 
             self.notifications_cache[guild_id][keyword].add(user_id)
 
-    async def send_notification(self, member, message, keywords, test=False):
+    async def send_notification(
+        self,
+        member: discord.User | discord.Member,
+        message: discord.Message,
+        keywords: list[str],
+        test=False,
+    ):
+        assert message.guild is not None
+
         content = discord.Embed(color=message.author.color)
         content.set_author(name=f"{message.author}", icon_url=message.author.display_avatar.url)
         pattern = regex.compile(self.keyword_regex, words=keywords, flags=regex.IGNORECASE)
@@ -49,7 +57,7 @@ class Notifications(commands.Cog):
             name="context", value=f"[Jump to message]({message.jump_url})", inline=True
         )
         content.set_footer(
-            text=f"{message.guild.name} | #{message.channel.name}",
+            text=f"{message.guild} | {util.displaychannel(message.channel)}",
             icon_url=getattr(message.guild.icon, "url", None),
         )
         content.timestamp = message.created_at
@@ -137,7 +145,7 @@ class Notifications(commands.Cog):
         await util.command_group_help(ctx)
 
     @notification.command(name="add")
-    async def notification_add(self, ctx: commands.Context, *, keyword):
+    async def notification_add(self, ctx: commands.Context, *, keyword: str):
         """Add a notification keyword"""
         if ctx.guild is None:
             raise exceptions.CommandWarning(
@@ -196,7 +204,7 @@ class Notifications(commands.Cog):
         await util.send_success(ctx, f"New notification set! Check your DM {emojis.VIVISMIRK}")
 
     @notification.command(name="remove")
-    async def notification_remove(self, ctx: commands.Context, *, keyword):
+    async def notification_remove(self, ctx: commands.Context, *, keyword: str):
         """Remove a notification keyword"""
         if ctx.guild is None:
             raise exceptions.CommandWarning(
