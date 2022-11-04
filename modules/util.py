@@ -34,17 +34,32 @@ class PatronCheckFailure(commands.CheckFailure):
     pass
 
 
-def displayname(member, escape=True):
-    if member is None:
-        return None
+def displayname(member: Optional[discord.User | discord.Member], escape=True):
+    match member:
+        case discord.Member():
+            name = member.nick or member.name
+        case discord.User():
+            name = member.name
+        case None:
+            return None
 
-    name = member.name
-    if isinstance(member, discord.Member):
-        name = member.nick or member.name
+    return discord.utils.escape_markdown(name) if escape else name
 
-    if escape:
-        return escape_md(name)
-    return name
+
+def displaychannel(channel: Optional[discord.abc.MessageableChannel]):
+    match channel:
+        case discord.Thread():
+            return f"#{channel.parent}/{channel.name}"
+        case discord.DMChannel():
+            return f"@{channel.recipient}"
+        case discord.TextChannel() | discord.GroupChannel():
+            return f"#{channel.name}"
+        case discord.VoiceChannel():
+            return f"🔊 {channel.name}"
+        case None:
+            return "Unknown Channel"
+        case _:
+            return f"#{channel.id}"
 
 
 async def send_success(target: discord.abc.Messageable, message: str):
@@ -53,7 +68,7 @@ async def send_success(target: discord.abc.Messageable, message: str):
     )
 
 
-async def determine_prefix(bot, message):
+async def determine_prefix(bot, message: discord.Message):
     """Get the prefix used in the invocation context"""
     if message.guild:
         prefix = bot.cache.prefixes.get(str(message.guild.id), bot.default_prefix)
@@ -61,18 +76,21 @@ async def determine_prefix(bot, message):
     return commands.when_mentioned_or(bot.default_prefix)(bot, message)
 
 
-async def is_blacklisted(ctx):
+async def is_blacklisted(ctx: commands.Context) -> bool:
     """Check command invocation context for blacklist triggers"""
-    if ctx.guild is not None and ctx.guild.id in ctx.bot.cache.blacklist["global"]["guild"]:
+    if ctx.author.id in ctx.bot.cache.blacklist["global"]["user"]:
+        raise exceptions.BlacklistedUser()
+
+    if ctx.guild is None or ctx.command is None:
+        return True
+
+    if ctx.guild.id in ctx.bot.cache.blacklist["global"]["guild"]:
         raise exceptions.BlacklistedGuild()
 
     if ctx.channel.id in ctx.bot.cache.blacklist["global"]["channel"]:
         raise exceptions.BlacklistedChannel()
 
-    if ctx.author.id in ctx.bot.cache.blacklist["global"]["user"]:
-        raise exceptions.BlacklistedUser()
-
-    if ctx.guild is not None and ctx.bot.cache.blacklist.get(str(ctx.guild.id)) is not None:
+    if ctx.bot.cache.blacklist.get(str(ctx.guild.id)) is not None:
         if ctx.author.id in ctx.bot.cache.blacklist[str(ctx.guild.id)]["member"]:
             raise exceptions.BlacklistedMember()
 
@@ -85,7 +103,7 @@ async def is_blacklisted(ctx):
     return True
 
 
-def flags_to_badges(user):
+def flags_to_badges(user: discord.User | discord.Member):
     """Get list of badge emojis from public user flags"""
     result = []
     for flag, value in iter(user.public_flags):
@@ -99,7 +117,9 @@ def flags_to_badges(user):
     return result or ["-"]
 
 
-async def send_as_pages(ctx, content, rows, maxrows=15, maxpages=10):
+async def send_as_pages(
+    ctx: commands.Context, content: discord.Embed, rows: list[str], maxrows=15, maxpages=10
+):
     """
     :param ctx     : Context
     :param content : Base embed
@@ -114,7 +134,9 @@ async def send_as_pages(ctx, content, rows, maxrows=15, maxpages=10):
         await ctx.send(embed=pages[0])
 
 
-async def text_based_page_switcher(ctx, pages, prefix="```", suffix="```", numbers=True):
+async def text_based_page_switcher(
+    ctx: commands.Context, pages: list[str], prefix="```", suffix="```", numbers=True
+):
     """
     :param ctx    : Context
     :param pages  : List of strings
@@ -133,20 +155,20 @@ async def text_based_page_switcher(ctx, pages, prefix="```", suffix="```", numbe
             page = prefix + "\n" + page
             pages[i - 1] = page
 
-    pages = TwoWayIterator(pages)
+    page_iterator = TwoWayIterator(pages)
 
-    msg = await ctx.send(pages.current())
+    msg = await ctx.send(page_iterator.current())
 
     async def switch_page(new_page):
         await msg.edit(content=new_page)
 
     async def previous_page():
-        content = pages.previous()
+        content = page_iterator.previous()
         if content is not None:
             await switch_page(content)
 
     async def next_page():
-        content = pages.next()
+        content = page_iterator.next()
         if content is not None:
             await switch_page(content)
 
@@ -154,7 +176,7 @@ async def text_based_page_switcher(ctx, pages, prefix="```", suffix="```", numbe
     asyncio.ensure_future(reaction_buttons(ctx, msg, functions))
 
 
-async def page_switcher(ctx, pages):
+async def page_switcher(ctx: commands.Context, pages: list[discord.Embed]):
     """
     :param ctx   : Context
     :param pages : List of embeds to use as pages
@@ -162,27 +184,28 @@ async def page_switcher(ctx, pages):
     if len(pages) == 1:
         return await ctx.send(embed=pages[0])
 
-    pages = TwoWayIterator(pages)
+    page_iterator = TwoWayIterator(pages)
 
     # add all page numbers
-    for i, page in enumerate(pages.items, start=1):
+    for i, page in enumerate(page_iterator.items, start=1):
         old_footer = page.footer.text
         page.set_footer(
-            text=f"{i}/{len(pages.items)}" + (f" | {old_footer}" if old_footer is not None else "")
+            text=f"{i}/{len(page_iterator.items)}"
+            + (f" | {old_footer}" if old_footer is not None else "")
         )
 
-    msg = await ctx.send(embed=pages.current())
+    msg = await ctx.send(embed=page_iterator.current())
 
     async def switch_page(content):
         await msg.edit(embed=content)
 
     async def previous_page():
-        content = pages.previous()
+        content = page_iterator.previous()
         if content is not None:
             await switch_page(content)
 
     async def next_page():
-        content = pages.next()
+        content = page_iterator.next()
         if content is not None:
             await switch_page(content)
 
@@ -190,7 +213,7 @@ async def page_switcher(ctx, pages):
     asyncio.ensure_future(reaction_buttons(ctx, msg, functions))
 
 
-def create_pages(content, rows, maxrows=15, maxpages=10):
+def create_pages(content: discord.Embed, rows: list[str], maxrows=15, maxpages=10):
     """
     :param content : Embed object to use as the base
     :param rows    : List of rows to use for the embed description
@@ -202,6 +225,7 @@ def create_pages(content, rows, maxrows=15, maxpages=10):
     content.description = ""
     thisrow = 0
     rowcount = len(rows)
+    done = False
     for row in rows:
         thisrow += 1
         if len(content.description) + len(row) < 2000 and thisrow < maxrows + 1:
@@ -212,7 +236,7 @@ def create_pages(content, rows, maxrows=15, maxpages=10):
             if len(pages) == maxpages - 1:
                 content.description += f"\n*+ {rowcount} more entries...*"
                 pages.append(content)
-                content = None
+                done = True
                 break
 
             pages.append(content)
@@ -220,7 +244,7 @@ def create_pages(content, rows, maxrows=15, maxpages=10):
             content.description = f"{row}"
             rowcount -= 1
 
-    if content is not None and not content.description == "":
+    if not done and not content.description == "":
         pages.append(content)
 
     return pages
@@ -535,20 +559,6 @@ async def command_group_help(ctx):
 async def send_command_help(ctx):
     """Sends default command help"""
     await ctx.send_help(ctx.invoked_subcommand or ctx.command)
-
-
-def escape_md(s):
-    """
-    :param s : String to espace markdown from
-    :return  : The escaped string
-    """
-    transformations = {regex.escape(c): "\\" + c for c in ("*", "`", "_", "~", "\\", "||")}
-
-    def replace(obj):
-        return transformations.get(regex.escape(obj.group(0)), "")
-
-    pattern = regex.compile("|".join(transformations.keys()))
-    return pattern.sub(replace, s)
 
 
 def map_to_range(input_value, input_start, input_end, output_start, output_end):
