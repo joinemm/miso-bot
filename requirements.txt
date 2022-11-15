@@ -121,7 +121,7 @@ orjson==3.8.1
     # via discord-py
 packaging==21.3
     # via matplotlib
-pillow==9.2.0
+pillow==9.3.0
     # via
     #   -r requirements.in
     #   colorgram-py
