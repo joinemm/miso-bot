@@ -2632,7 +2632,6 @@ async def fetch_html(bot: MisoBot, url: str, params: Optional[dict] = None):
         "Pragma": "no-cache",
         "Cache-Control": "no-cache",
     }
-    print(headers)
     async with bot.session.get(url, params=params, headers=headers) as response:
         data: str = await response.text()
         if not response.ok:
