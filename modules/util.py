@@ -40,7 +40,7 @@ def displayname(member: Optional[discord.User | discord.Member], escape=True):
             name = member.nick or member.name
         case discord.User():
             name = member.name
-        case None:
+        case _:
             return None
 
     return discord.utils.escape_markdown(name) if escape else name
