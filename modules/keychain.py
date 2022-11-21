@@ -34,6 +34,7 @@ class Keychain:
         self.PROXY_USER: str = ""
         self.PROXY_PASS: str = ""
         self.IG_COOKIE: str = ""
+        self.LASTFM_LOGIN_COOKIE: str = ""
 
         for name in self.__dict__.keys():
             value = os.environ.get(name)

@@ -727,7 +727,7 @@ class LastFm(commands.Cog):
             f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
             f"{albumname}?date_preset={period_http_format(period)}"
         )
-        data, error = await fetch_html(self.bot.session, url)
+        data, error = await fetch_html(self.bot, url)
         if error:
             raise exceptions.LastFMError(404, "Album page not found")
 
@@ -745,7 +745,7 @@ class LastFm(commands.Cog):
         }
 
         all_results = get_list_contents(soup)
-        all_results += await get_additional_pages(self.bot.session, soup, url)
+        all_results += await get_additional_pages(self.bot, soup, url)
 
         return album, all_results
 
@@ -756,7 +756,7 @@ class LastFm(commands.Cog):
             f"https://last.fm/user/{ctx.username}/library/music/{artistname}/"
             f"+{datatype}?date_preset={period_http_format(period)}"
         )
-        data, error = await fetch_html(self.bot.session, url)
+        data, error = await fetch_html(self.bot, url)
         if error:
             raise exceptions.LastFMError(404, "Artist page not found")
 
@@ -771,7 +771,7 @@ class LastFm(commands.Cog):
         }
 
         all_results = get_list_contents(soup)
-        all_results += await get_additional_pages(self.bot.session, soup, url)
+        all_results += await get_additional_pages(self.bot, soup, url)
 
         return artist, all_results
 
@@ -786,7 +786,7 @@ class LastFm(commands.Cog):
             f"{urllib.parse.quote_plus(artistname)}"
             f"?date_preset={period_http_format(period)}"
         )
-        data, error = await fetch_html(self.bot.session, url)
+        data, error = await fetch_html(self.bot, url)
         if error:
             raise exceptions.LastFMError(404, "Artist page not found")
 
@@ -2444,7 +2444,7 @@ class LastFm(commands.Cog):
 
     async def scrape_artist_image(self, artist):
         url = f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
-        data, error = await fetch_html(self.bot.session, url)
+        data, error = await fetch_html(self.bot, url)
         if error:
             return None
 
@@ -2463,7 +2463,7 @@ class LastFm(commands.Cog):
         url = f"https://www.last.fm/user/{username}/library/artists"
         for i in range(1, math.ceil(amount / 50) + 1):
             params = {"date_preset": period_http_format(period), "page": i}
-            task = asyncio.ensure_future(fetch_html(self.bot.session, url, params))
+            task = asyncio.ensure_future(fetch_html(self.bot, url, params))
             tasks.append(task)
 
         responses = await asyncio.gather(*tasks)
@@ -2613,9 +2613,27 @@ def parse_chart_arguments(args, server_version=False):
     return parsed
 
 
-async def fetch_html(session: aiohttp.ClientSession, url: str, params: Optional[dict] = None):
+async def fetch_html(bot: MisoBot, url: str, params: Optional[dict] = None):
     """Returns tuple of (data, error)"""
-    async with session.get(url, params=params) as response:
+    headers = headers = {
+        "Host": "www.last.fm",
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "fi,en;q=0.7,en-US;q=0.3",
+        "Accept-Encoding": "gzip, deflate, br",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Cookie": bot.keychain.LASTFM_LOGIN_COOKIE,
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-User": "?1",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache",
+    }
+    print(headers)
+    async with bot.session.get(url, params=params, headers=headers) as response:
         data: str = await response.text()
         if not response.ok:
             logger.error(f"Lastfm error {response.status}, {data}")
@@ -2685,7 +2703,7 @@ def get_list_contents(soup):
     return results
 
 
-async def get_additional_pages(session, soup, url):
+async def get_additional_pages(bot, soup, url):
     """Check for pagination on listing page and asynchronously fetch all the remaining pages"""
     pagination = soup.find("ul", {"class": "pagination-list"})
 
@@ -2696,7 +2714,7 @@ async def get_additional_pages(session, soup, url):
 
     async def get_additional_page(n):
         new_url = url + f"&page={n}"
-        data, error = await fetch_html(session, new_url)
+        data, error = await fetch_html(bot, new_url)
         if error:
             raise exceptions.LastFMError(error_code=0, message=error)
         soup = BeautifulSoup(data, "lxml")
