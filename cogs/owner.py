@@ -223,25 +223,30 @@ class Owner(commands.Cog):
             functions = {"⬅": previous_page, "➡": next_page}
             asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions))
 
-    @commands.command(aliases=["fmban"])
-    async def fmflag(self, ctx: commands.Context, lastfm_username, *, reason):
-        """Flag LastFM account as a cheater"""
-        await self.bot.db.execute(
-            "INSERT INTO lastfm_cheater VALUES(%s, %s, %s)",
-            lastfm_username.lower(),
-            arrow.utcnow().datetime,
-            reason,
-        )
-        await util.send_success(ctx, f"Flagged LastFM profile `{lastfm_username}` as a cheater.")
+    @commands.group()
+    async def vip(self, ctx: commands.Context):
+        if ctx.invoked_subcommand is None:
+            await util.command_group_help(ctx)
 
-    @commands.command(aliases=["fmunban"])
-    async def fmunflag(self, ctx: commands.Context, lastfm_username):
-        """Remove cheater flag from an LastFM account"""
+    @vip.command(name="add")
+    async def vip_add(self, ctx: commands.Context, user: discord.User):
         await self.bot.db.execute(
-            "DELETE FROM lastfm_cheater WHERE lastfm_username = %s",
-            lastfm_username.lower(),
+            """
+            INSERT INTO vip_user VALUES(%s)
+            """,
+            user.id,
         )
-        await util.send_success(ctx, f"`{lastfm_username}` is no longer flagged as a cheater.")
+        await util.send_success(ctx, f"{user.mention} is now VIP!")
+
+    @vip.command(name="remove")
+    async def vip_remove(self, ctx: commands.Context, user: discord.User):
+        await self.bot.db.execute(
+            """
+            DELETE FROM vip_user WHERE user_id = %s
+            """,
+            user.id,
+        )
+        await util.send_success(ctx, f"{user.mention} is no longer VIP!")
 
 
 def clean_codeblock(text):
