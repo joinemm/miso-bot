@@ -165,23 +165,25 @@ class Mod(commands.Cog):
     @commands.has_permissions(moderate_members=True)
     async def timeout(self, ctx: commands.Context, member: discord.Member, *, duration="1 hour"):
         """Timeout user. Pass 'remove' as the duration to remove"""
-        # TODO: rewrite
-        if member.timeout is not None:
-            seconds = member.timeout.timestamp() - arrow.now().int_timestamp
+        if member.is_timed_out():
             if duration and duration.strip().lower() == "remove":
-                await member.edit(timeout=None)
+                await member.timeout(None)
                 return await util.send_success(ctx, f"Removed timeout from {member.mention}")
             else:
+                seconds = member.timeout.timestamp() - arrow.now().int_timestamp
                 raise exceptions.CommandInfo(
                     f"{member.mention} is already timed out (**{util.stringfromtime(seconds)}** remaining)",
                 )
+        else:
+            seconds = util.timefromstring(duration)
+            if seconds is None:
+                raise exceptions.CommandWarning(f"Invalid duration `{duration}`")
+            until = arrow.now().shift(seconds=+seconds).datetime
 
-        seconds = util.timefromstring(duration)
-
-        await member.edit(timeout=arrow.now().shift(seconds=+seconds).datetime)
-        await util.send_success(
-            ctx, f"Timed out {member.mention} for **{util.stringfromtime(seconds)}**"
-        )
+            await member.timeout(until)
+            await util.send_success(
+                ctx, f"Timed out {member.mention} for **{util.stringfromtime(seconds)}**"
+            )
 
     @commands.command()
     @commands.guild_only()
