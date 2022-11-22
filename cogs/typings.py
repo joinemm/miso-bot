@@ -91,6 +91,9 @@ class Typings(commands.Cog):
     @typing.command(name="race")
     async def typing_race(self, ctx: commands.Context, language=None, wordcount: int = 25):
         """Challenge your friends into a typing race"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         if language is None:
             language = wordcount
         try:
@@ -226,7 +229,7 @@ class Typings(commands.Cog):
                 race_count = race_count + 1,
                 win_count = win_count + VALUES(win_count)
             """,
-            tuple(values),
+            values,
         )
 
         await util.send_as_pages(ctx, content, rows)
@@ -260,7 +263,9 @@ class Typings(commands.Cog):
             return player, wpm, accuracy
 
     @typing.command(name="history")
-    async def typing_history(self, ctx: commands.Context, member: discord.Member = None):
+    async def typing_history(
+        self, ctx: commands.Context, member: discord.Member | discord.User | None = None
+    ):
         """See your typing test history"""
         if member is None:
             member = ctx.author
@@ -331,7 +336,9 @@ class Typings(commands.Cog):
         )
 
     @typing.command(name="stats")
-    async def typing_stats(self, ctx: commands.Context, user: discord.Member = None):
+    async def typing_stats(
+        self, ctx: commands.Context, user: discord.Member | discord.User | None = None
+    ):
         """See your typing statistics"""
         if user is None:
             user = ctx.author
