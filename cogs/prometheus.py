@@ -2,7 +2,7 @@ from time import time
 
 import psutil
 from discord.ext import commands, tasks
-from prometheus_client import Counter, Gauge, Histogram, Summary
+from prometheus_client import Counter, Gauge, Summary
 
 from modules import log
 from modules.misobot import MisoBot
@@ -29,14 +29,13 @@ class Prometheus(commands.Cog):
             "Total number of gateway events.",
             ["event_type"],
         )
-        self.command_histogram = Histogram(
-            "miso_command_response_time_seconds",
+        self.command_response_time_summary = Summary(
+            "miso_command_response_time",
             "Command end-to-end response time in seconds.",
             ["command"],
-            buckets=(0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0),
         )
-        self.shard_latency_summary = Summary(
-            "miso_shard_latency_seconds",
+        self.shard_latency_summary = Gauge(
+            "miso_shard_latency",
             "Latency of a shard in seconds.",
             ["shard"],
         )
@@ -70,7 +69,7 @@ class Prometheus(commands.Cog):
     @tasks.loop(seconds=10)
     async def log_shard_latencies(self):
         for shard in self.bot.shards.values():
-            self.shard_latency_summary.labels(shard.id).observe(shard.latency)
+            self.shard_latency_summary.labels(shard.id).set(shard.latency)
 
     @tasks.loop(minutes=1)
     async def log_cache_contents(self):
@@ -98,7 +97,7 @@ class Prometheus(commands.Cog):
         if ctx.invoked_subcommand is None:
             took = time() - ctx.timer
             command = str(ctx.command)
-            self.command_histogram.labels(command).observe(took)
+            self.command_response_time_summary.labels(command).observe(took)
 
 
 async def setup(bot):
