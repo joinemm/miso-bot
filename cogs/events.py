@@ -29,7 +29,7 @@ class Events(commands.Cog):
     async def cog_load(self):
         self.status_loop.start()
 
-    def cog_unload(self):
+    async def cog_unload(self):
         self.status_loop.cancel()
 
     @tasks.loop(minutes=3.0)
@@ -89,7 +89,7 @@ class Events(commands.Cog):
         logchannel = self.bot.get_partial_messageable(self.guildlog)
         try:
             await logchannel.send(embed=content)
-        except (discord.Forbidden, discord.HTTPException):
+        except discord.HTTPException:
             logger.error("Cannot send message to guild log channel")
 
     @commands.Cog.listener()
@@ -113,7 +113,7 @@ class Events(commands.Cog):
         logchannel = self.bot.get_partial_messageable(self.guildlog)
         try:
             await logchannel.send(embed=content)
-        except (discord.Forbidden, discord.HTTPException):
+        except discord.HTTPException:
             logger.error("Cannot send message to guild log channel")
 
     @commands.Cog.listener()
@@ -480,7 +480,7 @@ class Events(commands.Cog):
                     content.add_field(name="Most recent reaction by", value=str(user))
                     try:
                         await log_channel.send(embed=content)
-                    except (discord.Forbidden, discord.HTTPException):
+                    except discord.HTTPException:
                         pass
 
             else:

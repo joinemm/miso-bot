@@ -161,12 +161,12 @@ class WebServer(commands.Cog):
             if cog.qualified_name in ignored_cogs:
                 continue
 
-            commands = cog.get_commands()
-            if not commands:
+            cog_commands = cog.get_commands()
+            if not cog_commands:
                 continue
 
             command_list = []
-            for command in commands:
+            for command in cog_commands:
                 command_structure = self.get_command_structure(command)
                 if command_structure:
                     command_list.append(command_structure)

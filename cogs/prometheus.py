@@ -54,7 +54,7 @@ class Prometheus(commands.Cog):
         self.log_shard_latencies.start()
         self.log_cache_contents.start()
 
-    def cog_unload(self):
+    async def cog_unload(self):
         self.log_system_metrics.cancel()
         self.log_shard_latencies.cancel()
         self.log_cache_contents.cancel()

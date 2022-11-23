@@ -119,7 +119,7 @@ class ErrorHander(commands.Cog):
         if isinstance(error, commands.NoPrivateMessage):
             try:
                 await self.send(ctx, "info", "This command cannot be used in DM", dm=True)
-            except (discord.HTTPException, discord.errors.Forbidden):
+            except discord.HTTPException:
                 pass
 
         elif isinstance(error, commands.MissingPermissions):

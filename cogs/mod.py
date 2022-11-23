@@ -21,7 +21,7 @@ class Mod(commands.Cog):
     async def cog_load(self):
         self.unmute_loop.start()
 
-    def cog_unload(self):
+    async def cog_unload(self):
         self.unmute_loop.cancel()
 
     @tasks.loop(seconds=10.0)

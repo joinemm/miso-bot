@@ -70,7 +70,7 @@ class MariaDB:
             await self.pool.wait_closed()
             logger.info("Closed MariaDB connection pool")
 
-    async def run_sql(self, sql: str, params: tuple = tuple()) -> tuple[int, Any]:
+    async def run_sql(self, sql: str, params: Optional[tuple] = None) -> tuple[int, Any]:
         """Internal executor, handles connection logic and returns data or changed rows"""
         if await self.wait_for_pool() and self.pool:
             conn: Connection

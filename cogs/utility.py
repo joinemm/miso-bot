@@ -66,7 +66,7 @@ class Utility(commands.Cog):
     async def cog_load(self):
         self.reminder_loop.start()
 
-    def cog_unload(self):
+    async def cog_unload(self):
         self.reminder_loop.cancel()
 
     @tasks.loop(seconds=5.0)
