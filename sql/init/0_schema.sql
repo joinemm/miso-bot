@@ -140,6 +140,8 @@ CREATE TABLE IF NOT EXISTS donator (
     FOREIGN KEY (donation_tier) REFERENCES donation_tier (id)
 );
 
+CREATE TABLE IF NOT EXISTS vip_user (user_id BIGINT, PRIMARY KEY (user_id));
+
 CREATE TABLE IF NOT EXISTS lastfm_vote_setting (
     user_id BIGINT,
     is_enabled BOOLEAN DEFAULT TRUE,

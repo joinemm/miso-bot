@@ -1,4 +1,10 @@
+from __future__ import annotations
+import discord
+from typing import TYPE_CHECKING
 from modules import exceptions, log
+
+if TYPE_CHECKING:
+    from modules.misobot import MisoBot
 
 logger = log.get_logger(__name__)
 
@@ -45,6 +51,15 @@ async def is_donator(ctx, user, unlock_tier=1):
         user.id,
     )
     return tier and tier >= unlock_tier
+
+
+async def is_vip(bot: MisoBot, user: discord.User):
+    vips = await bot.db.fetch_flattened(
+        """
+        SELECT user_id FROM vip_user
+        """
+    )
+    return user.id in vips
 
 
 async def is_blacklisted(ctx):

@@ -43,7 +43,7 @@ def displayname(member: Optional[discord.User | discord.Member], escape=True):
             name = member.nick or member.name
         case discord.User():
             name = member.name
-        case _:
+        case None:
             return None
 
     return discord.utils.escape_markdown(name) if escape else name
@@ -51,7 +51,12 @@ def displayname(member: Optional[discord.User | discord.Member], escape=True):
 
 def displaychannel(
     channel: Optional[
-        discord.TextChannel | discord.Thread | discord.DMChannel | discord.VoiceChannel
+        discord.TextChannel
+        | discord.Thread
+        | discord.DMChannel
+        | discord.VoiceChannel
+        | discord.GroupChannel
+        | discord.PartialMessageable
     ],
 ):
     match channel:

@@ -3,6 +3,7 @@ import asyncio
 import discord
 from discord.ext import commands
 
+from cogs.errorhandler import ErrorHander
 from modules import exceptions, queries, util
 from modules.misobot import MisoBot
 
@@ -24,6 +25,9 @@ class Rolepicker(commands.Cog):
     @rolepicker.command(name="add")
     async def rolepicker_add(self, ctx: commands.Context, role: discord.Role, *, name):
         """Add a role to the rolepicker"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         await self.bot.db.execute(
             """
             INSERT INTO rolepicker_role (guild_id, role_name, role_id)
@@ -43,6 +47,9 @@ class Rolepicker(commands.Cog):
     @rolepicker.command(name="remove")
     async def rolepicker_remove(self, ctx: commands.Context, *, name):
         """Remove a role from the rolepicker"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         role_id = await self.bot.db.fetch_value(
             """
             SELECT role_id FROM rolepicker_role WHERE guild_id = %s AND role_name = %s
@@ -81,6 +88,9 @@ class Rolepicker(commands.Cog):
     @rolepicker.command(name="list")
     async def rolepicker_list(self, ctx: commands.Context):
         """List all the roles currently available for picking"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
         data = (
             await self.bot.db.fetch(
                 """
@@ -144,6 +154,9 @@ class Rolepicker(commands.Cog):
         command = message.content[0]
         rolename = message.content[1:].strip()
         errorhandler = self.bot.get_cog("ErrorHander")
+        if not isinstance(errorhandler, ErrorHander):
+            return message.channel.send("Internal Error: Could not get ErrorHandler")
+
         if command in ["+", "-"]:
             role_id = await self.bot.db.fetch_value(
                 """

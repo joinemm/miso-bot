@@ -111,6 +111,7 @@ class ErrorHander(commands.Cog):
         if isinstance(error, exceptions.CommandWarning):
             command_logger.warning(log.log_command(ctx, extra=error))
             return await self.send(ctx, "warning", str(error), error.kwargs)
+
         command_logger.error(
             f'{type(error).__name__:25} > {ctx.guild} : {ctx.author} "{ctx.message.content}" > {error}'
         )
@@ -222,7 +223,7 @@ class ErrorHander(commands.Cog):
                 await ctx.message.delete()
 
         elif isinstance(error, commands.CommandOnCooldown):
-            if await queries.is_donator(ctx, ctx.author, 2):
+            if await queries.is_donator(ctx, ctx.author, 2) or queries.is_vip(ctx, ctx.author):
                 try:
                     await ctx.reinvoke()
                     return

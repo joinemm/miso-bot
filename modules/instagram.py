@@ -94,72 +94,117 @@ class Datalama:
             "x-access-key": self.bot.keychain.DATALAMA_ACCESS_KEY,
         }
         async with self.bot.session.get(
-            self.BASE_URL + endpoint, params=params, headers=headers
+            self.BASE_URL + endpoint,
+            params=params,
+            headers=headers,
         ) as response:
-            data = await response.json()
-            if (
-                response.status != 200
-                or data.get("exc_type") is not None
-                or data.get("detail") is not None
-            ):
-                raise InstagramError(
-                    f"ERROR {response.status} | {data.get('exc_type')} | {data.get('detail')}"
-                )
-            return data
+            try:
+                data = await response.json()
+                if (
+                    not response.ok
+                    or data.get("exc_type") is not None
+                    or data.get("detail") is not None
+                ):
+                    raise InstagramError(
+                        f"ERROR {response.status} | {data.get('exc_type')} | {data.get('detail')}"
+                    )
+                return data
+            except aiohttp.ContentTypeError:
+                response.raise_for_status()
+                text = await response.text()
+                raise InstagramError(f"{response.status} | {text}")
 
-    async def get_post(self, shortcode: str) -> IgPost:
-        data = await self.api_request("/v1/media/by/code", {"code": shortcode})
-
-        media = []
-        post_media_type = MediaType(data["media_type"])
-
-        if post_media_type == MediaType.ALBUM:
-            for resource in data["resources"]:
-                resource_media_type = MediaType(resource["media_type"])
-                if resource_media_type == MediaType.PHOTO:
-                    display_url = resource["image_versions"][0]["url"]
-                elif resource_media_type == MediaType.VIDEO:
-                    display_url = resource["video_url"]
-                else:
-                    display_url = ""
-                media.append(IgMedia(resource_media_type, display_url))
-        elif post_media_type == MediaType.VIDEO:
-            media.append(IgMedia(post_media_type, data["video_url"]))
-        else:
-            media.append(IgMedia(post_media_type, data["image_versions"][0]["url"]))
-
+    @staticmethod
+    def parse_user(data: dict):
+        """Pass a dict which has user as a key to make it IgUser"""
         user = data["user"]
-        user = IgUser(
+        return IgUser(
             user["pk"],
             user["username"],
             user["profile_pic_url"],
         )
 
-        timestamp = data["taken_at_ts"]
+    def parse_resource_v1(self, resource: dict) -> list[IgMedia]:
+        media = []
+        match MediaType(resource["media_type"]):
+            case MediaType.ALBUM:
+                for album_resource in resource["resources"]:
+                    media += self.parse_resource_v1(album_resource)
 
-        return IgPost(user, media, timestamp)
+            case MediaType.VIDEO:
+                media.append(
+                    IgMedia(MediaType.VIDEO, get_best_candidate(resource["video_versions"]))
+                )
 
-    async def get_story(self, story_pk: str) -> IgPost:
+            case MediaType.PHOTO:
+                media.append(
+                    IgMedia(MediaType.PHOTO, get_best_candidate(resource["image_versions"]))
+                )
+
+            case _:
+                raise TypeError(f"Unknown IG media type {resource['media_type']}")
+
+        return media
+
+    async def get_post_v1(self, shortcode: str) -> IgPost:
+        data = await self.api_request("/v1/media/by/code", {"code": shortcode})
+        return IgPost(
+            self.parse_user(data),
+            self.parse_resource_v1(data),
+            data["taken_at_ts"],
+        )
+
+    async def get_story_v1(self, story_pk: str) -> IgPost:
         data = await self.api_request("/v1/story/by/id", {"id": story_pk})
 
         media = []
-        post_media_type = MediaType(data["media_type"])
 
-        if post_media_type == MediaType.VIDEO:
-            media.append(IgMedia(post_media_type, data["video_url"]))
-        else:
-            media.append(IgMedia(post_media_type, data["thumbnail_url"]))
-
-        user = data["user"]
-        user = IgUser(
-            user["pk"],
-            user["username"],
-            user["profile_pic_url"],
-        )
+        match MediaType(data["media_type"]):
+            case MediaType.VIDEO:
+                media.append(IgMedia(MediaType.VIDEO, data["video_url"]))
+            case MediaType.PHOTO:
+                media.append(IgMedia(MediaType.PHOTO, data["thumbnail_url"]))
+            case _:
+                raise TypeError(f"Unknown IG media type {data['media_type']}")
 
         timestamp = int(arrow.get(data["taken_at"]).timestamp())
 
-        return IgPost(user, media, timestamp)
+        return IgPost(self.parse_user(data), media, timestamp)
+
+    def parse_resource_a1(self, resource: dict) -> list[IgMedia]:
+        media = []
+        match MediaType(resource["media_type"]):
+            case MediaType.ALBUM:
+                for album_resource in resource["carousel_media"]:
+                    media += self.parse_resource_v1(album_resource)
+
+            case MediaType.VIDEO:
+                media.append(
+                    IgMedia(MediaType.VIDEO, get_best_candidate(resource["video_versions"]))
+                )
+
+            case MediaType.PHOTO:
+                media.append(
+                    IgMedia(
+                        MediaType.PHOTO,
+                        get_best_candidate(resource["image_versions2"]["candidates"]),
+                    )
+                )
+
+            case _:
+                raise TypeError(f"Unknown IG media type {resource['media_type']}")
+
+        return media
+
+    async def get_post_a1(self, shortcode: str) -> IgPost:
+        data = await self.api_request("/a1/media/by/code", {"code": shortcode})
+        post = data["items"][0]
+
+        return IgPost(
+            self.parse_user(post),
+            self.parse_resource_a1(post),
+            post["taken_at"],
+        )
 
 
 class Instagram:
@@ -368,7 +413,7 @@ class Instagram:
         return IgPost(user, media, timestamp)
 
 
-def to_mediatype(typename: str):
+def to_mediatype(typename: str) -> MediaType:
     match typename:
         case "GraphVideo":
             return MediaType.VIDEO
@@ -378,3 +423,17 @@ def to_mediatype(typename: str):
             return MediaType.ALBUM
         case _:
             return MediaType.NONE
+
+
+def get_best_candidate(
+    candidates: list[dict], og_width: Optional[int] = None, og_height: Optional[int] = None
+) -> str:
+    """Filter out the best image candidate, based on resolution. Returns media url"""
+    if og_height and og_width:
+        best = next(
+            filter(lambda img: img["width"] == og_width and img["height"] == og_height, candidates)
+        )
+    else:
+        best = sorted(candidates, key=lambda img: img["width"] * img["height"], reverse=True)[0]
+
+    return best["url"]

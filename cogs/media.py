@@ -146,10 +146,10 @@ class Media(commands.Cog):
             try:
                 if shortcode:
                     post_url = f"https://www.instagram.com/p/{shortcode}"
-                    post = await instagram.Datalama(self.bot).get_post(shortcode)
+                    post = await instagram.Datalama(self.bot).get_post_v1(shortcode)
                 elif story_pk:
                     post_url = f"https://www.instagram.com/stories/{username}/{story_pk}"
-                    post = await instagram.Datalama(self.bot).get_story(story_pk)
+                    post = await instagram.Datalama(self.bot).get_story_v1(story_pk)
                 else:
                     raise exceptions.CommandError("Could not find anything to show")
 
@@ -413,7 +413,7 @@ class Media(commands.Cog):
         #     discord.utils.escape_markdown(x.find("a").text)
         #     for x in soup.find_all("div", {"class": "ellipsis rank03"})
         # ]
-        image = soup.find("img", {"onerror": "WEBPOCIMG.defaultAlbumImg(this);"}).get("src")
+        image = soup.find("img", {"onerror": "WEBPOCIMG.defaultAlbumImg(this);"})
 
         content = discord.Embed(color=discord.Color.from_rgb(0, 205, 60))
         content.set_author(
@@ -422,7 +422,8 @@ class Media(commands.Cog):
             url=url,
             icon_url="https://i.imgur.com/hm9xzPz.png",
         )
-        content.set_thumbnail(url=image)
+        if image is not None:
+            content.set_thumbnail(url=image.get("src"))
         content.timestamp = ctx.message.created_at
 
         rows = []
