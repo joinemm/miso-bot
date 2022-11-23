@@ -399,37 +399,31 @@ class Media(commands.Cog):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0",
         }
         async with self.bot.session.get(url, headers=headers) as response:
-            soup = BeautifulSoup(await response.text(), "lxml")
+            text = await response.text()
+            soup = BeautifulSoup(text, "lxml")
 
-        song_titles = [
-            discord.utils.escape_markdown(x.find("span").find("a").text)
-            for x in soup.find_all("div", {"class": "ellipsis rank01"})
-        ]
-        artists = [
-            discord.utils.escape_markdown(x.find("a").text)
-            for x in soup.find_all("div", {"class": "ellipsis rank02"})
-        ]
-        # albums = [
-        #     discord.utils.escape_markdown(x.find("a").text)
-        #     for x in soup.find_all("div", {"class": "ellipsis rank03"})
-        # ]
-        image = soup.find("img", {"onerror": "WEBPOCIMG.defaultAlbumImg(this);"})
+        rows = []
+        image = None
+        for i, chart_row in enumerate(soup.select(".lst50, .lst100"), start=1):
+            if not image:
+                image = chart_row.select_one("img")
+            title = chart_row.select_one(".wrap_song_info .rank01 span a")
+            artist = chart_row.select_one(".wrap_song_info .rank02 a")
+            if not title or not artist:
+                raise exceptions.CommandError("Failure parsing Melon page")
+
+            rows.append(f"`#{i:2}` **{artist.attrs['title']}** — ***{title.attrs['title']}***")
 
         content = discord.Embed(color=discord.Color.from_rgb(0, 205, 60))
         content.set_author(
-            name=f"Melon top {len(song_titles)}"
+            name=f"Melon top {len(rows)}"
             + ("" if timeframe == "" else f" - {timeframe.capitalize()}"),
             url=url,
             icon_url="https://i.imgur.com/hm9xzPz.png",
         )
-        if image is not None:
-            content.set_thumbnail(url=image.get("src"))
+        if image:
+            content.set_thumbnail(url=image.attrs["src"])
         content.timestamp = ctx.message.created_at
-
-        rows = []
-        for i, (song, artist) in enumerate(zip(song_titles, artists), start=1):
-            rows.append(f"`#{i:2}` **{artist}** — ***{song}***")
-
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()

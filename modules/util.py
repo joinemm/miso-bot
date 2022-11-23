@@ -606,7 +606,6 @@ async def color_from_image_url(
     session,
     url,
     fallback="202225",
-    return_color_object=False,
     size_limit=False,
     ignore_errors=True,
 ):
@@ -632,10 +631,7 @@ async def color_from_image_url(
         else:
             raise e
 
-    if return_color_object:
-        return dominant_color
-    else:
-        return rgb_to_hex(dominant_color)
+    return rgb_to_hex(dominant_color)
 
 
 async def rgb_from_image_url(session: aiohttp.ClientSession, url: str) -> Rgb:

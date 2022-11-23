@@ -779,12 +779,12 @@ class Utility(commands.Cog):
         while True:
             async with self.bot.session.get(link) as response:
                 soup = BeautifulSoup(await response.text(), "lxml")
-                meta = soup.find("meta", {"property": "og:url"})
+                meta = soup.select_one('meta[property="og:url"]')
 
                 if meta:
                     timestring = util.stringfromtime(time() - starttimer, 2)
                     await message.edit(
-                        content=f"Streamable created in **{timestring}**\n{meta.get('content')}"
+                        content=f"Streamable created in **{timestring}**\n{meta.attrs['content']}"
                     )
                     break
 

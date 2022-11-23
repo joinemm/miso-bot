@@ -1,6 +1,9 @@
 from __future__ import annotations
-import discord
+
 from typing import TYPE_CHECKING
+
+import discord
+
 from modules import exceptions, log
 
 if TYPE_CHECKING:
@@ -53,7 +56,7 @@ async def is_donator(ctx, user, unlock_tier=1):
     return tier and tier >= unlock_tier
 
 
-async def is_vip(bot: MisoBot, user: discord.User):
+async def is_vip(bot: MisoBot, user: discord.User | discord.Member):
     vips = await bot.db.fetch_flattened(
         """
         SELECT user_id FROM vip_user

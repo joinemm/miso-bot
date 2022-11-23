@@ -2009,9 +2009,7 @@ class LastFm(commands.Cog):
         )
         if cached_color:
             return int(cached_color, 16)
-        color = await util.color_from_image_url(
-            self.bot.session, image_url, fallback=None, return_color_object=True
-        )
+        color = await util.rgb_from_image_url(self.bot.session, image_url)
         if color is None:
             return int(self.lastfm_red, 16)
 
