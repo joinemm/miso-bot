@@ -4,18 +4,36 @@ import sys
 
 import uvloop
 from dotenv import load_dotenv
+from loguru import logger
 
 # dotenv has to be loaded before importing MisoBot
 load_dotenv()
 
-from modules import log  # noqa: E402
 from modules.misobot import MisoBot  # noqa: E402
 
+
+class InterceptHandler(logging.Handler):
+    def emit(self, record):
+        # Get corresponding Loguru level if it exists
+        try:
+            level = logger.level(record.levelname).name
+        except ValueError:
+            level = record.levelno
+
+        # Find caller from where originated the logged message
+        frame, depth = logging.currentframe(), 2
+        while frame and frame.f_code.co_filename == logging.__file__:
+            frame = frame.f_back
+            depth += 1
+
+        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+
+
+logging.basicConfig(handlers=[InterceptHandler()], level=logging.INFO)
+
 uvloop.install()
-logger = log.get_logger(__name__)
 
 developer_mode = "dev" in sys.argv
-maintenance_mode = "maintenance" in sys.argv
 
 if developer_mode:
     logger.info("Developer mode is ON")
@@ -52,22 +70,13 @@ extensions = [
     "prometheus",
 ]
 
-if maintenance_mode:
-    logger.info("maintenance mode is ON")
-    prefix = prefix * 2
-
-    extensions = [
-        "errorhandler",
-        "owner",
-    ]
-
 
 def main():
     bot = MisoBot(
         extensions=extensions,
         default_prefix=prefix,
     )
-    bot.run(TOKEN)
+    bot.run(TOKEN, log_handler=None)
 
 
 if __name__ == "__main__":

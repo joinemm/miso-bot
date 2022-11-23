@@ -1,4 +1,3 @@
-import logging
 import traceback
 from time import time
 
@@ -7,6 +6,7 @@ import orjson
 from discord import Activity, ActivityType, AllowedMentions, Intents, Status
 from discord.errors import Forbidden
 from discord.ext import commands
+from loguru import logger
 
 from modules import cache, maria, util
 from modules.help import EmbedHelpCommand
@@ -51,7 +51,6 @@ class MisoBot(commands.AutoShardedBot):
         )
         self.default_prefix = default_prefix
         self.extensions_to_load = extensions
-        self.logger = logging.getLogger("MisoBot")
         self.start_time = time()
         self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
         self.db = maria.MariaDB()
@@ -78,18 +77,18 @@ class MisoBot(commands.AutoShardedBot):
         self.check(self.cooldown_check)
 
     async def load_all_extensions(self):
-        self.logger.info("Loading extensions...")
+        logger.info("Loading extensions...")
         for extension in self.extensions_to_load:
             try:
                 await self.load_extension(f"cogs.{extension}")
-                self.logger.info(f"Loaded [ {extension} ]")
+                logger.info(f"Loaded [ {extension} ]")
             except Exception as error:
-                self.logger.error(f"Error loading [ {extension} ]")
+                logger.error(f"Error loading [ {extension} ]")
                 traceback.print_exception(type(error), error, error.__traceback__)
 
         await self.load_extension("jishaku")
         self.extensions_loaded = True
-        self.logger.info("All extensions loaded successfully!")
+        logger.info("All extensions loaded successfully!")
 
     async def close(self):
         """Overrides built-in close()"""
@@ -103,11 +102,11 @@ class MisoBot(commands.AutoShardedBot):
 
     async def on_ready(self):
         """Overrides built-in on_ready()"""
-        self.logger.info(f"Boot up process completed in {util.stringfromtime(self.boot_up_time)}")
+        logger.info(f"Boot up process completed in {util.stringfromtime(self.boot_up_time)}")
         latencies = self.latencies
-        self.logger.info(f"Loading complete | running {len(latencies)} shards")
+        logger.info(f"Loading complete | running {len(latencies)} shards")
         for shard_id, latency in latencies:
-            self.logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
+            logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
 
     @staticmethod
     async def before_any_command(ctx: commands.Context):
@@ -155,7 +154,7 @@ class MisoCluster(MisoBot):
         self.run(kwargs["token"])
 
     async def on_ready(self):
-        self.logger.info(f"Cluster {self.cluster_name} ready")
+        logger.info(f"Cluster {self.cluster_name} ready")
 
     async def on_shard_ready(self, shard_id):
-        self.logger.info(f"Shard {shard_id} ready")
+        logger.info(f"Shard {shard_id} ready")

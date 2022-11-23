@@ -4,6 +4,7 @@ from typing import Union
 import arrow
 import discord
 from discord.ext import commands
+from loguru import logger
 
 from modules import util
 from modules.misobot import MisoBot
@@ -85,7 +86,7 @@ class Owner(commands.Cog):
     @commands.command()
     async def logout(self, ctx: commands.Context):
         """Shut down the bot"""
-        print("LOGGING OUT")
+        logger.info("LOGGING OUT")
         await ctx.send("Shutting down... :electric_plug:")
         await self.bot.close()
 

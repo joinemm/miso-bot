@@ -5,6 +5,7 @@ from typing import Optional
 import aiohttp
 import arrow
 import orjson
+from loguru import logger
 
 from modules.misobot import MisoBot
 
@@ -238,7 +239,6 @@ class Instagram:
 
     async def close(self):
         await self.session.close()
-        print("closed")
 
     def parse_media(self, resource):
         resource_media_type = MediaType(int(resource["media_type"]))
@@ -294,7 +294,7 @@ class Instagram:
                 raise ExpiredCookie
 
             if data["status"] != "ok":
-                print(data)
+                logger.warning(data)
                 raise InstagramError(f'[HTTP {response.status}] {data.get("message")}')
 
         return data

@@ -34,7 +34,7 @@ class Keychain:
         self.IG_COOKIE: str = ""
         self.LASTFM_LOGIN_COOKIE: str = ""
 
-        for name in self.__dict__.keys():
+        for name in self.__dict__:
             value = os.environ.get(name)
             optional = [
                 "PROXY_URL",
