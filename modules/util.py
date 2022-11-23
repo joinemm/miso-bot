@@ -4,6 +4,7 @@ import io
 import math
 import os
 import re
+from collections import namedtuple
 from time import time
 from typing import Callable, Optional
 
@@ -24,6 +25,8 @@ logger = log.get_logger(__name__)
 
 
 IMAGE_SERVER_HOST = os.environ.get("IMAGE_SERVER_HOST")
+
+Rgb = namedtuple("Rgb", ("r", "g", "b"))
 
 
 class ErrorMessage(Exception):
@@ -617,7 +620,7 @@ async def color_from_image_url(
             colors = await asyncio.get_running_loop().run_in_executor(
                 None, lambda: colorgram.extract(image, 1)
             )
-            dominant_color = colors[0].rgb
+            dominant_color: Rgb = colors[0].rgb
     except Exception as e:
         if ignore_errors:
             return fallback
@@ -628,6 +631,15 @@ async def color_from_image_url(
         return dominant_color
     else:
         return rgb_to_hex(dominant_color)
+
+
+async def rgb_from_image_url(session: aiohttp.ClientSession, url: str) -> Rgb:
+    async with session.get(url) as response:
+        image = Image.open(io.BytesIO(await response.read()))
+        colors = await asyncio.get_running_loop().run_in_executor(
+            None, lambda: colorgram.extract(image, 1)
+        )
+        return colors[0].rgb
 
 
 def find_unicode_emojis(text):
