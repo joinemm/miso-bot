@@ -4,13 +4,11 @@ from itertools import cycle
 import arrow
 import discord
 from discord.ext import commands, tasks
+from loguru import logger
 
 from libraries import emoji_literals
-from modules import log, queries, util
+from modules import queries, util
 from modules.misobot import MisoBot
-
-logger = log.get_logger(__name__)
-command_logger = log.get_command_logger()
 
 
 class Events(commands.Cog):
@@ -58,7 +56,7 @@ class Events(commands.Cog):
         """Runs when any command is completed succesfully"""
         # prevent double invocation for subcommands
         if ctx.invoked_subcommand is None:
-            command_logger.info(log.log_command(ctx))
+            logger.info(util.log_command_format(ctx))
             if ctx.guild is not None:
                 await queries.save_command_usage(ctx)
 

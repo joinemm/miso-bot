@@ -1,3 +1,4 @@
+import logging
 import traceback
 from time import time
 
@@ -7,7 +8,7 @@ from discord import Activity, ActivityType, AllowedMentions, Intents, Status
 from discord.errors import Forbidden
 from discord.ext import commands
 
-from modules import cache, log, maria, util
+from modules import cache, maria, util
 from modules.help import EmbedHelpCommand
 from modules.keychain import Keychain
 
@@ -50,7 +51,7 @@ class MisoBot(commands.AutoShardedBot):
         )
         self.default_prefix = default_prefix
         self.extensions_to_load = extensions
-        self.logger = log.get_logger("MisoBot")
+        self.logger = logging.getLogger("MisoBot")
         self.start_time = time()
         self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
         self.db = maria.MariaDB()
@@ -151,9 +152,6 @@ class MisoCluster(MisoBot):
         self.cluster_name = kwargs.pop("cluster_name")
         self.cluster_id = kwargs.pop("cluster_id")
         super().__init__(**kwargs)
-
-        self.logger = log.get_logger(f"MisoBot#{self.cluster_name}")
-
         self.run(kwargs["token"])
 
     async def on_ready(self):

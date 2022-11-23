@@ -4,6 +4,7 @@ from typing import Optional
 import discord
 import regex
 from discord.ext import commands
+from loguru import logger
 
 from modules import emojis, exceptions, util
 from modules.misobot import MisoBot
@@ -64,7 +65,7 @@ class Notifications(commands.Cog):
 
         try:
             await member.send(embed=content)
-            self.bot.logger.info(f"Sending notification for words {keywords} to {member}")
+            logger.info(f"Sending notification for words {keywords} to {member}")
             if not test:
                 for keyword in keywords:
                     await self.bot.db.execute(
@@ -78,7 +79,7 @@ class Notifications(commands.Cog):
                         keyword,
                     )
         except discord.errors.Forbidden:
-            self.bot.logger.warning(f"Forbidden when trying to send a notification to {member}.")
+            logger.warning(f"Forbidden when trying to send a notification to {member}.")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -124,7 +125,7 @@ class Notifications(commands.Cog):
             try:
                 member = await message.guild.fetch_member(user_id)
             except discord.NotFound:
-                self.bot.logger.warning(
+                logger.warning(
                     f"User {user_id} not found, deleting their notification for {users_words}"
                 )
                 await self.bot.db.execute(

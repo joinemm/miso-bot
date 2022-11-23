@@ -14,15 +14,14 @@ import kdtree
 import orjson
 from bs4 import BeautifulSoup
 from discord.ext import commands
+from loguru import logger
 from PIL import Image
 
-from modules import emojis, exceptions, log, util
+from modules import emojis, exceptions, util
 from modules.genius import Genius
 from modules.misobot import MisoBot
 
 MISSING_IMAGE_HASH = "2a96cbd8b46e442fc41c2b86b821562f"
-
-logger = log.get_logger(__name__)
 
 
 def is_small_server():

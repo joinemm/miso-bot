@@ -1,11 +1,9 @@
 from typing import TYPE_CHECKING
 
-from modules import log
+from loguru import logger
 
 if TYPE_CHECKING:
     from modules.misobot import MisoBot
-
-logger = log.get_logger(__name__)
 
 
 class Cache:

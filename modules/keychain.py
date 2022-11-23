@@ -1,8 +1,6 @@
 import os
 
-from modules.log import get_logger
-
-logger = get_logger(__name__)
+from loguru import logger
 
 
 class Keychain:

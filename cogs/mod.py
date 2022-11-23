@@ -3,11 +3,10 @@ import asyncio
 import arrow
 import discord
 from discord.ext import commands, tasks
+from loguru import logger
 
-from modules import exceptions, log, util
+from modules import exceptions, util
 from modules.misobot import MisoBot
-
-logger = log.get_logger(__name__)
 
 
 class Mod(commands.Cog):

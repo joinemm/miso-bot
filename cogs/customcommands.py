@@ -3,11 +3,10 @@ import asyncio
 import arrow
 import discord
 from discord.ext import commands
+from loguru import logger
 
-from modules import exceptions, log, queries, util
+from modules import exceptions, queries, util
 from modules.misobot import MisoBot
-
-command_logger = log.get_command_logger()
 
 
 class CustomCommands(commands.Cog, name="Commands"):
@@ -75,7 +74,7 @@ class CustomCommands(commands.Cog, name="Commands"):
                 keyword,
             )
             if response:
-                command_logger.info(log.custom_command_format(ctx, keyword))
+                logger.info(util.log_command_format(ctx, extra="(CUSTOM)"))
                 await ctx.send(response)
                 await self.bot.db.execute(
                     """

@@ -4,12 +4,10 @@ import ssl
 import aiohttp_cors
 from aiohttp import web
 from discord.ext import commands, tasks
+from loguru import logger
 from prometheus_async import aio
 
-from modules import log
 from modules.misobot import MisoBot
-
-logger = log.get_logger(__name__)
 
 USE_HTTPS = os.environ.get("WEBSERVER_USE_HTTPS", "no")
 HOST = os.environ.get("WEBSERVER_HOSTNAME")
@@ -98,7 +96,7 @@ class WebServer(commands.Cog):
                     self.app,
                     host=HOST,
                     port=PORT,
-                    access_log=logger,
+                    access_log=None,
                     ssl_context=self.ssl_context,
                 )
             except OSError as e:

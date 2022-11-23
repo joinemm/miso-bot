@@ -16,13 +16,11 @@ import regex
 from discord.ext import commands
 from durations_nlp import Duration
 from durations_nlp.exceptions import InvalidTokenError
+from loguru import logger
 from PIL import Image, UnidentifiedImageError
 
 from libraries import emoji_literals
-from modules import emojis, exceptions, log, queries
-
-logger = log.get_logger(__name__)
-
+from modules import emojis, exceptions, queries
 
 IMAGE_SERVER_HOST = os.environ.get("IMAGE_SERVER_HOST")
 
@@ -885,3 +883,14 @@ class TwoWayIterator:
 
     def current(self):
         return self.items[self.index]
+
+
+def log_command_format(ctx, extra: str = ""):
+    try:
+        took = time() - ctx.timer
+    except AttributeError:
+        took = 0
+
+    guild = ctx.guild.name if ctx.guild is not None else "DM"
+    user = str(ctx.author)
+    return f"{guild} @ {user} : {ctx.message.content} ({took:.2f}s) {extra}"

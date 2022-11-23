@@ -12,11 +12,10 @@ import discord
 import orjson
 from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
+from loguru import logger
 
-from modules import emojis, exceptions, log, queries, util
+from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
-
-command_logger = log.get_command_logger()
 
 papago_pairs = [
     "ko/en",
@@ -51,8 +50,6 @@ papago_pairs = [
     "zh-tw/ja",
     "zh-tw/zh-tw",
 ]
-
-logger = log.get_logger(__name__)
 
 
 class Utility(commands.Cog):
@@ -201,7 +198,7 @@ class Utility(commands.Cog):
         except discord.errors.Forbidden:
             pass
 
-        command_logger.info(log.log_command(ctx))
+        logger.info(util.log_command_format(ctx))
         await queries.save_command_usage(ctx)
         try:
             bang, args = ctx.message.content[len(ctx.prefix or "") + 1 :].split(" ", 1)

@@ -11,13 +11,12 @@ import tweepy
 import yarl
 from bs4 import BeautifulSoup
 from discord.ext import commands
+from loguru import logger
 from tweepy.asynchronous import AsyncClient as TweepyClient
 
-from modules import exceptions, instagram, log, util
+from modules import exceptions, instagram, util
 from modules.misobot import MisoBot
 from modules.views import LinkButton
-
-logger = log.get_logger(__name__)
 
 
 class Media(commands.Cog):

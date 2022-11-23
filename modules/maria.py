@@ -5,11 +5,9 @@ from typing import Any, Optional
 
 import aiomysql
 from aiomysql import Connection, Cursor, Pool
+from loguru import logger
 
-from modules import exceptions, log
-
-logger = log.get_logger(__name__)
-log.get_logger("aiomysql")
+from modules import exceptions
 
 
 @dataclass()

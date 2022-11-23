@@ -5,10 +5,8 @@ import arrow
 import discord
 from discord.ext import commands
 
-from modules import log, util
+from modules import util
 from modules.misobot import MisoBot
-
-logger = log.get_logger(__name__)
 
 
 class Owner(commands.Cog):

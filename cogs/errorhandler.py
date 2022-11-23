@@ -1,14 +1,11 @@
 import asyncio
-import traceback
 
 import discord
 from discord.ext import commands
+from loguru import logger
 
-from modules import emojis, exceptions, log, queries, util
+from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
-
-logger = log.get_logger(__name__)
-command_logger = log.get_command_logger()
 
 
 class ErrorHander(commands.Cog):
@@ -72,12 +69,12 @@ class ErrorHander(commands.Cog):
             target = ctx.author if dm else ctx
             await target.send(embed=embed, **kwargs)
         except discord.errors.Forbidden:
-            self.bot.logger.warning("Forbidden when trying to send error message embed")
+            logger.warning("Forbidden when trying to send error message embed")
 
     async def log_and_traceback(self, ctx: commands.Context, error):
-        logger.error(f'Unhandled exception in command "{ctx.message.content}":')
-        exc = "".join(traceback.format_exception(type(error), error, error.__traceback__))
-        logger.error(exc)
+        logger.opt(exception=error).error(
+            f'Unhandled exception in command "{ctx.message.content}":'
+        )
         await self.send(ctx, "error", f"{type(error).__name__}: {error}", codeblock=True)
 
     @commands.Cog.listener()
@@ -95,7 +92,7 @@ class ErrorHander(commands.Cog):
             return
 
         if isinstance(error, commands.DisabledCommand):
-            command_logger.warning(log.log_command(ctx, extra=error))
+            logger.warning(util.log_command_format(ctx, extra=str(error)))
             return await self.send(
                 ctx,
                 "info",
@@ -106,14 +103,14 @@ class ErrorHander(commands.Cog):
             return await util.send_command_help(ctx)
 
         if isinstance(error, exceptions.CommandInfo):
-            command_logger.info(log.log_command(ctx, extra=error))
+            logger.info(util.log_command_format(ctx, extra=str(error)))
             return await self.send(ctx, "info", str(error), error.kwargs)
         if isinstance(error, exceptions.CommandWarning):
-            command_logger.warning(log.log_command(ctx, extra=error))
+            logger.warning(util.log_command_format(ctx, extra=str(error)))
             return await self.send(ctx, "warning", str(error), error.kwargs)
 
-        command_logger.error(
-            f'{type(error).__name__:25} > {ctx.guild} : {ctx.author} "{ctx.message.content}" > {error}'
+        logger.error(
+            f"{ctx.guild} @ {ctx.author} : {ctx.message.content} => {type(error).__name__}: {error}"
         )
 
         if isinstance(error, exceptions.CommandError):

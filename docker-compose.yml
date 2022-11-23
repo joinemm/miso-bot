@@ -74,6 +74,7 @@ services:
       - IMAGE_SERVER_HOST=image-server
       - EMOJIFIER_HOST=emojifier
       - WEBSERVER_HOSTNAME=miso-bot
+    tty: true
 
 networks:
   default:

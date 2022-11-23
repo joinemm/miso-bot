@@ -4,12 +4,10 @@ from typing import TYPE_CHECKING
 
 import discord
 
-from modules import exceptions, log
+from modules import exceptions
 
 if TYPE_CHECKING:
     from modules.misobot import MisoBot
-
-logger = log.get_logger(__name__)
 
 
 async def save_command_usage(ctx):

@@ -4,10 +4,7 @@ import psutil
 from discord.ext import commands, tasks
 from prometheus_client import Counter, Gauge, Summary
 
-from modules import log
 from modules.misobot import MisoBot
-
-logger = log.get_logger(__name__)
 
 
 class Prometheus(commands.Cog):
