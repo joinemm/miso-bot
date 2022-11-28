@@ -220,7 +220,7 @@ class ErrorHander(commands.Cog):
                 await ctx.message.delete()
 
         elif isinstance(error, commands.CommandOnCooldown):
-            if await queries.is_donator(ctx, ctx.author, 2) or queries.is_vip(
+            if await queries.is_donator(ctx, ctx.author, 2) or await queries.is_vip(
                 self.bot, ctx.author
             ):
                 try:
