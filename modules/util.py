@@ -636,13 +636,16 @@ async def color_from_image_url(
     return rgb_to_hex(dominant_color)
 
 
-async def rgb_from_image_url(session: aiohttp.ClientSession, url: str) -> Rgb:
-    async with session.get(url) as response:
-        image = Image.open(io.BytesIO(await response.read()))
-        colors = await asyncio.get_running_loop().run_in_executor(
-            None, lambda: colorgram.extract(image, 1)
-        )
-        return colors[0].rgb
+async def rgb_from_image_url(session: aiohttp.ClientSession, url: str) -> Rgb | None:
+    try:
+        async with session.get(url) as response:
+            image = Image.open(io.BytesIO(await response.read()))
+            colors = await asyncio.get_running_loop().run_in_executor(
+                None, lambda: colorgram.extract(image, 1)
+            )
+            return colors[0].rgb
+    except aiohttp.InvalidURL:
+        return None
 
 
 def find_unicode_emojis(text):
