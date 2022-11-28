@@ -36,15 +36,17 @@ class PatronCheckFailure(commands.CheckFailure):
 
 
 def displayname(member: Optional[discord.User | discord.Member], escape=True):
-    match member:
-        case discord.Member():
-            name = member.nick or member.name
-        case discord.User():
-            name = member.name
-        case None:
-            return None
+    if member is None:
+        return None
 
-    return discord.utils.escape_markdown(name) if escape else name
+    name = member.name
+    if isinstance(member, discord.Member) and member.nick is not None:
+        name = member.nick
+
+    if escape:
+        name = discord.utils.escape_markdown(name)
+
+    return name
 
 
 def displaychannel(
@@ -574,6 +576,8 @@ async def command_group_help(ctx):
     """Sends default command help if group command is invoked on it's own"""
     if ctx.invoked_subcommand is None:
         await ctx.bot.help_command.group_help_brief(ctx, ctx.command)
+        return True
+    return False
 
 
 async def send_command_help(ctx):
