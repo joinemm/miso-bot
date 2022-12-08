@@ -33,28 +33,6 @@ class WebServer(commands.Cog):
         self.app.router.add_get("/documentation", self.command_list)
         self.app.router.add_get("/donators", self.donator_list)
         self.app.router.add_get("/metrics", aio.web.server_stats)
-        # Configure default CORS settings.
-        # self.cors = aiohttp_cors.setup(
-        #     self.app,
-        #     defaults={
-        #         "*": aiohttp_cors.ResourceOptions(
-        #             allow_credentials=True,
-        #             expose_headers="*",
-        #             allow_headers="*",
-        #         )
-        #     },
-        # )
-
-        # # Configure CORS on all routes.
-        # for route in list(self.app.router.routes()):
-        #     self.cors.add(route)
-
-        # # https
-        # if USE_HTTPS == "yes" and SSL_CERT and SSL_KEY:
-        #     self.ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        #     self.ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)
-        # else:
-        #     self.ssl_context = None
 
     async def cog_load(self):
         self.cache_stats.start()
@@ -86,7 +64,6 @@ class WebServer(commands.Cog):
         await self.app.cleanup()
 
     async def run(self):
-        await self.bot.wait_until_ready()
         if HOST is not None:
             try:
                 logger.info(f"Starting webserver on {HOST}:{PORT}")
@@ -95,7 +72,6 @@ class WebServer(commands.Cog):
                     host=HOST,
                     port=PORT,
                     access_log=None,
-                    # ssl_context=self.ssl_context,
                 )
             except OSError as e:
                 logger.warning(e)
@@ -121,13 +97,23 @@ class WebServer(commands.Cog):
         return donators
 
     async def donator_list(self, request):
-        return web.json_response(self.cached["donators"])
+        if self.bot.is_ready():
+            response = self.cached["donators"]
+        else:
+            response = []
+
+        return web.json_response(response)
 
     async def ping_handler(self, request):
         return web.Response(text=f"{self.bot.latency*1000}")
 
     async def website_statistics(self, request):
-        return web.json_response(self.cached)
+        if self.bot.is_ready():
+            response = self.cached
+        else:
+            response = {}
+
+        return web.json_response(response)
 
     async def command_list(self, request):
         return web.json_response(self.cached_command_list)
