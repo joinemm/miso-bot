@@ -1,6 +1,20 @@
 version: '3.7'
 
 services:
+  nginx: 
+    image: nginx:latest
+    container_name: miso-nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - /etc/letsencrypt/:/etc/letsencrypt/
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - bot
+      - shlink
+
   db:
     container_name: miso-db
     image: mariadb
@@ -14,8 +28,21 @@ services:
       - MARIADB_PASSWORD=botpw
       - MARIADB_DATABASE=misobot
       - MARIADB_ROOT_PASSWORD=secure-af
+    
+  shlink-db:
+    container_name: miso-shlink-db
+    image: mariadb
+    restart: unless-stopped
+    volumes:
+      - shlink-database:/var/lib/mysql
+    environment:
+      - MARIADB_USER=bot
+      - MARIADB_PASSWORD=botpw
+      - MARIADB_DATABASE=shlink
+      - MARIADB_ROOT_PASSWORD=secure-af
 
   prometheus:
+    container_name: miso-prometheus
     image: prom/prometheus
     restart: unless-stopped
     ports:
@@ -32,6 +59,7 @@ services:
       - '--web.enable-lifecycle'
 
   grafana:
+    container_name: miso-grafana
     image: grafana/grafana-oss
     restart: unless-stopped
     ports:
@@ -40,7 +68,7 @@ services:
       - grafana-storage:/var/lib/grafana
 
   image-server:
-    container_name: image-server
+    container_name: miso-image-server
     build: https://github.com/joinemm/sushii-image-server.git#main
     restart: unless-stopped
     init: true
@@ -49,8 +77,25 @@ services:
     expose:
       - 3000
 
+  shlink:
+    container_name: miso-shlink
+    image: shlinkio/shlink:latest
+    restart: unless-stopped
+    expose:
+      - 8080
+    environment:
+      - DEFAULT_DOMAIN=url.misobot.xyz
+      - IS_HTTPS_ENABLED=true
+      - DB_DRIVER=maria
+      - DB_NAME=shlink
+      - DB_USER=bot
+      - DB_PASSWORD=botpw
+      - DB_HOST=shlink-db
+    depends_on:
+      - shlink-db
+
   emojifier:
-    container_name: emojifier
+    container_name: miso-emojifier
     build: https://github.com/joinemm/emojify.git#backend
     restart: unless-stopped
     expose:
@@ -59,21 +104,20 @@ services:
   bot:
     container_name: miso-bot
     build: .
-    command: python -O main.py
+    command: python -O main.py dev
     restart: unless-stopped
     expose:
-      - 443
+      - 8080
     depends_on:
       - db
-    ports:
-      - '443:443'
     env_file:
       - .env
     environment:
       - DB_HOST=miso-db
       - IMAGE_SERVER_HOST=image-server
       - EMOJIFIER_HOST=emojifier
-      - WEBSERVER_HOSTNAME=miso-bot
+      - WEBSERVER_PORT=8080
+      - WEBSERVER_HOSTNAME=0.0.0.0
     tty: true
 
 networks:
@@ -82,5 +126,6 @@ networks:
 
 volumes:
   database:
+  shlink-database:
   grafana-storage:
   prometheus-storage:
