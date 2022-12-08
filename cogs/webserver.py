@@ -1,7 +1,5 @@
 import os
-import ssl
 
-import aiohttp_cors
 from aiohttp import web
 from discord.ext import commands, tasks
 from loguru import logger
@@ -11,7 +9,7 @@ from modules.misobot import MisoBot
 
 USE_HTTPS = os.environ.get("WEBSERVER_USE_HTTPS", "no")
 HOST = os.environ.get("WEBSERVER_HOSTNAME")
-PORT = int(os.environ.get("WEBSERVER_PORT", 0))
+PORT = int(os.environ.get("WEBSERVER_PORT", 8080))
 SSL_CERT = os.environ.get("WEBSERVER_SSL_CERT")
 SSL_KEY = os.environ.get("WEBSERVER_SSL_KEY")
 
@@ -36,27 +34,27 @@ class WebServer(commands.Cog):
         self.app.router.add_get("/donators", self.donator_list)
         self.app.router.add_get("/metrics", aio.web.server_stats)
         # Configure default CORS settings.
-        self.cors = aiohttp_cors.setup(
-            self.app,
-            defaults={
-                "*": aiohttp_cors.ResourceOptions(
-                    allow_credentials=True,
-                    expose_headers="*",
-                    allow_headers="*",
-                )
-            },
-        )
+        # self.cors = aiohttp_cors.setup(
+        #     self.app,
+        #     defaults={
+        #         "*": aiohttp_cors.ResourceOptions(
+        #             allow_credentials=True,
+        #             expose_headers="*",
+        #             allow_headers="*",
+        #         )
+        #     },
+        # )
 
-        # Configure CORS on all routes.
-        for route in list(self.app.router.routes()):
-            self.cors.add(route)
+        # # Configure CORS on all routes.
+        # for route in list(self.app.router.routes()):
+        #     self.cors.add(route)
 
-        # https
-        if USE_HTTPS == "yes" and SSL_CERT and SSL_KEY:
-            self.ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            self.ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)
-        else:
-            self.ssl_context = None
+        # # https
+        # if USE_HTTPS == "yes" and SSL_CERT and SSL_KEY:
+        #     self.ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        #     self.ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)
+        # else:
+        #     self.ssl_context = None
 
     async def cog_load(self):
         self.cache_stats.start()
@@ -97,7 +95,7 @@ class WebServer(commands.Cog):
                     host=HOST,
                     port=PORT,
                     access_log=None,
-                    ssl_context=self.ssl_context,
+                    # ssl_context=self.ssl_context,
                 )
             except OSError as e:
                 logger.warning(e)

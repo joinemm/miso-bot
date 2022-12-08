@@ -66,14 +66,17 @@ extensions = [
     "reddit",
     "crypto",
     "kpop",
+]
+
+infrastructure_extensions = [
     "webserver",
     "prometheus",
 ]
 
 
 def main():
-    bot = MisoBot(
-        extensions=extensions,
+    bot: MisoBot = MisoBot(
+        extensions=extensions + infrastructure_extensions if not developer_mode else [],
         default_prefix=prefix,
     )
     bot.run(TOKEN, log_handler=None)
