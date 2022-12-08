@@ -826,6 +826,8 @@ def patrons_only():
             return True
         if await queries.is_donator(ctx, ctx.author):
             return True
+        if await queries.is_vip(ctx.bot, ctx.author):
+            return True
         raise PatronCheckFailure
 
     return commands.check(predicate)
