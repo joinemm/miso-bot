@@ -105,7 +105,10 @@ class Media(commands.Cog):
             except ValueError:
                 pass
 
-        return media_url
+        try:
+            return await util.shorten_url(self.bot, media_url, ["tiktok"])
+        except ClientConnectorError:
+            return media_url
 
     @commands.command(aliases=["ig", "insta"], usage="<links...> '-e'")
     async def instagram(self, ctx: commands.Context, *links: str):
@@ -366,14 +369,7 @@ class Media(commands.Cog):
             )
             caption = f"{self.tiktok.EMOJI} **@{video.user}**"
             if isinstance(file, str):
-                try:
-                    shortened_url = await util.shorten_url(self.bot, file, ["tiktok"])
-                except ClientConnectorError:
-                    shortened_url = file
-
-                await ctx.send(
-                    f"{caption}\n{shortened_url}", view=LinkButton("View on TikTok", tiktok_url)
-                )
+                await ctx.send(f"{caption}\n{file}", view=LinkButton("View on TikTok", tiktok_url))
             else:
                 await ctx.send(caption, file=file, view=LinkButton("View on TikTok", tiktok_url))
 
