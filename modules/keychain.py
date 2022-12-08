@@ -33,6 +33,7 @@ class Keychain:
         self.PROXY_PASS: str = ""
         self.IG_COOKIE: str = ""
         self.LASTFM_LOGIN_COOKIE: str = ""
+        self.SHLINK_API_KEY: str = ""
 
         for name in self.__dict__:
             value = os.environ.get(name)

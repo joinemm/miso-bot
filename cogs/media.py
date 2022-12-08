@@ -9,6 +9,7 @@ import orjson
 import regex
 import tweepy
 import yarl
+from aiohttp import ClientConnectorError
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from loguru import logger
@@ -16,6 +17,7 @@ from tweepy.asynchronous import AsyncClient as TweepyClient
 
 from modules import exceptions, instagram, util
 from modules.misobot import MisoBot
+from modules.tiktok import TikTok
 from modules.views import LinkButton
 
 
@@ -30,9 +32,14 @@ class Media(commands.Cog):
             wait_on_rate_limit=True,
         )
         self.ig = instagram.Instagram(self.bot, use_proxy=True)
+        self.tiktok = TikTok()
 
-    async def cog_unload(self):
-        await self.ig.close()
+    # async def cog_unload(self):
+    #     await self.ig.close()
+    #     await self.tiktok_api.close()
+
+    # async def cog_load(self):
+    #     await self.tiktok_api.warmup()
 
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx: commands.Context, *, query):
@@ -62,7 +69,9 @@ class Media(commands.Cog):
             index_entries=True,
         )
 
-    async def download_media(self, media_url: str, filename: str, max_filesize: int):
+    async def download_media(
+        self, media_url: str, filename: str, max_filesize: int
+    ) -> str | discord.File:
         # The url params are unescaped by aiohttp's built-in yarl
         # This causes problems with the hash-based request signing that instagram uses
         # Thankfully you can plug your own yarl.URL with encoded=True so it wont get encoded twice
@@ -80,25 +89,23 @@ class Media(commands.Cog):
             content_length = response.headers.get("Content-Length") or response.headers.get(
                 "x-full-image-content-length"
             )
-            if content_length:
-                if int(content_length) < max_filesize:
-                    buffer = io.BytesIO(await response.read())
-                    return discord.File(fp=buffer, filename=filename)
-                elif int(content_length) >= max_filesize:
-                    return media_url
-            else:
-                logger.warning(f"No content length header for {media_url}")
-                # there is no Content-Length header
+            if content_length and int(content_length) < max_filesize:
+                buffer = io.BytesIO(await response.read())
+                return discord.File(fp=buffer, filename=filename)
+
+            logger.warning(f"No content length header for {media_url}")
+            try:
                 # try to stream until we hit our limit
-                try:
-                    buffer = b""
-                    async for chunk in response.content.iter_chunked(1024):
-                        buffer += chunk
-                        if len(buffer) > max_filesize:
-                            raise ValueError
-                    return discord.File(fp=io.BytesIO(buffer), filename=filename)
-                except ValueError:
-                    return media_url
+                buffer = b""
+                async for chunk in response.content.iter_chunked(1024):
+                    buffer += chunk
+                    if len(buffer) > max_filesize:
+                        raise ValueError
+                return discord.File(fp=io.BytesIO(buffer), filename=filename)
+            except ValueError:
+                pass
+
+        return media_url
 
     @commands.command(aliases=["ig", "insta"], usage="<links...> '-e'")
     async def instagram(self, ctx: commands.Context, *links: str):
@@ -343,6 +350,32 @@ class Media(commands.Cog):
             await ctx.message.edit(suppress=True)
         except (discord.Forbidden, discord.NotFound):
             pass
+
+    @commands.command(name="tiktok", aliases=["tik", "tok"])
+    async def get_tiktok(self, ctx: commands.Context, *tiktok_links: str):
+        """Retrieve video from a tiktok"""
+        pattern = r"\bhttps?:\/\/(?:m|www|vm)\.tiktok\.com\/.*\b(?:(?:usr|v|embed|user|video)\/|\?shareId=|\&item_id=)(\d+)\b"
+        matches = re.finditer(pattern, "\n".join(tiktok_links))
+        for match in matches:
+            video_id = match.group(1)
+            tiktok_url = f"https://m.tiktok.com/v/{video_id}"
+            video = await self.tiktok.get_video(tiktok_url)
+            max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
+            file = await self.download_media(
+                video.video_url, f"{video.user}_{video_id}.mp4", max_filesize
+            )
+            caption = f"{self.tiktok.EMOJI} **@{video.user}**"
+            if isinstance(file, str):
+                try:
+                    shortened_url = await util.shorten_url(self.bot, file, ["tiktok"])
+                except ClientConnectorError:
+                    shortened_url = file
+
+                await ctx.send(
+                    f"{caption}\n{shortened_url}", view=LinkButton("View on TikTok", tiktok_url)
+                )
+            else:
+                await ctx.send(caption, file=file, view=LinkButton("View on TikTok", tiktok_url))
 
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx: commands.Context, *, query):

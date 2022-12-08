@@ -6,7 +6,7 @@ import os
 import re
 from collections import namedtuple
 from time import time
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 import aiohttp
 import arrow
@@ -21,6 +21,9 @@ from PIL import Image, UnidentifiedImageError
 
 from libraries import emoji_literals
 from modules import emojis, exceptions, queries
+
+if TYPE_CHECKING:
+    from modules.misobot import MisoBot
 
 IMAGE_SERVER_HOST = os.environ.get("IMAGE_SERVER_HOST")
 
@@ -901,3 +904,22 @@ def log_command_format(ctx, extra: str = ""):
     guild = ctx.guild.name if ctx.guild is not None else "DM"
     user = str(ctx.author)
     return f"{guild} @ {user} : {ctx.message.content} ({took:.2f}s) {extra}"
+
+
+async def shorten_url(bot: "MisoBot", long_url: str, tags: list[str] = list()):
+    data = {
+        "longUrl": long_url,
+        "validateUrl": True,
+        "tags": tags,
+        "title": "string",
+        "crawlable": True,
+        "findIfExists": True,
+    }
+
+    headers = {"accept": "application/json", "X-Api-Key": bot.keychain.SHLINK_API_KEY}
+    async with bot.session.post(
+        "http://shlink:8080/rest/v3/short-urls", json=data, headers=headers
+    ) as response:
+        response.raise_for_status()
+        data = await response.json()
+        return data["shortUrl"]
