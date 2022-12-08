@@ -37,6 +37,7 @@ class WebServer(commands.Cog):
     async def cog_load(self):
         self.cache_stats.start()
         self.cached_command_list = self.generate_command_list()
+        self.cached["donators"] = await self.update_donator_list()
         self.bot.loop.create_task(self.run())
 
     async def cog_unload(self):
@@ -97,23 +98,13 @@ class WebServer(commands.Cog):
         return donators
 
     async def donator_list(self, request):
-        if self.bot.is_ready():
-            response = self.cached["donators"]
-        else:
-            response = []
-
-        return web.json_response(response)
+        return web.json_response(self.cached["donators"])
 
     async def ping_handler(self, request):
         return web.Response(text=f"{self.bot.latency*1000}")
 
     async def website_statistics(self, request):
-        if self.bot.is_ready():
-            response = self.cached
-        else:
-            response = {}
-
-        return web.json_response(response)
+        return web.json_response(self.cached)
 
     async def command_list(self, request):
         return web.json_response(self.cached_command_list)
