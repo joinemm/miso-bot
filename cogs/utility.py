@@ -1024,4 +1024,7 @@ class WeatherUnitToggler(discord.ui.View):
             item.disabled = True  # type: ignore
 
         if self.message:
-            await self.message.edit(view=None)
+            try:
+                await self.message.edit(view=None)
+            except discord.NotFound:
+                pass
