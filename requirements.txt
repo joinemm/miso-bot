@@ -55,7 +55,7 @@ braceexpand==0.1.7
     # via jishaku
 brotli==1.0.9
     # via discord-py
-certifi==2022.9.24
+certifi==2022.12.7
     # via requests
 cffi==1.15.1
     # via pycares
