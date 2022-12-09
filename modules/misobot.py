@@ -1,7 +1,9 @@
 import traceback
+from dataclasses import dataclass
 from time import time
 
 import aiohttp
+import discord
 import orjson
 from discord import Activity, ActivityType, AllowedMentions, Intents, Status
 from discord.errors import Forbidden
@@ -11,6 +13,31 @@ from loguru import logger
 from modules import cache, maria, util
 from modules.help import EmbedHelpCommand
 from modules.keychain import Keychain
+
+
+@dataclass
+class LastFmContext:
+    target_user: discord.User | discord.Member
+    targets_author: bool
+    username: str
+
+
+class MisoContext(commands.Context):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lastfmcontext: LastFmContext
+        self.bot: MisoBot
+
+    async def success(self, message: str):
+        await self.send(
+            embed=discord.Embed(
+                description=":white_check_mark: " + message,
+                color=int("77b255", 16),
+            )
+        )
+
+    async def paginate(self, embed: discord.Embed, rows: list[str]):
+        await util.send_as_pages(self, embed, rows)
 
 
 class MisoBot(commands.AutoShardedBot):
@@ -58,7 +85,14 @@ class MisoBot(commands.AutoShardedBot):
         self.keychain = Keychain()
         self.version = "5.1"
         self.extensions_loaded = False
+        self.session: aiohttp.ClientSession
         self.register_hooks()
+
+    async def get_context(self, message, *, cls=MisoContext):
+        """when you override this method, you pass your new Context
+        subclass to the super() method, which tells the bot to
+        use the new MyContext class"""
+        return await super().get_context(message, cls=cls)
 
     async def setup_hook(self):
         self.session = aiohttp.ClientSession(
