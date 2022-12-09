@@ -354,18 +354,30 @@ class Media(commands.Cog):
         except (discord.Forbidden, discord.NotFound):
             pass
 
-    @commands.command(name="tiktok", aliases=["tik", "tok"])
+    @commands.command(name="tiktok", aliases=["tik", "tok", "tt"])
     async def get_tiktok(self, ctx: commands.Context, *tiktok_links: str):
         """Retrieve video from a tiktok"""
         pattern = r"\bhttps?:\/\/(?:m|www|vm)\.tiktok\.com\/.*\b(?:(?:usr|v|embed|user|video)\/|\?shareId=|\&item_id=)(\d+)\b"
+        vm_pattern = r"\bhttps?:\/\/vm\.tiktok\.com\/.*\b(\S+)\b"
+
         matches = re.finditer(pattern, "\n".join(tiktok_links))
+        vm_matches = re.finditer(vm_pattern, "\n".join(tiktok_links))
+
+        validated_urls = []
         for match in matches:
-            video_id = match.group(1)
-            tiktok_url = f"https://m.tiktok.com/v/{video_id}"
+            validated_urls.append(f"https://m.tiktok.com/v/{match.group(1)}")
+
+        for match in vm_matches:
+            validated_urls.append(f"https://vm.tiktok.com/{match.group(1)}")
+
+        if not validated_urls:
+            raise exceptions.CommandWarning("No valid TikTok urls found!")
+
+        for tiktok_url in validated_urls:
             video = await self.tiktok.get_video(tiktok_url)
             max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
             file = await self.download_media(
-                video.video_url, f"{video.user}_{video_id}.mp4", max_filesize
+                video.video_url, f"{video.user}_{tiktok_url.split('/')[-1]}.mp4", max_filesize
             )
             caption = f"{self.tiktok.EMOJI} **@{video.user}**"
             if isinstance(file, str):
