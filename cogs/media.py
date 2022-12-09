@@ -34,13 +34,6 @@ class Media(commands.Cog):
         self.ig = instagram.Instagram(self.bot, use_proxy=True)
         self.tiktok = TikTok()
 
-    # async def cog_unload(self):
-    #     await self.ig.close()
-    #     await self.tiktok_api.close()
-
-    # async def cog_load(self):
-    #     await self.tiktok_api.warmup()
-
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx: commands.Context, *, query):
         """Search for videos from youtube"""
@@ -70,7 +63,11 @@ class Media(commands.Cog):
         )
 
     async def download_media(
-        self, media_url: str, filename: str, max_filesize: int
+        self,
+        media_url: str,
+        filename: str,
+        max_filesize: int,
+        url_tags: list[str] = list(),
     ) -> str | discord.File:
         # The url params are unescaped by aiohttp's built-in yarl
         # This causes problems with the hash-based request signing that instagram uses
@@ -106,7 +103,7 @@ class Media(commands.Cog):
                 pass
 
         try:
-            return await util.shorten_url(self.bot, media_url, ["tiktok"])
+            return await util.shorten_url(self.bot, media_url, tags=url_tags)
         except ClientConnectorError:
             return media_url
 
@@ -204,7 +201,11 @@ class Media(commands.Cog):
                     ext = "mp4" if media.media_type == instagram.MediaType.VIDEO else "jpg"
                     dateformat = arrow.get(post.timestamp).format("YYMMDD")
                     filename = f"{dateformat}-@{post.user.username}-{shortcode}-{n}.{ext}"
-                    tasks.append(self.download_media(media.url, filename, max_filesize))
+                    tasks.append(
+                        self.download_media(
+                            media.url, filename, max_filesize, url_tags=["instagram"]
+                        )
+                    )
 
                 files = []
                 results = await asyncio.gather(*tasks)
@@ -331,7 +332,11 @@ class Media(commands.Cog):
                     filename = (
                         f"{timestamp.format('YYMMDD')}-@{screen_name}-{tweet.id}-{n}.{extension}"
                     )
-                    tasks.append(self.download_media(media_url, filename, max_filesize))
+                    tasks.append(
+                        self.download_media(
+                            media_url, filename, max_filesize, url_tags=["twitter"]
+                        )
+                    )
 
                 username = discord.utils.escape_markdown(screen_name)
                 caption = f"<:twitter:937425165241946162> **@{username}** <t:{int(timestamp.timestamp())}:d>"
@@ -377,7 +382,10 @@ class Media(commands.Cog):
             video = await self.tiktok.get_video(tiktok_url)
             max_filesize = getattr(ctx.guild, "filesize_limit", 8388608)
             file = await self.download_media(
-                video.video_url, f"{video.user}_{tiktok_url.split('/')[-1]}.mp4", max_filesize
+                video.video_url,
+                f"{video.user}_{tiktok_url.split('/')[-1]}.mp4",
+                max_filesize,
+                url_tags=["tiktok"],
             )
             caption = f"{self.tiktok.EMOJI} **@{video.user}**"
             if isinstance(file, str):
