@@ -109,12 +109,10 @@ class ErrorHander(commands.Cog):
             logger.warning(util.log_command_format(ctx, extra=str(error)))
             return await self.send(ctx, "warning", str(error), error.kwargs)
 
-        logger.error(
-            f"{ctx.guild} @ {ctx.author} : {ctx.message.content} => {type(error).__name__}: {error}"
-        )
+        # following errors wont return and will log the error
 
         if isinstance(error, exceptions.CommandError):
-            return await self.send(ctx, "error", str(error), error.kwargs)
+            await self.send(ctx, "error", str(error), error.kwargs)
 
         if isinstance(error, commands.NoPrivateMessage):
             try:
@@ -200,6 +198,9 @@ class ErrorHander(commands.Cog):
                     if perms.administrator or ctx.author.id == ctx.bot.owner_id:
                         try:
                             await ctx.reinvoke()
+                            logger.info(util.log_command_format(ctx))
+                            if ctx.guild is not None:
+                                await queries.save_command_usage(ctx)
                             return
                         except Exception as e:
                             return await self.on_command_error(ctx, e)
@@ -225,9 +226,12 @@ class ErrorHander(commands.Cog):
             ):
                 try:
                     await ctx.reinvoke()
+                    logger.info(util.log_command_format(ctx))
+                    if ctx.guild is not None:
+                        await queries.save_command_usage(ctx)
                     return
                 except Exception as e:
-                    await self.on_command_error(ctx, e)
+                    return await self.on_command_error(ctx, e)
             else:
                 await self.send(
                     ctx,
@@ -237,6 +241,10 @@ class ErrorHander(commands.Cog):
 
         else:
             await self.log_and_traceback(ctx, error)
+
+        logger.error(
+            f"{ctx.guild} @ {ctx.author} : {ctx.message.content} => {type(error).__name__}: {error}"
+        )
 
 
 async def setup(bot):
