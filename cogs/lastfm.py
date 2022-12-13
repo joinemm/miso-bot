@@ -1107,13 +1107,22 @@ class LastFm(commands.Cog):
         if warn is not None:
             await warn.delete()
 
-    @fm.command(aliases=["collage"], usage="[album | artist] [timeframe] [size] 'notitle'")
-    async def chart(self, ctx: commands.Context, *args):
+    @fm.command(
+        aliases=["chart"],
+        usage="['album' | 'artist'] [timeframe] [[width]x[height]] ['notitle']",
+    )
+    async def collage(self, ctx: MisoContext, *args):
         """
         Collage of your top albums or artists
 
         Usage:
-            >fm chart [album | artist] [timeframe] [width]x[height] [notitle]
+            >fm chart ['album' | 'artist'] [timeframe] [[width]x[height]] ['notitle']
+
+        Examples:
+            >fm chart (defaults to 3x3 weekly albums)
+            >fm chart 5x5 month
+            >fm chart artist
+            >fm chart 4x5 year notitle
         """
         arguments = parse_chart_arguments(args)
         if arguments["width"] + arguments["height"] > 30:

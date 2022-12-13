@@ -1,8 +1,10 @@
+from dataclasses import dataclass
 import traceback
 from dataclasses import dataclass
 from time import time
 
 import aiohttp
+import discord
 import discord
 import orjson
 from discord import Activity, ActivityType, AllowedMentions, Intents, Status
@@ -13,6 +15,32 @@ from loguru import logger
 from modules import cache, maria, util
 from modules.help import EmbedHelpCommand
 from modules.keychain import Keychain
+
+
+@dataclass
+class LastFmContext:
+    target_user: discord.User | discord.Member
+    targets_author: bool
+    username: str
+
+
+class MisoContext(commands.Context):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lastfmcontext: LastFmContext
+        self.bot: MisoBot
+        self.timer: float
+
+    async def success(self, message: str):
+        await self.send(
+            embed=discord.Embed(
+                description=":white_check_mark: " + message,
+                color=int("77b255", 16),
+            )
+        )
+
+    async def paginate(self, embed: discord.Embed, rows: list[str]):
+        await util.send_as_pages(self, embed, rows)
 
 
 @dataclass
@@ -143,32 +171,33 @@ class MisoBot(commands.AutoShardedBot):
             logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
 
     @staticmethod
-    async def before_any_command(ctx: commands.Context):
+    async def before_any_command(ctx: MisoContext):
         """Runs before any command"""
         if ctx.guild:
             await util.require_chunked(ctx.guild)
-        ctx.timer = time()  # type: ignore
+        ctx.timer = time()
         try:
             await ctx.typing()
         except Forbidden:
             pass
 
     @staticmethod
-    async def check_for_blacklist(ctx: commands.Context):
+    async def check_for_blacklist(ctx: MisoContext):
         """Check command invocation context for blacklist triggers"""
         return await util.is_blacklisted(ctx)
 
     @staticmethod
-    async def cooldown_check(ctx: commands.Context):
+    async def cooldown_check(ctx: MisoContext):
         """Global bot cooldown to prevent spam"""
         # prevent users getting rate limited when help command does filter_commands()
         if str(ctx.invoked_with).lower() == "help":
             return True
 
         bucket = ctx.bot.global_cd.get_bucket(ctx.message)
-        retry_after = bucket.update_rate_limit()
-        if retry_after:
-            raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.member)
+        if bucket:
+            retry_after = bucket.update_rate_limit()
+            if retry_after:
+                raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.member)
         return True
 
     @property
