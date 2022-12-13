@@ -6,7 +6,7 @@ from enum import Enum
 import aiohttp
 import arrow
 import orjson
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from loguru import logger
 
 from modules import exceptions
@@ -37,7 +37,7 @@ class LastFmImage:
         return cls(url.split("/")[-1].split(".")[0])
 
     def _get_res(self, res: str):
-        return self.CDN_BASE_URL + res + self.hash
+        return self.CDN_BASE_URL + res + self.hash + ".jpg"
 
     def is_missing(self):
         return self.hash == self.MISSING_IMAGE_HASH
@@ -366,23 +366,23 @@ class LastFmApi:
             return soup
 
     @staticmethod
-    def get_library_playcounts(soup: BeautifulSoup) -> list[tuple[str, int]]:
+    def get_library_playcounts(soup: BeautifulSoup | Tag) -> list[tuple[int, str]]:
         """Scrape a listing page for playcounts."""
         results = []
         for row in soup.select(".chartlist-row"):
             name = row.select_one(".chartlist-name a")
-            playcount = row.select_one("chartlist-count-bar-value")
+            playcount = row.select_one(".chartlist-count-bar-value")
             if name and playcount:
                 results.append(
                     (
-                        name.attrs["title"],
                         int(playcount.get_text().split()[0].replace(",", "")),
+                        name.text,
                     )
                 )
 
         return results
 
-    async def get_additional_library_pages(self, soup: BeautifulSoup, url: str):
+    async def get_additional_library_pages(self, soup: BeautifulSoup, url: str) -> list:
         """Check for pagination on listing page and fetch all the remaining pages."""
         pages = soup.select(".pagination-page")
         if not pages:

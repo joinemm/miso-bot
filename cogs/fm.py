@@ -1,8 +1,7 @@
-from dataclasses import dataclass
 import io
 import math
 import re
-import urllib.parse
+from dataclasses import dataclass
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Annotated, Literal, Optional, Union
 
@@ -78,6 +77,25 @@ class ChartSizeArgument:
                 return ChartSize(*map(lambda n: int(n), argument.split("x")))
             except ValueError:
                 raise commands.BadArgument(f"Cannot convert `{argument}` to size")
+
+
+class StrOrNp:
+    def extract(self, data: dict):
+        raise NotImplementedError
+
+    async def convert(self, ctx: MisoContext, argument: str):
+        print(argument)
+        if argument.lower() == "np":
+            assert isinstance(ctx.cog, LastFm)
+            data = await ctx.cog.api.user_get_now_playing(ctx.lastfmcontext.username)
+            return self.extract(data)
+        else:
+            return argument
+
+
+class ArtistArgument(StrOrNp):
+    def extract(self, data: dict):
+        return data["artist"]["#text"]
 
 
 class LastFm(commands.Cog):
@@ -489,7 +507,7 @@ class LastFm(commands.Cog):
             Annotated[ArtistSubcommand, ArtistSubcommandArgument]
         ] = ArtistSubcommand.OVERVIEW,
         *,
-        artist: str,
+        artist: Annotated[str, ArtistArgument],
     ):
         """
         See top tracks, albums or overview for specific artist
@@ -498,9 +516,9 @@ class LastFm(commands.Cog):
             >fm artist [timeframe] [toptracks | topalbums | profile] <artist name>
 
         Examples:
-            >fm artist weekly toptracks metallica
+            >fm artist weekly toptracks bts
             >fm artist talb dreamcatcher
-            >fm artist bts
+            >fm artist mamamoo
         """
         # dumb type checker doesnt get it
         if TYPE_CHECKING:
@@ -510,66 +528,35 @@ class LastFm(commands.Cog):
             case ArtistSubcommand.OVERVIEW:
                 await self.artist_overview(ctx, timeframe, artist)
             case ArtistSubcommand.TOPALBUMS:
-                await self.artist_topalbums(ctx, timeframe, artist)
+                await self.artist_top(ctx, timeframe, artist, "albums")
             case ArtistSubcommand.TOPTRACKS:
-                await self.artist_toptracks(ctx, timeframe, artist)
+                await self.artist_top(ctx, timeframe, artist, "tracks")
 
     # helpers
 
     async def artist_overview(self, ctx: MisoContext, timeframe: Period, artist: str):
-        albums = []
-        tracks = []
         artistinfo = await self.api.artist_get_info(
             artist, ctx.lastfmcontext.username, autocorrect=True
         )
-        url = f"https://last.fm/user/{ctx.lastfmcontext.username}/library/music/{urllib.parse.quote_plus(artist)}"
-        soup = await self.api.scrape_page(url, params={"date_preset": timeframe.web_format()})
+
+        artist_url_format = artistinfo["url"].split("/")[-1]
+        url = f"https://last.fm/user/{ctx.lastfmcontext.username}/library/music/{artist_url_format}?date_preset={timeframe.web_format()}"
+        soup = await self.api.scrape_page(url, authenticated=True)
 
         try:
-            albumsdiv, tracksdiv = soup.findAll("tbody", {"data-playlisting-add-entries": ""})[:2]
+            albumsdiv, tracksdiv = soup.select(".chartlist", limit=2)
         except ValueError:
-            artist_escaped = discord.utils.escape_markdown(artist)
-            if timeframe == Period.OVERALL:
-                return await ctx.send(f"You have never listened to **{artist_escaped}**!")
-            return await ctx.send(
-                f"You have not listened to **{artist_escaped}** in the past {timeframe}!"
-            )
+            raise_no_artist_plays(artist, timeframe)
 
-        for container, destination in zip([albumsdiv, tracksdiv], [albums, tracks]):
-            items = container.findAll("tr", {"class": "chartlist-row"})
-            for item in items:
-                name = item.find("td", {"class": "chartlist-name"}).find("a").get("title")
-                playcount = item.find("span", {"class": "chartlist-count-bar-value"}).text
-                destination.append((parse_playcount(playcount), name))
-
-        metadata = []
-        for metadata_item in soup.select(".metadata-display"):
-            metadata.append(parse_playcount(metadata_item.text))
-
-        scrobbles, albums_count, tracks_count = metadata
+        albums = self.api.get_library_playcounts(albumsdiv)
+        tracks = self.api.get_library_playcounts(tracksdiv)
 
         img = soup.select_one("span.library-header-image img")
         header = soup.select_one("h2.library-header-title")
         formatted_name = header.text.strip() if header else artist
 
-        listeners = artistinfo["stats"]["listeners"]
-        globalscrobbles = artistinfo["stats"]["playcount"]
-        similar = [x["name"] for x in artistinfo["similar"]["artist"]]
-        tags = [x["name"] for x in artistinfo["tags"]["tag"]]
-
-        crownstate = ""
-        if ctx.guild:
-            crown_holder_id = await self.bot.db.fetch_value(
-                """
-                SELECT user_id FROM artist_crown WHERE guild_id = %s AND artist_name = %s
-                """,
-                ctx.guild.id,
-                formatted_name,
-            )
-            if crown_holder_id == ctx.lastfmcontext.target_user.id:
-                crownstate = " :crown:"
-
         content = discord.Embed()
+
         if img:
             image = LastFmImage.from_url(img.attrs["src"])
             content.set_thumbnail(url=image.as_full())
@@ -583,36 +570,93 @@ class LastFm(commands.Cog):
                 else "Overview"
             ),
             icon_url=ctx.lastfmcontext.target_user.display_avatar.url,
-            url=f"{url}?date_preset={timeframe.web_format()}",
+            url=url,
         )
 
-        content.add_field(name="Listeners", value=f"**{listeners}**")
-        content.add_field(name="Scrobbles", value=f"**{globalscrobbles}**")
-        content.add_field(name="Your scrobbles", value=f"**{scrobbles}**{crownstate}")
+        metadata = []
+        for metadata_item in soup.select(".metadata-display"):
+            metadata.append(parse_playcount(metadata_item.text))
+
+        scrobbles, albums_count, tracks_count = metadata
+
+        crownstate = ""
+        if ctx.guild:
+            crown_holder_id = await self.bot.db.fetch_value(
+                """
+                SELECT user_id FROM artist_crown WHERE guild_id = %s AND artist_name = %s
+                """,
+                ctx.guild.id,
+                formatted_name,
+            )
+            if crown_holder_id == ctx.lastfmcontext.target_user.id:
+                crownstate = ":crown: "
+
+        content.add_field(name="Your plays", value=f"**{crownstate}{scrobbles}**")
+
+        listeners = int(artistinfo["stats"]["listeners"])
+        content.add_field(name="Worldwide listeners", value=f"**{listeners:,}**")
+
+        globalscrobbles = int(artistinfo["stats"]["playcount"])
+        content.add_field(name="Worldwide plays", value=f"**{globalscrobbles:,}**")
+
+        album_ranking = [f"**{name}** • {plays}" for (plays, name) in albums[:5]]
+        track_ranking = [f"**{name}** • {plays}" for (plays, name) in tracks[:5]]
+        longest_line = len(max(album_ranking, key=len)) + len(max(track_ranking, key=len))
+        render_inline = longest_line < 80
+
         content.add_field(
-            name=f":cd: {albums_count} Albums",
-            value="\n".join(self.ranked_list(albums[:3])),
-            inline=True,
+            name=f":cd: {albums_count} Albums heard",
+            value=">>> " + "\n".join(album_ranking),
+            inline=render_inline,
         )
         content.add_field(
-            name=f":musical_note: {tracks_count} Tracks",
-            value="\n".join(self.ranked_list(tracks[:3])),
-            inline=True,
+            name=f":musical_note: {tracks_count} Tracks heard",
+            value=">>> " + "\n".join(track_ranking),
+            inline=render_inline,
         )
 
-        if similar:
-            content.add_field(name="Similar artists", value=", ".join(similar), inline=False)
+        content.description = (
+            artistinfo["bio"]["summary"].split("<a href")[0].strip().replace("\n\n\n", "\n\n")
+        )
 
-        content.description = artistinfo["bio"]
-        content.set_footer(text=f"{', '.join(tags)}")
+        content.set_footer(text=", ".join([x["name"] for x in artistinfo["tags"]["tag"]]))
 
         await ctx.send(embed=content)
 
-    async def artist_topalbums(self, ctx: MisoContext, timeframe: Period, artist: str):
-        pass
+    async def artist_top(
+        self,
+        ctx: MisoContext,
+        timeframe: Period,
+        artist: str,
+        data_type: Literal["tracks", "albums"],
+    ):
+        artistinfo = await self.api.artist_get_info(
+            artist, ctx.lastfmcontext.username, autocorrect=True
+        )
 
-    async def artist_toptracks(self, ctx: MisoContext, timeframe: Period, artist: str):
-        pass
+        artist_url_format = artistinfo["url"].split("/")[-1]
+        url = f"https://last.fm/user/{ctx.lastfmcontext.username}/library/music/{artist_url_format}/+{data_type}?date_preset={timeframe.web_format()}"
+        soup = await self.api.scrape_page(url, authenticated=True)
+
+        formatted_name = artistinfo["name"]
+        row_items = self.api.get_library_playcounts(soup)
+        row_items += await self.api.get_additional_library_pages(soup, url)
+
+        img_tag = soup.select_one(".chartlist-image .cover-art img")
+        image = LastFmImage.from_url(img_tag.attrs["src"]) if img_tag else None
+
+        await self.paginated_embed(
+            ctx,
+            self.ranked_list(row_items),
+            f"{formatted_name} — "
+            + (
+                f"{timeframe.display().capitalize()} top {data_type}"
+                if timeframe != timeframe.OVERALL
+                else f"Top {data_type}"
+            ),
+            image,
+            footer=f"Total {artistinfo['stats']['userplaycount']} plays across {len(row_items)} {data_type}",
+        )
 
     @fm.command(name="cover", aliases=["art"])
     async def album_cover(self, ctx: MisoContext):
@@ -693,7 +737,7 @@ class LastFm(commands.Cog):
             data = await self.api.user_get_top_albums(
                 ctx.lastfmcontext.username, timeframe, size.count
             )
-            for album in data["albums"]:
+            for album in data["album"]:
                 name = album["name"]
                 artist = album["artist"]["name"]
                 plays = album["playcount"]
@@ -991,3 +1035,12 @@ def format_playcount(count: int):
 
 def parse_playcount(text: str):
     return int(text.split()[0].replace(",", ""))
+
+
+def raise_no_artist_plays(artist: str, timeframe: Period):
+    artist_escaped = discord.utils.escape_markdown(artist)
+    raise exceptions.CommandInfo(
+        f"You have never listened to **{artist_escaped}**!"
+        if timeframe == Period.OVERALL
+        else f"You have not listened to **{artist_escaped}** in the past {timeframe}!"
+    )
