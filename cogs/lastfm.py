@@ -1383,14 +1383,13 @@ class LastFm(commands.Cog):
         content = discord.Embed()
         content.set_author(
             name=f"What is {ctx.guild.name} listening to?",
-            icon_url=ctx.guild.icon.replace(size=64),
+            icon_url=ctx.guild.icon,
         )
-        content.colour = int(
-            await util.color_from_image_url(
-                self.bot.session, str(ctx.guild.icon.replace(size=64))
-            ),
-            16,
-        )
+        if ctx.guild.icon:
+            content.colour = int(
+                await util.color_from_image_url(self.bot.session, str(ctx.guild.icon)),
+                16,
+            )
         content.set_footer(
             text=f"{total_listening} / {total_linked} Members are listening to music"
         )
@@ -1439,14 +1438,13 @@ class LastFm(commands.Cog):
         content = discord.Embed()
         content.set_author(
             name=f"What has {ctx.guild.name} been listening to?",
-            icon_url=ctx.guild.icon.replace(size=64),
+            icon_url=ctx.guild.icon,
         )
-        content.colour = int(
-            await util.color_from_image_url(
-                self.bot.session, str(ctx.guild.icon.replace(size=64))
-            ),
-            16,
-        )
+        if ctx.guild.icon:
+            content.colour = int(
+                await util.color_from_image_url(self.bot.session, str(ctx.guild.icon)),
+                16,
+            )
         content.set_footer(
             text=f"{total_listening} / {total_linked} Members are listening to music right now"
         )
@@ -1493,7 +1491,7 @@ class LastFm(commands.Cog):
         content = discord.Embed()
         content.set_author(
             name=f"{ctx.guild} — {formatted_timeframe} top artists",
-            icon_url=ctx.guild.icon.replace(size=64),
+            icon_url=ctx.guild.icon,
         )
         content.set_footer(text=f"Taking into account top 100 artists of {total_users} members")
         for i, (artistname, playcount) in enumerate(
@@ -1550,7 +1548,7 @@ class LastFm(commands.Cog):
         content = discord.Embed()
         content.set_author(
             name=f"{ctx.guild} — {formatted_timeframe} top albums",
-            icon_url=ctx.guild.icon.replace(size=64),
+            icon_url=ctx.guild.icon,
         )
         content.set_footer(text=f"Taking into account top 100 albums of {total_users} members")
         for i, (albumname, albumdata) in enumerate(
@@ -1607,7 +1605,7 @@ class LastFm(commands.Cog):
         content = discord.Embed()
         content.set_author(
             name=f"{ctx.guild} — {formatted_timeframe} top tracks",
-            icon_url=ctx.guild.icon.replace(size=64),
+            icon_url=ctx.guild.icon,
         )
         content.set_footer(text=f"Taking into account top 100 tracks of {total_users} members")
         for i, (trackname, trackdata) in enumerate(

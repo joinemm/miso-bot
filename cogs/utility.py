@@ -16,6 +16,7 @@ from loguru import logger
 
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
+from modules.shazam import Shazam
 
 papago_pairs = [
     "ko/en",
@@ -60,6 +61,7 @@ class Utility(commands.Cog):
         self.icon = "🔧"
         self.reminder_list = []
         self.cache_needs_refreshing = True
+        self.shazam_client = Shazam(bot)
         with open("data/weather.json") as f:
             self.weather_constants = json.load(f)
 
@@ -206,6 +208,43 @@ class Utility(commands.Cog):
                 await self.resolve_bang(ctx, bang, args)
         except ValueError:
             await ctx.send("Please provide a query to search")
+
+    @commands.command()
+    async def shazam(self, ctx: commands.Context, url_or_attachment: Optional[str]):
+        """Find song name from video or audio"""
+        if url_or_attachment:
+            result = await self.shazam_client.recognize_from_url(url_or_attachment)
+        elif ctx.message.attachments:
+            attachment = await ctx.message.attachments[0].to_file()
+            result = await self.shazam_client.recognize_file(attachment.fp.read())
+        elif (
+            ctx.message.reference
+            and ctx.message.reference.message_id
+            and isinstance(ctx.channel, (discord.Thread, discord.TextChannel))
+        ):
+            reply_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+            if not reply_message.attachments:
+                raise exceptions.CommandWarning("Referenced message has no attachments")
+            attachment = await reply_message.attachments[0].to_file()
+            result = await self.shazam_client.recognize_file(attachment.fp.read())
+        else:
+            return await util.send_command_help(ctx)
+
+        if result is None:
+            raise exceptions.CommandWarning("I was unable to recognize any music from this")
+
+        metadata = "\n".join([f'`{m["title"]}:` {m["text"]}' for m in result.metadata])
+        content = discord.Embed(
+            description=f":notes: ***{result.song}*** by **{result.artist}**\n>>> {metadata}",
+            color=int("1b64f7", 16),
+        )
+        content.set_author(
+            name="Shazam result",
+            url=result.url,
+            icon_url="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Shazam_icon.svg/84px-Shazam_icon.svg.png",
+        )
+        content.set_thumbnail(url=result.cover_art)
+        await ctx.send(embed=content)
 
     @commands.command(usage="<'in' | 'on'> <time | YYYY/MM/DD [HH:mm:ss]> to <something>")
     async def remindme(self, ctx: commands.Context, pre, *, arguments):
@@ -1024,4 +1063,7 @@ class WeatherUnitToggler(discord.ui.View):
             item.disabled = True  # type: ignore
 
         if self.message:
-            await self.message.edit(view=None)
+            try:
+                await self.message.edit(view=None)
+            except discord.NotFound:
+                pass
