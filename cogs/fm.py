@@ -1,5 +1,6 @@
 import io
 import math
+import os
 import re
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -67,16 +68,21 @@ class ChartSize:
     def count(self):
         return self.width * self.height
 
+    def __str__(self):
+        return f"{self.width}x{self.height}"
+
 
 class ChartSizeArgument:
     async def convert(self, ctx: MisoContext, argument: str):
         try:
-            return ChartSize(int(argument), int(argument))
+            size = ChartSize(int(argument), int(argument))
         except ValueError:
             try:
-                return ChartSize(*map(lambda n: int(n), argument.split("x")))
+                size = ChartSize(*map(lambda n: int(n), argument.split("x")))
             except ValueError:
                 raise commands.BadArgument(f"Cannot convert `{argument}` to size")
+
+        return size
 
 
 class StrOrNp:
@@ -109,7 +115,7 @@ class LastFm(commands.Cog):
         self.bot: MisoBot = bot
         self.api = LastFmApi(bot)
 
-        with open("html/fm_chart.min.html", "r", encoding="utf-8") as file:
+        with open("html/fm_chart.html", "r", encoding="utf-8") as file:
             self.chart_html = file.read().replace("\n", "")
 
     @commands.group(aliases=["lastfm", "lfm", "lf"])
@@ -675,13 +681,13 @@ class LastFm(commands.Cog):
 
     @fm.command(
         aliases=["chart"],
-        usage="['album' | 'artist' | 'recent'] [timeframe] [[width]x[height]] ['notitle']",
+        usage="['album' | 'artist' | 'recent'] [timeframe] [[width]x[height]] ['notitle' | 'topster'] ['padded']",
     )
     async def collage(
         self,
         ctx: MisoContext,
         *args: Union[
-            Literal["album", "artist", "recent", "notitle", "recents"],
+            Literal["album", "artist", "recent", "notitle", "recents", "padded", "topster"],
             Annotated[Period, PeriodArgument],
             Annotated[ChartSize, ChartSizeArgument],
         ],
@@ -690,13 +696,14 @@ class LastFm(commands.Cog):
         Collage of your top albums or artists
 
         Usage:
-            >fm chart ['album' | 'artist' | 'recent'] [timeframe] [[width]x[height]] ['notitle']
+            >fm chart ['album' | 'artist' | 'recent'] [timeframe] [[width]x[height]] ['notitle' | 'topster'] ['padded']
 
         Examples:
             >fm chart (defaults to 3x3 weekly albums)
             >fm chart 5x5 month
             >fm chart artist
             >fm chart 4x5 year notitle
+            >fm chart 5x5 3month padded topster
         """
         timeframe = Period.WEEK
         size = ChartSize(3, 3)
@@ -704,9 +711,15 @@ class LastFm(commands.Cog):
             if isinstance(arg, Period):
                 timeframe = arg
             elif isinstance(arg, ChartSize):
+                if arg.width > 12 or arg.height > 12:
+                    raise exceptions.CommandWarning(
+                        "The maximum width/height of the collage is `12`"
+                    )
                 size = arg
 
         chart_nodes = []
+        topster_labels = []
+        topster = "topster" in args
         if "artist" in args:
             chart_title = "top artist"
             data = await self.api.user_get_top_artists(
@@ -717,76 +730,125 @@ class LastFm(commands.Cog):
             )
             for i, artist in enumerate(data["artist"]):
                 name = artist["name"]
-                plays = artist["playcount"]
+                plays = int(artist["playcount"])
                 chart_nodes.append(
-                    (scraped_images[i], f"{plays} {'play' if plays == 1 else 'plays'}<br>{name}")
+                    (
+                        scraped_images[i],
+                        f"<strong>{name}</strong></br>{plays} {'play' if plays == 1 else 'plays'}",
+                    )
                 )
+                if topster:
+                    if i > 0 and i % size.width == 0:
+                        topster_labels.append(dict(text="</br>"))
+                    topster_labels.append(dict(text=f"<li>{i+1}. {name}</li>"))
 
         elif "recent" in args or "recents" in args:
             chart_title = "recent tracks"
             data = await self.api.user_get_recent_tracks(ctx.lastfmcontext.username, size.count)
-            for track in data["track"]:
+            for i, track in enumerate(data["track"]):
                 name = track["name"]
                 artist = track["artist"]["#text"]
                 chart_nodes.append(
-                    (LastFmImage.from_url(track["image"][0]["#text"]), f"{name} — {artist}")
+                    (
+                        LastFmImage.from_url(track["image"][0]["#text"]),
+                        f"<strong>{name}</br>{artist}</strong>",
+                    )
                 )
+                if topster:
+                    if i > 0 and i % size.width == 0:
+                        topster_labels.append(dict(text="</br>"))
+                    topster_labels.append(dict(text=f"<li>{i+1}. {artist} — {name}</li>"))
 
         else:
             chart_title = "top album"
             data = await self.api.user_get_top_albums(
                 ctx.lastfmcontext.username, timeframe, size.count
             )
-            for album in data["album"]:
+            for i, album in enumerate(data["album"]):
                 name = album["name"]
                 artist = album["artist"]["name"]
-                plays = album["playcount"]
+                plays = int(album["playcount"])
                 chart_nodes.append(
                     (
                         LastFmImage.from_url(album["image"][0]["#text"]),
-                        f"{plays} {'play' if plays == 1 else 'plays'}<br>{name} — {artist}",
+                        f"<strong>{name}</br>{artist}</strong></br>{plays} {'play' if plays == 1 else 'plays'}",
                     )
                 )
+                if topster:
+                    if i > 0 and i % size.width == 0:
+                        topster_labels.append(dict(text="</br>"))
+                    topster_labels.append(dict(text=f"<li>{i+1}. {artist} — {name}</li>"))
 
         buffer = await self.chart_factory(
             chart_nodes,
             size,
-            show_labels="notitle" in args,
+            hide_labels="notitle" in args or topster,
+            use_padding="padded" in args,
+            topster_labels=topster_labels,
         )
 
-        caption = f"`{util.displayname(ctx.lastfmcontext.target_user, escape=False)} {timeframe.display()} {size} {chart_title} collage`"
+        caption = f"**{util.displayname(ctx.lastfmcontext.target_user)} — {timeframe.display()} {size} {chart_title} collage**"
         filename = f"miso_collage_{ctx.lastfmcontext.username}_{timeframe}_{arrow.now().int_timestamp}.jpg"
 
         await ctx.send(caption, file=discord.File(fp=buffer, filename=filename))
 
     async def chart_factory(
-        self, chart_nodes: list[tuple[LastFmImage, str]], size: ChartSize, show_labels=True
+        self,
+        chart_nodes: list[tuple[LastFmImage, str]],
+        size: ChartSize,
+        hide_labels=True,
+        use_padding=False,
+        topster_labels: list[str] = list(),
     ):
-        if show_labels:
-            img_div_template = '<div class="art"><img src="{0}"><p class="label">{1}</p></div>'
-        else:
-            img_div_template = '<div class="art"><img src="{0}"></div>'
 
-        image_size = 300
-        img_divs = []
+        resolution = 1080
+        font_size = 2.5
+        if size.count > 25:
+            font_size = 1.75
+        if size.count > 42:
+            resolution = 1440
+        if size.count > 49:
+            font_size = 1.25
+        if size.count > 69:
+            resolution = 2160
+        if size.count > 104:
+            font_size = 1.0
+
+        albums = []
         for (image, label) in chart_nodes:
-            # TODO: breakpoints for different res
-            img_divs.append(img_div_template.format((image.as_300(), label)))
+            albums.append(
+                {"image_url": image.as_full(), "label": label if not hide_labels else ""}
+            )
 
-        replacements = {
-            "WIDTH": image_size * size.width,
-            "HEIGHT": image_size * size.height,
-            "CHART_ITEMS": "\n".join(img_divs),
+        image_width = (
+            resolution
+            if size.width >= size.height
+            else int(resolution * (size.width / size.height))
+        )
+
+        render_context = {
+            "ROWS": size.height,
+            "COLUMNS": size.width,
+            "ALBUMS": albums,
+            "USE_TOPSTER": bool(topster_labels),
+            "TOPSTER_LABELS": topster_labels,
+            "TOPSTER_FONT_SIZE": f"{font_size}em",
+            "LABEL_FONT_SIZE": f"{font_size/2}em",
+            "RESOLUTION_WIDTH": f"{image_width}px",
+            "RESOLUTION_HEIGHT": f"{resolution}px" if size.height > size.width else "auto",
+            "WRAP_CLASSES": "with-gaps" if use_padding else "",
+            "BASE_URL": "http://" + os.environ["IMAGE_SERVER_HOST"] + ":3000",
         }
 
         payload = {
-            "html": util.format_html(self.chart_html, replacements),
-            "width": replacements["WIDTH"],
-            "height": replacements["HEIGHT"],
-            "imageFormat": "jpeg",
+            "templateName": "fm_collage",
+            "context": orjson.dumps(render_context).decode(),
+            "imageFormat": "jpg",
+            "width": 1,
+            "height": 1,
         }
 
-        return await util.render_html(self.bot, payload)
+        return await util.render_html(self.bot, payload, endpoint="template")
 
     async def server_lastfm_usernames(
         self, guild: discord.Guild, filter_blacklisted=False

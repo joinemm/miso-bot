@@ -40,7 +40,7 @@ class LastFmImage:
         return self.CDN_BASE_URL + res + self.hash + ".jpg"
 
     def is_missing(self):
-        return self.hash == self.MISSING_IMAGE_HASH
+        return self.hash in [self.MISSING_IMAGE_HASH, ""]
 
     def as_34s(self):
         return self._get_res("34s/")
@@ -454,17 +454,14 @@ class LastFmApi:
         self,
         username: str,
         amount,
-        period: Period | None = None,
+        period: Period,
     ) -> list[LastFmImage]:
         """Get image hashes for user's top n artists"""
-        url: str = f"https://www.last.fm/user/{username}/library/artists"
-        params = {"date_preset": period.web_format()} if period else {}
-
+        url: str = f"https://www.last.fm/user/{username}/library/artists?date_preset={period.web_format()}"
         tasks = []
         for i in range(1, math.ceil(amount / 50) + 1):
-            if i > 1:
-                params["page"] = str(i)
-            tasks.append(asyncio.ensure_future(self.scrape_page(url, params, authenticated=i > 1)))
+            params = {"page": str(i)} if i > 1 else None
+            tasks.append(self.scrape_page(url, params, authenticated=True))
 
         images = []
         soup: BeautifulSoup
@@ -472,7 +469,7 @@ class LastFmApi:
             if len(images) >= amount:
                 break
 
-            imagedivs = soup.select(".chartlist-image img")
+            imagedivs = soup.select(".chartlist-image .avatar img")
             images += [LastFmImage.from_url(div.attrs["src"]) for div in imagedivs]
 
         return images

@@ -1,0 +1,33 @@
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <link rel='stylesheet' href='{{BASE_URL}}/static/css/fm_collage.css' />
+  </head>
+  <body>
+    <div class='layout'>
+      <div
+        class='wrapper {{WRAP_CLASSES}}'
+        style='width: {{RESOLUTION_WIDTH}}; height: {{RESOLUTION_HEIGHT}}; grid-template-columns: repeat({{COLUMNS}}, 1fr); grid-template-rows: repeat({{ROWS}}, 1fr);'
+      >
+        {{#each ALBUMS}}
+          <div class='box' style='background-image: url("{{this.image_url}}")'>
+            <p class='label' style='font-size: {{TOPSTER_FONT_SIZE}}'>
+              {{{this.label}}}
+            </p>
+          </div>
+        {{/each}}
+      </div>
+      {{#if USE_TOPSTER}}
+        <div class='topster-wrapper {{WRAP_CLASSES}}'>
+          <ul class='topster' style='font-size: {{TOPSTER_FONT_SIZE}}'>
+            {{#each TOPSTER_LABELS}}
+              {{{this.text}}}
+            {{/each}}
+          </ul>
+        </div>
+      {{/if}}
+    </div>
+  </body>
+</html>
