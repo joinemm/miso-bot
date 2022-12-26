@@ -84,8 +84,6 @@ discord.py @ git+https://github.com/Rapptz/discord.py.git
     # via -r requirements.in
 durations-nlp==1.0.1
     # via -r requirements.in
-exceptiongroup==1.0.4
-    # via pytest
 fonttools==4.38.0
     # via matplotlib
 frozenlist==1.3.1
@@ -200,8 +198,6 @@ sniffio==1.3.0
     # via anyio
 soupsieve==2.3.2.post1
     # via beautifulsoup4
-tomli==2.0.1
-    # via pytest
 tweepy[async]==4.12.0
     # via -r requirements.in
 typing-extensions==4.4.0
@@ -214,7 +210,7 @@ uvloop==0.17.0
     # via -r requirements.in
 webencodings==0.5.1
     # via bleach
-wheel==0.37.1
+wheel==0.38.1
     # via astunparse
 wrapt==1.14.1
     # via prometheus-async
