@@ -1,0 +1,226 @@
+@import url('https://fonts.googleapis.com/css?family=Montserrat:400,600,700|Poor Story');
+
+:root {
+    --bg: #23272a;
+    --fg: #ffffff;
+    --fg-dim: #bbb;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    font-family: 'Montserrat';
+    margin: 0;
+    padding: 0;
+    z-index: -2;
+}
+
+.layout {
+    width: 540px;
+    padding: 10px;
+}
+
+.card {
+    border-radius: 25px;
+    overflow: hidden;
+}
+
+.bg {
+    height: 75px;
+}
+
+.lightmode {
+    --bg: #ffffff;
+    --fg: #000000;
+    --fg-dim: #23272a;
+}
+
+.bg-image {
+    height: 200px;
+    background-size: cover;
+    background-position: center;
+}
+
+.border {
+    margin: 10px;
+    border: none;
+    padding: 5px;
+    border-radius: 30px;
+    background-color: #000;
+    position: relative;
+}
+
+.golden,
+.golden:before {
+    background: linear-gradient(40deg, #462523 0, #cb9b51 22%, #f6e27a 45%, #f6f2c0 50%, #f6e27a 55%, #cb9b51 78%, #462523 100%);
+}
+
+.silver,
+.silver:before {
+    background: linear-gradient(40deg, #454565 0, #a1a1a1 22%, #dedede 45%, #ffffff 50%, #dedede 55%, #a1a1a1 78%, #454565 100%);
+}
+
+.diamond,
+.diamond:before {
+    background: linear-gradient(40deg, #08969f 0, #51bac9 22%, #94d9f0 45%, #eeeeff 50%, #94d9f0 55%, #51bac9 78%, #08969f 100%);
+}
+
+.purple,
+.purple:before {
+    background: linear-gradient(43deg, #4158D0 0%, #C850C0 46%, #FFCC70 100%);
+}
+
+.border:before {
+    z-index: -1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 0;
+    border-radius: 30px;
+    filter: blur(10px);
+}
+
+.profile {
+    background: var(--bg);
+    padding: 10px;
+    box-shadow: 0 0 40px 0px rgba(0, 0, 0, 0.3);
+    position: relative;
+    width: 100%;
+    color: var(--fg);
+}
+
+.profile__account {
+    align-self: center;
+    flex: 1;
+    padding-left: 138px;
+}
+
+.profile__badges {
+    margin-left: 30px;
+    max-width: 130px;
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.profile__header {
+    display: flex;
+    min-height: 32px;
+    margin-bottom: 0;
+    justify-content: space-between;
+}
+
+.profile__icon {
+    font-size: 1.5em;
+    margin-right: 10px;
+    padding-top: 3px;
+}
+
+.profile__icon--gradient {
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.profile__icon--blue {
+    color: #68b6ef;
+}
+
+.profile__icon--pink {
+    color: #ff7477;
+}
+
+.profile__icon--yellow {
+    color: #f6bc66;
+}
+
+.profile__key {
+    font-family: "Montserrat", sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    text-align: center;
+}
+
+.profile__picture {
+    background: var(--bg);
+    border-radius: 50%;
+    border: 10px solid var(--bg);
+    height: 128px;
+    position: absolute;
+    top: -40px;
+    width: 128px;
+}
+
+.profile__picture:before {
+    border-radius: 50%;
+    box-shadow: 0 0 40px 0px rgba(0, 0, 0, 0.3);
+    content: "";
+    height: calc(100% + 20px);
+    left: -10px;
+    position: absolute;
+    top: -10px;
+    width: calc(100% + 20px);
+    z-index: -1;
+}
+
+.profile__picture img {
+    border-radius: 50%;
+    height: 100%;
+    width: 100%;
+}
+
+.profile__stat {
+    border-right: 1px solid var(--fg-dim);
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    margin: 6px 0;
+    padding: 4px 4px;
+}
+
+.profile__stat:last-of-type {
+    border-right: none;
+}
+
+.profile__stats {
+    display: flex;
+    justify-content: space-between;
+}
+
+.profile__username {
+    font-family: "Montserrat", sans-serif;
+    font-weight: 600;
+    margin: 0;
+    text-align: left;
+}
+
+.profile__tagline {
+    font-family: "Poor Story", Twemoji, sans-serif;
+    font-weight: 400;
+    margin: 4px;
+    font-size: 15px;
+    padding-left: 128px;
+    text-align: left;
+    color: var(--fg);
+}
+
+.profile__discriminator {
+    color: var(--fg-dim);
+}
+
+.profile__value {
+    font-family: "Montserrat", sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.profile__info {
+    padding-top: 10px;
+}
