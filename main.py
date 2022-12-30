@@ -63,7 +63,7 @@ extensions = [
     "images",
     "utility",
     "typings",
-    "reddit",
+    # "reddit",
     "crypto",
     "kpop",
 ]
