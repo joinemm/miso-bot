@@ -66,6 +66,7 @@ extensions = [
     # "reddit",
     "crypto",
     "kpop",
+    "tts",
 ]
 
 infrastructure_extensions = [
