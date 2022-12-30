@@ -190,6 +190,14 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
+    async def shardof(self, ctx: commands.Context, guild_id: int):
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            raise exceptions.CommandWarning(f"Guild `{guild_id}` not found")
+
+        await ctx.send(f"**{guild}** is on shard `{guild.shard_id}`")
+
+    @commands.command()
     async def changelog(self, ctx: commands.Context, author="joinemm", repo="miso-bot"):
         """See github commit history"""
         data = await self.get_commits(author, repo)

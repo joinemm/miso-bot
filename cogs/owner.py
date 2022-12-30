@@ -90,6 +90,16 @@ class Owner(commands.Cog):
         await ctx.send("Shutting down... :electric_plug:")
         await self.bot.close()
 
+    @commands.command()
+    async def shardreconnect(self, ctx: commands.Context, shard_id: int):
+        """Disconnect and then reconnect a shard"""
+        shard = self.bot.get_shard(shard_id)
+        if shard is None:
+            return await ctx.send(f":warning: Shard `{shard_id}` not found")
+
+        await shard.reconnect()
+        await util.send_success(ctx, f"Reconnected shard `{shard_id}`")
+
     @commands.group(aliases=["patron"], case_insensitive=True)
     async def donator(self, ctx: commands.Context):
         """Manage sponsors and donations"""
