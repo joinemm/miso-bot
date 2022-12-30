@@ -1,14 +1,19 @@
 import asyncio
+import os
 from typing import Optional, Union
 
 import arrow
 import bleach
 import discord
 import humanize
+import orjson
 from discord.ext import commands
 
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
+from modules.profiles import ProfileEditor
+
+# from modules.ui import RowPaginator
 
 
 class User(commands.Cog):
@@ -325,6 +330,7 @@ class User(commands.Cog):
         rows = []
         medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
         i = 1
+        your_row = None
         if data:
             for user_id, fishy_count in data:
                 if global_data:
@@ -340,7 +346,10 @@ class User(commands.Cog):
                 else:
                     ranking = f"`#{i:2}`"
 
-                rows.append(f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy")
+                row = f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy"
+                rows.append(row)
+                if user == ctx.author and i > 15:
+                    your_row = row
                 i += 1
         if not rows:
             raise exceptions.CommandInfo("Nobody has any fish yet!")
@@ -349,6 +358,9 @@ class User(commands.Cog):
             title=f":fish: {'Global' if global_data else ctx.guild.name} fishy leaderboard",
             color=int("55acee", 16),
         )
+        if your_row:
+            content.add_field(name="You", value=your_row)
+        # await RowPaginator(content, rows, per_page=1).run(ctx)
         await util.send_as_pages(ctx, content, rows)
 
     @leaderboard.command(name="wpm", aliases=["typing"])
@@ -692,6 +704,138 @@ class User(commands.Cog):
             )
         else:
             await ctx.send("You are not married!")
+
+    @commands.command()
+    async def newp(self, ctx, user: Optional[discord.Member] = None):
+        if user is None:
+            user = ctx.author
+
+        assert user is not None
+
+        handlebars_context = await self.create_profile_handlebars_context(ctx, user)
+
+        payload = {
+            "templateName": "profile",
+            "context": orjson.dumps(handlebars_context).decode(),
+            "width": 0,
+            "height": 0,
+            "imageFormat": "png",
+        }
+        buffer = await util.render_html(self.bot, payload, "template")
+        await ctx.send(file=discord.File(fp=buffer, filename=f"profile_{user.name}.png"))
+
+    async def create_profile_handlebars_context(self, ctx, user):
+        if user.bot:
+            description = "I am a bot, BEEP BOOP!"
+        else:
+            description = "..."
+
+        fishy = await self.bot.db.fetch_value(
+            """
+            SELECT fishy_count FROM fishy WHERE user_id = %s
+            """,
+            user.id,
+        )
+
+        tier = await ctx.bot.db.fetch_value(
+            """
+            SELECT donation_tier FROM donator
+            WHERE user_id = %s
+            AND currently_active
+            """,
+            user.id,
+        )
+
+        donator = bool(tier)
+        tier = tier or 0
+
+        tier_gradients = ["", "silver", "golden", "diamond", "purple"]
+
+        def make_badge(icon, color, classes=""):
+            return {"icon": icon, "color": color, "classes": classes}
+
+        member_number = 1
+        for member in ctx.guild.members:
+            if member.joined_at < user.joined_at:
+                member_number += 1
+
+        badges = []
+        if user.id == self.bot.owner_id:
+            badges.append(make_badge("fas fa-code", "#3e70dd"))
+            tier = 4
+
+        if user.bot:
+            badges.append(make_badge("fas fa-robot", "#5865f2"))
+
+        lastfm = await self.bot.db.fetch_row(
+            "SELECT lastfm_username FROM user_settings WHERE user_id = %s",
+            user.id,
+        )
+        if lastfm:
+            badges.append(make_badge("fab fa-lastfm", "#d71a21"))
+
+        if donator:
+            badges.append(
+                make_badge(
+                    "fas fa-gem", "transparent", f"profile__icon--gradient {tier_gradients[tier]}"
+                )
+            )
+
+        profile_data = await self.bot.db.fetch_row(
+            """
+            SELECT description, background_url, border, theme
+            FROM user_profile WHERE user_id = %s
+            """,
+            user.id,
+        )
+
+        if profile_data:
+            description, background_url, border, theme = profile_data
+            # TODO: theme, border
+            if description is not None:
+                description = bleach.clean(description.replace("\n", " "))
+            background_url = background_url or ""
+        else:
+            theme = "dark"
+            border = 0
+            background_url = ""
+        background_color = user.color
+
+        command_uses = await self.bot.db.fetch_value(
+            """
+            SELECT SUM(uses) FROM command_usage WHERE user_id = %s
+            GROUP BY user_id
+            """,
+            user.id,
+        )
+        if not command_uses:
+            command_uses = "N/A"
+
+        handlebars_context = {
+            "BASE_URL": os.environ.get("IMAGE_SERVER_HOST"),
+            "BORDER_CLASS": tier_gradients[border],
+            "BACKGROUND_STYLE": f'background-image: url("{background_url}")'
+            if background_url
+            else f"background-color: {background_color}",
+            "BACKGROUND_CLASS": "bg-image" if background_url else "bg",
+            "AVATAR_URL": user.display_avatar.replace(size=1024, format="png").url,
+            "USERNAME": user.name,
+            "DISCRIMINATOR": user.discriminator,
+            "BIO": description,
+            "MEMBER_NUMBER": member_number,
+            "FISHY_AMOUNT": fishy or 0,
+            "COMMAND_COUNT": str(command_uses),
+            "BADGES": badges,
+            "THEME": theme,
+        }
+
+        return handlebars_context
+
+    @commands.command()
+    async def editnew(self, ctx: commands.Context):
+        """Edit your profile"""
+        handlebars_context = await self.create_profile_handlebars_context(ctx, ctx.author)
+        await ProfileEditor(ctx, handlebars_context).run()
 
 
 async def setup(bot):
