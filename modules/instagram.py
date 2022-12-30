@@ -136,7 +136,7 @@ class Datalama:
         user = data["user"]
         return IgUser(
             user["pk"],
-            user["username"],
+            user["username"] or f"instagram_user_{user['pk']}",
             user["profile_pic_url"],
         )
 

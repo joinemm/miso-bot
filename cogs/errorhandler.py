@@ -105,6 +105,7 @@ class ErrorHander(commands.Cog):
         if isinstance(error, exceptions.CommandInfo):
             logger.info(util.log_command_format(ctx, extra=str(error)))
             return await self.send(ctx, "info", str(error), error.kwargs)
+
         if isinstance(error, exceptions.CommandWarning):
             logger.warning(util.log_command_format(ctx, extra=str(error)))
             return await self.send(ctx, "warning", str(error), error.kwargs)
@@ -114,7 +115,7 @@ class ErrorHander(commands.Cog):
         if isinstance(error, exceptions.CommandError):
             await self.send(ctx, "error", str(error), error.kwargs)
 
-        if isinstance(error, commands.NoPrivateMessage):
+        elif isinstance(error, commands.NoPrivateMessage):
             try:
                 await self.send(ctx, "info", "This command cannot be used in DM", dm=True)
             except discord.HTTPException:
@@ -240,7 +241,7 @@ class ErrorHander(commands.Cog):
                 )
 
         else:
-            await self.log_and_traceback(ctx, error)
+            return await self.log_and_traceback(ctx, error)
 
         logger.error(
             f"{ctx.guild} @ {ctx.author} : {ctx.message.content} => {type(error).__name__}: {error}"
