@@ -15,7 +15,6 @@ import discord
 import regex
 from discord.ext import commands
 from durations_nlp import Duration
-from durations_nlp.exceptions import InvalidTokenError
 from loguru import logger
 from PIL import Image, UnidentifiedImageError
 
@@ -398,10 +397,7 @@ def timefromstring(s):
     :returns : Time in seconds
     """
     s = s.removeprefix("for")
-    try:
-        return int(Duration(s).to_seconds())
-    except InvalidTokenError:
-        return None
+    return int(Duration(s).to_seconds())
 
 
 def stringfromtime(t, accuracy=4):
