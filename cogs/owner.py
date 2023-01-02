@@ -1,5 +1,4 @@
 import asyncio
-from typing import Union
 
 import arrow
 import discord
@@ -25,11 +24,12 @@ class Owner(commands.Cog):
     async def say(
         self,
         ctx: commands.Context,
-        channel: Union[discord.TextChannel, discord.Thread],
+        channel_id: int,
         *,
         message,
     ):
         """Makes the bot say something in the given channel"""
+        channel = self.bot.get_partial_messageable(channel_id)
         await ctx.send(f"Sending message to **{channel.guild}** <#{channel.id}>\n> {message}")
         await channel.send(message)
 
