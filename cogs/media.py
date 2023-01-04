@@ -356,7 +356,7 @@ class Media(commands.Cog):
     async def get_tiktok(self, ctx: commands.Context, *tiktok_links: str):
         """Retrieve video from a tiktok"""
         pattern = r"\bhttps?:\/\/(?:m|www|vm)\.tiktok\.com\/.*\b(?:(?:usr|v|embed|user|video)\/|\?shareId=|\&item_id=)(\d+)\b"
-        vm_pattern = r"\bhttps?:\/\/vm\.tiktok\.com\/.*\b(\S+)\b"
+        vm_pattern = r"\bhttps?:\/\/(?:vm|vt)\.tiktok\.com\/.*\b(\S+)\b"
 
         matches = re.finditer(pattern, "\n".join(tiktok_links))
         vm_matches = re.finditer(vm_pattern, "\n".join(tiktok_links))
