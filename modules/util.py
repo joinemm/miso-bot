@@ -680,10 +680,10 @@ def find_custom_emojis(text):
     return emoji_list
 
 
-async def image_info_from_url(session, url) -> Optional[dict]:
+async def image_info_from_url(session: aiohttp.ClientSession, url) -> Optional[dict]:
     """Return dictionary containing filesize, filetype and dimensions of an image"""
     async with session.get(str(url)) as response:
-        filesize = int(response.headers.get("Content-Length")) / 1024
+        filesize = int(response.headers.get("Content-Length", 0)) / 1024
         filetype = response.headers.get("Content-Type")
         try:
             image = Image.open(io.BytesIO(await response.read()))
