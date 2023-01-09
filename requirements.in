@@ -4,7 +4,7 @@ aiohttp-cors
 aiomysql
 arrow
 async-cse
-asyncpraw
+# asyncpraw
 beautifulsoup4
 bleach
 colorgram.py
@@ -25,4 +25,5 @@ prometheus-async
 markdownify
 lxml
 loguru
+aioredis
 shazamio

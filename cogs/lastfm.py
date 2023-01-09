@@ -2630,7 +2630,7 @@ async def fetch_html(bot: MisoBot, url: str, params: Optional[dict] = None):
     async with bot.session.get(url, params=params, headers=headers) as response:
         data: str = await response.text()
         if not response.ok:
-            logger.error(f"Lastfm error {response.status}, {data}")
+            logger.error(f"Lastfm error {response.status}")
             return "", data
         else:
             return data, None

@@ -11,6 +11,7 @@ from loguru import logger
 from modules import cache, maria, util
 from modules.help import EmbedHelpCommand
 from modules.keychain import Keychain
+from modules.redis import Redis
 
 
 class MisoBot(commands.AutoShardedBot):
@@ -58,6 +59,7 @@ class MisoBot(commands.AutoShardedBot):
         self.keychain = Keychain()
         self.version = "5.1"
         self.extensions_loaded = False
+        self.redis = Redis()
         self.register_hooks()
 
     async def setup_hook(self):
@@ -66,6 +68,7 @@ class MisoBot(commands.AutoShardedBot):
             json_serialize=lambda x: orjson.dumps(x).decode(),
             timeout=aiohttp.ClientTimeout(total=30),
         )
+        await self.redis.start()
         await self.db.initialize_pool()
         await self.cache.initialize_settings_cache()
         await self.load_all_extensions()

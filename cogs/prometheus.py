@@ -48,6 +48,10 @@ class Prometheus(commands.Cog):
             "miso_cached_user_count",
             "Total amount of users cached",
         )
+        self.ig_cache_hits = Counter(
+            "miso_redis_instagram_hits",
+            "How many requests hit the cache instead of datalama",
+        )
 
     async def cog_load(self):
         self.log_system_metrics.start()
@@ -88,6 +92,9 @@ class Prometheus(commands.Cog):
     @log_cache_contents.before_loop
     async def task_waiter(self):
         await self.bot.wait_until_ready()
+
+    async def increment_instagram_cache_hits(self):
+        self.ig_cache_hits.inc()
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context):
