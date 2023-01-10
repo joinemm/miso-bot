@@ -56,7 +56,7 @@ extensions = [
     "mod",
     "owner",
     "notifications",
-    "miscellaneous",
+    "misc",
     "media",
     "lastfm",
     "user",

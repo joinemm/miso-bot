@@ -17,7 +17,7 @@ from modules.misobot import MisoBot
 EMOJIFIER_HOST = os.environ.get("EMOJIFIER_HOST")
 
 
-class Miscellaneous(commands.Cog):
+class Misc(commands.Cog):
     """Miscellaneous commands"""
 
     def __init__(self, bot):
@@ -809,7 +809,7 @@ class Miscellaneous(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(Miscellaneous(bot))
+    await bot.add_cog(Misc(bot))
 
 
 @dataclass
