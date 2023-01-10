@@ -60,7 +60,6 @@ extensions = [
     "media",
     "lastfm",
     "user",
-    "images",
     "utility",
     "typings",
     "crypto",
