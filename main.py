@@ -52,7 +52,7 @@ extensions = [
     "customcommands",
     "fishy",
     "information",
-    "rolepicker",
+    "roles",
     "mod",
     "owner",
     "notifications",
@@ -63,7 +63,6 @@ extensions = [
     "images",
     "utility",
     "typings",
-    "reddit",
     "crypto",
     "kpop",
 ]

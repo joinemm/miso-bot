@@ -15,7 +15,6 @@ import discord
 import regex
 from discord.ext import commands
 from durations_nlp import Duration
-from durations_nlp.exceptions import InvalidTokenError
 from loguru import logger
 from PIL import Image, UnidentifiedImageError
 
@@ -398,10 +397,7 @@ def timefromstring(s):
     :returns : Time in seconds
     """
     s = s.removeprefix("for")
-    try:
-        return int(Duration(s).to_seconds())
-    except InvalidTokenError:
-        return None
+    return int(Duration(s).to_seconds())
 
 
 def stringfromtime(t, accuracy=4):
@@ -680,10 +676,10 @@ def find_custom_emojis(text):
     return emoji_list
 
 
-async def image_info_from_url(session, url) -> Optional[dict]:
+async def image_info_from_url(session: aiohttp.ClientSession, url) -> Optional[dict]:
     """Return dictionary containing filesize, filetype and dimensions of an image"""
     async with session.get(str(url)) as response:
-        filesize = int(response.headers.get("Content-Length")) / 1024
+        filesize = int(response.headers.get("Content-Length", 0)) / 1024
         filetype = response.headers.get("Content-Type")
         try:
             image = Image.open(io.BytesIO(await response.read()))

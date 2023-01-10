@@ -124,6 +124,16 @@ services:
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
     tty: true
+  
+  redis:
+    container_name: miso-redis
+    image: "redis:alpine"
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    expose:
+      - 6379
+    volumes:
+      - redis-data:/data
 
 networks:
   default:
@@ -134,3 +144,4 @@ volumes:
   shlink-database:
   grafana-storage:
   prometheus-storage:
+  redis-data:

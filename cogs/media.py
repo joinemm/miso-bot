@@ -143,11 +143,8 @@ class Media(commands.Cog):
                     username, story_pk = story_result.groups()
                 else:
                     shortcode_only = regex.search(r"[a-zA-Z\-_\d]{,11}", post_url)
-                    if shortcode_only is None:
-                        raise exceptions.CommandError(
-                            f"Invalid Instagram link or shortcode `{post_url}`"
-                        )
-                    shortcode = shortcode_only.group(0)
+                    if shortcode_only is not None:
+                        shortcode = shortcode_only.group(0)
 
             try:
                 if shortcode:
@@ -157,14 +154,10 @@ class Media(commands.Cog):
                     post_url = f"https://www.instagram.com/stories/{username}/{story_pk}"
                     post = await instagram.Datalama(self.bot).get_story_v1(story_pk)
                 else:
-                    raise exceptions.CommandError("Could not find anything to show")
+                    raise exceptions.CommandError(
+                        f"Unable to parse Instagram link or Id `{post_url}`, please check that it's correct"
+                    )
 
-            except instagram.ExpiredCookie as exc:
-                raise exceptions.CommandError(
-                    "The Instagram login session has expired, please ask my developer to reauthenticate!"
-                ) from exc
-            except instagram.ExpiredStory as exc:
-                raise exceptions.CommandError("This story is no longer available.") from exc
             except instagram.InstagramError as exc:
                 raise exceptions.CommandError(exc.message)
 
@@ -363,7 +356,7 @@ class Media(commands.Cog):
     async def get_tiktok(self, ctx: commands.Context, *tiktok_links: str):
         """Retrieve video from a tiktok"""
         pattern = r"\bhttps?:\/\/(?:m|www|vm)\.tiktok\.com\/.*\b(?:(?:usr|v|embed|user|video)\/|\?shareId=|\&item_id=)(\d+)\b"
-        vm_pattern = r"\bhttps?:\/\/vm\.tiktok\.com\/.*\b(\S+)\b"
+        vm_pattern = r"\bhttps?:\/\/(?:vm|vt)\.tiktok\.com\/.*\b(\S+)\b"
 
         matches = re.finditer(pattern, "\n".join(tiktok_links))
         vm_matches = re.finditer(vm_pattern, "\n".join(tiktok_links))

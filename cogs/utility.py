@@ -272,7 +272,7 @@ class Utility(commands.Cog):
 
         elif pre == "in":
             # user inputs time delta
-            seconds = util.timefromstring(reminder_time) or 0
+            seconds = util.timefromstring(reminder_time)
             date = now.shift(seconds=+seconds)
 
         else:

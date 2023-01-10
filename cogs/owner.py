@@ -1,5 +1,4 @@
 import asyncio
-from typing import Union
 
 import arrow
 import discord
@@ -25,11 +24,12 @@ class Owner(commands.Cog):
     async def say(
         self,
         ctx: commands.Context,
-        channel: Union[discord.TextChannel, discord.Thread],
+        channel_id: int,
         *,
         message,
     ):
         """Makes the bot say something in the given channel"""
+        channel = self.bot.get_partial_messageable(channel_id)
         await ctx.send(f"Sending message to **{channel.guild}** <#{channel.id}>\n> {message}")
         await channel.send(message)
 
@@ -89,6 +89,16 @@ class Owner(commands.Cog):
         logger.info("LOGGING OUT")
         await ctx.send("Shutting down... :electric_plug:")
         await self.bot.close()
+
+    @commands.command()
+    async def shardreconnect(self, ctx: commands.Context, shard_id: int):
+        """Disconnect and then reconnect a shard"""
+        shard = self.bot.get_shard(shard_id)
+        if shard is None:
+            return await ctx.send(f":warning: Shard `{shard_id}` not found")
+
+        await shard.reconnect()
+        await util.send_success(ctx, f"Reconnected shard `{shard_id}`")
 
     @commands.group(aliases=["patron"], case_insensitive=True)
     async def donator(self, ctx: commands.Context):

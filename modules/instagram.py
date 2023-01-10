@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
+from urllib.parse import urlencode
 
 import aiohttp
 import arrow
@@ -90,6 +91,16 @@ class Datalama:
         self.bot: MisoBot = bot
 
     async def api_request(self, endpoint: str, params: dict) -> dict:
+        # Try redis cache first
+        cache_key = self.BASE_URL + endpoint + "?" + urlencode(params)
+        cached_response = await self.bot.redis.get(cache_key)
+        if cached_response:
+            logger.info(f"Instagram request was pulled from the cache {cache_key}")
+            prom = self.bot.get_cog("Prometheus")
+            if prom:
+                await prom.increment_instagram_cache_hits()  # type: ignore
+            return orjson.loads(cached_response)
+
         headers = {
             "accept": "application/json",
             "x-access-key": self.bot.keychain.DATALAMA_ACCESS_KEY,
@@ -109,7 +120,11 @@ class Datalama:
                     raise InstagramError(
                         f"ERROR {response.status} | {data.get('exc_type')} | {data.get('detail')}"
                     )
+
+                # save succesful response in redis cache for future use
+                await self.bot.redis.set(cache_key, orjson.dumps(data), 86400)
                 return data
+
             except aiohttp.ContentTypeError:
                 response.raise_for_status()
                 text = await response.text()
@@ -121,7 +136,7 @@ class Datalama:
         user = data["user"]
         return IgUser(
             user["pk"],
-            user["username"],
+            user["username"] or f"instagram_user_{user['pk']}",
             user["profile_pic_url"],
         )
 

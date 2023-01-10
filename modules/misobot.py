@@ -1,10 +1,8 @@
-from dataclasses import dataclass
 import traceback
 from dataclasses import dataclass
 from time import time
 
 import aiohttp
-import discord
 import discord
 import orjson
 from discord import Activity, ActivityType, AllowedMentions, Intents, Status
@@ -15,6 +13,7 @@ from loguru import logger
 from modules import cache, maria, util
 from modules.help import EmbedHelpCommand
 from modules.keychain import Keychain
+from modules.redis import Redis
 
 
 @dataclass
@@ -30,31 +29,6 @@ class MisoContext(commands.Context):
         self.lastfmcontext: LastFmContext
         self.bot: MisoBot
         self.timer: float
-
-    async def success(self, message: str):
-        await self.send(
-            embed=discord.Embed(
-                description=":white_check_mark: " + message,
-                color=int("77b255", 16),
-            )
-        )
-
-    async def paginate(self, embed: discord.Embed, rows: list[str]):
-        await util.send_as_pages(self, embed, rows)
-
-
-@dataclass
-class LastFmContext:
-    target_user: discord.User | discord.Member
-    targets_author: bool
-    username: str
-
-
-class MisoContext(commands.Context):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.lastfmcontext: LastFmContext
-        self.bot: MisoBot
 
     async def success(self, message: str):
         await self.send(
@@ -113,6 +87,7 @@ class MisoBot(commands.AutoShardedBot):
         self.keychain = Keychain()
         self.version = "5.1"
         self.extensions_loaded = False
+        self.redis = Redis()
         self.session: aiohttp.ClientSession
         self.register_hooks()
 
@@ -126,7 +101,9 @@ class MisoBot(commands.AutoShardedBot):
         self.session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(limit=0),
             json_serialize=lambda x: orjson.dumps(x).decode(),
+            timeout=aiohttp.ClientTimeout(total=30),
         )
+        await self.redis.start()
         await self.db.initialize_pool()
         await self.cache.initialize_settings_cache()
         await self.load_all_extensions()
