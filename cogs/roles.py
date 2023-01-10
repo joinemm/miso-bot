@@ -15,7 +15,7 @@ class Roles(commands.Cog):
         self.bot: MisoBot = bot
         self.icon = "🎨"
 
-    @commands.group(case_insensitive=True)
+    @commands.group(case_insensitive=True, aliases=["colourizer"])
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def colorizer(self, ctx: commands.Context):
@@ -136,7 +136,7 @@ class Roles(commands.Cog):
         )
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=["colourme"])
     async def colorme(self, ctx: commands.Context, hex_color: str):
         """Get yourself a nice color role of any color you want"""
         if ctx.guild is None or isinstance(ctx.author, discord.User):
@@ -201,7 +201,7 @@ class Roles(commands.Cog):
                 reason=f"{ctx.author} colored themselves",
                 color=color,
             )
-            await color_role.edit(position=baserole.position)
+            await color_role.edit(position=baserole.position + 1)
             await self.bot.db.execute(
                 """
                 INSERT INTO colorizer_role (guild_id, role_id, color)
