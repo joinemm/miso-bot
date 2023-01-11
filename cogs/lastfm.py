@@ -2049,7 +2049,8 @@ class LastFm(commands.Cog):
             inline=True,
         )
         content.add_field(name="Country", value=data["user"]["country"])
-        content.set_thumbnail(url=profile_pic_url)
+        if profile_pic_url:
+            content.set_thumbnail(url=profile_pic_url)
         content.set_footer(text=f"Total plays: {playcount}")
         content.colour = int(self.lastfm_red, 16)
         if blacklisted:
