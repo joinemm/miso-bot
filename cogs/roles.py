@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from cogs.errorhandler import ErrorHander
-from modules import exceptions, queries, util
+from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
 
 
@@ -83,13 +83,21 @@ class Roles(commands.Cog):
         msg = await ctx.send(embed=content)
 
         async def confirm():
+            await msg.edit(content=emojis.LOADING)
             for role in matching_roles:
                 await role.delete(reason="Colorizer cleanup")
+
+            await self.bot.db.execute(
+                """
+                DELETE FROM colorizer_role WHERE guild_id = %s
+                """,
+                ctx.guild.id,  # type: ignore
+            )
 
             content.title = f":white_check_mark: Deleted all {len(matching_roles)} color roles"
             content.description = ""
             content.color = int("77b255", 16)
-            await msg.edit(embed=content)
+            await msg.edit(content=None, embed=content)
 
         async def cancel():
             content.title = ":x: Role cleanup cancelled"
@@ -181,19 +189,30 @@ class Roles(commands.Cog):
             ctx.guild.id,
         )
 
+        existing_roles_ids: list[int] = [x[1] for x in (existing_roles or [])]
+
         color_role = None
         if existing_roles is not None:
             existing_role_id: int | None = dict(existing_roles).get(str(color))
             color_role = ctx.guild.get_role(existing_role_id) if existing_role_id else None
 
             # remove old color roles if any
-            old_roles = filter(
-                lambda r: r.id in [x[1] for x in existing_roles or []], ctx.author.roles
-            )
+            old_roles = list(filter(lambda r: r.id in existing_roles_ids, ctx.author.roles))
             if old_roles:
-                await ctx.author.remove_roles(*old_roles)
+                await ctx.author.remove_roles(*old_roles, atomic=True, reason="Changed color")
+
+            # remove manually deleted roles
+            for role_id in existing_roles_ids:
+                if ctx.guild.get_role(role_id) is None:
+                    await self.bot.db.execute(
+                        """
+                        DELETE FROM colorizer_role WHERE role_id = %s
+                        """,
+                        role_id,
+                    )
 
         if color_role is None:
+
             # create a new role
             color_role = await ctx.guild.create_role(
                 name=str(color),
@@ -201,7 +220,9 @@ class Roles(commands.Cog):
                 reason=f"{ctx.author} colored themselves",
                 color=color,
             )
-            await color_role.edit(position=baserole.position + 1)
+
+            existing_roles_ids.append(color_role.id)
+
             await self.bot.db.execute(
                 """
                 INSERT INTO colorizer_role (guild_id, role_id, color)
@@ -213,6 +234,27 @@ class Roles(commands.Cog):
                 color_role.id,
                 str(color),
             )
+
+            # reorder the roles list
+            payload = []
+            before_colors = []
+            acquired = []
+            colors = []
+            for role in ctx.guild.roles:
+                if role.id in existing_roles_ids:
+                    colors.append(role)
+                else:
+                    acquired.append(role)
+
+                if role == baserole:
+                    before_colors += acquired
+                    acquired = []
+
+            final = before_colors + colors + acquired
+            for i, role in enumerate(final):
+                payload.append({"id": role.id, "position": i})
+
+            await self.bot.http.move_role_position(ctx.guild.id, payload, reason="movin")  # type: ignore
 
         # color the user
         await ctx.author.add_roles(color_role)
