@@ -1225,7 +1225,7 @@ class LastFm(commands.Cog):
             ),
             *args,
         )
-        return data
+        return data or []
 
     @fm.group(aliases=["s", "guild"])
     @commands.guild_only()
@@ -2666,7 +2666,7 @@ async def username_to_ctx(ctx: commands.Context):
         ctx.usertarget.id,
     )
     if not ctx.username and (
-        ctx.invoked_subcommand and ctx.invoked_subcommand.name not in ["set", "blacklist"]
+        not ctx.invoked_subcommand or ctx.invoked_subcommand.name not in ["set", "blacklist"]
     ):
         if not ctx.foreign_target:
             msg = f"No last.fm username saved! Please use `{ctx.prefix}fm set` to save your username (last.fm account required)"

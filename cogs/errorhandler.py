@@ -60,7 +60,7 @@ class ErrorHander(commands.Cog):
                 **kwargs,
             )
         except discord.Forbidden:
-            logger.warning("403 Forbidden when trying to send error message : {message}")
+            logger.warning(f"403 Forbidden when trying to send error message : {message}")
 
     async def send_info(
         self, ctx: commands.Context, message: str, error: Exception | None = None, **kwargs
