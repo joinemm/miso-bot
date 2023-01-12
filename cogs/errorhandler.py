@@ -223,7 +223,6 @@ class ErrorHander(commands.Cog):
 
             case _:
                 await self.send_error(ctx, f"{type(error).__name__}: {error}", error)
-                logger.error(self.log_format(ctx, error))
                 logger.opt(exception=error).error("Unhandled exception traceback:")
 
 
