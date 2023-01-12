@@ -7,6 +7,7 @@ from typing import Tuple, Union
 import arrow
 import discord
 import orjson
+from aiohttp import ClientResponseError
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
@@ -582,9 +583,8 @@ class Misc(commands.Cog):
             >emoji :emoji:
         """
         my_emoji = self.parse_emoji(emoji_str)
-        if isinstance(my_emoji, int):
-            # just getting the id back because that's all we got
-            return await ctx.send(f"https://cdn.discordapp.com/emojis/{my_emoji}")
+        if my_emoji.name is None and my_emoji.id is None:
+            return await ctx.send(my_emoji.url)
 
         content = discord.Embed(title=f"`:{my_emoji.name}:`")
         content.set_image(url=my_emoji.url)
@@ -594,7 +594,7 @@ class Misc(commands.Cog):
                 text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
             )
 
-        if my_emoji.id:
+        if my_emoji.id and my_emoji.name:
             discord_emoji = self.bot.get_emoji(my_emoji.id)
             if discord_emoji and discord_emoji.guild:
                 emoji = await discord_emoji.guild.fetch_emoji(my_emoji.id)
@@ -612,36 +612,41 @@ class Misc(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_emojis=True)
-    async def steal(self, ctx: commands.Context, emoji: str | int, name: str | None):
+    async def steal(self, ctx: commands.Context, *emojis: int | str):
         """Steal an emoji to your own server"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        my_emoji = self.parse_emoji(emoji)
-        if isinstance(my_emoji, int):
-            # just getting the id back because that's all we got
-            return await ctx.send(f"https://cdn.discordapp.com/emojis/{my_emoji}")
-        if not my_emoji.id:
-            raise exceptions.CommandWarning("Sorry I cannot steal this emoji :(")
-        async with self.bot.session.get(my_emoji.url) as response:
-            image_bytes = await response.read()
+        for emoji in emojis:
+            my_emoji = self.parse_emoji(emoji)
 
-        # use user supplied name if given
-        if name is not None:
-            my_emoji.name = name
+            if my_emoji.name and not my_emoji.id:
+                raise exceptions.CommandWarning(
+                    "Why are you trying to steal a default emoji? :skull:"
+                )
 
-        my_new_emoji = await ctx.guild.create_custom_emoji(
-            name=my_emoji.name or "misobot_steal",
-            reason=f"Stolen by {ctx.author}",
-            image=image_bytes,
-        )
+            async with self.bot.session.get(my_emoji.url) as response:
+                try:
+                    response.raise_for_status()
+                    image_bytes = await response.read()
+                except ClientResponseError:
+                    raise exceptions.CommandWarning(f"No such emoji `{my_emoji.url}`")
 
-        await ctx.send(
-            embed=discord.Embed(
-                description=f":pirate_flag: Succesfully stole `:{my_new_emoji.name}:` and added it to this server {my_new_emoji}",
-                color=int("e6e7e8", 16),
+            my_new_emoji = await ctx.guild.create_custom_emoji(
+                name=my_emoji.name or "stolen_emoji",
+                reason=f"Stolen by {ctx.author}",
+                image=image_bytes,
             )
-        )
+
+            await ctx.send(
+                embed=discord.Embed(
+                    description=(
+                        f":pirate_flag: Succesfully stole `:{my_new_emoji.name}:` "
+                        f"and added it to this server {my_new_emoji}"
+                    ),
+                    color=int("e6e7e8", 16),
+                )
+            )
 
     @commands.command()
     async def emojify(self, ctx: commands.Context, *, text: Union[discord.Message, str]):
@@ -768,18 +773,18 @@ class Misc(commands.Cog):
         return meme
 
     def parse_emoji(self, emoji_str: str | int):
-        my_emoji = DisplayEmoji(None, "", "")
+        my_emoji = DisplayEmoji(None, "", None)
         if isinstance(emoji_str, int):
             # user passed emoji id
             discord_emoji = self.bot.get_emoji(emoji_str)
-            if discord_emoji is None:
+            if discord_emoji:
+                my_emoji.id = discord_emoji.id
+                my_emoji.animated = discord_emoji.animated
+                my_emoji.name = discord_emoji.name
+                my_emoji.url = discord_emoji.url
+            else:
                 # cant get any info about it just send the image
-                return emoji_str
-
-            my_emoji.id = discord_emoji.id
-            my_emoji.animated = discord_emoji.animated
-            my_emoji.name = discord_emoji.name
-            my_emoji.url = discord_emoji.url
+                my_emoji.url = f"https://cdn.discordapp.com/emojis/{emoji_str}"
 
         else:
             custom_emoji_match = re.search(r"<(a?)?:(\w+):(\d+)>", emoji_str)
