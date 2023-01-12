@@ -78,7 +78,7 @@ class ErrorHander(commands.Cog):
         self, ctx: commands.Context, message: str, error: Exception | None = None, **kwargs
     ):
         logger.error(self.log_format(ctx, error, message))
-        await self.send_embed(ctx, message, ":no_entry:", "be1931", **kwargs)
+        await self.send_embed(ctx, f"```ex\n{message}```", color="be1931", **kwargs)
 
     async def send_lastfm_error(self, ctx: commands.Context, error: exceptions.LastFMError):
         match error.error_code:

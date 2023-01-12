@@ -37,6 +37,31 @@ class PatronCheckFailure(commands.CheckFailure):
     pass
 
 
+class KeywordArguments:
+    @classmethod
+    def from_arguments(cls, args: tuple):
+        try:
+            return cls(**{k: v for d in args for k, v in d.items()})
+        except TypeError as e:
+            arg = str(e).split("'")[1]
+            options = [f"`{o}`" for o in cls.__init__.__code__.co_varnames[1:]]
+            raise exceptions.CommandWarning(
+                f"Unknown option `{arg}`, available options: {', '.join(options)}"
+            )
+
+
+class KeywordCommandArgument:
+    async def convert(self, ctx: commands.Context, argument: str):
+        try:
+            option, value = argument.split("=", 1)
+        except ValueError:
+            raise commands.BadArgument(
+                "Cannot parse `{argument`, Please give arguments in `option=value` format.\n"
+                "Refer to the command help for list of options (`>help [commandname]`)"
+            )
+        return {option: value}
+
+
 def displayname(member: Optional[discord.User | discord.Member], escape=True):
     if member is None:
         return None
