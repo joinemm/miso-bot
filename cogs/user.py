@@ -573,9 +573,13 @@ class User(commands.Cog):
             if ctx.author.id in el:
                 pair = list(el)
                 if ctx.author.id == pair[0]:
-                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(pair[1])
+                    partner = ctx.guild.get_member(pair[1]) or await util.find_user(
+                        self.bot, pair[1]
+                    )
                 else:
-                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(pair[0])
+                    partner = ctx.guild.get_member(pair[0]) or await util.find_user(
+                        self.bot, pair[0]
+                    )
                 return await ctx.send(
                     f":confused: You are already married to **{util.displayname(partner)}**! You must divorce before marrying someone else..."
                 )
@@ -625,9 +629,13 @@ class User(commands.Cog):
                 to_remove.append(el)
                 pair = list(el)
                 if ctx.author.id == pair[0]:
-                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(pair[1])
+                    partner = ctx.guild.get_member(pair[1]) or await util.find_user(
+                        self.bot, pair[1]
+                    )
                 else:
-                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(pair[0])
+                    partner = ctx.guild.get_member(pair[0]) or await util.find_user(
+                        self.bot, pair[0]
+                    )
 
         if partner == "":
             return await ctx.send(":thinking: You are not married!")
@@ -682,9 +690,9 @@ class User(commands.Cog):
         )
         if data:
             if data[0] == member.id:
-                partner = ctx.guild.get_member(data[1]) or self.bot.get_user(data[1])
+                partner = ctx.guild.get_member(data[1]) or await util.find_user(self.bot, data[1])
             else:
-                partner = ctx.guild.get_member(data[0]) or self.bot.get_user(data[0])
+                partner = ctx.guild.get_member(data[0]) or await util.find_user(self.bot, data[0])
             marriage_date = data[2]
             length = humanize.naturaldelta(
                 arrow.utcnow().timestamp() - marriage_date.timestamp(), months=False
@@ -710,7 +718,7 @@ class User(commands.Cog):
             await self.bot.db.fetch(
                 """
             SELECT first_user_id, second_user_id, marriage_date
-            FROM marriage ORDER BY marriage_date
+            FROM marriage ORDER BY marriage_date LIMIT 75
             """
             )
             or []
@@ -718,8 +726,8 @@ class User(commands.Cog):
 
         rows = []
         for first_user_id, second_user_id, marriage_date in data:
-            first_user = self.bot.get_user(first_user_id)
-            second_user = self.bot.get_user(second_user_id)
+            first_user = await util.find_user(self.bot, first_user_id)
+            second_user = await util.find_user(self.bot, second_user_id)
 
             # if neither user is reachable then ignore this marriage
             if first_user is None or second_user is None:

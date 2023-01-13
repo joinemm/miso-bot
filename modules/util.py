@@ -107,6 +107,16 @@ async def send_success(target: discord.abc.Messageable, message: str):
     )
 
 
+async def find_user(bot: "MisoBot", user_id: int) -> discord.User | None:
+    user = bot.get_user(user_id)
+    if user:
+        return user
+    try:
+        user = await bot.fetch_user(user_id)
+    except discord.NotFound:
+        return None
+
+
 async def determine_prefix(bot, message: discord.Message):
     """Get the prefix used in the invocation context"""
     if message.guild:
