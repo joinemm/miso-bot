@@ -111,6 +111,7 @@ async def find_user(bot: "MisoBot", user_id: int) -> discord.User | None:
     user = bot.get_user(user_id)
     if user:
         return user
+
     try:
         user = await bot.fetch_user(user_id)
     except discord.NotFound:

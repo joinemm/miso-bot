@@ -726,8 +726,8 @@ class User(commands.Cog):
 
         rows = []
         for first_user_id, second_user_id, marriage_date in data:
-            first_user = await util.find_user(self.bot, first_user_id)
-            second_user = await util.find_user(self.bot, second_user_id)
+            first_user = self.bot.get_user(first_user_id)
+            second_user = self.bot.get_user(second_user_id)
 
             # if neither user is reachable then ignore this marriage
             if first_user is None or second_user is None:
