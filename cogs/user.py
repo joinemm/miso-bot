@@ -676,7 +676,6 @@ class User(commands.Cog):
             SELECT first_user_id, second_user_id, marriage_date
                 FROM marriage
             WHERE first_user_id = %s OR second_user_id = %s
-            ORDER BY marriage_date
             """,
             member.id,
             member.id,
@@ -711,7 +710,7 @@ class User(commands.Cog):
             await self.bot.db.fetch(
                 """
             SELECT first_user_id, second_user_id, marriage_date
-            FROM marriage
+            FROM marriage ORDER BY marriage_date
             """
             )
             or []
