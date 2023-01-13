@@ -1,7 +1,9 @@
 import traceback
 from time import time
+from typing import Any
 
 import aiohttp
+import discord
 import orjson
 from discord import Activity, ActivityType, AllowedMentions, Intents, Status
 from discord.errors import Forbidden
@@ -15,7 +17,7 @@ from modules.redis import Redis
 
 
 class MisoBot(commands.AutoShardedBot):
-    def __init__(self, extensions, default_prefix, **kwargs):
+    def __init__(self, extensions: list[str], default_prefix: str, **kwargs: dict[str, Any]):
         super().__init__(
             help_command=EmbedHelpCommand(),
             activity=Activity(type=ActivityType.playing, name="Booting up..."),
@@ -100,7 +102,7 @@ class MisoBot(commands.AutoShardedBot):
         await self.db.cleanup()
         await super().close()
 
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         """Overrides built-in on_message()"""
         await super().on_message(message)
 
@@ -148,17 +150,3 @@ class MisoBot(commands.AutoShardedBot):
     @property
     def guild_count(self) -> int:
         return len(self.guilds)
-
-
-class MisoCluster(MisoBot):
-    def __init__(self, **kwargs):
-        self.cluster_name = kwargs.pop("cluster_name")
-        self.cluster_id = kwargs.pop("cluster_id")
-        super().__init__(**kwargs)
-        self.run(kwargs["token"])
-
-    async def on_ready(self):
-        logger.info(f"Cluster {self.cluster_name} ready")
-
-    async def on_shard_ready(self, shard_id):
-        logger.info(f"Shard {shard_id} ready")
