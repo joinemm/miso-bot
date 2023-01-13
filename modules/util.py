@@ -107,7 +107,7 @@ async def send_success(target: discord.abc.Messageable, message: str):
     )
 
 
-async def determine_prefix(bot: MisoBot, message: discord.Message):
+async def determine_prefix(bot, message: discord.Message):
     """Get the prefix used in the invocation context"""
     if message.guild:
         prefix = bot.cache.prefixes.get(str(message.guild.id), bot.default_prefix)
