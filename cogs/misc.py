@@ -130,6 +130,17 @@ class Misc(commands.Cog):
             data = await response.json(loads=orjson.loads)
         await ctx.send(f"*{data['affirmation']}*")
 
+    @commands.command()
+    async def joke(self, ctx: commands.Context):
+        """Get a random dad joke"""
+        async with self.bot.session.get(
+            "https://icanhazdadjoke.com/",
+            headers={"Accept": "application/json"},
+        ) as response:
+            data = await response.json(loads=orjson.loads)
+
+        await ctx.send(f"<:funwaa:1063446110565310515> {data['joke']}")
+
     @commands.command(aliases=["imbored"])
     async def iambored(self, ctx: commands.Context):
         """Get something to do"""
