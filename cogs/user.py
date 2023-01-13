@@ -675,7 +675,9 @@ class User(commands.Cog):
             """
             SELECT first_user_id, second_user_id, marriage_date
                 FROM marriage
-            WHERE first_user_id = %s OR second_user_id = %s""",
+            WHERE first_user_id = %s OR second_user_id = %s
+            ORDER BY marriage_date
+            """,
             member.id,
             member.id,
         )
