@@ -722,19 +722,14 @@ class User(commands.Cog):
             second_user = self.bot.get_user(second_user_id)
 
             # if neither user is reachable then ignore this marriage
-            if first_user is None and second_user is None:
+            if first_user is None or second_user is None:
                 continue
 
             length = humanize.naturaldelta(
                 arrow.utcnow().timestamp() - marriage_date.timestamp(), months=False
             )
 
-            rows.append(
-                f"{first_user.name if first_user else first_user_id}"
-                " :heart: "
-                f"{second_user.name if second_user else second_user_id}"
-                f" - **{length}**"
-            )
+            rows.append(f"{first_user.name} :heart: {second_user.name} - **{length}**")
 
         if not rows:
             raise exceptions.CommandWarning("No one is married yet!")
