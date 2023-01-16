@@ -718,7 +718,7 @@ class User(commands.Cog):
             await self.bot.db.fetch(
                 """
             SELECT first_user_id, second_user_id, marriage_date
-            FROM marriage ORDER BY marriage_date LIMIT 75
+            FROM marriage ORDER BY marriage_date
             """
             )
             or []
