@@ -8,40 +8,35 @@
 
 * * *
 
-A discord bot with almost 100 commands and features, including but not limited to:
+A discord bot with over 100 commands and features, including but not limited to:
 
+-   Fishing
 -   LastFM Integration
 -   Melon charts
 -   Youtube search
--   Twitter image extractor
--   Instagram image extractor
--   Moderation (ban, mute, etc)
--   Logs bans, leaves, joins, messages
+-   Twitter media extractor
+-   Instagram media extractor
+-   TikTok media extractor
+-   Moderation (ban, mute, timeout, etc)
+-   Logs bans, leaves, joins, deleted messages
 -   Server and user information
--   Levels and XP leaderboards
 -   Customizable profiles
--   Server activity graph
 -   Minecraft server status
 -   Starboard
--   Voting channels
--   Fishing
 -   DuckDuckGo bangs
 -   Colors and color palettes
--   Create Gfycats and Streamables 
--   Gfycat search
--   xkcd
+-   Create and search gifs
 -   Horoscope
 -   Weather
 -   Keyword notifications
 -   Rolepicker
+-   Color roles
 -   Typing tests and Typeracer
--   Papago Naver translator
--   Google Translate
+-   Papago Naver and google translator
 -   Wolfram alpha
 -   Reminders
 -   Custom commands
--   Changeable prefix
--   OPGG
+-   Configurable prefix
 -   Cryptocurrency data
 -   Kpop idol database
 
@@ -50,6 +45,10 @@ A discord bot with almost 100 commands and features, including but not limited t
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=joinemm/miso-bot&type=Date)](https://star-history.com/#joinemm/miso-bot&Date)
+
+## Contributor wall
+
+[![c](https://contrib.rocks/image?repo=joinemm/miso-bot)](https://github.com/joinemm/miso-bot/graphs/contributors)
 
 ## Deployment using docker
 
