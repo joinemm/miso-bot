@@ -92,11 +92,11 @@ class MisoBot(commands.AutoShardedBot):
         self.session: aiohttp.ClientSession
         self.register_hooks()
 
-    async def get_context(self, message, *, cls=MisoContext):
+    async def get_context(self, message: discord.Message):
         """when you override this method, you pass your new Context
         subclass to the super() method, which tells the bot to
         use the new MyContext class"""
-        return await super().get_context(message, cls=cls)
+        return await super().get_context(message, cls=MisoContext)
 
     async def setup_hook(self):
         self.session = aiohttp.ClientSession(
