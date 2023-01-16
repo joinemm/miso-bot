@@ -483,6 +483,7 @@ class Misc(commands.Cog):
                 slots = 50 - len(colors)
                 amount = min(source, slots)
                 colors += ["{:06x}".format(random.randint(0, 0xFFFFFF)) for _ in range(amount)]
+                next_is_random_count = False
             # member or role color
             elif isinstance(source, (discord.Member, discord.Role)):
                 colors.append(str(source.color))
