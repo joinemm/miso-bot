@@ -344,6 +344,7 @@ class Information(commands.Cog):
             await ctx.send(embed=content)
 
     @commandstats.command(name="global")
+    @commands.cooldown(1, 180)
     @commands.is_owner()
     async def commandstats_global(
         self, ctx: commands.Context, user: Optional[discord.Member] = None

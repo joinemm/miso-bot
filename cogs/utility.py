@@ -3,14 +3,12 @@ import html
 import json
 import random
 from time import time
-from typing import Optional
+from typing import Annotated, Any, Optional
 from zoneinfo import ZoneInfo
 
-import aiohttp
 import arrow
 import discord
 import orjson
-from bs4 import BeautifulSoup
 from discord.ext import commands, tasks
 from loguru import logger
 
@@ -51,6 +49,22 @@ papago_pairs = [
     "zh-tw/ja",
     "zh-tw/zh-tw",
 ]
+
+
+class GifOptions(util.KeywordArguments):
+    def __init__(self, start: float | None = None, end: float | None = None):
+        if start and end is None:
+            end = float(start) + 60
+        elif end and start is None:
+            start = 0.0
+
+        if end and start:
+            self.cut = {"start": float(start), "duration": float(end) - float(start)}
+        else:
+            self.cut = None
+
+    def json(self):
+        return {k: v for k, v in self.__dict__.items() if v is not None}
 
 
 class Utility(commands.Cog):
@@ -738,25 +752,48 @@ class Utility(commands.Cog):
                 await ctx.send(":shrug:")
 
     @commands.command()
-    async def creategif(self, ctx: commands.Context, media_url):
-        """Create a gfycat gif from video url"""
+    async def creategif(
+        self,
+        ctx: commands.Context,
+        media_url: str,
+        *gifoptions: Annotated[dict[str, Any], util.KeywordCommandArgument],
+    ):
+        """Create a gfycat gif from video url
+
+        Give any options in `option=value` format:
+        >>> `start`: The number of seconds into the video to start the gif from
+        `end`: The time when the gif should end in seconds
+
+        """
+        options = GifOptions.from_arguments(gifoptions)
+
+        API_URL = "https://api.gfycat.com/v1/gfycats"
         starttimer = time()
         auth_headers = await gfycat_oauth(self.bot)
-        url = "https://api.gfycat.com/v1/gfycats"
-        params = {"fetchUrl": media_url.strip("`")}
-        async with self.bot.session.post(url, json=params, headers=auth_headers) as response:
+        params = {
+            "fetchUrl": media_url,
+            "tags": ["misobot"],
+            "title": "Miso Bot",
+            "private": False,
+            "description": "Gif created with Miso Bot https://misobot.xyz",
+        } | options.json()
+
+        async with self.bot.session.post(API_URL, json=params, headers=auth_headers) as response:
             data = await response.json(loads=orjson.loads)
 
-        try:
-            gfyname = data["gfyname"]
-        except KeyError:
-            raise exceptions.CommandWarning("Unable to create gif from this link!")
+        gfyname = data.get("gfyname")
+        error = data.get("errorMessage")
+        if gfyname is None:
+            if error is not None:
+                error = orjson.loads(error)
+                raise exceptions.CommandWarning(f"{error['code']}: {error['description']}")
+
+            raise exceptions.CommandWarning("Failed creating gif")
 
         message = await ctx.send(f"Encoding {emojis.LOADING}")
 
-        i = 1
-        url = f"https://api.gfycat.com/v1/gfycats/fetch/status/{gfyname}"
-        await asyncio.sleep(5)
+        url = f"{API_URL}/fetch/status/{gfyname}"
+        await asyncio.sleep(1)
         while True:
             async with self.bot.session.get(url, headers=auth_headers) as response:
                 data = await response.json(loads=orjson.loads)
@@ -773,67 +810,15 @@ class Utility(commands.Cog):
                 break
 
             else:
-                await message.edit(content="There was an error while creating your gif :(")
+                await message.edit(
+                    content=(
+                        "There was an error while creating your gif :("
+                        f"\n> `error: {data['errorMessage']['description']}`"
+                    )
+                )
                 break
 
-            await asyncio.sleep(i)
-            i += 1
-
-    @commands.command()
-    async def streamable(self, ctx: commands.Context, media_url):
-        """Create a streamable video from media/twitter/ig url"""
-        starttimer = time()
-
-        url = "https://api.streamable.com/import"
-        params = {"url": media_url.strip("`")}
-        auth = aiohttp.BasicAuth(
-            self.bot.keychain.STREAMABLE_USER, self.bot.keychain.STREAMABLE_PASSWORD
-        )
-
-        async with self.bot.session.get(url, params=params, auth=auth) as response:
-            if not response.ok:
-                try:
-                    data = await response.json(loads=orjson.loads)
-                    messages = []
-                    for category in data["messages"]:
-                        for msg in data["messages"][category]:
-                            messages.append(msg)
-                    messages = " | ".join(messages)
-                    errormsg = f"ERROR {response.status}: {messages}"
-                except (aiohttp.ContentTypeError, KeyError):
-                    errormsg = await response.text()
-
-                logger.error(errormsg)
-                return await ctx.send(f"```{errormsg.split(';')[0]}```")
-
-            data = await response.json(loads=orjson.loads)
-            link = "https://streamable.com/" + data.get("shortcode")
-            message = await ctx.send(f"Processing Video {emojis.LOADING}")
-
-        i = 1
-        await asyncio.sleep(5)
-        while True:
-            async with self.bot.session.get(link) as response:
-                soup = BeautifulSoup(await response.text(), "lxml")
-                meta = soup.select_one('meta[property="og:url"]')
-
-                if meta:
-                    timestring = util.stringfromtime(time() - starttimer, 2)
-                    await message.edit(
-                        content=f"Streamable created in **{timestring}**\n{meta.attrs['content']}"
-                    )
-                    break
-
-                header = soup.find("h1")
-                status = ""
-                if header:
-                    status = header.text
-                if status != "Processing Video":
-                    await message.edit(content=f":warning: {status}")
-                    break
-
-                await asyncio.sleep(i)
-                i += 1
+            await asyncio.sleep(1)
 
     @commands.command()
     async def stock(self, ctx: commands.Context, *, symbol):

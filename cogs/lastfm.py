@@ -192,7 +192,10 @@ class LastFm(commands.Cog):
     @fm.command()
     async def profile(self, ctx: commands.Context):
         """See your Last.fm profile"""
-        await ctx.send(embed=await self.get_userinfo_embed(ctx.username))  # type: ignore
+        content = await self.get_userinfo_embed(ctx.username)
+        if content is None:
+            raise exceptions.CommandError(f"Could not get your lastfm profile (`{ctx.username}`)")
+        await ctx.send(embed=content)  # type: ignore
 
     @fm.command()
     async def milestone(self, ctx: commands.Context, n: int):
@@ -1231,7 +1234,7 @@ class LastFm(commands.Cog):
             ),
             *args,
         )
-        return data
+        return data or []
 
     @fm.group(aliases=["s", "guild"])
     @commands.guild_only()
@@ -2058,7 +2061,8 @@ class LastFm(commands.Cog):
             inline=True,
         )
         content.add_field(name="Country", value=data["user"]["country"])
-        content.set_thumbnail(url=profile_pic_url)
+        if profile_pic_url:
+            content.set_thumbnail(url=profile_pic_url)
         content.set_footer(text=f"Total plays: {playcount}")
         content.colour = int(self.lastfm_red, 16)
         if blacklisted:
@@ -2670,7 +2674,9 @@ async def username_to_ctx(ctx: commands.Context):
         "SELECT lastfm_username FROM user_settings WHERE user_id = %s",
         ctx.usertarget.id,
     )
-    if not ctx.username and ctx.invoked_subcommand.name not in ["set", "blacklist"]:
+    if not ctx.username and (
+        not ctx.invoked_subcommand or ctx.invoked_subcommand.name not in ["set", "blacklist"]
+    ):
         if not ctx.foreign_target:
             msg = f"No last.fm username saved! Please use `{ctx.prefix}fm set` to save your username (last.fm account required)"
         else:

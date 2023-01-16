@@ -436,8 +436,12 @@ class Events(commands.Cog):
             content = starboard_embed(message, reaction_count, emoji_display)
             if board_message is None:
                 # message is not on board yet, or it was deleted
-
-                board_message = await board_channel.send(embed=content)
+                try:
+                    board_message = await board_channel.send(embed=content)
+                except discord.Forbidden:
+                    return await message.reply(
+                        f"I tried to starboard this but I don't have permission to send embed in {board_channel.mention} :("
+                    )
                 await self.bot.db.execute(
                     """
                     INSERT INTO starboard_message (original_message_id, starboard_message_id)

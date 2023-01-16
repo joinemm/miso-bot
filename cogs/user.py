@@ -573,9 +573,13 @@ class User(commands.Cog):
             if ctx.author.id in el:
                 pair = list(el)
                 if ctx.author.id == pair[0]:
-                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(pair[1])
+                    partner = ctx.guild.get_member(pair[1]) or await util.find_user(
+                        self.bot, pair[1]
+                    )
                 else:
-                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(pair[0])
+                    partner = ctx.guild.get_member(pair[0]) or await util.find_user(
+                        self.bot, pair[0]
+                    )
                 return await ctx.send(
                     f":confused: You are already married to **{util.displayname(partner)}**! You must divorce before marrying someone else..."
                 )
@@ -625,9 +629,13 @@ class User(commands.Cog):
                 to_remove.append(el)
                 pair = list(el)
                 if ctx.author.id == pair[0]:
-                    partner = ctx.guild.get_member(pair[1]) or self.bot.get_user(pair[1])
+                    partner = ctx.guild.get_member(pair[1]) or await util.find_user(
+                        self.bot, pair[1]
+                    )
                 else:
-                    partner = ctx.guild.get_member(pair[0]) or self.bot.get_user(pair[0])
+                    partner = ctx.guild.get_member(pair[0]) or await util.find_user(
+                        self.bot, pair[0]
+                    )
 
         if partner == "":
             return await ctx.send(":thinking: You are not married!")
@@ -662,24 +670,29 @@ class User(commands.Cog):
         )
 
     @commands.command()
-    async def marriage(self, ctx: commands.Context):
+    async def marriage(
+        self, ctx: commands.Context, member: discord.Member | discord.User | None = None
+    ):
         """Check your marriage status"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
+
+        member = member or ctx.author
 
         data = await self.bot.db.fetch_row(
             """
             SELECT first_user_id, second_user_id, marriage_date
                 FROM marriage
-            WHERE first_user_id = %s OR second_user_id = %s""",
-            ctx.author.id,
-            ctx.author.id,
+            WHERE first_user_id = %s OR second_user_id = %s
+            """,
+            member.id,
+            member.id,
         )
         if data:
-            if data[0] == ctx.author.id:
-                partner = ctx.guild.get_member(data[1]) or self.bot.get_user(data[1])
+            if data[0] == member.id:
+                partner = ctx.guild.get_member(data[1]) or await util.find_user(self.bot, data[1])
             else:
-                partner = ctx.guild.get_member(data[0]) or self.bot.get_user(data[0])
+                partner = ctx.guild.get_member(data[0]) or await util.find_user(self.bot, data[0])
             marriage_date = data[2]
             length = humanize.naturaldelta(
                 arrow.utcnow().timestamp() - marriage_date.timestamp(), months=False
@@ -687,11 +700,49 @@ class User(commands.Cog):
             await ctx.send(
                 embed=discord.Embed(
                     color=int("f4abba", 16),
-                    description=f":wedding: You have been married to **{util.displayname(partner)}** for **{length}**",
+                    description=(
+                        f":wedding: {'You have' if member == ctx.author else f'**{member}** has'} "
+                        f"been married to **{util.displayname(partner)}** for **{length}**"
+                    ),
                 )
             )
         else:
             await ctx.send("You are not married!")
+
+    @commands.command()
+    async def marriages(self, ctx: commands.Context):
+        """View the longest surviving marriages"""
+        content = discord.Embed(title=":wedding: Longest marriages")
+
+        data = (
+            await self.bot.db.fetch(
+                """
+            SELECT first_user_id, second_user_id, marriage_date
+            FROM marriage ORDER BY marriage_date
+            """
+            )
+            or []
+        )
+
+        rows = []
+        for first_user_id, second_user_id, marriage_date in data:
+            first_user = self.bot.get_user(first_user_id)
+            second_user = self.bot.get_user(second_user_id)
+
+            # if neither user is reachable then ignore this marriage
+            if first_user is None or second_user is None:
+                continue
+
+            length = humanize.naturaldelta(
+                arrow.utcnow().timestamp() - marriage_date.timestamp(), months=False
+            )
+
+            rows.append(f"{first_user.name} :heart: {second_user.name} - **{length}**")
+
+        if not rows:
+            raise exceptions.CommandWarning("No one is married yet!")
+
+        await util.send_as_pages(ctx, content, rows)
 
 
 async def setup(bot):

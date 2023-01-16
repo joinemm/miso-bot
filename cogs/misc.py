@@ -1,14 +1,15 @@
-from dataclasses import dataclass
 import os
 import random
 import re
-from typing import Union
+from dataclasses import dataclass
+from typing import Tuple, Union
 
 import arrow
 import discord
 import orjson
+from aiohttp import ClientResponseError
 from discord.ext import commands
-from PIL import UnidentifiedImageError
+from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
 from libraries import emoji_literals, minestat
 from modules import exceptions, util
@@ -17,7 +18,7 @@ from modules.misobot import MisoBot
 EMOJIFIER_HOST = os.environ.get("EMOJIFIER_HOST")
 
 
-class Miscellaneous(commands.Cog):
+class Misc(commands.Cog):
     """Miscellaneous commands"""
 
     def __init__(self, bot):
@@ -128,6 +129,17 @@ class Miscellaneous(commands.Cog):
         async with self.bot.session.get("https://www.affirmations.dev") as response:
             data = await response.json(loads=orjson.loads)
         await ctx.send(f"*{data['affirmation']}*")
+
+    @commands.command()
+    async def joke(self, ctx: commands.Context):
+        """Get a random dad joke"""
+        async with self.bot.session.get(
+            "https://icanhazdadjoke.com/",
+            headers={"Accept": "application/json"},
+        ) as response:
+            data = await response.json(loads=orjson.loads)
+
+        await ctx.send(f"<:funwaa:1063446110565310515> {data['joke']}")
 
     @commands.command(aliases=["imbored"])
     async def iambored(self, ctx: commands.Context):
@@ -582,9 +594,8 @@ class Miscellaneous(commands.Cog):
             >emoji :emoji:
         """
         my_emoji = self.parse_emoji(emoji_str)
-        if isinstance(my_emoji, int):
-            # just getting the id back because that's all we got
-            return await ctx.send(f"https://cdn.discordapp.com/emojis/{my_emoji}")
+        if my_emoji.name is None and my_emoji.id is None:
+            return await ctx.send(my_emoji.url)
 
         content = discord.Embed(title=f"`:{my_emoji.name}:`")
         content.set_image(url=my_emoji.url)
@@ -594,7 +605,7 @@ class Miscellaneous(commands.Cog):
                 text=f"{stats['filetype']} | {stats['filesize']} | {stats['dimensions']}"
             )
 
-        if my_emoji.id:
+        if my_emoji.id and my_emoji.name:
             discord_emoji = self.bot.get_emoji(my_emoji.id)
             if discord_emoji and discord_emoji.guild:
                 emoji = await discord_emoji.guild.fetch_emoji(my_emoji.id)
@@ -612,36 +623,41 @@ class Miscellaneous(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_emojis=True)
-    async def steal(self, ctx: commands.Context, emoji: str | int, name: str | None):
+    async def steal(self, ctx: commands.Context, *emojis: int | str):
         """Steal an emoji to your own server"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        my_emoji = self.parse_emoji(emoji)
-        if isinstance(my_emoji, int):
-            # just getting the id back because that's all we got
-            return await ctx.send(f"https://cdn.discordapp.com/emojis/{my_emoji}")
-        if not my_emoji.id:
-            raise exceptions.CommandWarning("Sorry I cannot steal this emoji :(")
-        async with self.bot.session.get(my_emoji.url) as response:
-            image_bytes = await response.read()
+        for emoji in emojis:
+            my_emoji = self.parse_emoji(emoji)
 
-        # use user supplied name if given
-        if name is not None:
-            my_emoji.name = name
+            if my_emoji.name and not my_emoji.id:
+                raise exceptions.CommandWarning(
+                    "Why are you trying to steal a default emoji? :skull:"
+                )
 
-        my_new_emoji = await ctx.guild.create_custom_emoji(
-            name=my_emoji.name or "misobot_steal",
-            reason=f"Stolen by {ctx.author}",
-            image=image_bytes,
-        )
+            async with self.bot.session.get(my_emoji.url) as response:
+                try:
+                    response.raise_for_status()
+                    image_bytes = await response.read()
+                except ClientResponseError:
+                    raise exceptions.CommandWarning(f"No such emoji `{my_emoji.url}`")
 
-        await ctx.send(
-            embed=discord.Embed(
-                description=f":pirate_flag: Succesfully stole `:{my_new_emoji.name}:` and added it to this server {my_new_emoji}",
-                color=int("e6e7e8", 16),
+            my_new_emoji = await ctx.guild.create_custom_emoji(
+                name=my_emoji.name or "stolen_emoji",
+                reason=f"Stolen by {ctx.author}",
+                image=image_bytes,
             )
-        )
+
+            await ctx.send(
+                embed=discord.Embed(
+                    description=(
+                        f":pirate_flag: Succesfully stole `:{my_new_emoji.name}:` "
+                        f"and added it to this server {my_new_emoji}"
+                    ),
+                    color=int("e6e7e8", 16),
+                )
+            )
 
     @commands.command()
     async def emojify(self, ctx: commands.Context, *, text: Union[discord.Message, str]):
@@ -673,19 +689,113 @@ class Miscellaneous(commands.Cog):
             except discord.errors.HTTPException:
                 raise exceptions.CommandWarning("Your text once emojified is too long to send!")
 
+    @commands.command()
+    async def meme(self, ctx: commands.Context, template: str, *, content):
+        """Make memes with given templates of empty signs
+
+        Available templates:
+            olivia, yyxy, haseul, jihyo, dubu, chaeyoung, nayeon, trump
+        """
+
+        options = {}
+        match template:
+            case "olivia":
+                options = {
+                    "filename": "images/hye.jpg",
+                    "boxdimensions": (206, 480, 530, 400),
+                    "angle": 2,
+                }
+            case "yyxy":
+                options = {
+                    "filename": "images/yyxy.png",
+                    "boxdimensions": (500, 92, 315, 467),
+                    "angle": 1,
+                }
+            case "haseul":
+                options = {
+                    "filename": "images/haseul.jpg",
+                    "boxdimensions": (212, 395, 275, 279),
+                    "wm_size": 20,
+                    "wm_color": (50, 50, 50, 100),
+                    "angle": 4,
+                }
+            case "jihyo":
+                options = {
+                    "filename": "images/jihyo.jpg",
+                    "boxdimensions": (272, 441, 518, 353),
+                    "wm_color": (255, 255, 255, 255),
+                    "angle": 7,
+                }
+            case "trump":
+                options = {
+                    "filename": "images/trump.jpg",
+                    "boxdimensions": (761, 579, 406, 600),
+                    "wm_color": (255, 255, 255, 255),
+                }
+            case "dubu":
+                options = {
+                    "filename": "images/dubu.jpg",
+                    "boxdimensions": (287, 454, 512, 347),
+                    "wm_color": (255, 255, 255, 255),
+                    "angle": 3,
+                }
+            case "chaeyoung":
+                options = {
+                    "filename": "images/chae.jpg",
+                    "boxdimensions": (109, 466, 467, 320),
+                    "wm_color": (255, 255, 255, 255),
+                    "angle": 3,
+                }
+            case "nayeon":
+                options = {
+                    "filename": "images/nayeon.jpg",
+                    "boxdimensions": (247, 457, 531, 353),
+                    "wm_color": (255, 255, 255, 255),
+                    "angle": 5,
+                }
+
+        meme = await self.bot.loop.run_in_executor(
+            None, lambda: self.meme_factory(ctx, text=content, **options)
+        )
+        await ctx.send(file=meme)
+
+    def meme_factory(
+        self,
+        ctx: commands.Context,
+        filename: str,
+        boxdimensions: Tuple[int, int, int, int],
+        text: str,
+        color: Tuple[int, int, int] = (40, 40, 40),
+        wm_size=30,
+        wm_color: Tuple[int, int, int, int] = (150, 150, 150, 100),
+        angle=0,
+    ):
+        image = ImageObject(filename)
+        image.write_box(*boxdimensions, color, text, angle=angle)
+        image.write_watermark(wm_size, wm_color)
+
+        save_location = f"downloads/{ctx.message.id}_output_{filename.split('/')[-1]}"
+        image.save(save_location)
+
+        with open(save_location, "rb") as img:
+            meme = discord.File(img)
+
+        os.remove(save_location)
+        return meme
+
     def parse_emoji(self, emoji_str: str | int):
-        my_emoji = DisplayEmoji(None, "", "")
+        my_emoji = DisplayEmoji(None, "", None)
         if isinstance(emoji_str, int):
             # user passed emoji id
             discord_emoji = self.bot.get_emoji(emoji_str)
-            if discord_emoji is None:
+            if discord_emoji:
+                my_emoji.id = discord_emoji.id
+                my_emoji.animated = discord_emoji.animated
+                my_emoji.name = discord_emoji.name
+                my_emoji.url = discord_emoji.url
+            else:
                 # cant get any info about it just send the image
-                return emoji_str
-
-            my_emoji.id = discord_emoji.id
-            my_emoji.animated = discord_emoji.animated
-            my_emoji.name = discord_emoji.name
-            my_emoji.url = discord_emoji.url
+                my_emoji.url = f"https://cdn.discordapp.com/emojis/{emoji_str}"
 
         else:
             custom_emoji_match = re.search(r"<(a?)?:(\w+):(\d+)>", emoji_str)
@@ -715,7 +825,7 @@ class Miscellaneous(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(Miscellaneous(bot))
+    await bot.add_cog(Misc(bot))
 
 
 @dataclass
@@ -724,3 +834,93 @@ class DisplayEmoji:
     url: str
     name: str | None
     animated: bool = False
+
+
+class ImageObject:
+    def __init__(self, filename):
+        self.filename = filename
+        self.image = Image.open(self.filename)
+        self.draw = ImageDraw.Draw(self.image)
+        self.font = "NanumGothic.ttf"
+
+    def get_text_size(self, font_size, text):
+        font = ImageFont.truetype(self.font, font_size)
+        return font.getsize(text)
+
+    def save(self, filename=None):
+        self.image.save(filename or self.filename)
+
+    def write_watermark(self, size, color):
+        font = ImageFont.truetype(self.font, size)
+        self.draw.text((5, 5), "Created with Miso Bot", font=font, fill=color)
+
+    def write_box(self, x, y, width, height, color, text, angle=0):
+        font_size = 300
+
+        while True:
+            lines = []
+            line = []
+            size = (0, 0)
+            line_height = 0
+            words = text.split(" ")
+            for word in words:
+                if "\n" in word:
+                    newline_words = word.split("\n")
+                    new_line = " ".join(line + [newline_words[0]])
+                    size = self.get_text_size(font_size, new_line)
+                    line_height = size[1]
+                    if size[0] <= width:
+                        line.append(newline_words[0])
+                    else:
+                        lines.append(line)
+                        line = [newline_words[0]]
+                    lines.append(line)
+                    if len(word.split("\n")) > 2:
+                        for i in range(1, len(word.split("\n")) - 1):
+                            lines.append([newline_words[i]])
+                    line = [newline_words[-1]]
+                else:
+                    new_line = " ".join(line + [word])
+                    size = self.get_text_size(font_size, new_line)
+                    line_height = size[1]
+                    if size[0] <= width:
+                        line.append(word)
+                    else:
+                        lines.append(line)
+                        line = [word]
+
+                # check after every word to exit prematurely
+                size = self.get_text_size(font_size, " ".join(line))
+                text_height = len(lines) * line_height
+                if text_height > height or size[0] > width:
+                    break
+
+            # add leftover line to total
+            if line:
+                lines.append(line)
+
+            text_height = len(lines) * line_height
+            if text_height <= height and size[0] <= width:
+                break
+
+            font_size -= 1
+
+        lines = [" ".join(line) for line in lines]
+        font = ImageFont.truetype(self.font, font_size)
+
+        txt = None
+        if angle != 0:
+            txt = Image.new("RGBA", (self.image.size))
+            txtd = ImageDraw.Draw(txt)
+        else:
+            txtd = self.draw
+        height = y
+        for i, line in enumerate(lines):
+            total_size = self.get_text_size(font_size, line)
+            x_left = int(x + ((width - total_size[0]) / 2))
+            txtd.text((x_left, height), line, font=font, fill=color)
+            height += line_height
+
+        if angle != 0 and txt:
+            txt = txt.rotate(angle, resample=Image.BILINEAR)
+            self.image.paste(txt, mask=txt)

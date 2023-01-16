@@ -257,6 +257,10 @@ class Owner(commands.Cog):
         )
         await util.send_success(ctx, f"{user.mention} is no longer VIP!")
 
+    @commands.command()
+    async def alwaysfail(self, _):
+        return 1 / 0
+
 
 def clean_codeblock(text):
     """Remove codeblocks and empty lines, return lines"""
