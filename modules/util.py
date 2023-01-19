@@ -17,6 +17,8 @@ from discord.ext import commands
 from durations_nlp import Duration
 from loguru import logger
 from PIL import Image, UnidentifiedImageError
+from random_user_agent.params import HardwareType
+from random_user_agent.user_agent import UserAgent
 
 from libraries import emoji_literals
 from modules import emojis, exceptions, queries
@@ -897,6 +899,15 @@ async def require_chunked(guild: discord.Guild):
         logger.info(
             f"Chunked [{guild}] with {guild.member_count} members in {time() - start_time:.2f} seconds"
         )
+
+
+user_agent_rotator = UserAgent(hardware_types=[HardwareType.COMPUTER.value], limit=100)
+
+
+def random_user_agent():
+    """Random User Agent String"""
+    user_agent = user_agent_rotator.get_random_user_agent()
+    return user_agent
 
 
 class TwoWayIterator:

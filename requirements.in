@@ -4,7 +4,6 @@ aiohttp-cors
 aiomysql
 arrow
 async-cse
-# asyncpraw
 beautifulsoup4
 bleach
 colorgram.py
@@ -27,3 +26,4 @@ lxml
 loguru
 aioredis
 shazamio
+random_user_agent

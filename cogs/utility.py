@@ -4,6 +4,7 @@ import json
 import random
 from time import time
 from typing import Annotated, Any, Optional
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import arrow
@@ -15,6 +16,7 @@ from loguru import logger
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
 from modules.shazam import Shazam
+from modules.ui import BaseButtonPaginator
 
 papago_pairs = [
     "ko/en",
@@ -978,9 +980,61 @@ class Utility(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
+    @commands.group()
+    async def steam(self, ctx: commands.Context):
+        """Steam commands"""
+        await util.command_group_help(ctx)
+
+    @steam.command()
+    async def market(self, ctx: commands.Context, *, search_term: str):
+        """Search the steam community market"""
+        MARKET_SEARCH_URL = "https://steamcommunity.com/market/search/render"
+
+        headers = {"User-Agent": util.random_user_agent()}
+        params = {"norender": 1, "count": 99, "query": search_term}
+        async with self.bot.session.get(
+            MARKET_SEARCH_URL, params=params, headers=headers
+        ) as response:
+            response.raise_for_status()
+            data = await response.json()
+
+        if not data["results"]:
+            raise exceptions.CommandInfo(f"No steam market listings found for `{search_term}`")
+
+        await MarketPaginator(data["results"]).run(ctx)
+
 
 async def setup(bot):
     await bot.add_cog(Utility(bot))
+
+
+class MarketPaginator(BaseButtonPaginator):
+    MARKET_LISTING_URL = "https://steamcommunity.com/market/listings/"
+    IMAGE_BASE_URL = "https://community.akamai.steamstatic.com/economy/image/"
+
+    def __init__(self, entries: list[dict], **kwargs):
+        super().__init__(entries=entries, per_page=1, **kwargs)
+
+    async def format_page(self, entries: list[dict]):
+        # entries should be a list with length of one so just grab the first element
+        result = entries[0]
+        asset = result["asset_description"]
+        item_hash = quote(asset["market_hash_name"])
+        market_link = f"{self.MARKET_LISTING_URL}{ asset['appid']}/{item_hash}"
+        return (
+            discord.Embed(
+                description=asset["type"],
+                color=int("68932f", 16),
+            )
+            .set_author(
+                name=result["name"],
+                url=market_link,
+            )
+            .set_thumbnail(url=self.IMAGE_BASE_URL + asset["icon_url"])
+            .add_field(name="Starting at", value=result["sell_price_text"])
+            .add_field(name="Listings", value=str(result["sell_listings"]))
+            .set_footer(icon_url=result["app_icon"], text=result["app_name"])
+        )
 
 
 async def detect_language(bot, string):
