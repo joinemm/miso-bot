@@ -660,6 +660,41 @@ class Misc(commands.Cog):
                 )
             )
 
+    @commands.command(usage="<sticker>")
+    @commands.has_permissions(manage_emojis=True)
+    async def stealsticker(self, ctx: commands.Context):
+        """Steal a sticker to your own server"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
+        if not ctx.message.stickers:
+            await util.send_command_help(ctx)
+
+        for sticker in ctx.message.stickers:
+            fetched_sticker = await sticker.fetch()
+
+            if isinstance(fetched_sticker, discord.GuildSticker):
+                sticker_file = await fetched_sticker.to_file()
+
+                my_new_sticker = await ctx.guild.create_sticker(
+                    name=fetched_sticker.name,
+                    description=fetched_sticker.description or "",
+                    emoji=fetched_sticker.emoji,
+                    file=sticker_file,
+                )
+            else:
+                raise exceptions.CommandWarning("I cannot steal default discord stickers!")
+
+            content = discord.Embed(
+                description=(
+                    f":pirate_flag: Succesfully stole sticker `{my_new_sticker.name}` "
+                    "and added it to this server"
+                ),
+                color=int("e6e7e8", 16),
+            )
+            content.set_thumbnail(url=my_new_sticker.url)
+            await ctx.send(embed=content)
+
     @commands.command()
     async def emojify(self, ctx: commands.Context, *, text: Union[discord.Message, str]):
         """Emojify your message
