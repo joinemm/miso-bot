@@ -64,7 +64,7 @@ click==8.1.3
     # via jishaku
 colorgram-py==1.2.0
     # via -r requirements.in
-contourpy==1.0.6
+contourpy==1.0.7
     # via matplotlib
 cycler==0.11.0
     # via matplotlib
@@ -91,7 +91,7 @@ idna==3.4
     #   yarl
 import-expression==1.1.4
     # via jishaku
-iniconfig==1.1.1
+iniconfig==2.0.0
     # via pytest
 jishaku==2.5.1
     # via -r requirements.in
@@ -107,7 +107,7 @@ lxml==4.9.2
     # via -r requirements.in
 markdownify==0.11.6
     # via -r requirements.in
-matplotlib==3.6.2
+matplotlib==3.6.3
     # via -r requirements.in
 multidict==6.0.4
     # via
@@ -124,13 +124,13 @@ oauthlib==3.2.2
     # via
     #   requests-oauthlib
     #   tweepy
-orjson==3.8.3
+orjson==3.8.5
     # via discord-py
-packaging==22.0
+packaging==23.0
     # via
     #   matplotlib
     #   pytest
-pillow==9.3.0
+pillow==9.4.0
     # via
     #   -r requirements.in
     #   colorgram-py
@@ -155,7 +155,7 @@ pymysql==1.0.2
     # via aiomysql
 pyparsing==3.0.9
     # via matplotlib
-pytest==7.2.0
+pytest==7.2.1
     # via
     #   pytest-asyncio
     #   shazamio
@@ -167,15 +167,17 @@ python-dateutil==2.8.2
     #   matplotlib
 python-dotenv==0.21.0
     # via -r requirements.in
+random-user-agent==1.0.1
+    # via -r requirements.in
 regex==2022.10.31
     # via -r requirements.in
-requests==2.28.1
+requests==2.28.2
     # via
     #   requests-oauthlib
     #   tweepy
 requests-oauthlib==1.3.1
     # via tweepy
-scipy==1.9.3
+scipy==1.10.0
     # via -r requirements.in
 shazamio==0.3.1.1
     # via -r requirements.in
@@ -197,7 +199,7 @@ typing-extensions==4.4.0
     # via
     #   aioredis
     #   pydantic
-urllib3==1.26.13
+urllib3==1.26.14
     # via requests
 uvloop==0.17.0
     # via -r requirements.in
