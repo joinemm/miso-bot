@@ -194,7 +194,7 @@ class ErrorHander(commands.Cog):
             case exceptions.ServerTooBig():
                 await self.send_warning(ctx, ErrorMessages.server_too_big, error)
 
-            case (commands.NotOwner(), commands.CheckFailure()):
+            case commands.NotOwner() | commands.CheckFailure():
                 await self.send_warning(ctx, ErrorMessages.not_allowed, error)
 
             case discord.Forbidden():
