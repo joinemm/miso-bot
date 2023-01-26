@@ -910,6 +910,10 @@ def random_user_agent():
     return user_agent
 
 
+def asset_full_size(asset: discord.Asset) -> str:
+    return asset.replace(size=4096).url
+
+
 class TwoWayIterator:
     """Two way iterator class that is used as the backend for paging"""
 

@@ -192,12 +192,11 @@ class User(commands.Cog):
             content.set_author(name=f"{user} Banner", icon_url=user.display_avatar.url)
             return await ctx.send(embed=content)
 
-        content.set_author(
-            name=f"{user} Banner", url=user.banner.url, icon_url=user.display_avatar.url
-        )
+        banner_url = util.asset_full_size(user.banner)
 
-        content.set_image(url=user.banner.url)
-        stats = await util.image_info_from_url(self.bot.session, user.banner.url)
+        content.set_author(name=f"{user} Banner", url=banner_url, icon_url=user.display_avatar.url)
+        content.set_image(url=banner_url)
+        stats = await util.image_info_from_url(self.bot.session, banner_url)
         color = await util.color_from_image_url(
             self.bot.session, user.banner.replace(size=64, format="png").url
         )
@@ -224,14 +223,16 @@ class User(commands.Cog):
         if not guild.banner:
             raise exceptions.CommandWarning("This server has no banner")
 
+        banner_url = util.asset_full_size(guild.banner)
+
         content.set_author(
             name=f"{guild} Banner",
-            url=guild.banner.url,
+            url=banner_url,
             icon_url=guild.icon.url if guild.icon else None,
         )
 
-        content.set_image(url=guild.banner.url)
-        stats = await util.image_info_from_url(self.bot.session, guild.banner.url)
+        content.set_image(url=banner_url)
+        stats = await util.image_info_from_url(self.bot.session, banner_url)
         color = await util.color_from_image_url(
             self.bot.session, guild.banner.replace(size=64, format="png").url
         )
