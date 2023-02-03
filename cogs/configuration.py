@@ -281,11 +281,7 @@ class Configuration(commands.Cog):
             """,
             ctx.guild.id,
         )
-        if emoji_type == "custom":
-            emoji = self.bot.get_emoji(emoji_id)
-        else:
-            emoji = emoji_name
-
+        emoji = self.bot.get_emoji(emoji_id) if emoji_type == "custom" else emoji_name
         await util.send_success(
             ctx,
             f"Messages now need **{amount}** {emoji} reactions to get into the starboard.",
@@ -422,11 +418,7 @@ class Configuration(commands.Cog):
             log_channel_id,
         ) = starboard_settings
 
-        if emoji_type == "custom":
-            emoji = self.bot.get_emoji(emoji_id)
-        else:
-            emoji = emoji_name
-
+        emoji = self.bot.get_emoji(emoji_id) if emoji_type == "custom" else emoji_name
         blacklisted_channels: list[int] = await self.bot.db.fetch_flattened(
             """
             SELECT channel_id FROM starboard_blacklist WHERE guild_id = %s
@@ -534,10 +526,10 @@ class Configuration(commands.Cog):
         if not channels:
             raise exceptions.CommandInfo("There are no voting channels on this server yet!")
 
-        rows = []
-        for channel_id, voting_type in channels:
-            rows.append(f"<#{channel_id}> - `{voting_type}`")
-
+        rows = [
+            f"<#{channel_id}> - `{voting_type}`"
+            for channel_id, voting_type in channels
+        ]
         content = discord.Embed(
             title=f":1234: Voting channels in {ctx.guild.name}", color=int("3b88c3", 16)
         )
@@ -578,10 +570,7 @@ class Configuration(commands.Cog):
             raise exceptions.CommandError("Unable to get current guild")
 
         existing_role = await util.get_role(ctx, role)
-        if existing_role is None:
-            role_id = int(role)
-        else:
-            role_id = existing_role.id
+        role_id = int(role) if existing_role is None else existing_role.id
         await self.bot.db.execute(
             "DELETE FROM autorole WHERE guild_id = %s AND role_id = %s",
             ctx.guild.id,
@@ -603,10 +592,7 @@ class Configuration(commands.Cog):
         content = discord.Embed(
             title=f":scroll: Autoroles in {ctx.guild.name}", color=int("ffd983", 16)
         )
-        rows = []
-        for role_id in roles:
-            rows.append(f"<@&{role_id}> [`{role_id}`]")
-
+        rows = [f"<@&{role_id}> [`{role_id}`]" for role_id in roles]
         if not rows:
             rows = ["No roles have been set up yet!"]
 

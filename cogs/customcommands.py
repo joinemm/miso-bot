@@ -48,15 +48,14 @@ class CustomCommands(commands.Cog, name="Commands"):
 
     async def custom_command_list(self, guild_id, match=""):
         """Returns a list of custom commands on server"""
-        command_list = set()
         data = await self.bot.db.fetch_flattened(
             "SELECT command_trigger FROM custom_command WHERE guild_id = %s", guild_id
         )
-        for command_trigger in data:
-            if match == "" or match in command_trigger:
-                command_list.add(command_trigger)
-
-        return command_list
+        return {
+            command_trigger
+            for command_trigger in data
+            if match == "" or match in command_trigger
+        }
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error):
@@ -177,15 +176,16 @@ class CustomCommands(commands.Cog, name="Commands"):
 
         content = discord.Embed()
 
-        internal_rows = []
-        for command in self.bot_command_list(match=name):
-            internal_rows.append(f"{ctx.prefix}{command}")
-        if internal_rows:
+        if internal_rows := [
+            f"{ctx.prefix}{command}"
+            for command in self.bot_command_list(match=name)
+        ]:
             content.add_field(name="Internal commands", value="\n".join(internal_rows))
 
-        custom_rows = []
-        for command in await self.custom_command_list(ctx.guild.id, match=name):
-            custom_rows.append(f"{ctx.prefix}{command}")
+        custom_rows = [
+            f"{ctx.prefix}{command}"
+            for command in await self.custom_command_list(ctx.guild.id, match=name)
+        ]
         if custom_rows:
             content.add_field(name="Custom commands", value="\n".join(custom_rows))
 
@@ -200,10 +200,10 @@ class CustomCommands(commands.Cog, name="Commands"):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        rows = []
-        for command in await self.custom_command_list(ctx.guild.id):
-            rows.append(f"{ctx.prefix}{command}")
-
+        rows = [
+            f"{ctx.prefix}{command}"
+            for command in await self.custom_command_list(ctx.guild.id)
+        ]
         if rows:
             content = discord.Embed(title=f"{ctx.guild.name} custom commands")
             await util.send_as_pages(ctx, content, rows)

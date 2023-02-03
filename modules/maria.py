@@ -89,30 +89,22 @@ class MariaDB:
     async def fetch(self, statement: str, *params):
         """Fetch data"""
         _, data = await self.run_sql(statement, params)
-        if data:
-            return data
-        return None
+        return data or None
 
     async def fetch_value(self, statement: str, *params):
         """Fetches the first value of the first row of the query"""
         _, data = await self.run_sql(statement, params)
-        if data:
-            return data[0][0]
-        return None
+        return data[0][0] if data else None
 
     async def fetch_row(self, statement: str, *params) -> list:
         """Fetches the first row of the query"""
         _, data = await self.run_sql(statement, params)
-        if data:
-            return data[0]
-        return []
+        return data[0] if data else []
 
     async def fetch_flattened(self, statement: str, *params) -> list:
         """Fetches the first element of every row as a flattened list"""
         _, data = await self.run_sql(statement, params)
-        if data:
-            return [row[0] for row in data]
-        return []
+        return [row[0] for row in data] if data else []
 
     async def executemany(self, statement: str, params: list[tuple]):
         """Execute the same sql with different arguments"""

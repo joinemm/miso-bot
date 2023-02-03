@@ -196,9 +196,9 @@ class Roles(commands.Cog):
             existing_role_id: int | None = dict(existing_roles).get(str(color))
             color_role = ctx.guild.get_role(existing_role_id) if existing_role_id else None
 
-            # remove old color roles if any
-            old_roles = list(filter(lambda r: r.id in existing_roles_ids, ctx.author.roles))
-            if old_roles:
+            if old_roles := list(
+                filter(lambda r: r.id in existing_roles_ids, ctx.author.roles)
+            ):
                 await ctx.author.remove_roles(*old_roles, atomic=True, reason="Changed color")
 
             # remove manually deleted roles
@@ -235,8 +235,6 @@ class Roles(commands.Cog):
                 str(color),
             )
 
-            # reorder the roles list
-            payload = []
             before_colors = []
             acquired = []
             colors = []
@@ -251,9 +249,7 @@ class Roles(commands.Cog):
                     acquired = []
 
             final = before_colors + colors + acquired
-            for i, role in enumerate(final):
-                payload.append({"id": role.id, "position": i})
-
+            payload = [{"id": role.id, "position": i} for i, role in enumerate(final)]
             await self.bot.http.move_role_position(ctx.guild.id, payload, reason="movin")  # type: ignore
 
         # color the user
@@ -364,11 +360,9 @@ class Roles(commands.Cog):
             title=f":scroll: Available roles in {ctx.guild.name}",
             color=int("ffd983", 16),
         )
-        rows = []
-        for role_name, role_id in sorted(data):
-            rows.append(f"`{role_name}` : <@&{role_id}>")
-
-        if rows:
+        if rows := [
+            f"`{role_name}` : <@&{role_id}>" for role_name, role_id in sorted(data)
+        ]:
             await util.send_as_pages(ctx, content, rows)
         else:
             content.description = "Nothing yet!"

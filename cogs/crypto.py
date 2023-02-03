@@ -60,10 +60,7 @@ class Cryptocurrency(commands.Cog):
         if isinstance(data, dict):
             raise exceptions.CommandError(data.get("msg"))
 
-        candle_data = []
-        for ticker in data:
-            candle_data.append(str(ticker[:5]))
-
+        candle_data = [str(ticker[:5]) for ticker in data]
         current_price = Decimal(data[-1][4]).normalize()
 
         replacements = {
@@ -90,8 +87,7 @@ class Cryptocurrency(commands.Cog):
         async with self.bot.session.get(url, params=params) as response:
             data = await response.json(loads=orjson.loads)
 
-        error = data.get("msg")
-        if error:
+        if error := data.get("msg"):
             raise exceptions.CommandError(error)
 
         content = discord.Embed(color=int("f3ba2e", 16))

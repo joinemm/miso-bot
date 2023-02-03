@@ -219,7 +219,7 @@ class LastFm(commands.Cog):
         remainder = total % per_page
         total_pages = int(pre_data["recenttracks"]["@attr"]["totalPages"])
         if n > remainder:
-            n = n - remainder
+            n -= remainder
             containing_page = total_pages - math.ceil(n / per_page)
         else:
             containing_page = total_pages
@@ -376,8 +376,7 @@ class LastFm(commands.Cog):
                 playcount = int(trackdata["userplaycount"])
                 if playcount > 0:
                     content.description += f"\n> {playcount} {format_plays(playcount)}"
-                for tag in trackdata["toptags"]["tag"]:
-                    tags.append(tag["name"])
+                tags.extend(tag["name"] for tag in trackdata["toptags"]["tag"])
                 content.set_footer(text=", ".join(tags))
             except (KeyError, TypeError):
                 pass
@@ -657,7 +656,7 @@ class LastFm(commands.Cog):
             buffer = io.BytesIO(await response.read())
             await ctx.send(
                 f"**{artist_name} — {album_name}**",
-                file=discord.File(fp=buffer, filename=image_hash + ".jpg"),
+                file=discord.File(fp=buffer, filename=f"{image_hash}.jpg"),
             )
 
     @fm.command(name="album")
@@ -858,11 +857,7 @@ class LastFm(commands.Cog):
             artist["formatted_name"],
         )
 
-        if crown_holder == ctx.usertarget.id:
-            crownstate = " :crown:"
-        else:
-            crownstate = ""
-
+        crownstate = " :crown:" if crown_holder == ctx.usertarget.id else ""
         scrobbles, albums_count, tracks_count = metadata
         content.add_field(name="Listeners", value=f"**{listeners}**")
         content.add_field(name="Scrobbles", value=f"**{globalscrobbles}**")
@@ -958,11 +953,7 @@ class LastFm(commands.Cog):
 
             dim = size.split("x")
             width = int(dim[0])
-            if len(dim) > 1:
-                height = abs(int(dim[1]))
-            else:
-                height = abs(int(dim[0]))
-
+            height = abs(int(dim[1])) if len(dim) > 1 else abs(int(dim[0]))
             if width + height > max_size:
                 raise exceptions.CommandInfo(
                     f"Size is too big! Chart `width` + `height` total must not exceed `{max_size}`"
@@ -1007,10 +998,7 @@ class LastFm(commands.Cog):
 
         if to_fetch:
             to_cache = []
-            tasks = []
-            for image_id in to_fetch:
-                tasks.append(self.fetch_color(self.bot.session, image_id))
-
+            tasks = [self.fetch_color(self.bot.session, image_id) for image_id in to_fetch]
             if len(tasks) > 500:
                 warn = await ctx.send(
                     ":exclamation:Your library includes over 500 uncached album colours, "
@@ -1030,9 +1018,10 @@ class LastFm(commands.Cog):
                 to_cache,
             )
 
+        tree = kdtree.create(album_color_nodes)
         if rainbow:
-            if diagonal:
-                rainbow_colors = [
+            rainbow_colors = (
+                [
                     (255, 79, 0),
                     (255, 33, 0),
                     (217, 29, 82),
@@ -1046,8 +1035,8 @@ class LastFm(commands.Cog):
                     (255, 200, 0),
                     (255, 148, 0),
                 ]
-            else:
-                rainbow_colors = [
+                if diagonal
+                else [
                     (255, 0, 0),  # red
                     (255, 127, 0),  # orange
                     (255, 255, 0),  # yellow
@@ -1056,12 +1045,8 @@ class LastFm(commands.Cog):
                     (75, 0, 130),  # purple
                     (148, 0, 211),  # violet
                 ]
-
-            chunks = []
-            tree = kdtree.create(album_color_nodes)
-            for rgb in rainbow_colors:
-                chunks.append(list(tree.search_knn(rgb, width + height)))
-
+            )
+            chunks = [list(tree.search_knn(rgb, width + height)) for rgb in rainbow_colors]
             random_offset = random.randint(0, 6)
             final_albums = []
             for album_index in range(width * height):
@@ -1082,7 +1067,6 @@ class LastFm(commands.Cog):
                 )
 
         else:
-            tree = kdtree.create(album_color_nodes)
             nearest = tree.search_knn(query_color, width * height)
 
             final_albums = [
@@ -1271,41 +1255,39 @@ class LastFm(commands.Cog):
 
         chart_type = "ERROR"
         content_map = {}
-        if tasks:
-            data = await asyncio.gather(*tasks)
-            chart = []
-
-            if arguments["method"] == "user.gettopalbums":
-                chart_type = "top album"
-                for user_data in data:
-                    if user_data is None:
-                        continue
-                    for album in user_data:
-                        album_name = album["name"]
-                        artist = album["artist"]["name"]
-                        name = f"{album_name} — {artist}"
-                        plays = int(album["playcount"])
-                        image_url = album["image"][3]["#text"]
-                        if name in content_map:
-                            content_map[name]["plays"] += plays
-                        else:
-                            content_map[name] = {"plays": plays, "image": image_url}
-
-            elif arguments["method"] == "user.gettopartists":
-                chart_type = "top artist"
-                for user_data in data:
-                    if user_data is None:
-                        continue
-                    for artist in user_data:
-                        name = artist["name"]
-                        plays = int(artist["playcount"])
-                        if name in content_map:
-                            content_map[name]["plays"] += plays
-                        else:
-                            content_map[name] = {"plays": plays, "image": None}
-
-        else:
+        if not tasks:
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+
+        data = await asyncio.gather(*tasks)
+        chart = []
+
+        if arguments["method"] == "user.gettopalbums":
+            chart_type = "top album"
+            for user_data in data:
+                if user_data is None:
+                    continue
+                for album in user_data:
+                    album_name = album["name"]
+                    artist = album["artist"]["name"]
+                    name = f"{album_name} — {artist}"
+                    plays = int(album["playcount"])
+                    if name in content_map:
+                        content_map[name]["plays"] += plays
+                    else:
+                        content_map[name] = {"plays": plays, "image": album["image"][3]["#text"]}
+
+        elif arguments["method"] == "user.gettopartists":
+            chart_type = "top artist"
+            for user_data in data:
+                if user_data is None:
+                    continue
+                for artist in user_data:
+                    name = artist["name"]
+                    plays = int(artist["playcount"])
+                    if name in content_map:
+                        content_map[name]["plays"] += plays
+                    else:
+                        content_map[name] = {"plays": plays, "image": None}
 
         for i, (name, content_data) in enumerate(
             sorted(content_map.items(), key=lambda x: x[1]["plays"], reverse=True),
@@ -1340,7 +1322,6 @@ class LastFm(commands.Cog):
     @server.command(name="nowplaying", aliases=["np"])
     async def server_nowplaying(self, ctx: commands.Context):
         """What this server is currently listening to"""
-        listeners = []
         tasks = []
         for user_id, lastfm_username in await self.server_lastfm_usernames(ctx):
             member = ctx.guild.get_member(user_id)
@@ -1350,30 +1331,27 @@ class LastFm(commands.Cog):
             tasks.append(self.get_np(lastfm_username, member))
 
         total_linked = len(tasks)
-        if tasks:
-            data = await asyncio.gather(*tasks)
-            for song, member_ref in data:
-                if song is not None:
-                    listeners.append((song, member_ref))
-        else:
+        if not tasks:
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
+        data = await asyncio.gather(*tasks)
+        listeners = [
+            (song, member_ref) for song, member_ref in data if song is not None
+        ]
         if not listeners:
             return await ctx.send("Nobody on this server is listening to anything at the moment!")
 
         total_listening = len(listeners)
-        rows = []
         maxlen = 0
         for song, member in listeners:
             dn = util.displayname(member)
             if len(dn) > maxlen:
                 maxlen = len(dn)
 
-        for song, member in listeners:
-            rows.append(
-                f"{util.displayname(member)} | **{discord.utils.escape_markdown(song.get('artist'))}** — ***{discord.utils.escape_markdown(song.get('name'))}***"
-            )
-
+        rows = [
+            f"{util.displayname(member)} | **{discord.utils.escape_markdown(song.get('artist'))}** — ***{discord.utils.escape_markdown(song.get('name'))}***"
+            for song, member in listeners
+        ]
         content = discord.Embed()
         content.set_author(
             name=f"What is {ctx.guild.name} listening to?",

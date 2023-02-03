@@ -56,8 +56,7 @@ class Mod(commands.Cog):
             if guild is None:
                 continue
             await util.require_chunked(guild)
-            user = guild.get_member(user_id)
-            if user:
+            if user := guild.get_member(user_id):
                 mute_role_id = await self.bot.db.fetch_value(
                     """
                     SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
@@ -295,7 +294,7 @@ class Mod(commands.Cog):
         """Resolve user ids into usernames"""
         if len(ids) > 25:
             raise exceptions.CommandWarning("Only 25 ids at a time please!")
-        elif len(ids) == 0:
+        elif not ids:
             await util.send_command_help(ctx)
 
         rows = []

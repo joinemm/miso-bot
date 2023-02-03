@@ -185,7 +185,7 @@ class Misc(commands.Cog):
             "Naur",
         ]
         answer = random.choice(choices)
-        question = question + ("?" if not question.endswith("?") else "")
+        question = question + ("" if question.endswith("?") else "?")
         await ctx.send(f"> {question}\n**{answer}**")
 
     @commands.command()
@@ -211,7 +211,7 @@ class Misc(commands.Cog):
             >ship <name> and <name>
         """
         nameslist = names.split(" and ")
-        if not len(nameslist) == 2:
+        if len(nameslist) != 2:
             nameslist = names.split(" ", 1)
             if len(nameslist) < 2:
                 return await ctx.send("Please give two names separated with `and`")
@@ -219,23 +219,22 @@ class Misc(commands.Cog):
         lovenums = [0, 0, 0, 0, 0]
         for c in names:
             c = c.lower()
-            if c == "l":
+            if c == "e":
+                lovenums[3] += 1
+            elif c == "l":
                 lovenums[0] += 1
             elif c == "o":
                 lovenums[1] += 1
-            elif c == "v":
-                lovenums[2] += 1
-            elif c == "e":
-                lovenums[3] += 1
             elif c == "s":
                 lovenums[4] += 1
 
+            elif c == "v":
+                lovenums[2] += 1
         while max(lovenums) > 9:
             newnums = []
             for n in lovenums:
                 if n > 9:
-                    newnums.append(n // 10)
-                    newnums.append(n % 10)
+                    newnums.extend((n // 10, n % 10))
                 else:
                     newnums.append(n)
             lovenums = newnums
@@ -246,42 +245,29 @@ class Misc(commands.Cog):
         while len(lovenums) > 2 and it < maxit and len(lovenums) < maxlen:
             newnums = []
             it += 1
-            for i in range(0, len(lovenums) - 1):
+            for i in range(len(lovenums) - 1):
                 pairsum = lovenums[i] + lovenums[i + 1]
                 if pairsum < 10:
                     newnums.append(pairsum)
                 else:
-                    newnums.append(1)
-                    newnums.append(pairsum % 10)
+                    newnums.extend((1, pairsum % 10))
             lovenums = newnums
 
         # This if-else matches with original site alg handling of non-convergent result. (i.e. defaulting to 1%)
         # Technically, you can leave this section as it was previously and still get a non-trivial outputtable result since the length is always at least 2.
-        if len(lovenums) == 2:
-            percentage = lovenums[0] * 10 + lovenums[1]
-        else:
-            percentage = 1  # Same default that original site algorithm used
-
+        percentage = lovenums[0] * 10 + lovenums[1] if len(lovenums) == 2 else 1
         if percentage < 25:
             emoji = ":broken_heart:"
-            text = "Dr. Love thinks a relationship might work out between {} and {}, but the chance is very small. A successful relationship is possible, but you both have to work on it. Do not sit back and think that it will all work out fine, because it might not be working out the way you wanted it to. Spend as much time with each other as possible. Again, the chance of this relationship working out is very small, so even when you do work hard on it, it still might not work out.".format(
-                nameslist[0], nameslist[1]
-            )
+            text = f"Dr. Love thinks a relationship might work out between {nameslist[0]} and {nameslist[1]}, but the chance is very small. A successful relationship is possible, but you both have to work on it. Do not sit back and think that it will all work out fine, because it might not be working out the way you wanted it to. Spend as much time with each other as possible. Again, the chance of this relationship working out is very small, so even when you do work hard on it, it still might not work out."
         elif percentage < 50:
             emoji = ":heart:"
-            text = "The chance of a relationship working out between {} and {} is not very big, but a relationship is very well possible, if the two of you really want it to, and are prepared to make some sacrifices for it. You'll have to spend a lot of quality time together. You must be aware of the fact that this relationship might not work out at all, no matter how much time you invest in it.".format(
-                nameslist[0], nameslist[1]
-            )
+            text = f"The chance of a relationship working out between {nameslist[0]} and {nameslist[1]} is not very big, but a relationship is very well possible, if the two of you really want it to, and are prepared to make some sacrifices for it. You'll have to spend a lot of quality time together. You must be aware of the fact that this relationship might not work out at all, no matter how much time you invest in it."
         elif percentage < 75:
             emoji = ":heart:"
-            text = "Dr. Love thinks that a relationship between {} and {} has a reasonable chance of working out, but on the other hand, it might not. Your relationship may suffer good and bad times. If things might not be working out as you would like them to, do not hesitate to talk about it with the person involved. Spend time together, talk with each other.".format(
-                nameslist[0], nameslist[1]
-            )
+            text = f"Dr. Love thinks that a relationship between {nameslist[0]} and {nameslist[1]} has a reasonable chance of working out, but on the other hand, it might not. Your relationship may suffer good and bad times. If things might not be working out as you would like them to, do not hesitate to talk about it with the person involved. Spend time together, talk with each other."
         else:
             emoji = ":sparkling_heart:"
-            text = "Dr. Love thinks that a relationship between {} and {} has a very good chance of being successful, but this doesn't mean that you don't have to work on the relationship. Remember that every relationship needs spending time together, talking with each other etc.".format(
-                nameslist[0], nameslist[1]
-            )
+            text = f"Dr. Love thinks that a relationship between {nameslist[0]} and {nameslist[1]} has a very good chance of being successful, but this doesn't mean that you don't have to work on the relationship. Remember that every relationship needs spending time together, talking with each other etc."
 
         content = discord.Embed(
             title=f"{nameslist[0]} {emoji} {nameslist[1]} - {percentage}%",
@@ -673,18 +659,17 @@ class Misc(commands.Cog):
         for sticker in ctx.message.stickers:
             fetched_sticker = await sticker.fetch()
 
-            if isinstance(fetched_sticker, discord.GuildSticker):
-                sticker_file = await fetched_sticker.to_file()
-
-                my_new_sticker = await ctx.guild.create_sticker(
-                    name=fetched_sticker.name,
-                    description=fetched_sticker.description or "",
-                    emoji=fetched_sticker.emoji,
-                    file=sticker_file,
-                )
-            else:
+            if not isinstance(fetched_sticker, discord.GuildSticker):
                 raise exceptions.CommandWarning("I cannot steal default discord stickers!")
 
+            sticker_file = await fetched_sticker.to_file()
+
+            my_new_sticker = await ctx.guild.create_sticker(
+                name=fetched_sticker.name,
+                description=fetched_sticker.description or "",
+                emoji=fetched_sticker.emoji,
+                file=sticker_file,
+            )
             content = discord.Embed(
                 description=(
                     f":pirate_flag: Succesfully stole sticker `{my_new_sticker.name}` "
@@ -822,9 +807,7 @@ class Misc(commands.Cog):
     def parse_emoji(self, emoji_str: str | int):
         my_emoji = DisplayEmoji(None, "", None)
         if isinstance(emoji_str, int):
-            # user passed emoji id
-            discord_emoji = self.bot.get_emoji(emoji_str)
-            if discord_emoji:
+            if discord_emoji := self.bot.get_emoji(emoji_str):
                 my_emoji.id = discord_emoji.id
                 my_emoji.animated = discord_emoji.animated
                 my_emoji.name = discord_emoji.name
@@ -833,29 +816,24 @@ class Misc(commands.Cog):
                 # cant get any info about it just send the image
                 my_emoji.url = f"https://cdn.discordapp.com/emojis/{emoji_str}"
 
+        elif custom_emoji_match := re.search(r"<(a?)?:(\w+):(\d+)>", emoji_str):
+            # is a custom emoji
+            animated, emoji_name, emoji_id = custom_emoji_match.groups()
+            my_emoji.url = (
+                f"https://cdn.discordapp.com/emojis/{emoji_id}.{'gif' if animated else 'png'}"
+            )
+            my_emoji.name = emoji_name
+            my_emoji.animated = animated == "a"
+            my_emoji.id = int(emoji_id)
+        elif emoji_name := emoji_literals.UNICODE_TO_NAME.get(emoji_str):
+            codepoint = "-".join(
+                f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE[emoji_name]
+            )
+            my_emoji.name = emoji_name.strip(":")
+            my_emoji.url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
         else:
-            custom_emoji_match = re.search(r"<(a?)?:(\w+):(\d+)>", emoji_str)
-            if custom_emoji_match:
-                # is a custom emoji
-                animated, emoji_name, emoji_id = custom_emoji_match.groups()
-                my_emoji.url = (
-                    f"https://cdn.discordapp.com/emojis/{emoji_id}.{'gif' if animated else 'png'}"
-                )
-                my_emoji.name = emoji_name
-                my_emoji.animated = animated == "a"
-                my_emoji.id = int(emoji_id)
-            else:
-                # maybe unicode then
-                emoji_name = emoji_literals.UNICODE_TO_NAME.get(emoji_str)
-                if emoji_name:
-                    codepoint = "-".join(
-                        f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE[emoji_name]
-                    )
-                    my_emoji.name = emoji_name.strip(":")
-                    my_emoji.url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
-                else:
-                    # its nothin
-                    raise exceptions.CommandWarning("Invalid emoji!")
+            # its nothin
+            raise exceptions.CommandWarning("Invalid emoji!")
 
         return my_emoji
 
@@ -912,8 +890,7 @@ class ImageObject:
                         line = [newline_words[0]]
                     lines.append(line)
                     if len(word.split("\n")) > 2:
-                        for i in range(1, len(word.split("\n")) - 1):
-                            lines.append([newline_words[i]])
+                        lines.extend([newline_words[i]] for i in range(1, len(word.split("\n")) - 1))
                     line = [newline_words[-1]]
                 else:
                     new_line = " ".join(line + [word])
@@ -951,7 +928,7 @@ class ImageObject:
         else:
             txtd = self.draw
         height = y
-        for i, line in enumerate(lines):
+        for line in lines:
             total_size = self.get_text_size(font_size, line)
             x_left = int(x + ((width - total_size[0]) / 2))
             txtd.text((x_left, height), line, font=font, fill=color)

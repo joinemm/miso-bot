@@ -78,13 +78,12 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
     def _switch_page(self, count: int, /) -> list[T]:
         self._current_page += count
 
-        if self.clamp_pages:
-            if count < 0:  # Going down
-                if self._current_page < 0:
-                    self._current_page = self.max_page - 1
-            elif count > 0:  # Going up
-                if self._current_page > self.max_page - 1:  # - 1 for indexing
-                    self._current_page = 0
+        if count < 0:
+            if self.clamp_pages and self._current_page < 0:
+                self._current_page = self.max_page - 1
+        elif count > 0:
+            if self.clamp_pages and self._current_page > self.max_page - 1:
+                self._current_page = 0
 
         self.page_number.label = f"Page {self._current_page + 1} of {self.max_page}"
         return self.pages[self._current_page]

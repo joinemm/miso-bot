@@ -121,8 +121,9 @@ class Events(commands.Cog):
         """Called when a new member joins a guild"""
         await self.bot.wait_until_ready()
         logging_channel_id = None
-        logging_settings = self.bot.cache.logging_settings.get(str(member.guild.id))
-        if logging_settings:
+        if logging_settings := self.bot.cache.logging_settings.get(
+            str(member.guild.id)
+        ):
             logging_channel_id = logging_settings.get("member_log_channel_id")
 
         if logging_channel_id:
@@ -168,8 +169,7 @@ class Events(commands.Cog):
         """Called when user gets banned from a server"""
         await self.bot.wait_until_ready()
         logging_channel_id = None
-        logging_settings = self.bot.cache.logging_settings.get(str(guild.id))
-        if logging_settings:
+        if logging_settings := self.bot.cache.logging_settings.get(str(guild.id)):
             logging_channel_id = logging_settings.get("ban_log_channel_id")
 
         if logging_channel_id:
@@ -191,8 +191,9 @@ class Events(commands.Cog):
         """Called when member leaves a guild"""
         await self.bot.wait_until_ready()
         logging_channel_id = None
-        logging_settings = self.bot.cache.logging_settings.get(str(member.guild.id))
-        if logging_settings:
+        if logging_settings := self.bot.cache.logging_settings.get(
+            str(member.guild.id)
+        ):
             logging_channel_id = logging_settings.get("member_log_channel_id")
 
         if logging_channel_id:
@@ -251,8 +252,9 @@ class Events(commands.Cog):
             return
 
         channel_id = None
-        logging_settings = self.bot.cache.logging_settings.get(str(message.guild.id))
-        if logging_settings:
+        if logging_settings := self.bot.cache.logging_settings.get(
+            str(message.guild.id)
+        ):
             channel_id = logging_settings.get("message_log_channel_id")
         if channel_id:
             log_channel = message.guild.get_channel(channel_id)
@@ -281,8 +283,9 @@ class Events(commands.Cog):
         if message.author.bot:
             return
 
-        autoresponses = self.bot.cache.autoresponse.get(str(message.guild.id), True)
-        if autoresponses:
+        if autoresponses := self.bot.cache.autoresponse.get(
+            str(message.guild.id), True
+        ):
             await self.easter_eggs(message)
 
     @staticmethod
@@ -406,11 +409,10 @@ class Events(commands.Cog):
                         reaction_count = react.count
                         reacted_users = [user async for user in react.users()]
                         break
-                else:
-                    if react.emoji == payload.emoji.name:
-                        reaction_count = react.count
-                        reacted_users = [user async for user in react.users()]
-                        break
+                elif react.emoji == payload.emoji.name:
+                    reaction_count = react.count
+                    reacted_users = [user async for user in react.users()]
+                    break
 
             reacted_users = set(reacted_users)
             reacted_users.add(user)

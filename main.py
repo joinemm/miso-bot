@@ -74,7 +74,8 @@ infrastructure_extensions = [
 
 def main():
     bot: MisoBot = MisoBot(
-        extensions=extensions + (infrastructure_extensions if not developer_mode else []),
+        extensions=extensions
+        + ([] if developer_mode else infrastructure_extensions),
         default_prefix=prefix,
     )
     bot.run(TOKEN, log_handler=None)

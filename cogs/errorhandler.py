@@ -151,7 +151,6 @@ class ErrorHander(commands.Cog):
 
         # handle error based on it's type
         match error:
-
             case commands.CommandNotFound():
                 return
 
@@ -171,19 +170,30 @@ class ErrorHander(commands.Cog):
                 await util.send_command_help(ctx)
 
             case commands.MissingPermissions():
-                permissions = ", ".join(f"`{x}`" for x in error.missing_permissions)
+                permissions = ", ".join(
+                    f"`{x}`" for x in error.missing_permissions
+                )
                 await self.send_warning(
-                    ctx, ErrorMessages.missing_permissions.format(permissions), error
+                    ctx,
+                    ErrorMessages.missing_permissions.format(permissions),
+                    error,
                 )
 
             case commands.BotMissingPermissions():
-                permissions = ", ".join(f"`{x}`" for x in error.missing_permissions)
+                permissions = ", ".join(
+                    f"`{x}`" for x in error.missing_permissions
+                )
                 await self.send_warning(
-                    ctx, ErrorMessages.bot_missing_permissions.format(permissions, error)
+                    ctx,
+                    ErrorMessages.bot_missing_permissions.format(
+                        permissions, error
+                    ),
                 )
 
             case commands.NoPrivateMessage():
-                await self.send_warning(ctx, ErrorMessages.no_private_message, error)
+                await self.send_warning(
+                    ctx, ErrorMessages.no_private_message, error
+                )
 
             case commands.MaxConcurrencyReached():
                 await self.send_warning(ctx, ErrorMessages.max_concurrency, error)
@@ -213,7 +223,9 @@ class ErrorHander(commands.Cog):
                 await self.send_lastfm_error(ctx, error)
 
             case exceptions.RendererError():
-                await self.send_error(ctx, "HTML Rendering error: " + str(error), error)
+                await self.send_error(
+                    ctx, f"HTML Rendering error: {str(error)}", error
+                )
 
             case exceptions.Blacklist():
                 await self.handle_blacklist(ctx, error)
@@ -222,7 +234,9 @@ class ErrorHander(commands.Cog):
                 await self.handle_cooldown(ctx, error)
 
             case _:
-                await self.send_error(ctx, f"{type(error).__name__}: {error}", error)
+                await self.send_error(
+                    ctx, f"{type(error).__name__}: {error}", error
+                )
                 logger.opt(exception=error).error("Unhandled exception traceback:")
 
 

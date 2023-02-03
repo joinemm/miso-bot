@@ -116,18 +116,15 @@ class WebServer(commands.Cog):
         subcommands = []
         if hasattr(command, "commands"):
             for subcommand in command.commands:
-                subcommand_structure = self.get_command_structure(subcommand)
-                if subcommand_structure:
+                if subcommand_structure := self.get_command_structure(subcommand):
                     subcommands.append(subcommand_structure)
 
-        result = {
+        return {
             "name": command.name,
             "usage": command.usage or command.signature,
             "description": command.short_doc,
             "subcommands": subcommands,
         }
-
-        return result
 
     def generate_command_list(self):
         ignored_cogs = ["Jishaku", "Owner"]
@@ -142,8 +139,7 @@ class WebServer(commands.Cog):
 
             command_list = []
             for command in cog_commands:
-                command_structure = self.get_command_structure(command)
-                if command_structure:
+                if command_structure := self.get_command_structure(command):
                     command_list.append(command_structure)
 
             if not command_list:
