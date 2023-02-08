@@ -883,7 +883,7 @@ async def render_html(bot, payload, endpoint="html"):
                 buffer = io.BytesIO(await response.read())
                 return buffer
             raise exceptions.RendererError(f"{response.status} : {await response.text()}")
-    except aiohttp.ClientConnectorError:
+    except aiohttp.ClientConnectionError:
         raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
 
 

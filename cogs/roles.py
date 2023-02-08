@@ -381,11 +381,11 @@ class Roles(commands.Cog):
         await util.send_success(ctx, f"Rolepicker is now **{'enabled' if value else 'disabled'}**")
 
     @commands.Cog.listener()
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         """Rolechannel message handler"""
         await self.bot.wait_until_ready()
 
-        if message.guild is None:
+        if message.guild is None or not isinstance(message.author, discord.Member):
             return
 
         if message.channel.id not in self.bot.cache.rolepickers:
@@ -424,21 +424,15 @@ class Roles(commands.Cog):
                 message.guild.id,
                 rolename.lower(),
             )
-            role = message.guild.get_role(role_id)
+            role = message.guild.get_role(role_id) if role_id else None
             if role is None:
-                await errorhandler.send(
-                    message.channel, "warning", f'Role `"{rolename}"` not found!'
-                )
+                await message.reply(f':warning: Role `"{rolename}"` not found!')
 
             elif command == "+":
                 try:
                     await message.author.add_roles(role)
                 except discord.errors.Forbidden:
-                    await errorhandler.send(
-                        message.channel,
-                        "error",
-                        "I don't have permission to give you this role!",
-                    )
+                    await message.reply(":warning: I don't have permission to give you this role!")
                 else:
                     await message.channel.send(
                         embed=discord.Embed(
@@ -450,10 +444,8 @@ class Roles(commands.Cog):
                 try:
                     await message.author.remove_roles(role)
                 except discord.errors.Forbidden:
-                    await errorhandler.send(
-                        message.channel,
-                        "error",
-                        "I don't have permission to remove this role from you!",
+                    await message.reply(
+                        ":warning: I don't have permission to remove this role from you!"
                     )
                 else:
                     await message.channel.send(
@@ -463,10 +455,8 @@ class Roles(commands.Cog):
                         ),
                     )
         else:
-            await errorhandler.send(
-                message.channel,
-                "warning",
-                f"Unknown action `{command}`. Use `+name` to add roles and `-name` to remove them.",
+            await message.reply(
+                f":warning: Unknown action `{command}`. Use `+name` to add roles and `-name` to remove them."
             )
 
         await asyncio.sleep(5)
