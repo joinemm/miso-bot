@@ -386,6 +386,12 @@ class Media(commands.Cog):
             else:
                 await ctx.send(caption, file=file, view=LinkButton("View on TikTok", tiktok_url))
 
+        try:
+            # delete discord automatic embed
+            await ctx.message.edit(suppress=True)
+        except (discord.Forbidden, discord.NotFound):
+            pass
+
     @commands.command(aliases=["gif", "gfy"])
     async def gfycat(self, ctx: commands.Context, *, query):
         """Search for a gfycat gif"""
