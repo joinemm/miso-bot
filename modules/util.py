@@ -58,7 +58,7 @@ class KeywordCommandArgument:
             option, value = argument.split("=", 1)
         except ValueError:
             raise commands.BadArgument(
-                "Cannot parse `{argument`, Please give arguments in `option=value` format.\n"
+                f"Cannot parse `{argument}`, Please give arguments in `option=value` format.\n"
                 "Refer to the command help for list of options (`>help [commandname]`)"
             )
         return {option: value}

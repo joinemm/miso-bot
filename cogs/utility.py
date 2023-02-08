@@ -763,8 +763,11 @@ class Utility(commands.Cog):
         """Create a gfycat gif from video url
 
         Give any options in `option=value` format:
-        >>> `start`: The number of seconds into the video to start the gif from
-        `end`: The time when the gif should end in seconds
+        > `start`: The number of seconds into the video to start the gif from
+        > `end`: The time when the gif should end in seconds
+
+        Example:
+            >creategif start=4 end=10 link-to-video.mp4
 
         """
         options = GifOptions.from_arguments(gifoptions)
