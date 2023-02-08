@@ -89,7 +89,7 @@ class CustomCommands(commands.Cog, name="Commands"):
                     "custom",
                 )
 
-    @commands.group(aliases=["cmd"])
+    @commands.group(aliases=["cmd", "commands"])
     @commands.guild_only()
     async def command(self, ctx: commands.Context):
         """Manage server specific custom commmands"""

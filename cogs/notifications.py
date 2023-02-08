@@ -140,7 +140,7 @@ class Notifications(commands.Cog):
             if member is not None and message.channel.permissions_for(member).read_messages:
                 asyncio.ensure_future(self.send_notification(member, message, users_words))
 
-    @commands.group(case_insensitive=True, aliases=["noti", "notif"])
+    @commands.group(case_insensitive=True, aliases=["noti", "notif", "notifications"])
     async def notification(self, ctx: commands.Context):
         """Manage your keyword notifications on this server"""
         await util.command_group_help(ctx)
