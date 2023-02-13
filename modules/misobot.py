@@ -61,7 +61,7 @@ class MisoBot(commands.AutoShardedBot):
         self.keychain = Keychain()
         self.version = "5.1"
         self.extensions_loaded = False
-        self.redis = Redis()
+        self.redis: Redis = Redis()
         self.register_hooks()
 
     async def setup_hook(self):

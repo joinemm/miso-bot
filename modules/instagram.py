@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
+from urllib import parse
 from urllib.parse import urlencode
 
 import aiohttp
+import aioredis
 import arrow
 import orjson
 from loguru import logger
@@ -36,6 +38,7 @@ class MediaType(Enum):
 class IgMedia:
     media_type: MediaType
     url: str
+    expires: int | None = None
 
 
 @dataclass
@@ -90,17 +93,47 @@ class Datalama:
     def __init__(self, bot: MisoBot):
         self.bot: MisoBot = bot
 
-    async def api_request(self, endpoint: str, params: dict) -> dict:
-        # Try redis cache first
-        cache_key = self.BASE_URL + endpoint + "?" + urlencode(params)
-        cached_response = await self.bot.redis.get(cache_key)
+    def make_cache_key(self, endpoint: str, params: dict):
+        return self.BASE_URL + endpoint + "?" + urlencode(params)
+
+    @staticmethod
+    def get_url_expiry(media_url: str):
+        return int(parse.parse_qs(parse.urlparse(media_url).query)["oe"][0], 16)
+
+    async def api_request_with_cache(self, endpoint: str, params: dict) -> tuple[dict, bool, str]:
+        cache_key = self.make_cache_key(endpoint, params)
+
+        data = await self.try_cache(cache_key)
+        was_cached = data is not None
+        if not was_cached:
+            data = await self.api_request(endpoint, params)
+
+        return data, was_cached, cache_key
+
+    async def try_cache(self, cache_key: str) -> dict | None:
+        try:
+            cached_response = await self.bot.redis.get(cache_key)
+        except aioredis.ConnectionError:
+            logger.warning("Could not get cached content from redis (ConnectionError)")
+            cached_response = None
+
         if cached_response:
             logger.info(f"Instagram request was pulled from the cache {cache_key}")
             prom = self.bot.get_cog("Prometheus")
             if prom:
                 await prom.increment_instagram_cache_hits()  # type: ignore
             return orjson.loads(cached_response)
+        else:
+            return None
 
+    async def save_cache(self, cache_key: str, data: dict, lifetime: int):
+        try:
+            await self.bot.redis.set(cache_key, orjson.dumps(data), lifetime)
+            logger.info(f"Instagram request was cached (expires in {lifetime}) {cache_key}")
+        except aioredis.ConnectionError:
+            logger.warning("Could not save content into redis cache (ConnectionError)")
+
+    async def api_request(self, endpoint: str, params: dict) -> dict:
         headers = {
             "accept": "application/json",
             "x-access-key": self.bot.keychain.DATALAMA_ACCESS_KEY,
@@ -121,14 +154,70 @@ class Datalama:
                         f"ERROR {response.status} | {data.get('exc_type')} | {data.get('detail')}"
                     )
 
-                # save succesful response in redis cache for future use
-                await self.bot.redis.set(cache_key, orjson.dumps(data), 86400)
                 return data
 
             except aiohttp.ContentTypeError:
                 response.raise_for_status()
                 text = await response.text()
                 raise InstagramError(f"{response.status} | {text}")
+
+    async def get_post_v1(self, shortcode: str) -> IgPost:
+        data, was_cached, cache_key = await self.api_request_with_cache(
+            "/v1/media/by/code",
+            {"code": shortcode},
+        )
+
+        media = self.parse_resource_v1(data)
+
+        if not was_cached and media:
+            lifetime = (
+                (media[0].expires - arrow.utcnow().int_timestamp) if media[0].expires else 86400
+            )
+            await self.save_cache(cache_key, data, lifetime)
+
+        return IgPost(
+            self.parse_user(data),
+            media,
+            data["taken_at_ts"],
+        )
+
+    async def get_story_v1(self, story_pk: str) -> IgPost:
+        data, was_cached, cache_key = await self.api_request_with_cache(
+            "/v1/story/by/id",
+            {"id": story_pk},
+        )
+
+        media = []
+
+        match MediaType(data["media_type"]):
+            case MediaType.VIDEO:
+                media.append(
+                    IgMedia(
+                        MediaType.VIDEO,
+                        data["video_url"],
+                        self.get_url_expiry(data["video_url"]),
+                    )
+                )
+            case MediaType.PHOTO:
+                media.append(
+                    IgMedia(
+                        MediaType.PHOTO,
+                        data["thumbnail_url"],
+                        self.get_url_expiry(data["thumbnail_url"]),
+                    )
+                )
+            case _:
+                raise TypeError(f"Unknown IG media type {data['media_type']}")
+
+        if not was_cached and media:
+            lifetime = (
+                (media[0].expires - arrow.utcnow().int_timestamp) if media[0].expires else 86400
+            )
+            await self.save_cache(cache_key, data, lifetime)
+
+        timestamp = int(arrow.get(data["taken_at"]).timestamp())
+
+        return IgPost(self.parse_user(data), media, timestamp)
 
     @staticmethod
     def parse_user(data: dict):
@@ -148,44 +237,29 @@ class Datalama:
                     media += self.parse_resource_v1(album_resource)
 
             case MediaType.VIDEO:
+                media_url = get_best_candidate(resource["video_versions"])
                 media.append(
-                    IgMedia(MediaType.VIDEO, get_best_candidate(resource["video_versions"]))
+                    IgMedia(
+                        MediaType.VIDEO,
+                        media_url,
+                        self.get_url_expiry(media_url),
+                    )
                 )
 
             case MediaType.PHOTO:
+                media_url = get_best_candidate(resource["image_versions"])
                 media.append(
-                    IgMedia(MediaType.PHOTO, get_best_candidate(resource["image_versions"]))
+                    IgMedia(
+                        MediaType.PHOTO,
+                        media_url,
+                        self.get_url_expiry(media_url),
+                    )
                 )
 
             case _:
                 raise TypeError(f"Unknown IG media type {resource['media_type']}")
 
         return media
-
-    async def get_post_v1(self, shortcode: str) -> IgPost:
-        data = await self.api_request("/v1/media/by/code", {"code": shortcode})
-        return IgPost(
-            self.parse_user(data),
-            self.parse_resource_v1(data),
-            data["taken_at_ts"],
-        )
-
-    async def get_story_v1(self, story_pk: str) -> IgPost:
-        data = await self.api_request("/v1/story/by/id", {"id": story_pk})
-
-        media = []
-
-        match MediaType(data["media_type"]):
-            case MediaType.VIDEO:
-                media.append(IgMedia(MediaType.VIDEO, data["video_url"]))
-            case MediaType.PHOTO:
-                media.append(IgMedia(MediaType.PHOTO, data["thumbnail_url"]))
-            case _:
-                raise TypeError(f"Unknown IG media type {data['media_type']}")
-
-        timestamp = int(arrow.get(data["taken_at"]).timestamp())
-
-        return IgPost(self.parse_user(data), media, timestamp)
 
     def parse_resource_a1(self, resource: dict) -> list[IgMedia]:
         media = []
@@ -195,15 +269,22 @@ class Datalama:
                     media += self.parse_resource_v1(album_resource)
 
             case MediaType.VIDEO:
+                media_url = get_best_candidate(resource["video_versions"])
                 media.append(
-                    IgMedia(MediaType.VIDEO, get_best_candidate(resource["video_versions"]))
+                    IgMedia(
+                        MediaType.VIDEO,
+                        media_url,
+                        self.get_url_expiry(media_url),
+                    )
                 )
 
             case MediaType.PHOTO:
+                media_url = get_best_candidate(resource["image_versions2"]["candidates"])
                 media.append(
                     IgMedia(
                         MediaType.PHOTO,
-                        get_best_candidate(resource["image_versions2"]["candidates"]),
+                        media_url,
+                        self.get_url_expiry(media_url),
                     )
                 )
 
