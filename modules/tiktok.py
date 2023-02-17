@@ -40,14 +40,12 @@ class TikTok:
         self.input_element = soup.findAll("input")
 
     def generate_post_data(self, url: str):
-        data = {}
-        for index in self.input_element:
-            if index.get("id") == "link_url":
-                data[index.get("name")] = url
-            else:
-                data[index.get("name")] = index.get("value")
-
-        return data
+        return {
+            index.get("name"): url
+            if index.get("id") == "link_url"
+            else index.get("value")
+            for index in self.input_element
+        }
 
     async def download_video(
         self, url: str, session: aiohttp.ClientSession

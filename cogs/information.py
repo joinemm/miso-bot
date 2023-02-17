@@ -274,12 +274,9 @@ class Information(commands.Cog):
                 manager = "UNKNOWN"
             content.add_field(name="Managed by", value=manager)
 
-        perms = []
-        for perm, allow in iter(role.permissions):
-            if allow:
-                perms.append(f"`{perm.upper()}`")
-
-        if perms:
+        if perms := [
+            f"`{perm.upper()}`" for perm, allow in iter(role.permissions) if allow
+        ]:
             content.add_field(name="Allowed permissions", value=" ".join(perms), inline=False)
 
         await ctx.send(embed=content)
@@ -288,11 +285,10 @@ class Information(commands.Cog):
     async def commandstats(self, ctx: commands.Context):
         """See command usage statistics"""
         if ctx.invoked_subcommand is None:
-            args = ctx.message.content.split()[1:]
-            if not args:
-                await util.send_command_help(ctx)
-            else:
+            if args := ctx.message.content.split()[1:]:
                 await self.commandstats_single(ctx, " ".join(args))
+            else:
+                await util.send_command_help(ctx)
 
     @commandstats.command(name="server")
     async def commandstats_server(
@@ -306,10 +302,7 @@ class Information(commands.Cog):
             title=f":bar_chart: Most used commands in {ctx.guild.name}"
             + ("" if user is None else f" by {user}")
         )
-        opt = []
-        if user is not None:
-            opt = [user.id]
-
+        opt = [user.id] if user is not None else []
         data = await self.bot.db.fetch(
             f"""
             SELECT command_name, SUM(use_sum) as total FROM (
@@ -353,10 +346,7 @@ class Information(commands.Cog):
         content = discord.Embed(
             title=":bar_chart: Most used commands" + ("" if user is None else f" by {user}")
         )
-        opt = []
-        if user is not None:
-            opt = [user.id]
-
+        opt = [user.id] if user is not None else []
         data = await self.bot.db.fetch(
             f"""
             SELECT command_name, SUM(use_sum) as total FROM (
@@ -475,7 +465,7 @@ class Information(commands.Cog):
         # additional data for command groups
         if group:
             content.description = "Command Group"
-            subcommands_tuple = tuple([f"{command.name} {x.name}" for x in command.commands])  # type: ignore
+            subcommands_tuple = tuple(f"{command.name} {x.name}" for x in command.commands)
             subcommand_usage = await self.bot.db.fetch(
                 """
                 SELECT command_name, SUM(uses) FROM command_usage
@@ -497,10 +487,7 @@ class Information(commands.Cog):
     @commands.command(aliases=["serverdp", "sdp", "guildicon"])
     async def servericon(self, ctx: commands.Context, guild_id: Optional[int] = None):
         """Get the icon of the server"""
-        guild = ctx.guild
-        if guild_id:
-            guild = self.bot.get_guild(guild_id)
-
+        guild = self.bot.get_guild(guild_id) if guild_id else ctx.guild
         if guild is None:
             raise exceptions.CommandError("Can't get guild")
 

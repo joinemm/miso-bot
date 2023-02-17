@@ -105,13 +105,15 @@ def displaychannel(
 
 async def send_success(target: discord.abc.Messageable, message: str):
     await target.send(
-        embed=discord.Embed(description=":white_check_mark: " + message, color=int("77b255", 16))
+        embed=discord.Embed(
+            description=f":white_check_mark: {message}",
+            color=int("77b255", 16),
+        )
     )
 
 
 async def find_user(bot: "MisoBot", user_id: int) -> discord.User | None:
-    user = bot.get_user(user_id)
-    if user:
+    if user := bot.get_user(user_id):
         return user
 
     try:
@@ -291,7 +293,6 @@ def create_pages(content: discord.Embed, rows: list[str], maxrows=15, maxpages=1
         thisrow += 1
         if len(content.description) + len(row) < 2000 and thisrow < maxrows + 1:
             content.description += f"\n{row}"
-            rowcount -= 1
         else:
             thisrow = 1
             if len(pages) == maxpages - 1:
@@ -303,9 +304,8 @@ def create_pages(content: discord.Embed, rows: list[str], maxrows=15, maxpages=1
             pages.append(content)
             content = copy.deepcopy(content)
             content.description = f"{row}"
-            rowcount -= 1
-
-    if not done and not content.description == "":
+        rowcount -= 1
+    if not done and content.description != "":
         pages.append(content)
 
     return pages
@@ -486,10 +486,7 @@ def xp_from_message(message):
     :returns       : Amount of xp rewarded from given message. Minimum 1
     """
     words = message.content.split(" ")
-    eligible_words = 0
-    for x in words:
-        if len(x) > 1:
-            eligible_words += 1
+    eligible_words = sum(len(x) > 1 for x in words)
     xp = eligible_words + (10 * len(message.attachments))
     if xp == 0:
         xp = 1
@@ -525,9 +522,7 @@ async def get_member(
     try:
         return await commands.MemberConverter().convert(ctx, argument)
     except commands.errors.BadArgument:
-        if try_user:
-            return await get_user(ctx, argument, fallback)
-        return fallback
+        return await get_user(ctx, argument, fallback) if try_user else fallback
 
 
 async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
@@ -577,7 +572,7 @@ async def get_color(ctx, argument: str, fallback=None):
         return await commands.ColourConverter().convert(ctx, argument)
     except commands.errors.BadArgument:
         try:
-            return await commands.ColourConverter().convert(ctx, "#" + argument)
+            return await commands.ColourConverter().convert(ctx, f"#{argument}")
         except commands.errors.BadArgument:
             return fallback
 
@@ -706,12 +701,8 @@ def find_unicode_emojis(text):
 
 def find_custom_emojis(text):
     """Finds and returns all custom discord emojis from a string"""
-    emoji_list = set()
     data = regex.findall(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>", text)
-    for _a, emoji_name, emoji_id in data:
-        emoji_list.add((emoji_name, emoji_id))
-
-    return emoji_list
+    return {(emoji_name, emoji_id) for _a, emoji_name, emoji_id in data}
 
 
 async def image_info_from_url(session: aiohttp.ClientSession, url) -> Optional[dict]:
@@ -808,11 +799,8 @@ class UserActivity:
                     prefix = "Listening"
                 elif activity.type == discord.ActivityType.watching:
                     prefix = "Watching"
-                elif activity.type == discord.ActivityType.streaming:
-                    prefix = "Streaming"
-
                 if prefix:
-                    self.base = prefix + " "
+                    self.base = f"{prefix} "
                 self.base += f"**{activity.name}**"
 
             elif isinstance(activity, discord.Spotify):
@@ -842,12 +830,8 @@ async def send_tasks_result_list(ctx, successful_operations, failed_operations, 
     content = discord.Embed(
         color=(int("77b255", 16) if successful_operations else int("dd2e44", 16))
     )
-    rows = []
-    for op in successful_operations:
-        rows.append(f":white_check_mark: {op}")
-    for op in failed_operations:
-        rows.append(f":x: {op}")
-
+    rows = [f":white_check_mark: {op}" for op in successful_operations]
+    rows.extend(f":x: {op}" for op in failed_operations)
     content.description = "\n".join(rows)
     if title:
         content.title = title
@@ -877,11 +861,10 @@ def format_html(template, replacements):
 async def render_html(bot, payload, endpoint="html"):
     try:
         async with bot.session.post(
-            f"http://{IMAGE_SERVER_HOST}:3000/{endpoint}", data=payload
-        ) as response:
+                    f"http://{IMAGE_SERVER_HOST}:3000/{endpoint}", data=payload
+                ) as response:
             if response.status == 200:
-                buffer = io.BytesIO(await response.read())
-                return buffer
+                return io.BytesIO(await response.read())
             raise exceptions.RendererError(f"{response.status} : {await response.text()}")
     except aiohttp.ClientConnectionError:
         raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
@@ -906,8 +889,7 @@ user_agent_rotator = UserAgent(hardware_types=[HardwareType.COMPUTER.value], lim
 
 def random_user_agent():
     """Random User Agent String"""
-    user_agent = user_agent_rotator.get_random_user_agent()
-    return user_agent
+    return user_agent_rotator.get_random_user_agent()
 
 
 def asset_full_size(asset: discord.Asset) -> str:

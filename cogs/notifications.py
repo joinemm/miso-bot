@@ -350,13 +350,12 @@ class Notifications(commands.Cog):
 
             pattern = regex.compile(self.keyword_regex, words=keywords, flags=regex.IGNORECASE)
 
-            finds = pattern.findall(message.content)
-            if not finds:
-                await ctx.send(":x: This message would not notify you")
-            else:
+            if finds := pattern.findall(message.content):
                 keywords = list(set(finds))
                 await self.send_notification(ctx.author, message, keywords, test=True)
                 await ctx.send(":ok_hand: Check your DM")
+            else:
+                await ctx.send(":x: This message would not notify you")
 
 
 async def setup(bot):

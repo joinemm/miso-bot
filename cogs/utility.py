@@ -181,7 +181,7 @@ class Utility(commands.Cog):
             await ctx.command.callback(self, ctx)
 
     async def resolve_bang(self, ctx: commands.Context, bang, args):
-        params = {"q": "!" + bang + " " + args, "format": "json", "no_redirect": 1}
+        params = {"q": f"!{bang} {args}", "format": "json", "no_redirect": 1}
         url = "https://api.duckduckgo.com"
         async with self.bot.session.get(url, params=params) as response:
             data = await response.json(content_type=None)
@@ -629,8 +629,8 @@ class Utility(commands.Cog):
         async with self.bot.session.get(API_BASE_URL, params={"term": word}) as response:
             data = await response.json(loads=orjson.loads)
 
-        pages = []
         if data["list"]:
+            pages = []
             for entry in data["list"]:
                 definition = entry["definition"].replace("]", "**").replace("[", "**")
                 example = entry["example"].replace("]", "**").replace("[", "**")
@@ -638,7 +638,7 @@ class Utility(commands.Cog):
                 content = discord.Embed(colour=discord.Colour.from_rgb(254, 78, 28))
                 content.description = f"{definition}"
 
-                if not example == "":
+                if example != "":
                     content.add_field(name="Example", value=example)
 
                 content.set_footer(
@@ -681,10 +681,9 @@ class Utility(commands.Cog):
         target = ""
         languages = text.partition(" ")[0]
         if "/" in languages or "->" in languages:
-            if "/" in languages:
-                source, target = languages.split("/")
-            elif "->" in languages:
-                source, target = languages.split("->")
+            source, target = (
+                languages.split("/") if "/" in languages else languages.split("->")
+            )
             text = text.partition(" ")[2]
             if source == "":
                 source = await detect_language(self.bot, text)
@@ -692,10 +691,7 @@ class Utility(commands.Cog):
                 target = "en"
         else:
             source = await detect_language(self.bot, text)
-            if source == "en":
-                target = "ko"
-            else:
-                target = "en"
+            target = "ko" if source == "en" else "en"
         language_pair = f"{source}/{target}"
 
         # we have language and query, now choose the appropriate translator
@@ -804,17 +800,14 @@ class Utility(commands.Cog):
                 data = await response.json(loads=orjson.loads)
                 task = data["task"]
 
-            if task == "encoding":
-                pass
-
-            elif task == "complete":
+            if task == "complete":
                 await message.edit(
                     content=f"Gif created in **{util.stringfromtime(time() - starttimer, 2)}**"
                     f"\nhttps://gfycat.com/{data['gfyname']}"
                 )
                 break
 
-            else:
+            elif task != "encoding":
                 await message.edit(
                     content=(
                         "There was an error while creating your gif :("
@@ -904,11 +897,10 @@ class Utility(commands.Cog):
             "SELECT timezone FROM user_settings WHERE user_id = %s",
             member.id,
         )
-        if tz_str:
-            dt = arrow.now(tz_str)
-            await ctx.send(f":clock2: **{dt.format('MMM Do HH:mm')}**")
-        else:
+        if not tz_str:
             raise exceptions.CommandWarning(f"{member} has not set their timezone yet!")
+        dt = arrow.now(tz_str)
+        await ctx.send(f":clock2: **{dt.format('MMM Do HH:mm')}**")
 
     @timezone.command(name="set")
     async def tz_set(self, ctx: commands.Context, your_timezone):
@@ -972,15 +964,15 @@ class Utility(commands.Cog):
         if not data:
             raise exceptions.CommandWarning("No one on this server has set their timezone yet!")
 
-        dt_data = []
-        for user_id, tz_str in data:
-            dt_data.append((arrow.now(tz_str), ctx.guild.get_member(user_id)))
-
-        for dt, member in sorted(dt_data, key=lambda x: int(x[0].format("Z"))):
-            if member is None:
-                continue
-            rows.append(f"{dt.format('MMM Do HH:mm')} - **{util.displayname(member)}**")
-
+        dt_data = [
+            (arrow.now(tz_str), ctx.guild.get_member(user_id))
+            for user_id, tz_str in data
+        ]
+        rows.extend(
+            f"{dt.format('MMM Do HH:mm')} - **{util.displayname(member)}**"
+            for dt, member in sorted(dt_data, key=lambda x: int(x[0].format("Z")))
+            if member is not None
+        )
         await util.send_as_pages(ctx, content, rows)
 
     @commands.group()
@@ -1070,9 +1062,7 @@ async def gfycat_oauth(bot):
         data = await response.json(loads=orjson.loads)
         access_token = data["access_token"]
 
-    auth_headers = {"Authorization": f"Bearer {access_token}"}
-
-    return auth_headers
+    return {"Authorization": f"Bearer {access_token}"}
 
 
 class WeatherUnitToggler(discord.ui.View):

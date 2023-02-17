@@ -301,9 +301,13 @@ class Fishy(commands.Cog):
     async def trash(self, ctx: commands.Context, user, gift):
         icon = random.choice(self.TRASH_ICONS)
         await ctx.send(
-            f"Caught **trash{'!' if not gift else ''}** {icon}"
-            + (f" for {user.name}!" if gift else "")
-            + " Better luck next time."
+            (
+                (
+                    f"Caught **trash{'' if gift else '!'}** {icon}"
+                    + (f" for {user.name}!" if gift else "")
+                )
+                + " Better luck next time."
+            )
         )
         return 0
 

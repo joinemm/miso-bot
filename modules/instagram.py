@@ -78,13 +78,10 @@ class InstagramIdCodec:
         """Covert a shortcode to a numeric value."""
         base = len(alphabet)
         strlen = len(shortcode)
-        num = 0
-        idx = 0
-        for char in shortcode:
-            power = strlen - (idx + 1)
-            num += alphabet.index(char) * (base**power)
-            idx += 1
-        return num
+        return sum(
+            alphabet.index(char) * base ** (strlen - (idx + 1))
+            for idx, char in enumerate(shortcode)
+        )
 
 
 class Datalama:
@@ -119,8 +116,7 @@ class Datalama:
 
         if cached_response:
             logger.info(f"Instagram request was pulled from the cache {cache_key}")
-            prom = self.bot.get_cog("Prometheus")
-            if prom:
+            if prom := self.bot.get_cog("Prometheus"):
                 await prom.increment_instagram_cache_hits()  # type: ignore
             return orjson.loads(cached_response)
         else:
@@ -314,12 +310,12 @@ class Instagram:
         self.jar = aiohttp.CookieJar(unsafe=True)
         self.session = aiohttp.ClientSession(cookie_jar=self.jar)
 
-        proxy_url: str = bot.keychain.PROXY_URL
-        proxy_user: str = bot.keychain.PROXY_USER
-        proxy_pass: str = bot.keychain.PROXY_PASS
-
         if use_proxy:
+            proxy_url: str = bot.keychain.PROXY_URL
             self.proxy = proxy_url
+            proxy_user: str = bot.keychain.PROXY_USER
+            proxy_pass: str = bot.keychain.PROXY_PASS
+
             self.proxy_auth = aiohttp.BasicAuth(proxy_user, proxy_pass)
         else:
             self.proxy = None
@@ -462,18 +458,13 @@ class Instagram:
         data = data["items"][0]
 
         resources = []
-        media = []
-
         media_type = MediaType(int(data["media_type"]))
         if media_type == MediaType.ALBUM:
-            for carousel_media in data["carousel_media"]:
-                resources.append(carousel_media)
+            resources.extend(iter(data["carousel_media"]))
         else:
             resources = [data]
 
-        for resource in resources:
-            media.append(self.parse_media(resource))
-
+        media = [self.parse_media(resource) for resource in resources]
         timestamp = data["taken_at"]
         user = data["user"]
         user = IgUser(

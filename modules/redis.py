@@ -14,8 +14,7 @@ class Redis:
         await self.pool.set(key, value, ex=expiry)
 
     async def get(self, key):
-        val = await self.pool.get(key)
-        return val
+        return await self.pool.get(key)
 
     async def close(self):
         await self.pool.close()

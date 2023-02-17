@@ -20,7 +20,7 @@ class Genius:
 
     async def search(self, query: str):
         """Search Genius for songs"""
-        url = "https://" + self.API_BASE_URL + "/search"
+        url = f"https://{self.API_BASE_URL}/search"
         headers = {
             "X-RapidAPI-Key": self.bot.keychain.RAPIDAPI_KEY,
             "X-RapidAPI-Host": self.API_BASE_URL,
@@ -35,7 +35,7 @@ class Genius:
         """Scrape lyrics from the given relative path"""
         lyrics = []
 
-        url = "https://genius.com" + lyrics_path
+        url = f"https://genius.com{lyrics_path}"
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64; rv:103.0) Gecko/20100101 Firefox/103.0"
         }
@@ -43,7 +43,7 @@ class Genius:
             content = await response.text()
             soup = BeautifulSoup(content, "lxml")
             lyric_containers = soup.find_all("div", {"data-lyrics-container": "true"})
-            for container in lyric_containers:
-                lyrics.append(MDText().convert_soup(container))
-
+            lyrics.extend(
+                MDText().convert_soup(container) for container in lyric_containers
+            )
         return lyrics

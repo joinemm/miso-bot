@@ -224,8 +224,7 @@ class Media(commands.Cog):
     @staticmethod
     def sort_videos(video: dict) -> int:
         width, height = re.findall(r"[/](\d*)x(\d*)[/]", video["src"])[0]
-        res = int(width) * int(height)
-        return res
+        return int(width) * int(height)
 
     @commands.command(aliases=["twt"], usage="<links...> '-e'")
     async def twitter(self, ctx: commands.Context, *links: str):
@@ -252,9 +251,8 @@ class Media(commands.Cog):
         for tweet_url in urls:
             tweet_id = tweet_url
             if "status" in tweet_url:
-                match = re.search(r"status/(\d+)", tweet_url)
-                if match:
-                    tweet_id = match.group(1)
+                if match := re.search(r"status/(\d+)", tweet_url):
+                    tweet_id = match[1]
 
             try:
                 tweet_id = int(tweet_id)
@@ -277,7 +275,7 @@ class Media(commands.Cog):
             for media in response.includes.get("media", []):  # type: ignore
                 if media.type == "photo":
                     base, extension = media.url.rsplit(".", 1)
-                    media_urls.append(("jpg", base + "?format=" + extension + "&name=orig"))
+                    media_urls.append(("jpg", f"{base}?format={extension}&name=orig"))
                 else:
                     variants = sorted(
                         filter(lambda x: x["content_type"] == "video/mp4", media.data["variants"]),
@@ -365,13 +363,12 @@ class Media(commands.Cog):
         matches = re.finditer(pattern, "\n".join(tiktok_links))
         vm_matches = re.finditer(vm_pattern, "\n".join(tiktok_links))
 
-        validated_urls = []
-        for match in matches:
-            validated_urls.append(f"https://m.tiktok.com/v/{match.group(1)}")
-
-        for match in vm_matches:
-            validated_urls.append(f"https://vm.tiktok.com/{match.group(1)}")
-
+        validated_urls = [
+            f"https://m.tiktok.com/v/{match.group(1)}" for match in matches
+        ]
+        validated_urls.extend(
+            f"https://vm.tiktok.com/{match.group(1)}" for match in vm_matches
+        )
         if not validated_urls:
             raise exceptions.CommandWarning("No valid TikTok urls found!")
 
