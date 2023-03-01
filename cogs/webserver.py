@@ -7,11 +7,8 @@ from prometheus_async import aio
 
 from modules.misobot import MisoBot
 
-USE_HTTPS = os.environ.get("WEBSERVER_USE_HTTPS", "no")
 HOST = os.environ.get("WEBSERVER_HOSTNAME")
 PORT = int(os.environ.get("WEBSERVER_PORT", 8080))
-SSL_CERT = os.environ.get("WEBSERVER_SSL_CERT")
-SSL_KEY = os.environ.get("WEBSERVER_SSL_KEY")
 
 
 class WebServer(commands.Cog):
