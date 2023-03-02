@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
@@ -5,8 +6,10 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 
-class InvalidVideo(Exception):
-    pass
+class TiktokError(Exception):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(message)
 
 
 @dataclass
@@ -14,6 +17,16 @@ class TikTokVideo:
     video_url: str
     user: str
     description: str
+
+
+def error_code_to_message(error_code):
+    match error_code:
+        case "tiktok":
+            return "URL redirected to tiktok home page."
+        case "Video is private!":
+            return "Video is private or unavailable"
+        case _:
+            return error_code
 
 
 class TikTok:
@@ -41,9 +54,7 @@ class TikTok:
 
     def generate_post_data(self, url: str):
         return {
-            index.get("name"): url
-            if index.get("id") == "link_url"
-            else index.get("value")
+            index.get("name"): url if index.get("id") == "link_url" else index.get("value")
             for index in self.input_element
         }
 
@@ -55,19 +66,19 @@ class TikTok:
             data=self.generate_post_data(url),
             allow_redirects=True,
         ) as response:
-
-            text = await response.text()
             if response.status == 302:
-                raise InvalidVideo
-            for error_message in [
-                "This video is currently not available",
-                "Video is private or removed!",
-                "Submitted Url is Invalid, Try Again",
-            ]:
-                if error_message in text:
-                    raise InvalidVideo(error_message)
+                raise TiktokError("302 Not Found")
 
+            error_code = response.url.query.get("err")
+            if error_code:
+                raise TiktokError(error_code_to_message(error_code))
+
+        text = await response.text()
         soup = BeautifulSoup(text, "lxml")
+
+        error_message = re.search(r"html: 'Error: (.*)'", soup.findAll("script")[-1].text)
+        if error_message:
+            print(error_message.group(1))
 
         download_link = soup.findAll("a", attrs={"target": "_blank"})[0].get("href")
         username, description = [el.text for el in soup.select("h2.white-text")[:2]]
