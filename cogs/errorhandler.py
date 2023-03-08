@@ -76,10 +76,15 @@ class ErrorHander(commands.Cog):
         await self.send_embed(ctx, message, ":warning:", "ffcc4d", **kwargs)
 
     async def send_error(
-        self, ctx: commands.Context, message: str, error: Exception | None = None, **kwargs
+        self,
+        ctx: commands.Context,
+        message: str,
+        error: Exception | None = None,
+        language="",
+        **kwargs,
     ):
         logger.error(self.log_format(ctx, error, message))
-        await self.send_embed(ctx, f"```ex\n{message}```", color="be1931", **kwargs)
+        await self.send_embed(ctx, f"```{language}\n{message}```", color="be1931", **kwargs)
 
     async def send_lastfm_error(self, ctx: commands.Context, error: exceptions.LastFMError):
         match error.error_code:
@@ -216,7 +221,7 @@ class ErrorHander(commands.Cog):
                 await self.send_lastfm_error(ctx, error)
 
             case exceptions.RendererError():
-                await self.send_error(ctx, f"HTML Rendering error: {str(error)}", error)
+                await self.send_error(ctx, f"Rendering Error: {str(error)}", error)
 
             case exceptions.Blacklist():
                 await self.handle_blacklist(ctx, error)
@@ -228,7 +233,9 @@ class ErrorHander(commands.Cog):
                 await self.send_warning(ctx, f"TikTok Error: {error.message}")
 
             case _:
-                await self.send_error(ctx, f"{type(error).__name__}: {error}", error)
+                await self.send_error(
+                    ctx, f"{type(error).__name__}: {error}", error, language="ex"
+                )
                 logger.opt(exception=error).error("Unhandled exception traceback:")
 
 

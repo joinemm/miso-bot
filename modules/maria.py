@@ -79,7 +79,10 @@ class MariaDB:
                 async with conn.cursor() as cur:
                     changed: int = await cur.execute(sql, params)
                     return changed, await cur.fetchall()
-        raise exceptions.CommandError("Could not connect to the local MariaDB instance!")
+        else:
+            raise exceptions.CommandError(
+                "Internal error: Unable to acquire database connection pool"
+            )
 
     async def execute(self, statement: str, *params) -> int:
         """Executes sql and returns the number of rows affected"""
@@ -114,4 +117,7 @@ class MariaDB:
                 cur: Cursor
                 async with conn.cursor() as cur:
                     await cur.executemany(statement, params)
-        raise exceptions.CommandError("Could not connect to the local MariaDB instance!")
+        else:
+            raise exceptions.CommandError(
+                "Internal Error: Unable to acquire database connection pool"
+            )
