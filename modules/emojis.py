@@ -14,6 +14,8 @@ TYPING = "<a:typing:749966793480732694>"
 
 LASTFM = "<:lastfm:785230336014811139>"
 
+REMOVE = "<:remove:1081546717050179645>"
+
 
 class Status(Enum):
     online = "<:online:783745533457203212>"
@@ -25,23 +27,24 @@ class Status(Enum):
 
 
 class Badge(Enum):
-    staff = "<:staff:783744718185693214>"
-    partner = "<:partner:783744609138114560>"
-    nitro = "<:nitro:783744676996841532>"
+    staff = "<a:discord_staff:1083026664444919890>"
+    partner = "<a:partnered_server_owner:1083026854178476202>"
+    nitro = "<a:nitro_subscriber:1083026661961900112>"
     hypesquad = "<:hypesquad:783744695074684946>"
-    hypesquad_brilliance = "<:hypesquad_brilliance:783744824444190740>"
-    hypesquad_bravery = "<:hypesquad_bravery:783744840928198736>"
-    hypesquad_balance = "<:hypesquad_balance:783745461499592734>"
-    verified_bot_developer = "<:verified_bot_developer:783744740301996042>"
-    discord_certified_moderator = "<:discord_certified_moderator:946884847639617598>"
-    early_supporter = "<:early_supporter:783744759101390888>"
-    bug_hunter = "<:bug_hunter:783744806815268914>"
-    bug_hunter_level_2 = "<:bug_hunter_level_2:783744783670968331>"
+    hypesquad_brilliance = "<:hypesquad_brilliance:1083029882470137886>"
+    hypesquad_bravery = "<:hypesquad_bravery:1083029880347840544>"
+    hypesquad_balance = "<:hypesquad_balance:1083029878330368142>"
+    verified_bot_developer = "<a:early_verified_bot_developer:1083026866178359356>"
+    discord_certified_moderator = "<a:certified_moderator:1083026863468847154>"
+    early_supporter = "<:early_supporter:1083027046923517964>"
+    bug_hunter = "<a:bug_hunter:1083026666076520598>"
+    bug_hunter_level_2 = "<a:gold_bug_hunter:1083026670748979235>"
     team_user = ""
     system = ""
-    verified_bot = "<:verified_bot:813396139373101076>"
-    boosting = "<:boosting:813395502439727165>"
-    known_spammer = ":triangular_flag_on_post:"
+    verified_bot = "<a:verified:1083026856669876286>"
+    boosting = "<a:nitro_boost:1083027795250262056>"
+    spammer = ":triangular_flag_on_post:"
+    active_developer = "<a:active_developer:1083026858813177908>"
 
 
 HUGS = [

@@ -2,12 +2,10 @@ import copy
 import math
 import os
 import time
-from datetime import datetime
 from typing import Optional
 
 import arrow
 import discord
-import humanize
 import orjson
 import psutil
 from discord.ext import commands
@@ -49,14 +47,23 @@ class Information(commands.Cog):
             colour=discord.Colour.orange(),
         )
         content.add_field(
-            name="Github Sponsor (0 fees!)",
+            name="Github Sponsors",
             value="https://github.com/sponsors/joinemm",
             inline=False,
         )
-        content.add_field(name="Ko-fi (0 fees!)", value="https://ko-fi.com/joinemm", inline=False)
         content.add_field(
-            name="Patreon (15% fees :thumbsdown:)",
+            name="Ko-Fi",
+            value="https://ko-fi.com/joinemm",
+            inline=False,
+        )
+        content.add_field(
+            name="Patreon (high fees so not recommended)",
             value="https://www.patreon.com/joinemm",
+            inline=False,
+        )
+        content.add_field(
+            name="Litecoin wallet address",
+            value="`ltc1qsxmy8q8ptdlhdcamypa2uspj8zf8m0ukua9vn5`",
             inline=False,
         )
         content.set_footer(text="Donations will be used to pay for server and upkeep costs")
@@ -64,17 +71,27 @@ class Information(commands.Cog):
 
     @commands.command(aliases=["patrons", "supporters", "sponsors"])
     async def donators(self, ctx: commands.Context):
-        """See who is donating!"""
+        """See who has donated!"""
         patrons = await self.bot.db.fetch(
             """
-            SELECT user_id, currently_active, amount, donating_since
-            FROM donator
+            SELECT user_id, amount FROM donator
             """
         )
-        if not patrons:
+
+        donators = []
+        if patrons:
+            for user_id, _ in sorted(patrons, key=lambda x: x[2], reverse=True):
+                user = self.bot.get_user(user_id)
+                if user is None:
+                    continue
+
+                donators.append(f"**{user}**")
+
+        if not donators:
             raise exceptions.CommandInfo(
                 "There are no donators :thinking: Maybe you should be the first one"
             )
+
         description = " | ".join(
             [
                 "[github](https://github.com/sponsors/joinemm)",
@@ -83,25 +100,10 @@ class Information(commands.Cog):
             ]
         )
 
-        current = []
-        for user_id, is_active, amount, donating_since in sorted(
-            patrons, key=lambda x: x[2], reverse=True
-        ):
-            user = self.bot.get_user(user_id)
-            if user is None:
-                continue
-
-            if is_active:
-                how_long = humanize.naturaldelta(datetime.now() - donating_since)
-                current.append(f"**${int(amount)}** by **{user}** (*for {how_long}*)")
-
-        if current:
-            description += "\n\n" + ("\n".join(current))
-
         content = discord.Embed(
-            title=":heart: Miso Bot supporters",
+            title=":heart: Miso Bot donators",
             color=int("dd2e44", 16),
-            description=description,
+            description=description + "\n\n" + ("\n".join(donators)),
         )
 
         await ctx.send(embed=content)
@@ -274,9 +276,7 @@ class Information(commands.Cog):
                 manager = "UNKNOWN"
             content.add_field(name="Managed by", value=manager)
 
-        if perms := [
-            f"`{perm.upper()}`" for perm, allow in iter(role.permissions) if allow
-        ]:
+        if perms := [f"`{perm.upper()}`" for perm, allow in iter(role.permissions) if allow]:
             content.add_field(name="Allowed permissions", value=" ".join(perms), inline=False)
 
         await ctx.send(embed=content)

@@ -90,7 +90,13 @@ class User(commands.Cog):
         )
         content.set_thumbnail(url=user.display_avatar.url)
         content.set_footer(text=f"#{user.id}")
-        content.add_field(name="Badges", value="> " + " ".join(util.flags_to_badges(user)))
+
+        user_badges = util.flags_to_badges(user)
+        other_badges = []
+        if ctx.guild.owner == user:
+            other_badges.append("<:guild_owner:1083027791500546170>")
+
+        content.add_field(name="Badges", value=" ".join(user_badges + other_badges))
         content.add_field(name="Mention", value=user.mention)
         content.add_field(name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M"))
 
@@ -100,9 +106,7 @@ class User(commands.Cog):
             member_number = 1 + sum(
                 1
                 for member in ctx.guild.members
-                if member.joined_at
-                and user.joined_at
-                and member.joined_at < user.joined_at
+                if member.joined_at and user.joined_at and member.joined_at < user.joined_at
             )
             boosting_date = None
             if user.premium_since:
@@ -497,13 +501,11 @@ class User(commands.Cog):
             if description is not None:
                 description = bleach.clean(
                     description.replace("\n", "<br>"),
-                    tags=bleach.sanitizer.ALLOWED_TAGS + ["br"],
+                    tags=bleach.sanitizer.ALLOWED_TAGS + ["br"],  # type: ignore
                 )
             background_url = background_url or ""
             background_color = (
-                f"#{background_color}"
-                if background_color is not None
-                else user.color
+                f"#{background_color}" if background_color is not None else user.color
             )
         else:
             background_color = user.color
@@ -591,11 +593,7 @@ class User(commands.Cog):
                     description=f":revolving_hearts: **{util.displayname(user)}** and **{util.displayname(ctx.author)}** are now married :wedding:",
                 )
             )
-            new_proposals = {
-                el
-                for el in self.proposals
-                if el[0] not in [user.id, ctx.author.id]
-            }
+            new_proposals = {el for el in self.proposals if el[0] not in [user.id, ctx.author.id]}
             self.proposals = new_proposals
         else:
             self.proposals.add((ctx.author.id, user.id))
@@ -698,41 +696,6 @@ class User(commands.Cog):
             )
         else:
             await ctx.send("You are not married!")
-
-    @commands.command()
-    async def marriages(self, ctx: commands.Context):
-        """View the longest surviving marriages"""
-        content = discord.Embed(title=":wedding: Longest marriages")
-
-        data = (
-            await self.bot.db.fetch(
-                """
-            SELECT first_user_id, second_user_id, marriage_date
-            FROM marriage ORDER BY marriage_date
-            """
-            )
-            or []
-        )
-
-        rows = []
-        for first_user_id, second_user_id, marriage_date in data:
-            first_user = self.bot.get_user(first_user_id)
-            second_user = self.bot.get_user(second_user_id)
-
-            # if neither user is reachable then ignore this marriage
-            if first_user is None or second_user is None:
-                continue
-
-            length = humanize.naturaldelta(
-                arrow.utcnow().timestamp() - marriage_date.timestamp(), months=False
-            )
-
-            rows.append(f"{first_user.name} :heart: {second_user.name} - **{length}**")
-
-        if not rows:
-            raise exceptions.CommandWarning("No one is married yet!")
-
-        await util.send_as_pages(ctx, content, rows)
 
 
 async def setup(bot):
