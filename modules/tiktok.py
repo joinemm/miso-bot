@@ -73,7 +73,8 @@ class TikTok:
             if error_code:
                 raise TiktokError(error_code_to_message(error_code))
 
-        text = await response.text()
+            text = await response.text()
+
         soup = BeautifulSoup(text, "lxml")
 
         error_message = re.search(r"html: 'Error: (.*)'", soup.findAll("script")[-1].text)
