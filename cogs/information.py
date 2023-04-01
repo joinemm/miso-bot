@@ -72,16 +72,16 @@ class Information(commands.Cog):
     @commands.command(aliases=["patrons", "supporters", "sponsors"])
     async def donators(self, ctx: commands.Context):
         """See who has donated!"""
-        patrons = await self.bot.db.fetch(
+        patrons = await self.bot.db.fetch_flattened(
             """
-            SELECT user_id, amount FROM donator
+            SELECT user_id FROM donator
             """
         )
 
         donators = []
         if patrons:
-            for user_id, _ in sorted(patrons, key=lambda x: x[2], reverse=True):
-                user = self.bot.get_user(user_id)
+            for user_id in patrons:
+                user = self.bot.fetch_user(user_id)
                 if user is None:
                     continue
 
@@ -465,7 +465,7 @@ class Information(commands.Cog):
         # additional data for command groups
         if group:
             content.description = "Command Group"
-            subcommands_tuple = tuple(f"{command.name} {x.name}" for x in command.commands)
+            subcommands_tuple = tuple(f"{command.name} {x.name}" for x in command.commands)  # type: ignore
             subcommand_usage = await self.bot.db.fetch(
                 """
                 SELECT command_name, SUM(uses) FROM command_usage

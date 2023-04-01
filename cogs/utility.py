@@ -681,9 +681,7 @@ class Utility(commands.Cog):
         target = ""
         languages = text.partition(" ")[0]
         if "/" in languages or "->" in languages:
-            source, target = (
-                languages.split("/") if "/" in languages else languages.split("->")
-            )
+            source, target = languages.split("/") if "/" in languages else languages.split("->")
             text = text.partition(" ")[2]
             if source == "":
                 source = await detect_language(self.bot, text)
@@ -763,10 +761,15 @@ class Utility(commands.Cog):
         > `end`: The time when the gif should end in seconds
 
         Example:
-            >creategif start=4 end=10 link-to-video.mp4
+            >creategif link-to-video.mp4 start=4 end=1
 
         """
         options = GifOptions.from_arguments(gifoptions)
+
+        raise exceptions.CommandWarning(
+            "Gfycat.com has been abandoned and their upload service no longer works. \
+                Alternative gif service coming in the near future. (giphy maybe)"
+        )
 
         API_URL = "https://api.gfycat.com/v1/gfycats"
         starttimer = time()
@@ -964,10 +967,7 @@ class Utility(commands.Cog):
         if not data:
             raise exceptions.CommandWarning("No one on this server has set their timezone yet!")
 
-        dt_data = [
-            (arrow.now(tz_str), ctx.guild.get_member(user_id))
-            for user_id, tz_str in data
-        ]
+        dt_data = [(arrow.now(tz_str), ctx.guild.get_member(user_id)) for user_id, tz_str in data]
         rows.extend(
             f"{dt.format('MMM Do HH:mm')} - **{util.displayname(member)}**"
             for dt, member in sorted(dt_data, key=lambda x: int(x[0].format("Z")))

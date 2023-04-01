@@ -385,6 +385,7 @@ class Misc(commands.Cog):
         async with self.bot.session.post(
             "https://aztro.sameerkumar.website/", params=params
         ) as response:
+            response.raise_for_status()
             data = await response.json(loads=orjson.loads)
 
         sign = self.hs[sunsign]
@@ -745,7 +746,7 @@ class Misc(commands.Cog):
                     "filename": "images/jihyo.jpg",
                     "boxdimensions": (272, 441, 518, 353),
                     "wm_color": (255, 255, 255, 255),
-                    "angle": 7,
+                    "angle": -7,
                 }
             case "trump":
                 options = {
@@ -758,7 +759,7 @@ class Misc(commands.Cog):
                     "filename": "images/dubu.jpg",
                     "boxdimensions": (287, 454, 512, 347),
                     "wm_color": (255, 255, 255, 255),
-                    "angle": 3,
+                    "angle": -3,
                 }
             case "chaeyoung":
                 options = {
@@ -774,6 +775,8 @@ class Misc(commands.Cog):
                     "wm_color": (255, 255, 255, 255),
                     "angle": 5,
                 }
+            case _:
+                raise exceptions.CommandWarning(f"No meme template called `{template}`")
 
         meme = await self.bot.loop.run_in_executor(
             None, lambda: self.meme_factory(ctx, text=content, **options)
@@ -826,9 +829,7 @@ class Misc(commands.Cog):
             my_emoji.animated = animated == "a"
             my_emoji.id = int(emoji_id)
         elif emoji_name := emoji_literals.UNICODE_TO_NAME.get(emoji_str):
-            codepoint = "-".join(
-                f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE[emoji_name]
-            )
+            codepoint = "-".join(f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE[emoji_name])
             my_emoji.name = emoji_name.strip(":")
             my_emoji.url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
         else:
@@ -890,7 +891,9 @@ class ImageObject:
                         line = [newline_words[0]]
                     lines.append(line)
                     if len(word.split("\n")) > 2:
-                        lines.extend([newline_words[i]] for i in range(1, len(word.split("\n")) - 1))
+                        lines.extend(
+                            [newline_words[i]] for i in range(1, len(word.split("\n")) - 1)
+                        )
                     line = [newline_words[-1]]
                 else:
                     new_line = " ".join(line + [word])
