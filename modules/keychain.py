@@ -5,7 +5,6 @@ from loguru import logger
 
 class Keychain:
     def __init__(self):
-
         self.TWITTER_BEARER_TOKEN: str = ""
         self.NAVER_APPID: str = ""
         self.NAVER_TOKEN: str = ""
@@ -34,6 +33,7 @@ class Keychain:
         self.IG_COOKIE: str = ""
         self.LASTFM_LOGIN_COOKIE: str = ""
         self.SHLINK_API_KEY: str = ""
+        self.GIPHY_API_KEY: str = ""
 
         for name in self.__dict__:
             value = os.environ.get(name)

@@ -1335,9 +1335,7 @@ class LastFm(commands.Cog):
             return await ctx.send("Nobody on this server has connected their last.fm account yet!")
 
         data = await asyncio.gather(*tasks)
-        listeners = [
-            (song, member_ref) for song, member_ref in data if song is not None
-        ]
+        listeners = [(song, member_ref) for song, member_ref in data if song is not None]
         if not listeners:
             return await ctx.send("Nobody on this server is listening to anything at the moment!")
 
@@ -1394,7 +1392,7 @@ class LastFm(commands.Cog):
         if not listeners:
             return await ctx.send("Nobody on this server is listening to anything at the moment!")
 
-        listeners = sorted(listeners, key=lambda l: l[0].get("date"), reverse=True)
+        listeners = sorted(listeners, key=lambda listener: listener[0].get("date"), reverse=True)
         rows = []
         for song, member in listeners:
             suffix = ""

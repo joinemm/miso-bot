@@ -12,7 +12,6 @@ class MDText(MarkdownConverter):
 
 
 class Genius:
-
     API_BASE_URL: str = "genius.p.rapidapi.com"
 
     def __init__(self, bot: MisoBot):
@@ -43,7 +42,5 @@ class Genius:
             content = await response.text()
             soup = BeautifulSoup(content, "lxml")
             lyric_containers = soup.find_all("div", {"data-lyrics-container": "true"})
-            lyrics.extend(
-                MDText().convert_soup(container) for container in lyric_containers
-            )
+            lyrics.extend(MDText().convert_soup(container) for container in lyric_containers)
         return lyrics
