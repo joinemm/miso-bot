@@ -8,7 +8,7 @@ aiodns==3.0.0
     # via discord-py
 aiofiles==22.1.0
     # via shazamio
-aiohttp==3.8.3
+aiohttp==3.8.4
     # via
     #   -r requirements.in
     #   aiohttp-cors
@@ -32,7 +32,7 @@ astunparse==1.6.3
     # via import-expression
 async-cse==0.3.0
     # via -r requirements.in
-async-lru==1.0.3
+async-lru==2.0.2
     # via tweepy
 async-timeout==4.0.2
     # via
@@ -42,11 +42,11 @@ attrs==22.2.0
     # via
     #   aiohttp
     #   pytest
-beautifulsoup4==4.11.1
+beautifulsoup4==4.12.0
     # via
     #   -r requirements.in
     #   markdownify
-bleach==5.0.1
+bleach==6.0.0
     # via -r requirements.in
 braceexpand==0.1.7
     # via jishaku
@@ -56,7 +56,7 @@ certifi==2022.12.7
     # via requests
 cffi==1.15.1
     # via pycares
-charset-normalizer==2.1.1
+charset-normalizer==3.1.0
     # via
     #   aiohttp
     #   requests
@@ -74,15 +74,15 @@ discord.py @ git+https://github.com/Rapptz/discord.py.git
     # via -r requirements.in
 durations-nlp==1.0.1
     # via -r requirements.in
-exceptiongroup==1.1.0
+exceptiongroup==1.1.1
     # via pytest
-fonttools==4.38.0
+fonttools==4.39.3
     # via matplotlib
 frozenlist==1.3.3
     # via
     #   aiohttp
     #   aiosignal
-humanize==4.4.0
+humanize==4.6.0
     # via -r requirements.in
 idna==3.4
     # via
@@ -99,7 +99,7 @@ kdtree==0.16
     # via -r requirements.in
 kiwisolver==1.4.4
     # via matplotlib
-line-profiler==4.0.2
+line-profiler==4.0.3
     # via jishaku
 loguru==0.6.0
     # via -r requirements.in
@@ -107,13 +107,13 @@ lxml==4.9.2
     # via -r requirements.in
 markdownify==0.11.6
     # via -r requirements.in
-matplotlib==3.6.3
+matplotlib==3.7.1
     # via -r requirements.in
 multidict==6.0.4
     # via
     #   aiohttp
     #   yarl
-numpy==1.24.1
+numpy==1.24.2
     # via
     #   -r requirements.in
     #   contourpy
@@ -124,13 +124,13 @@ oauthlib==3.2.2
     # via
     #   requests-oauthlib
     #   tweepy
-orjson==3.8.5
+orjson==3.8.9
     # via discord-py
 packaging==23.0
     # via
     #   matplotlib
     #   pytest
-pillow==9.4.0
+pillow==9.5.0
     # via
     #   -r requirements.in
     #   colorgram-py
@@ -139,7 +139,7 @@ pluggy==1.0.0
     # via pytest
 prometheus-async==22.2.0
     # via -r requirements.in
-prometheus-client==0.15.0
+prometheus-client==0.16.0
     # via prometheus-async
 psutil==5.9.4
     # via -r requirements.in
@@ -147,15 +147,15 @@ pycares==4.3.0
     # via aiodns
 pycparser==2.21
     # via cffi
-pydantic==1.10.4
+pydantic==1.10.7
     # via shazamio
 pydub==0.25.1
     # via shazamio
-pymysql==1.0.2
+pymysql==1.0.3
     # via aiomysql
 pyparsing==3.0.9
     # via matplotlib
-pytest==7.2.1
+pytest==7.2.2
     # via
     #   pytest-asyncio
     #   shazamio
@@ -165,11 +165,11 @@ python-dateutil==2.8.2
     # via
     #   arrow
     #   matplotlib
-python-dotenv==0.21.0
+python-dotenv==1.0.0
     # via -r requirements.in
 random-user-agent==1.0.1
     # via -r requirements.in
-regex==2022.10.31
+regex==2023.3.23
     # via -r requirements.in
 requests==2.28.2
     # via
@@ -177,7 +177,7 @@ requests==2.28.2
     #   tweepy
 requests-oauthlib==1.3.1
     # via tweepy
-scipy==1.10.0
+scipy==1.10.1
     # via -r requirements.in
 shazamio==0.3.1.1
     # via -r requirements.in
@@ -189,25 +189,26 @@ six==1.16.0
     #   python-dateutil
 sniffio==1.3.0
     # via anyio
-soupsieve==2.3.2.post1
+soupsieve==2.4
     # via beautifulsoup4
 tomli==2.0.1
     # via pytest
-tweepy[async]==4.12.1
+tweepy[async]==4.13.0
     # via -r requirements.in
-typing-extensions==4.4.0
+typing-extensions==4.5.0
     # via
     #   aioredis
+    #   async-lru
     #   pydantic
-urllib3==1.26.14
+urllib3==1.26.15
     # via requests
 uvloop==0.17.0
     # via -r requirements.in
 webencodings==0.5.1
     # via bleach
-wheel==0.38.4
+wheel==0.40.0
     # via astunparse
-wrapt==1.14.1
+wrapt==1.15.0
     # via prometheus-async
 yarl==1.8.2
     # via aiohttp

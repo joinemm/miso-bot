@@ -1,7 +1,7 @@
 version: '3.7'
 
 services:
-  nginx: 
+  nginx:
     image: nginx:latest
     container_name: miso-nginx
     restart: unless-stopped
@@ -28,7 +28,7 @@ services:
       - MARIADB_PASSWORD=botpw
       - MARIADB_DATABASE=misobot
       - MARIADB_ROOT_PASSWORD=secure-af
-    
+
   shlink-db:
     container_name: miso-shlink-db
     image: mariadb
@@ -118,8 +118,9 @@ services:
       - EMOJIFIER_HOST=emojifier
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
+      - USE_REDIS_CACHE=1
     tty: true
-  
+
   redis:
     container_name: miso-redis
     image: "redis:alpine"

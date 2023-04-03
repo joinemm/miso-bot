@@ -4,9 +4,9 @@
 #
 #    pip-compile dev-requirements.in
 #
-astroid==2.12.12
+astroid==2.15.2
     # via pylint
-black==22.10.0
+black==23.3.0
     # via -r dev-requirements.in
 cfgv==3.3.1
     # via pre-commit
@@ -18,52 +18,61 @@ dill==0.3.6
     # via pylint
 distlib==0.3.6
     # via virtualenv
-filelock==3.8.0
+filelock==3.10.7
     # via virtualenv
-flake8==5.0.4
+flake8==6.0.0
     # via -r dev-requirements.in
-identify==2.5.8
+identify==2.5.22
     # via pre-commit
-isort==5.10.1
-    # via pylint
-lazy-object-proxy==1.8.0
+isort==5.12.0
+    # via
+    #   -r dev-requirements.in
+    #   pylint
+lazy-object-proxy==1.9.0
     # via astroid
 mccabe==0.7.0
     # via
     #   flake8
     #   pylint
-mypy-extensions==0.4.3
+mypy-extensions==1.0.0
     # via black
 nodeenv==1.7.0
     # via pre-commit
-pathspec==0.10.1
+packaging==23.0
+    # via
+    #   -c requirements.txt
+    #   black
+pathspec==0.11.1
     # via black
-platformdirs==2.5.2
+platformdirs==3.2.0
     # via
     #   black
     #   pylint
     #   virtualenv
-pre-commit==2.20.0
+pre-commit==3.2.1
     # via -r dev-requirements.in
-pycodestyle==2.9.1
+pycodestyle==2.10.0
     # via flake8
-pyflakes==2.5.0
+pyflakes==3.0.1
     # via flake8
-pylint==2.15.5
+pylint==2.17.2
     # via -r dev-requirements.in
 pyyaml==6.0
     # via pre-commit
-toml==0.10.2
-    # via pre-commit
 tomli==2.0.1
     # via
+    #   -c requirements.txt
     #   black
     #   pylint
-tomlkit==0.11.6
+tomlkit==0.11.7
     # via pylint
-virtualenv==20.16.6
+typing-extensions==4.5.0
+    # via
+    #   -c requirements.txt
+    #   astroid
+virtualenv==20.21.0
     # via pre-commit
-wrapt==1.14.1
+wrapt==1.15.0
     # via
     #   -c requirements.txt
     #   astroid
