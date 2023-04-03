@@ -6,6 +6,7 @@ from discord.ext import commands
 from loguru import logger
 
 from modules import emojis, exceptions, queries, util
+from modules.instagram import InstagramError
 from modules.misobot import MisoBot
 from modules.tiktok import TiktokError
 
@@ -97,7 +98,6 @@ class ErrorHander(commands.Cog):
             case _:
                 message = error.display()
 
-        logger.error(self.log_format(ctx, error, message))
         await self.send_embed(ctx, message, emojis.LASTFM, "b90000")
 
     async def handle_blacklist(self, ctx: commands.Context, error: exceptions.Blacklist):
@@ -238,6 +238,9 @@ class ErrorHander(commands.Cog):
                     ctx,
                     f"Bad Argument: parameter `{error.param.name}` must be one of {options}",
                 )
+
+            case InstagramError():
+                await self.send_warning(ctx, error.message)
 
             case _:
                 await self.send_error(

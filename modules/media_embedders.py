@@ -299,6 +299,9 @@ class TwitterEmbedder(BaseEmbedder):
             user_fields=["profile_image_url"],
         )
 
+        if response.errors:  # type: ignore
+            raise exceptions.CommandWarning(response.errors[0]["detail"])  # type: ignore
+
         tweet: tweepy.Tweet = response.data  # type: ignore
         media_urls = []
 
