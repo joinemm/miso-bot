@@ -81,7 +81,7 @@ class Information(commands.Cog):
         donators = []
         if patrons:
             for user_id in patrons:
-                user = self.bot.fetch_user(user_id)
+                user = await self.bot.fetch_user(user_id)
                 if user is None:
                     continue
 
