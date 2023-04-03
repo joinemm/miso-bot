@@ -424,7 +424,7 @@ class Misc(commands.Cog):
 
         date_node = paragraph.find("strong")
         if date_node is not None:
-            date = date_node.text
+            date = date_node.text.strip()
             date_node.clear()  # type: ignore
         else:
             date = "[ERROR]"
@@ -438,6 +438,29 @@ class Misc(commands.Cog):
             title=f"{sign['emoji']} {sign['name']} | {date}",
             description=hs_text,
         )
+
+        if variant.startswith("daily"):
+            async with self.bot.session.get(
+                f"https://www.horoscope.com/star-ratings/{variant.split('-')[-1]}/{sunsign}"
+            ) as response:
+                second_soup = BeautifulSoup(await response.text(), "lxml")
+                wrapper = second_soup.select_one(".module-skin")
+
+            if wrapper:
+                titles = wrapper.findAll("h3")
+                text = wrapper.findAll("p")[:-1]
+                for title, text in zip(titles, text):
+                    star_count = len(title.select(".highlight"))
+                    stars = star_count * ":star:"
+                    emptystars = (5 - star_count) * "<:no_star:1092503441991008306>"
+                    title_text = title.text
+                    if title_text == "Sex":
+                        title_text = "Romance"
+                    content.add_field(
+                        name=f"{title_text} {stars}{emptystars}",
+                        value=text.text,
+                        inline=False,
+                    )
 
         await ctx.send(embed=content)
 
