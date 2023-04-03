@@ -99,7 +99,7 @@ class Prometheus(commands.Cog):
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
-            took = time() - ctx.timer
+            took = time() - ctx.timer  # type: ignore
             command = str(ctx.command)
             self.command_response_time_summary.labels(command).observe(took)
 

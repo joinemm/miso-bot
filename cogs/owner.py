@@ -42,9 +42,7 @@ class Owner(commands.Cog):
         message,
     ):
         """Makes the bot dm something to the given user"""
-        await ctx.send(
-            f"Sending message to **{user}** <@{user.id}>\n> {message}", allowed_mentions=None
-        )
+        await ctx.send(f"Sending message to **{user}** <@{user.id}>\n> {message}")
         await user.send(message)
 
     @commands.command()
@@ -56,9 +54,7 @@ class Owner(commands.Cog):
 
         rows = [
             f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
-            for guild in sorted(
-                self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True
-            )
+            for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True)
         ]
         await util.send_as_pages(ctx, content, rows)
 
@@ -67,9 +63,7 @@ class Owner(commands.Cog):
         """Find a guild by name"""
         rows = [
             f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
-            for guild in sorted(
-                self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True
-            )
+            for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True)
             if search_term.lower() in guild.name.lower()
         ]
         content = discord.Embed(title=f"Found **{len(rows)}** guilds matching search term")
