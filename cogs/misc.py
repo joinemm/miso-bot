@@ -2,12 +2,13 @@ import os
 import random
 import re
 from dataclasses import dataclass
-from typing import Tuple, Union
+from typing import Literal, Tuple, Union
 
 import arrow
 import discord
 import orjson
 from aiohttp import ClientResponseError
+from bs4 import BeautifulSoup
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
@@ -25,65 +26,77 @@ class Misc(commands.Cog):
         self.bot: MisoBot = bot
         self.icon = "🔮"
         self.hs = {
-            "aquarius": {
-                "name": "Aquarius",
-                "emoji": ":aquarius:",
-                "date_range": "Jan 20 - Feb 18",
-            },
-            "pisces": {
-                "name": "Pisces",
-                "emoji": ":pisces:",
-                "date_range": "Feb 19 - Mar 20",
-            },
             "aries": {
                 "name": "Aries",
                 "emoji": ":aries:",
                 "date_range": "Mar 21 - Apr 19",
+                "id": 1,
             },
             "taurus": {
                 "name": "Taurus",
                 "emoji": ":taurus:",
                 "date_range": "Apr 20 - May 20",
+                "id": 2,
             },
             "gemini": {
                 "name": "Gemini",
                 "emoji": ":gemini:",
                 "date_range": "May 21 - Jun 20",
+                "id": 3,
             },
             "cancer": {
                 "name": "Cancer",
                 "emoji": ":cancer:",
                 "date_range": "Jun 21 - Jul 22",
+                "id": 4,
             },
             "leo": {
                 "name": "Leo",
                 "emoji": ":leo:",
                 "date_range": "Jul 23 - Aug 22",
+                "id": 5,
             },
             "virgo": {
                 "name": "Virgo",
                 "emoji": ":virgo:",
                 "date_range": "Aug 23 - Sep 22",
+                "id": 6,
             },
             "libra": {
                 "name": "Libra",
                 "emoji": ":libra:",
                 "date_range": "Sep 23 - Oct 22",
+                "id": 7,
             },
             "scorpio": {
                 "name": "Scorpio",
                 "emoji": ":scorpius:",
                 "date_range": "Oct 23 - Nov 21",
+                "id": 8,
             },
             "sagittarius": {
                 "name": "Sagittarius",
                 "emoji": ":sagittarius:",
                 "date_range": "Nov 22 - Dec 21",
+                "id": 9,
             },
             "capricorn": {
                 "name": "Capricorn",
                 "emoji": ":capricorn:",
                 "date_range": "Dec 22 - Jan 19",
+                "id": 10,
+            },
+            "aquarius": {
+                "name": "Aquarius",
+                "emoji": ":aquarius:",
+                "date_range": "Jan 20 - Feb 18",
+                "id": 11,
+            },
+            "pisces": {
+                "name": "Pisces",
+                "emoji": ":pisces:",
+                "date_range": "Feb 19 - Mar 20",
+                "id": 12,
             },
         }
 
@@ -359,19 +372,33 @@ class Misc(commands.Cog):
     async def horoscope(self, ctx: commands.Context):
         """Get your daily horoscope"""
         if ctx.invoked_subcommand is None:
-            await self.send_hs(ctx, "today")
+            await self.send_hs(ctx, "daily-today")
 
     @horoscope.command(name="tomorrow")
     async def horoscope_tomorrow(self, ctx: commands.Context):
         """Get tomorrow's horoscope"""
-        await self.send_hs(ctx, "tomorrow")
+        await self.send_hs(ctx, "daily-tomorrow")
 
     @horoscope.command(name="yesterday")
     async def horoscope_yesterday(self, ctx: commands.Context):
         """Get yesterday's horoscope"""
-        await self.send_hs(ctx, "yesterday")
+        await self.send_hs(ctx, "daily-yesterday")
 
-    async def send_hs(self, ctx: commands.Context, day):
+    @horoscope.command(name="weekly", aliases=["week"])
+    async def horoscope_weekly(self, ctx: commands.Context):
+        """Get this week's horoscope"""
+        await self.send_hs(ctx, "weekly")
+
+    @horoscope.command(name="monthly", aliases=["month"])
+    async def horoscope_monthly(self, ctx: commands.Context):
+        """Get this month's horoscope"""
+        await self.send_hs(ctx, "monthly")
+
+    async def send_hs(
+        self,
+        ctx: commands.Context,
+        variant: Literal["daily-yesterday", "daily-today", "daily-tomorrow", "weekly", "monthly"],
+    ):
         sunsign = await self.bot.db.fetch_value(
             "SELECT sunsign FROM user_settings WHERE user_id = %s",
             ctx.author.id,
@@ -381,26 +408,36 @@ class Misc(commands.Cog):
                 "Please save your zodiac sign using `>horoscope set <sign>`\n"
                 "Use `>horoscope list` if you don't know which one you are."
             )
-        params = {"sign": sunsign, "day": day}
-        async with self.bot.session.post(
-            "https://aztro.sameerkumar.website/", params=params
-        ) as response:
-            response.raise_for_status()
-            data = await response.json(loads=orjson.loads)
 
         sign = self.hs[sunsign]
+
+        async with self.bot.session.get(
+            f"https://www.horoscope.com/us/horoscopes/general/horoscope-general-{variant}.aspx",
+            params={"sign": sign["id"]},
+        ) as response:
+            response.raise_for_status()
+            soup = BeautifulSoup(await response.text(), "lxml")
+            paragraph = soup.select_one("p")
+
+        if paragraph is None:
+            raise exceptions.CommandError("Something went wrong trying to get horoscope text")
+
+        date_node = paragraph.find("strong")
+        if date_node is not None:
+            date = date_node.text
+            date_node.clear()  # type: ignore
+        else:
+            date = "[ERROR]"
+
+        for line_break in paragraph.findAll("br"):
+            line_break.replaceWith("\n")
+        hs_text = paragraph.get_text().strip("- ")
+
         content = discord.Embed(
             color=int("9266cc", 16),
-            title=f"{sign['emoji']} {sign['name']} - {data['current_date']}",
-            description=data["description"],
+            title=f"{sign['emoji']} {sign['name']} | {date}",
+            description=hs_text,
         )
-
-        content.add_field(name="Mood", value=data["mood"], inline=True)
-        content.add_field(name="Compatibility", value=data["compatibility"], inline=True)
-        content.add_field(name="Color", value=data["color"], inline=True)
-        content.add_field(name="Lucky number", value=data["lucky_number"], inline=True)
-        content.add_field(name="Lucky time", value=data["lucky_time"], inline=True)
-        content.add_field(name="Date range", value=data["date_range"], inline=True)
 
         await ctx.send(embed=content)
 
