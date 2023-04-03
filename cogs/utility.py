@@ -776,7 +776,6 @@ class Utility(commands.Cog):
             },
         ) as response:
             gif_data = await response.json(loads=orjson.loads)
-            print(gif_data)
 
         await msg.edit(embed=None, content=gif_data["data"]["url"])
 

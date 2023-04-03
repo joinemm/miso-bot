@@ -302,8 +302,6 @@ class TwitterEmbedder(BaseEmbedder):
         tweet: tweepy.Tweet = response.data  # type: ignore
         media_urls = []
 
-        print(response.includes)  # type: ignore
-
         user = response.includes["users"][0]  # type: ignore
         screen_name = user.username
         tweet_url = f"https://twitter.com/{screen_name}/status/{tweet.id}"
@@ -360,7 +358,7 @@ class TwitterEmbedder(BaseEmbedder):
 
 class MediaUI(View):
     def __init__(self, label: str, url: str):
-        super().__init__()
+        super().__init__(timeout=60)
         linkbutton = discord.ui.Button(label=label, url=url)
         self.add_item(linkbutton)
         self.message_ref: discord.Message | None = None
@@ -373,3 +371,11 @@ class MediaUI(View):
             await self.message_ref.delete()
         else:
             await interaction.response.defer()
+
+    async def on_timeout(self):
+        self.remove_item(self.delete_button)
+        if self.message_ref:
+            try:
+                await self.message_ref.edit(view=self)
+            except discord.NotFound:
+                pass

@@ -79,7 +79,7 @@ class TikTok:
 
         error_message = re.search(r"html: 'Error: (.*)'", soup.findAll("script")[-1].text)
         if error_message:
-            print(error_message.group(1))
+            raise TiktokError(error_message)
 
         download_link = soup.findAll("a", attrs={"target": "_blank"})[0].get("href")
         username, description = [el.text for el in soup.select("h2.white-text")[:2]]
