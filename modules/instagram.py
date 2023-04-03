@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from urllib import parse
 from urllib.parse import urlencode
 
@@ -10,7 +10,8 @@ import arrow
 import orjson
 from loguru import logger
 
-from modules.misobot import MisoBot
+if TYPE_CHECKING:
+    from modules.misobot import MisoBot
 
 
 class ExpiredCookie(Exception):
@@ -50,6 +51,7 @@ class IgUser:
 
 @dataclass
 class IgPost:
+    url: str
     user: IgUser
     media: list[IgMedia]
     timestamp: int
@@ -87,8 +89,8 @@ class InstagramIdCodec:
 class Datalama:
     BASE_URL = "https://api.datalama.io"
 
-    def __init__(self, bot: MisoBot):
-        self.bot: MisoBot = bot
+    def __init__(self, bot: "MisoBot"):
+        self.bot: "MisoBot" = bot
 
     def make_cache_key(self, endpoint: str, params: dict):
         return self.BASE_URL + endpoint + "?" + urlencode(params)
@@ -172,12 +174,13 @@ class Datalama:
             await self.save_cache(cache_key, data, lifetime)
 
         return IgPost(
+            f"https://www.instagram.com/p/{shortcode}",
             self.parse_user(data),
             media,
             data["taken_at_ts"],
         )
 
-    async def get_story_v1(self, story_pk: str) -> IgPost:
+    async def get_story_v1(self, username: str, story_pk: str) -> IgPost:
         data, was_cached, cache_key = await self.api_request_with_cache(
             "/v1/story/by/id",
             {"id": story_pk},
@@ -213,7 +216,12 @@ class Datalama:
 
         timestamp = int(arrow.get(data["taken_at"]).timestamp())
 
-        return IgPost(self.parse_user(data), media, timestamp)
+        return IgPost(
+            f"https://www.instagram.com/stories/{username}/{story_pk}",
+            self.parse_user(data),
+            media,
+            timestamp,
+        )
 
     @staticmethod
     def parse_user(data: dict):
@@ -294,6 +302,7 @@ class Datalama:
         post = data["items"][0]
 
         return IgPost(
+            f"https://www.instagram.com/p/{shortcode}",
             self.parse_user(post),
             self.parse_resource_a1(post),
             post["taken_at"],
@@ -303,10 +312,10 @@ class Datalama:
 class Instagram:
     def __init__(
         self,
-        bot: MisoBot,
+        bot: "MisoBot",
         use_proxy: bool = False,
     ):
-        self.bot: MisoBot = bot
+        self.bot: "MisoBot" = bot
         self.jar = aiohttp.CookieJar(unsafe=True)
         self.session = aiohttp.ClientSession(cookie_jar=self.jar)
 
@@ -440,7 +449,12 @@ class Instagram:
         except StopIteration:
             raise ExpiredStory
 
-        return IgPost(user, [self.parse_media(story)], story["taken_at"])
+        return IgPost(
+            f"https://www.instagram.com/stories/{username}/{story_pk}",
+            user,
+            [self.parse_media(story)],
+            story["taken_at"],
+        )
 
     async def get_user(self, username) -> IgUser:
         data = await self.v1_api_request("users/web_profile_info/", {"username": username})
@@ -472,7 +486,7 @@ class Instagram:
             user["username"],
             user["profile_pic_url"],
         )
-        return IgPost(user, media, timestamp)
+        return IgPost(f"https://www.instagram.com/p/{shortcode}", user, media, timestamp)
 
     async def get_post_graphql(self, shortcode: str) -> IgPost:
         data = await self.graphql_request(shortcode)
@@ -497,7 +511,7 @@ class Instagram:
             user["username"],
             user["profile_pic_url"],
         )
-        return IgPost(user, media, timestamp)
+        return IgPost(f"https://www.instagram.com/p/{shortcode}", user, media, timestamp)
 
 
 def to_mediatype(typename: str) -> MediaType:

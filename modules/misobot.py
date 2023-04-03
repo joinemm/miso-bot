@@ -12,6 +12,7 @@ from loguru import logger
 
 from modules import cache, maria, util
 from modules.help import EmbedHelpCommand
+from modules.instagram import Datalama
 from modules.keychain import Keychain
 from modules.redis import Redis
 
@@ -62,6 +63,7 @@ class MisoBot(commands.AutoShardedBot):
         self.version = "5.1"
         self.extensions_loaded = False
         self.redis: Redis = Redis()
+        self.datalama = Datalama(self)
         self.register_hooks()
 
     async def setup_hook(self):

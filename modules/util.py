@@ -64,6 +64,13 @@ class KeywordCommandArgument:
         return {option: value}
 
 
+async def suppress(message: discord.Message):
+    try:
+        await message.edit(suppress=True)
+    except (discord.Forbidden, discord.NotFound):
+        pass
+
+
 def displayname(member: Optional[discord.User | discord.Member], escape=True):
     if member is None:
         return None
@@ -165,7 +172,8 @@ def flags_to_badges(user: discord.User | discord.Member):
             try:
                 result.append(emojis.Badge[flag].value)
             except KeyError:
-                pass
+                logger.warning(f"Badge with no emoji associated with it: {flag}")
+
     if isinstance(user, discord.Member) and user.premium_since is not None:
         result.append(emojis.Badge["boosting"].value)
     return result or ["-"]
@@ -838,15 +846,19 @@ async def send_tasks_result_list(ctx, successful_operations, failed_operations, 
     await ctx.send(embed=content)
 
 
+async def patron_check(ctx):
+    if ctx.author.id == ctx.bot.owner_id:
+        return True
+    if await queries.is_donator(ctx, ctx.author):
+        return True
+    if await queries.is_vip(ctx.bot, ctx.author):
+        return True
+    raise PatronCheckFailure
+
+
 def patrons_only():
     async def predicate(ctx):
-        if ctx.author.id == ctx.bot.owner_id:
-            return True
-        if await queries.is_donator(ctx, ctx.author):
-            return True
-        if await queries.is_vip(ctx.bot, ctx.author):
-            return True
-        raise PatronCheckFailure
+        return await patron_check(ctx)
 
     return commands.check(predicate)
 
@@ -861,8 +873,8 @@ def format_html(template, replacements):
 async def render_html(bot, payload, endpoint="html"):
     try:
         async with bot.session.post(
-                    f"http://{IMAGE_SERVER_HOST}:3000/{endpoint}", data=payload
-                ) as response:
+            f"http://{IMAGE_SERVER_HOST}:3000/{endpoint}", data=payload
+        ) as response:
             if response.status == 200:
                 return io.BytesIO(await response.read())
             raise exceptions.RendererError(f"{response.status} : {await response.text()}")

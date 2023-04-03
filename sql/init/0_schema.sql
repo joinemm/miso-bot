@@ -247,6 +247,15 @@ CREATE TABLE IF NOT EXISTS guild_settings (
     PRIMARY KEY (guild_id)
 );
 
+CREATE TABLE IF NOT EXISTS media_auto_embed_settings (
+    guild_id BIGINT,
+    instagram BOOLEAN DEFAULT FALSE,
+    twitter BOOLEAN DEFAULT FALSE,
+    tiktok BOOLEAN DEFAULT FALSE,
+    reddit BOOLEAN DEFAULT FALSE,
+    PRIMARY KEY (guild_id)
+);
+
 CREATE TABLE IF NOT EXISTS starboard_settings (
     guild_id BIGINT,
     channel_id BIGINT DEFAULT NULL,

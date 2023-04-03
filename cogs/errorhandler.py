@@ -232,6 +232,13 @@ class ErrorHander(commands.Cog):
             case TiktokError():
                 await self.send_warning(ctx, f"TikTok Error: {error.message}")
 
+            case commands.BadLiteralArgument():
+                options = ", ".join(f"`{x}`" for x in error.literals)
+                await self.send_warning(
+                    ctx,
+                    f"Bad Argument: parameter `{error.param.name}` must be one of {options}",
+                )
+
             case _:
                 await self.send_error(
                     ctx, f"{type(error).__name__}: {error}", error, language="ex"

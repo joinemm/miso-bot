@@ -20,6 +20,7 @@ class Cache:
         self.marriages = []
         self.starboard_settings = {}
         self.starboard_blacklisted_channels = set()
+        self.media_auto_embed = {}
 
     async def cache_starboard_settings(self):
         data = await self.bot.db.fetch(
@@ -86,6 +87,19 @@ class Cache:
                 except KeyError:
                     self.autoroles[str(guild_id)] = {role_id}
 
+    async def cache_auto_embedders(self):
+        media_embed_settings = await self.bot.db.fetch(
+            "SELECT guild_id, instagram, twitter, tiktok, reddit FROM media_auto_embed_settings"
+        )
+        if media_embed_settings:
+            for guild_id, instagram, twitter, tiktok, reddit in media_embed_settings:
+                self.media_auto_embed[str(guild_id)] = {
+                    "instagram": instagram,
+                    "twitter": twitter,
+                    "tiktok": tiktok,
+                    "reddit": reddit,
+                }
+
     async def initialize_settings_cache(self):
         logger.info("Caching settings...")
         prefixes = await self.bot.db.fetch("SELECT guild_id, prefix FROM guild_prefix")
@@ -150,3 +164,4 @@ class Cache:
         await self.cache_starboard_settings()
         await self.cache_logging_settings()
         await self.cache_autoroles()
+        await self.cache_auto_embedders()
