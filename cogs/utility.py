@@ -1,9 +1,8 @@
-import asyncio
 import html
 import json
 import random
 from time import time
-from typing import Annotated, Any, Optional
+from typing import Optional
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
@@ -175,10 +174,12 @@ class Utility(commands.Cog):
         if isinstance(error, commands.CommandNotFound) and ctx.message.content.startswith(
             f"{ctx.prefix}!"
         ):
-            ctx.timer = time()
-            ctx.iscallback = True
+            # type ignores everywhere because this is so hacky
+            ctx.timer = time()  # type: ignore
+            ctx.iscallback = True  # type: ignore
             ctx.command = self.bot.get_command("!")
-            await ctx.command.callback(self, ctx)
+            if ctx.command:
+                await ctx.command.callback(self, ctx)  # type: ignore
 
     async def resolve_bang(self, ctx: commands.Context, bang, args):
         params = {"q": f"!{bang} {args}", "format": "json", "no_redirect": 1}
@@ -189,13 +190,16 @@ class Utility(commands.Cog):
             if location == "":
                 return await ctx.send(":warning: Unknown bang or found nothing!")
 
-            while location:
+            while True:
                 async with self.bot.session.get(url, params=params) as deeper_response:
                     response = deeper_response
-                    location = response.headers.get("location")
+                    new_location = response.headers.get("location")
+                    if not new_location:
+                        break
+                    else:
+                        location = new_location
 
-            content = str(response.url)
-        await ctx.send(content)
+        await ctx.send(location)
 
     @commands.command(name="!", usage="<bang> <query...>")
     async def bang(self, ctx: commands.Context):
@@ -325,30 +329,29 @@ class Utility(commands.Cog):
             )
         )
 
+    async def get_user_location(self, ctx: commands.Context):
+        location = await self.bot.db.fetch_value(
+            "SELECT location_string FROM user_settings WHERE user_id = %s",
+            ctx.author.id,
+        )
+        if location is None:
+            raise exceptions.CommandInfo(
+                f"Please save your location using `{ctx.prefix}weather save <location...>`"
+            )
+        return location
+
     @commands.group()
     async def weather(self, ctx: commands.Context):
         """Show current weather in given location"""
         if ctx.invoked_subcommand is None:
             await util.command_group_help(ctx)
-        else:
-            ctx.location = await self.bot.db.fetch_value(
-                "SELECT location_string FROM user_settings WHERE user_id = %s",
-                ctx.author.id,
-            )
 
     @weather.command(name="now")
     async def weather_now(self, ctx: commands.Context, *, location: Optional[str] = None):
-        if location is None:
-            location = ctx.location
-            if ctx.location is None:
-                raise exceptions.CommandInfo(
-                    f"Please save your location using `{ctx.prefix}weather save <location...>`"
-                )
-
+        location = await self.get_user_location(ctx)
         lat, lon, address = await self.geolocate(location)
         local_time, country_code = await self.get_country_information(lat, lon)
 
-        API_BASE_URL = "https://api.tomorrow.io/v4/timelines"
         params = {
             "apikey": self.bot.keychain.TOMORROWIO_TOKEN,
             "location": f"{lat},{lon}",
@@ -380,12 +383,15 @@ class Utility(commands.Cog):
         else:
             logger.warning("Arrow object must be constructed with ZoneInfo timezone object")
 
-        async with self.bot.session.get(API_BASE_URL, params=params) as response:
+        async with self.bot.session.get(
+            "https://api.tomorrow.io/v4/timelines", params=params
+        ) as response:
             if response.status != 200:
                 logger.error(response.status)
                 logger.error(response.headers)
                 logger.error(await response.text())
                 raise exceptions.CommandError(f"Weather api returned HTTP ERROR {response.status}")
+
             data = await response.json(loads=orjson.loads)
 
         current_data = next(
@@ -437,16 +443,9 @@ class Utility(commands.Cog):
 
     @weather.command(name="forecast")
     async def weather_forecast(self, ctx: commands.Context, *, location: Optional[str] = None):
-        if location is None:
-            location = ctx.location
-            if ctx.location is None:
-                raise exceptions.CommandInfo(
-                    f"Please save your location using `{ctx.prefix}weather save <location...>`"
-                )
-
+        location = await self.get_user_location(ctx)
         lat, lon, address = await self.geolocate(location)
         local_time, country_code = await self.get_country_information(lat, lon)
-        API_BASE_URL = "https://api.tomorrow.io/v4/timelines"
         params = {
             "apikey": self.bot.keychain.TOMORROWIO_TOKEN,
             "location": f"{lat},{lon}",
@@ -476,7 +475,9 @@ class Utility(commands.Cog):
         else:
             logger.warning("Arrow object must be constructed with ZoneInfo timezone object")
 
-        async with self.bot.session.get(API_BASE_URL, params=params) as response:
+        async with self.bot.session.get(
+            "https://api.tomorrow.io/v4/timelines", params=params
+        ) as response:
             if response.status != 200:
                 logger.error(response.status)
                 logger.error(response.headers)
