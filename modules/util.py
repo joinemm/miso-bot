@@ -87,7 +87,7 @@ def displayname(member: Optional[discord.User | discord.Member], escape=True):
 
 def displaychannel(
     channel: Optional[
-        discord.abc.MessageableChannel
+        discord.StageChannel
         | discord.TextChannel
         | discord.Thread
         | discord.DMChannel
