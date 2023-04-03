@@ -453,7 +453,7 @@ class Misc(commands.Cog):
                     star_count = len(title.select(".highlight"))
                     stars = star_count * ":star:"
                     emptystars = (5 - star_count) * "<:no_star:1092503441991008306>"
-                    title_text = title.text
+                    title_text = title.text.strip()
                     if title_text == "Sex":
                         title_text = "Romance"
                     content.add_field(
