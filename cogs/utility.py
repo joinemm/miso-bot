@@ -747,79 +747,37 @@ class Utility(commands.Cog):
             else:
                 await ctx.send(":shrug:")
 
-    @commands.command()
-    async def creategif(
-        self,
-        ctx: commands.Context,
-        media_url: str,
-        *gifoptions: Annotated[dict[str, Any], util.KeywordCommandArgument],
-    ):
-        """Create a gfycat gif from video url
+    @commands.command(enabled=False)
+    async def creategif(self, ctx: commands.Context, media_url: str):
+        """Create a Giphy gif"""
+        URL = "https://upload.giphy.com/v1/gifs"
+        params = {
+            "api_key": self.bot.keychain.GIPHY_API_KEY,
+            "source_image_url": media_url,
+            "tags": ["misobot"],
+            "source_post_url": "https://misobot.xyz",
+        }
 
-        Give any options in `option=value` format:
-        > `start`: The number of seconds into the video to start the gif from
-        > `end`: The time when the gif should end in seconds
-
-        Example:
-            >creategif link-to-video.mp4 start=4 end=1
-
-        """
-        options = GifOptions.from_arguments(gifoptions)
-
-        raise exceptions.CommandWarning(
-            "Gfycat.com has been abandoned and their upload service no longer works. \
-                Alternative gif service coming in the near future. (giphy maybe)"
+        msg = await ctx.send(
+            embed=discord.Embed(
+                description=f"{emojis.LOADING} **Creating your gif...**"
+            ).set_footer(text="Powered by GIPHY")
         )
 
-        API_URL = "https://api.gfycat.com/v1/gfycats"
-        starttimer = time()
-        auth_headers = await gfycat_oauth(self.bot)
-        params = {
-            "fetchUrl": media_url,
-            "tags": ["misobot"],
-            "title": "Miso Bot",
-            "private": False,
-            "description": "Gif created with Miso Bot https://misobot.xyz",
-        } | options.json()
-
-        async with self.bot.session.post(API_URL, json=params, headers=auth_headers) as response:
+        async with self.bot.session.post(URL, json=params) as response:
+            response.raise_for_status()
             data = await response.json(loads=orjson.loads)
 
-        gfyname = data.get("gfyname")
-        error = data.get("errorMessage")
-        if gfyname is None:
-            if error is not None:
-                error = orjson.loads(error)
-                raise exceptions.CommandWarning(f"{error['code']}: {error['description']}")
+        async with self.bot.session.get(
+            f"https://api.giphy.com/v1/gifs/{data['data']['id']}",
+            params={
+                "api_key": self.bot.keychain.GIPHY_API_KEY,
+            },
+        ) as response:
+            gif_data = await response.json(loads=orjson.loads)
+            print(gif_data)
 
-            raise exceptions.CommandWarning("Failed creating gif")
-
-        message = await ctx.send(f"Encoding {emojis.LOADING}")
-
-        url = f"{API_URL}/fetch/status/{gfyname}"
-        await asyncio.sleep(1)
-        while True:
-            async with self.bot.session.get(url, headers=auth_headers) as response:
-                data = await response.json(loads=orjson.loads)
-                task = data["task"]
-
-            if task == "complete":
-                await message.edit(
-                    content=f"Gif created in **{util.stringfromtime(time() - starttimer, 2)}**"
-                    f"\nhttps://gfycat.com/{data['gfyname']}"
-                )
-                break
-
-            elif task != "encoding":
-                await message.edit(
-                    content=(
-                        "There was an error while creating your gif :("
-                        f"\n> `error: {data['errorMessage']['description']}`"
-                    )
-                )
-                break
-
-            await asyncio.sleep(1)
+        await msg.edit(embed=None, content=gif_data["data"]["url"])
 
     @commands.command()
     async def stock(self, ctx: commands.Context, *, symbol):

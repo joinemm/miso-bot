@@ -422,11 +422,20 @@ class Media(commands.Cog):
         async def randomize():
             await msg.edit(content=f"**{query}** {random.choice(urls)}")
 
-        async def done():
-            return True
+    @commands.command(aliases=["gif"])
+    async def giphy(self, ctx: commands.Context, *, query):
+        """Search for gif from Giphy"""
+        URL = "https://api.giphy.com/v1/gifs/search"
+        params = {
+            "q": query,
+            "api_key": self.bot.keychain.GIPHY_API_KEY,
+            "limit": 50,
+        }
+        async with self.bot.session.get(URL, params=params) as response:
+            data = await response.json()
+            gifs = data["data"]
 
-        buttons = {"❌": msg.delete, "🔁": randomize, "🔒": done}
-        asyncio.ensure_future(util.reaction_buttons(ctx, msg, buttons, only_author=True))
+        await GiphyUI(gifs).run(ctx)
 
     @commands.command(usage="<day | month | realtime | rising>")
     async def melon(self, ctx: commands.Context, timeframe):
@@ -496,8 +505,45 @@ async def setup(bot):
     await bot.add_cog(Media(bot))
 
 
-async def extract_scripts(session, url):
-    async with session.get(url) as response:
-        data = await response.text()
-        soup = BeautifulSoup(data, "lxml")
-        return soup.find_all("script", {"type": "application/ld+json"})
+class GiphyUI(discord.ui.View):
+    def __init__(self, urls: list):
+        super().__init__()
+        self.message: discord.Message
+        self.gifs = urls
+
+    async def run(self, ctx: commands.Context):
+        self.message = await ctx.send(random.choice(self.gifs)["url"], view=self)
+
+    @discord.ui.button(emoji=emojis.REMOVE, style=discord.ButtonStyle.danger)
+    async def toggle(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        await self.message.delete()
+
+    @discord.ui.button(emoji=emojis.REPEAT, style=discord.ButtonStyle.primary)
+    async def randomize(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        await self.message.edit(content=random.choice(self.gifs)["url"])
+
+    @discord.ui.button(emoji=emojis.CONFIRM, style=discord.ButtonStyle.secondary)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        await self.remove_ui()
+
+    @discord.ui.button(
+        label="Powered by GIPHY", style=discord.ButtonStyle.secondary, disabled=True
+    )
+    async def giphy_label(self, _, __):
+        pass
+
+    async def remove_ui(self):
+        for item in self.children:
+            item.disabled = True  # type: ignore
+
+        if self.message:
+            try:
+                await self.message.edit(view=None)
+            except discord.NotFound:
+                pass
+
+    async def on_timeout(self):
+        await self.remove_ui()
