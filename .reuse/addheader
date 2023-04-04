@@ -4,4 +4,4 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
-./venv/bin/python main.py dev
+reuse addheader --copyright="Joonas Rautiola <joinemm@pm.me>" --license="MPL-2.0" --template="header.jinja2" $@

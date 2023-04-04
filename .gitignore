@@ -10,3 +10,4 @@ data/data.json
 polls.yaml
 .env
 poetry.lock
+*/__pycache__

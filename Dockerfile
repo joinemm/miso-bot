@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+#
+# SPDX-License-Identifier: MPL-2.0
+
 FROM python:3.10.5
 
 WORKDIR /app

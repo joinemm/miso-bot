@@ -1,3 +1,7 @@
+-- SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+-- SPDX-License-Identifier: MPL-2.0
+-- https://git.joinemm.dev/miso-bot
+
 CREATE TABLE IF NOT EXISTS kpop_group (
     group_id INT NOT NULL AUTO_INCREMENT,
     profile_link VARCHAR(128),
