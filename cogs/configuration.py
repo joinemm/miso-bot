@@ -3,8 +3,7 @@ from typing import Annotated
 import discord
 from discord.ext import commands
 
-from libraries import emoji_literals
-from modules import exceptions, queries, util
+from modules import emoji_literals, exceptions, queries, util
 from modules.misobot import MisoBot
 
 
@@ -526,10 +525,7 @@ class Configuration(commands.Cog):
         if not channels:
             raise exceptions.CommandInfo("There are no voting channels on this server yet!")
 
-        rows = [
-            f"<#{channel_id}> - `{voting_type}`"
-            for channel_id, voting_type in channels
-        ]
+        rows = [f"<#{channel_id}> - `{voting_type}`" for channel_id, voting_type in channels]
         content = discord.Embed(
             title=f":1234: Voting channels in {ctx.guild.name}", color=int("3b88c3", 16)
         )

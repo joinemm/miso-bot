@@ -14,8 +14,7 @@ from bs4 import BeautifulSoup
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
-from libraries import emoji_literals
-from modules import exceptions, util
+from modules import emoji_literals, exceptions, util
 from modules.misobot import MisoBot
 
 EMOJIFIER_HOST = os.environ.get("EMOJIFIER_HOST")

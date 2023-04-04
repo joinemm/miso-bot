@@ -6,8 +6,7 @@ import discord
 from discord.ext import commands, tasks
 from loguru import logger
 
-from libraries import emoji_literals
-from modules import queries, util
+from modules import emoji_literals, queries, util
 from modules.media_embedders import InstagramEmbedder, TikTokEmbedder
 from modules.misobot import MisoBot
 

@@ -20,8 +20,7 @@ from PIL import Image, UnidentifiedImageError
 from random_user_agent.params import HardwareType
 from random_user_agent.user_agent import UserAgent
 
-from libraries import emoji_literals
-from modules import emojis, exceptions, queries
+from modules import emoji_literals, emojis, exceptions, queries
 
 if TYPE_CHECKING:
     from modules.misobot import MisoBot
