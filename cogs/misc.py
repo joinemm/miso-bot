@@ -1,3 +1,4 @@
+import base64
 import os
 import random
 import re
@@ -6,13 +7,14 @@ from typing import Literal, Tuple, Union
 
 import arrow
 import discord
+import minestat
 import orjson
 from aiohttp import ClientResponseError
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
-from libraries import emoji_literals, minestat
+from libraries import emoji_literals
 from modules import exceptions, util
 from modules.misobot import MisoBot
 
@@ -342,13 +344,10 @@ class Misc(commands.Cog):
 
             address, port = data
 
-        if port is None:
-            port = 25565
-
         server = await self.bot.loop.run_in_executor(
-            None, lambda: minestat.MineStat(address, int(port))
+            None, lambda: minestat.MineStat(address, int(port) if port else 0)
         )
-        content = discord.Embed(color=discord.Color.green())
+        content = discord.Embed(color=int("70b237", 16))
         if server.online:
             content.add_field(name="Server Address", value=f"`{server.address}`")
             content.add_field(name="Version", value=server.version)
@@ -356,12 +355,23 @@ class Misc(commands.Cog):
                 name="Players", value=f"{server.current_players}/{server.max_players}"
             )
             content.add_field(name="Latency", value=f"{server.latency}ms")
-            content.set_footer(text=f"Message of the day: {server.motd}")
+            content.set_footer(text=f"Message of the day: {server.stripped_motd}")
         else:
             content.title = f"{address}:{port}"
             content.description = ":warning: **Server is offline**"
-        content.set_thumbnail(url="https://i.imgur.com/P1IxD0Q.png")
-        await ctx.send(embed=content)
+
+        if server.favicon_b64:
+            file = discord.File(
+                filename="servericon.png",
+                fp=base64.urlsafe_b64decode(
+                    server.favicon_b64.replace("data:image/png;base64,", "")
+                ),
+            )
+            content.set_thumbnail(url="attachment://servericon.png")
+            await ctx.send(embed=content, file=file)
+        else:
+            content.set_thumbnail(url="https://i.imgur.com/P1IxD0Q.png")
+            await ctx.send(embed=content)
 
     @commands.command()
     async def clap(self, ctx: commands.Context, *sentence):
