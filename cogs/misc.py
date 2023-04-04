@@ -448,7 +448,7 @@ class Misc(commands.Cog):
 
             if wrapper:
                 titles = wrapper.findAll("h3")
-                text = wrapper.findAll("p")[:-1]
+                text = wrapper.findAll("p")
                 for title, text in zip(titles, text):
                     star_count = len(title.select(".highlight"))
                     stars = star_count * ":star:"
