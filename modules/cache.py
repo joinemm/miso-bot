@@ -12,7 +12,6 @@ class Cache:
         self.log_emoji = False
         self.prefixes = {}
         self.rolepickers = set()
-        self.votechannels = set()
         self.autoresponse = {}
         self.blacklist = {}
         self.logging_settings = {}
@@ -109,10 +108,6 @@ class Cache:
 
         self.rolepickers = set(
             await self.bot.db.fetch_flattened("SELECT channel_id FROM rolepicker_settings")
-        )
-
-        self.votechannels = set(
-            await self.bot.db.fetch_flattened("SELECT channel_id FROM voting_channel")
         )
 
         guild_settings = await self.bot.db.fetch(

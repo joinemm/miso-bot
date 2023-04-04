@@ -360,19 +360,6 @@ CREATE TABLE IF NOT EXISTS marriage (
     PRIMARY KEY (first_user_id, second_user_id)
 );
 
-CREATE TABLE IF NOT EXISTS stats (
-    ts DATETIME,
-    messages INT NOT NULL DEFAULT 0,
-    reactions INT NOT NULL DEFAULT 0,
-    commands_used INT NOT NULL DEFAULT 0,
-    guild_count INT NOT NULL DEFAULT 0,
-    member_count INT NOT NULL DEFAULT 0,
-    notifications_sent INT NOT NULL DEFAULT 0,
-    lastfm_api_requests INT NOT NULL DEFAULT 0,
-    html_rendered INT NOT NULL DEFAULT 0,
-    PRIMARY KEY (ts)
-);
-
 CREATE TABLE IF NOT EXISTS stannable_artist (
     id INT NOT NULL AUTO_INCREMENT,
     artist_name VARCHAR(128),
