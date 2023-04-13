@@ -27,3 +27,4 @@ loguru
 aioredis
 shazamio
 random_user_agent
+minestat

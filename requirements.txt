@@ -72,6 +72,8 @@ dataclass-factory==2.16
     # via shazamio
 discord.py @ git+https://github.com/Rapptz/discord.py.git
     # via -r requirements.in
+dnspython==2.3.0
+    # via minestat
 durations-nlp==1.0.1
     # via -r requirements.in
 exceptiongroup==1.1.1
@@ -108,6 +110,8 @@ lxml==4.9.2
 markdownify==0.11.6
     # via -r requirements.in
 matplotlib==3.7.1
+    # via -r requirements.in
+minestat==2.6.1
     # via -r requirements.in
 multidict==6.0.4
     # via
