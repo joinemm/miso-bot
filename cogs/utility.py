@@ -752,26 +752,36 @@ class Utility(commands.Cog):
             else:
                 await ctx.send(":shrug:")
 
-    @commands.command(enabled=False)
-    async def creategif(self, ctx: commands.Context, media_url: str):
+    @commands.command()
+    async def creategif(self, ctx: commands.Context, media_url: str, *tags: str):
         """Create a Giphy gif"""
         URL = "https://upload.giphy.com/v1/gifs"
         params = {
             "api_key": self.bot.keychain.GIPHY_API_KEY,
             "source_image_url": media_url,
-            "tags": ["misobot"],
+            "tags": ["misobot"] + list(tags),
             "source_post_url": "https://misobot.xyz",
         }
 
         msg = await ctx.send(
             embed=discord.Embed(
-                description=f"{emojis.LOADING} **Creating your gif...**"
+                description=f"{emojis.LOADING} **Creating your gif...**",
+                color=int("8a3cff", 16),
             ).set_footer(text="Powered by GIPHY")
         )
 
         async with self.bot.session.post(URL, json=params) as response:
-            response.raise_for_status()
-            data = await response.json(loads=orjson.loads)
+            if response.status == 200:
+                data = await response.json(loads=orjson.loads)
+            else:
+                await msg.delete()
+                if response.status == 500:
+                    raise exceptions.CommandWarning(
+                        "Gif creation failed! Most likely the url provided is not a valid video source."
+                    )
+                else:
+                    response.raise_for_status()
+                    return
 
         async with self.bot.session.get(
             f"https://api.giphy.com/v1/gifs/{data['data']['id']}",
@@ -780,6 +790,18 @@ class Utility(commands.Cog):
             },
         ) as response:
             gif_data = await response.json(loads=orjson.loads)
+
+        await self.bot.db.execute(
+            """
+            INSERT INTO user_uploaded_gif
+                (user_id, guild_id, gif_id, source_url)
+                VALUES(%s, %s, %s, %s)
+            """,
+            ctx.author.id,
+            ctx.guild.id if ctx.guild else None,
+            gif_data["data"]["id"],
+            media_url,
+        )
 
         await msg.edit(embed=None, content=gif_data["data"]["url"])
 

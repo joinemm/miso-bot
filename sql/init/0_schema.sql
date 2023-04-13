@@ -1,7 +1,6 @@
 -- SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
 -- SPDX-License-Identifier: MPL-2.0
 -- https://git.joinemm.dev/miso-bot
-
 -- blacklists
 CREATE TABLE IF NOT EXISTS blacklisted_guild (
     guild_id BIGINT,
@@ -258,6 +257,15 @@ CREATE TABLE IF NOT EXISTS media_auto_embed_settings (
     tiktok BOOLEAN DEFAULT FALSE,
     reddit BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (guild_id)
+);
+
+CREATE TABLE IF NOT EXISTS user_uploaded_gif (
+    user_id BIGINT,
+    guild_id BIGINT,
+    gif_id VARCHAR(32),
+    source_url VARCHAR(2083),
+    ts DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (gif_id)
 );
 
 CREATE TABLE IF NOT EXISTS starboard_settings (
