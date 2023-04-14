@@ -56,7 +56,8 @@ class KeywordArguments:
 
 
 class KeywordCommandArgument:
-    async def convert(self, _ctx: commands.Context, argument: str):
+    @staticmethod
+    async def convert(_ctx: commands.Context, argument: str):
         try:
             option, value = argument.split("=", 1)
         except ValueError:
@@ -674,8 +675,7 @@ async def color_from_image_url(
     except Exception as e:
         if ignore_errors:
             return fallback
-        else:
-            raise e
+        raise e
 
     return rgb_to_hex(dominant_color)
 

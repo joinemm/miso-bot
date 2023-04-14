@@ -125,8 +125,7 @@ class Datalama:
             if prom := self.bot.get_cog("Prometheus"):
                 await prom.increment_instagram_cache_hits()  # type: ignore
             return orjson.loads(cached_response)
-        else:
-            return None
+        return None
 
     async def save_cache(self, cache_key: str, data: dict, lifetime: int):
         try:
@@ -345,16 +344,16 @@ class Instagram:
     async def close(self):
         await self.session.close()
 
-    def parse_media(self, resource):
+    @staticmethod
+    def parse_media(resource):
         resource_media_type = MediaType(int(resource["media_type"]))
         if resource_media_type == MediaType.PHOTO:
             res = resource["image_versions2"]["candidates"][0]
             return IgMedia(resource_media_type, res["url"])
-        elif resource_media_type == MediaType.VIDEO:
+        if resource_media_type == MediaType.VIDEO:
             res = resource["video_versions"][0]
             return IgMedia(resource_media_type, res["url"])
-        else:
-            return IgMedia(resource_media_type, "")
+        return IgMedia(resource_media_type, "")
 
     async def graphql_request(self, shortcode: str):
         url = "https://www.instagram.com/graphql/query/"
