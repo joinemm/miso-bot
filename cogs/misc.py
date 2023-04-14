@@ -856,8 +856,8 @@ class Misc(commands.Cog):
         )
         await ctx.send(file=meme)
 
+    @staticmethod
     def meme_factory(
-        self,
         ctx: commands.Context,
         filename: str,
         boxdimensions: Tuple[int, int, int, int],

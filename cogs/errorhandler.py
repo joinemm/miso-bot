@@ -34,8 +34,9 @@ class ErrorHander(commands.Cog):
     def __init__(self, bot):
         self.bot: MisoBot = bot
 
+    @staticmethod
     def log_format(
-        self, ctx: commands.Context, error: Exception | None, message: str | None = None
+        ctx: commands.Context, error: Exception | None, message: str | None = None
     ):
         return f"{ctx.guild} @ {ctx.author} : {ctx.message.content} => {type(error).__name__}: {message or str(error)}"
 
@@ -49,8 +50,8 @@ class ErrorHander(commands.Cog):
         except commands.CommandError as e:
             return await self.on_command_error(ctx, e)
 
+    @staticmethod
     async def send_embed(
-        self,
         ctx: commands.Context,
         message: str,
         emoji: str = "",
