@@ -171,11 +171,10 @@ class Mod(commands.Cog):
             if duration and duration.strip().lower() == "remove":
                 await member.timeout(None)
                 return await util.send_success(ctx, f"Removed timeout from {member.mention}")
-            else:
-                seconds = member.timeout.timestamp() - arrow.now().int_timestamp
-                raise exceptions.CommandInfo(
-                    f"{member.mention} is already timed out (**{util.stringfromtime(seconds)}** remaining)",
-                )
+            seconds = member.timeout.timestamp() - arrow.now().int_timestamp
+            raise exceptions.CommandInfo(
+                f"{member.mention} is already timed out (**{util.stringfromtime(seconds)}** remaining)",
+            )
         else:
             seconds = util.timefromstring(duration)
             if seconds is None:

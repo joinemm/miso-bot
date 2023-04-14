@@ -1030,8 +1030,7 @@ async def detect_language(bot, string):
 def temp(celsius: float, convert_to_f: bool = False) -> str:
     if convert_to_f:
         return f"{int((celsius * 9.0 / 5.0) + 32)} °F"
-    else:
-        return f"{int(celsius)} °C"
+    return f"{int(celsius)} °C"
 
 
 async def gfycat_oauth(bot):
