@@ -6,7 +6,7 @@ FROM python:3.10.10
 
 WORKDIR /app
 
-RUN wget --progress https://github.com/isis-project/isis-fonts/blob/master/NanumGothic.ttf?raw=true -O NanumGothic.ttf 
+RUN wget --progress=dot:giga https://github.com/isis-project/isis-fonts/blob/master/NanumGothic.ttf?raw=true -O NanumGothic.ttf 
 RUN apt-get update -y \
     && apt-get install --no-install-recommends -y ffmpeg \
     && apt-get clean \
