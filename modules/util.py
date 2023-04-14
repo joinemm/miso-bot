@@ -56,7 +56,8 @@ class KeywordArguments:
 
 
 class KeywordCommandArgument:
-    async def convert(self, ctx: commands.Context, argument: str):
+    @staticmethod
+    async def convert(ctx: commands.Context, argument: str):
         try:
             option, value = argument.split("=", 1)
         except ValueError:

@@ -344,7 +344,8 @@ class Instagram:
     async def close(self):
         await self.session.close()
 
-    def parse_media(self, resource):
+    @staticmethod
+    def parse_media(resource):
         resource_media_type = MediaType(int(resource["media_type"]))
         if resource_media_type == MediaType.PHOTO:
             res = resource["image_versions2"]["candidates"][0]
