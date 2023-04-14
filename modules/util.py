@@ -674,8 +674,7 @@ async def color_from_image_url(
     except Exception as e:
         if ignore_errors:
             return fallback
-        else:
-            raise e
+        raise e
 
     return rgb_to_hex(dominant_color)
 

@@ -2616,8 +2616,7 @@ async def fetch_html(bot: MisoBot, url: str, params: Optional[dict] = None):
         if not response.ok:
             logger.error(f"Lastfm error {response.status}")
             return "", data
-        else:
-            return data, None
+        return data, None
 
 
 def period_http_format(period):
