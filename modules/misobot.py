@@ -68,6 +68,8 @@ class MisoBot(commands.AutoShardedBot):
         self.extensions_loaded = False
         self.redis: Redis = Redis()
         self.datalama = Datalama(self)
+        self.boot_up_time: float
+        self.session: aiohttp.ClientSession
         self.register_hooks()
 
     async def setup_hook(self):

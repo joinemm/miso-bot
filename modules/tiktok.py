@@ -51,12 +51,18 @@ class TikTok:
     }
     EMOJI = "<:tiktok:1050401570090647582>"
 
+    def __init__(self) -> None:
+        self.input_element = None
+
     async def warmup(self, session: aiohttp.ClientSession):
-        self.request = await session.get(self.BASE_URL)
-        soup = BeautifulSoup(await self.request.text(), "lxml")
+        response = await session.get(self.BASE_URL)
+        soup = BeautifulSoup(await response.text(), "lxml")
         self.input_element = soup.findAll("input")
 
     def generate_post_data(self, url: str):
+        if self.input_element is None:
+            raise Exception("TikTok downloader was not warmed up!")
+
         return {
             index.get("name"): url if index.get("id") == "link_url" else index.get("value")
             for index in self.input_element

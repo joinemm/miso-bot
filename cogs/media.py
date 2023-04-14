@@ -213,17 +213,17 @@ class GiphyUI(discord.ui.View):
         self.message = await ctx.send(random.choice(self.gifs)["url"], view=self)
 
     @discord.ui.button(emoji=emojis.REMOVE, style=discord.ButtonStyle.danger)
-    async def toggle(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def toggle(self, interaction: discord.Interaction, _button: discord.ui.Button):
         await interaction.response.defer()
         await self.message.delete()
 
     @discord.ui.button(emoji=emojis.REPEAT, style=discord.ButtonStyle.primary)
-    async def randomize(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def randomize(self, interaction: discord.Interaction, _button: discord.ui.Button):
         await interaction.response.defer()
         await self.message.edit(content=random.choice(self.gifs)["url"])
 
     @discord.ui.button(emoji=emojis.CONFIRM, style=discord.ButtonStyle.secondary)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def confirm(self, interaction: discord.Interaction, _button: discord.ui.Button):
         await interaction.response.defer()
         await self.remove_ui()
 

@@ -51,7 +51,7 @@ class Mod(commands.Cog):
             return
 
         now_ts = arrow.utcnow().int_timestamp
-        for (user_id, guild_id, channel_id, unmute_on) in self.unmute_list:
+        for user_id, guild_id, channel_id, unmute_on in self.unmute_list:
             unmute_ts = unmute_on.timestamp()
             if unmute_ts > now_ts:
                 continue
@@ -298,8 +298,9 @@ class Mod(commands.Cog):
         """Resolve user ids into usernames"""
         if len(ids) > 25:
             raise exceptions.CommandWarning("Only 25 ids at a time please!")
-        elif not ids:
-            await util.send_command_help(ctx)
+
+        if not ids:
+            return await util.send_command_help(ctx)
 
         rows = []
         for user_id in ids:
@@ -427,9 +428,9 @@ class Mod(commands.Cog):
 
         async def confirm_ban():
             try:
-                assert isinstance(ctx.guild, discord.Guild)
-                await ctx.guild.ban(user, delete_message_days=0)
-                content.title = ":white_check_mark: Banned user"
+                if ctx.guild is not None:
+                    await ctx.guild.ban(user, delete_message_days=0)
+                    content.title = ":white_check_mark: Banned user"
             except discord.errors.Forbidden:
                 content.title = None
                 content.description = f":no_entry: It seems I don't have the permission to ban **{user}** {user.mention}"

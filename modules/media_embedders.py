@@ -74,7 +74,7 @@ class BaseEmbedder:
         media_url: str,
         filename: str,
         max_filesize: int,
-        url_tags: list[str] = list(),
+        url_tags: list[str] | None = None,
     ) -> str | discord.File:
         """Downloads media content respecting discord's filesize limit for each guild"""
         # The url params are unescaped by aiohttp's built-in yarl
@@ -373,7 +373,7 @@ class MediaUI(View):
         self._children.reverse()
 
     @discord.ui.button(emoji=emojis.REMOVE, style=discord.ButtonStyle.danger)
-    async def delete_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def delete_button(self, interaction: discord.Interaction, _button: discord.ui.Button):
         if self.message_ref and interaction.user in self.approved_deletors:
             await self.message_ref.delete()
         else:

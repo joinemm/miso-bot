@@ -94,7 +94,7 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
 
     @discord.ui.button(emoji="<:left:997949561911918643>", style=STYLE)
     async def on_arrow_backward(
-        self, interaction: discord.Interaction, button: discord.ui.Button
+        self, interaction: discord.Interaction, _button: discord.ui.Button
     ) -> None:
         entries = self._switch_page(-1)
         embed = await self.format_page(entries)
@@ -102,13 +102,13 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
 
     @discord.ui.button(label="...", style=STYLE, disabled=True)
     async def page_number(
-        self, interaction: discord.Interaction, button: discord.ui.Button
+        self, _interaction: discord.Interaction, _button: discord.ui.Button
     ) -> None:
         pass
 
     @discord.ui.button(emoji="<:right:997949563665133570>", style=STYLE)
     async def on_arrow_forward(
-        self, interaction: discord.Interaction, button: discord.ui.Button
+        self, interaction: discord.Interaction, _button: discord.ui.Button
     ) -> None:
         entries = self._switch_page(1)
         embed = await self.format_page(entries)

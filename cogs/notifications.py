@@ -50,7 +50,8 @@ class Notifications(commands.Cog):
         keywords: list[str],
         test=False,
     ):
-        assert message.guild is not None
+        if message.guild is None:
+            return
 
         content = discord.Embed(color=message.author.color)
         content.set_author(name=f"{message.author}", icon_url=message.author.display_avatar.url)

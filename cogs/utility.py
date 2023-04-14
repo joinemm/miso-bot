@@ -200,8 +200,7 @@ class Utility(commands.Cog):
                     new_location = response.headers.get("location")
                     if not new_location:
                         break
-                    else:
-                        location = new_location
+                    location = new_location
 
         await ctx.send(location)
 
@@ -779,9 +778,8 @@ class Utility(commands.Cog):
                     raise exceptions.CommandWarning(
                         "Gif creation failed! Most likely the url provided is not a valid video source."
                     )
-                else:
-                    response.raise_for_status()
-                    return
+                response.raise_for_status()
+                return
 
         async with self.bot.session.get(
             f"https://api.giphy.com/v1/gifs/{data['data']['id']}",
@@ -1067,7 +1065,7 @@ class WeatherUnitToggler(discord.ui.View):
         self.toggle.label = "°C" if self.F else "°F"
 
     @discord.ui.button(emoji="🌡️", style=discord.ButtonStyle.secondary)
-    async def toggle(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def toggle(self, interaction: discord.Interaction, _button: discord.ui.Button):
         self.F = not self.F
         self.update_label()
 

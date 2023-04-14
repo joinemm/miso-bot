@@ -56,7 +56,7 @@ class KeywordArguments:
 
 
 class KeywordCommandArgument:
-    async def convert(self, ctx: commands.Context, argument: str):
+    async def convert(self, _ctx: commands.Context, argument: str):
         try:
             option, value = argument.split("=", 1)
         except ValueError:
@@ -953,11 +953,11 @@ def log_command_format(ctx, extra: str = ""):
     return f"{guild} @ {user} : {ctx.message.content} ({took:.2f}s) {extra}"
 
 
-async def shorten_url(bot: "MisoBot", long_url: str, tags: list[str] = list()):
+async def shorten_url(bot: "MisoBot", long_url: str, tags: list[str] | None = None):
     data = {
         "longUrl": long_url,
         "validateUrl": True,
-        "tags": tags,
+        "tags": tags or [],
         "title": "string",
         "crawlable": True,
         "findIfExists": True,
