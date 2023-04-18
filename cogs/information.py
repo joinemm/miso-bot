@@ -85,9 +85,11 @@ class Information(commands.Cog):
         donators = []
         if patrons:
             for user_id in patrons:
-                user = await self.bot.fetch_user(user_id)
+                user = self.bot.get_user(user_id)
                 if user is None:
-                    continue
+                    user = await self.bot.fetch_user(user_id)
+                    if user is None or user.name.startswith("Deleted User "):
+                        continue
 
                 donators.append(f"**{user}**")
 
