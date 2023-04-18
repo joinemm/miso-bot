@@ -84,6 +84,7 @@ class TikTok:
                 raise TiktokError(error_code_to_message(error_code))
 
             text = await response.text()
+            # print(text)
 
         soup = BeautifulSoup(text, "lxml")
 
@@ -91,9 +92,36 @@ class TikTok:
         if error_message:
             raise TiktokError(error_message)
 
-        download_link = soup.findAll("a", attrs={"target": "_blank"})[0].get("href")
-        username, description = [el.text for el in soup.select("h2.white-text")[:2]]
-        return download_link, username, description
+        download_link = soup.findAll(
+            "a",
+            attrs={
+                "target": "_blank",
+                "class": "btn",
+            },
+        )
+        if not download_link:
+            # probably a slideshow with music
+            script = soup.findAll("script")[-2].text
+            data = re.search(r"data: {\s*data:\s*'(.*?)'", script, flags=re.MULTILINE)
+            if data is None:
+                raise TiktokError("Internal Error: Unable to scrape POST data")
+
+            async with session.post(
+                "https://muscdn.xyz/slider", data={"data": data.group(1)}, headers=self.HEADERS
+            ) as response:
+                converted_data = await response.json()
+                username = soup.select_one("h2.white-text")
+                if username:
+                    username = username.text.strip("Download Now: Check out ").strip(
+                        "’s video! #TikTok >"
+                    )
+                else:
+                    username = ""
+                return converted_data["url"], username, ""
+
+        else:
+            username, description = [el.text for el in soup.select("h2.white-text")[:2]]
+            return download_link[0].get("href"), username, description
 
     async def get_video(self, url: str) -> TikTokVideo:
         async with aiohttp.ClientSession() as session:
