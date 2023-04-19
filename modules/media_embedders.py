@@ -38,6 +38,7 @@ class InstagramStory:
 class Options:
     captions: bool = False
     delete_after: bool = False
+    spoiler: bool = False
 
 
 def filesize_limit(guild: discord.Guild | None):
@@ -65,6 +66,9 @@ class BaseEmbedder:
 
         if "-d" in words or "--delete" in words:
             options.delete_after = True
+
+        if "-s" in words or "--spoiler" in words:
+            options.spoiler = True
 
         return options
 
@@ -99,6 +103,7 @@ class BaseEmbedder:
         filename: str,
         max_filesize: int,
         url_tags: list[str] | None = None,
+        spoiler: bool = False,
     ) -> str | discord.File:
         """Downloads media content respecting discord's filesize limit for each guild"""
         # The url params are unescaped by aiohttp's built-in yarl
@@ -120,7 +125,7 @@ class BaseEmbedder:
             )
             if content_length and int(content_length) < max_filesize:
                 buffer = io.BytesIO(await response.read())
-                return discord.File(fp=buffer, filename=filename)
+                return discord.File(fp=buffer, filename=filename, spoiler=spoiler)
             try:
                 # try to stream until we hit our limit
                 buffer = b""
@@ -128,11 +133,13 @@ class BaseEmbedder:
                     buffer += chunk
                     if len(buffer) > max_filesize:
                         raise ValueError
-                return discord.File(fp=io.BytesIO(buffer), filename=filename)
+                return discord.File(fp=io.BytesIO(buffer), filename=filename, spoiler=spoiler)
             except ValueError:
                 pass
 
         try:
+            if spoiler:
+                return f"||{await util.shorten_url(self.bot, media_url, tags=url_tags)}||"
             return await util.shorten_url(self.bot, media_url, tags=url_tags)
         except ClientConnectorError:
             return media_url
@@ -224,6 +231,7 @@ class InstagramEmbedder(BaseEmbedder):
                     filename,
                     filesize_limit(channel.guild),
                     url_tags=["instagram"],
+                    spoiler=options.spoiler if options else False,
                 )
             )
 
@@ -277,6 +285,7 @@ class TikTokEmbedder(BaseEmbedder):
             f"{video.user}_{tiktok_url.split('/')[-1]}.mp4",
             filesize_limit(channel.guild),
             url_tags=["tiktok"],
+            spoiler=options.spoiler if options else False,
         )
         caption = f"{self.EMOJI} **@{video.user}**"
         if options and options.captions:
@@ -379,6 +388,7 @@ class TwitterEmbedder(BaseEmbedder):
                     filename,
                     filesize_limit(channel.guild),
                     url_tags=["twitter"],
+                    spoiler=options.spoiler if options else False,
                 )
             )
 
