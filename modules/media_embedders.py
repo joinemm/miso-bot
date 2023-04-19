@@ -37,6 +37,7 @@ class InstagramStory:
 @dataclass
 class Options:
     captions: bool = False
+    delete_after: bool = False
 
 
 def filesize_limit(guild: discord.Guild | None):
@@ -62,6 +63,9 @@ class BaseEmbedder:
         if "-c" in words or "--caption" in words:
             options.captions = True
 
+        if "-d" in words or "--delete" in words:
+            options.delete_after = True
+
         return options
 
     async def process(self, ctx: commands.Context, user_input: str):
@@ -74,7 +78,10 @@ class BaseEmbedder:
         for result in results:
             await self.send(ctx, result, options=options)
 
-        await util.suppress(ctx.message)
+        if options.delete_after:
+            await ctx.message.delete()
+        else:
+            await util.suppress(ctx.message)
 
     async def create_message(
         self, channel: "discord.abc.MessageableChannel", media: Any, options: Options | None = None
