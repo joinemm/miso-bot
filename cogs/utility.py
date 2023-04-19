@@ -19,7 +19,7 @@ from loguru import logger
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
 from modules.shazam import Shazam
-from modules.ui import BaseButtonPaginator
+from modules.ui import BaseButtonPaginator, Compliance, RowPaginator
 
 papago_pairs = [
     "ko/en",
@@ -752,56 +752,179 @@ class Utility(commands.Cog):
                 await ctx.send(":shrug:")
 
     @commands.command()
-    async def creategif(self, ctx: commands.Context, media_url: str, *tags: str):
-        """Create a Giphy gif"""
-        URL = "https://upload.giphy.com/v1/gifs"
-        params = {
-            "api_key": self.bot.keychain.GIPHY_API_KEY,
-            "source_image_url": media_url,
-            "tags": ["misobot"] + list(tags),
-            "source_post_url": "https://misobot.xyz",
-        }
-
-        msg = await ctx.send(
-            embed=discord.Embed(
-                description=f"{emojis.LOADING} **Creating your gif...**",
-                color=int("8a3cff", 16),
-            ).set_footer(text="Powered by GIPHY")
+    async def mygifs(self, ctx: commands.Context):
+        """See the gifs you have uploaded"""
+        data = await self.bot.db.fetch(
+            """
+            SELECT gif_id, source_url, ts FROM user_uploaded_gif WHERE user_id = %s
+            """,
+            ctx.author.id,
         )
-
-        async with self.bot.session.post(URL, json=params) as response:
-            if response.status == 200:
-                data = await response.json(loads=orjson.loads)
-            else:
-                await msg.delete()
-                if response.status == 500:
-                    raise exceptions.CommandWarning(
-                        "Gif creation failed! Most likely the url provided is not a valid video source."
-                    )
-                response.raise_for_status()
-                return
+        if not data:
+            raise exceptions.CommandWarning("You have not uploaded any gifs yet!")
 
         async with self.bot.session.get(
-            f"https://api.giphy.com/v1/gifs/{data['data']['id']}",
+            "https://api.giphy.com/v1/gifs",
+            params={
+                "api_key": self.bot.keychain.GIPHY_API_KEY,
+                "ids": ",".join(gif[0] for gif in data),
+            },
+        ) as response:
+            response_data = await response.json()
+
+        if not response_data["data"]:
+            raise exceptions.CommandWarning("You don't have any gifs :(")
+
+        gif_sources = {gif[0]: gif[1] for gif in data}
+
+        rows = []
+        for gif in response_data["data"]:
+            source = gif_sources[gif["id"]]
+            ts = arrow.get(gif["import_datetime"])
+            rows.append(
+                f"`{gif['id']}` [Source]({source}) | [Gif]({gif['url']}) <t:{int(ts.timestamp())}:R>"
+            )
+
+        await RowPaginator(
+            discord.Embed(color=int("8b3cff", 16)).set_author(
+                name="Your gifs", icon_url=ctx.author.display_avatar.url
+            ),
+            rows,
+        ).run(ctx)
+
+    # GIPHY doesnt actually have delete endpoint so I haven't figured out how to actually do this yet
+    #
+    # @commands.command()
+    # async def deletegif(self, ctx: commands.Context, gif_id: str):
+    #     """Delete a gif you have uploaded"""
+    #     gif_owner = await self.bot.db.fetch_value(
+    #         """
+    #         SELECT user_id FROM user_uploaded_gif WHERE gif_id = %s
+    #         """,
+    #         gif_id,
+    #     )
+    #     if gif_owner is None:
+    #         raise exceptions.CommandWarning(
+    #             f"Gif with id `{gif_id}` does not exist. Please check `{ctx.prefix}mygifs`"
+    #         )
+    #     if gif_owner != ctx.author.id:
+    #         raise exceptions.CommandWarning(
+    #             f"You don't own this gif. Please check `{ctx.prefix}mygifs`"
+    #         )
+
+    #     await self.bot.db.execute(
+    #         """
+    #         DELETE FROM user_uploaded_gif WHERE gif_id = %s
+    #         """,
+    #         gif_id,
+    #     )
+
+    @commands.command()
+    async def creategif(self, ctx: commands.Context, media_url: str, *tags: str):
+        """Create a gif and upload it to GIPHY"""
+        has_seen_warning = await self.bot.db.fetch_value(
+            """
+            SELECT giphy_content_warning FROM popup_seen WHERE user_id = %s
+            """,
+            ctx.author.id,
+        )
+        if not has_seen_warning:
+            view = Compliance()
+            compliance_msg = await ctx.send(
+                embed=discord.Embed(
+                    color=int("5c68ee", 16),
+                    title="GIPHY Notice",
+                    description="Uploading NSFW content on GIPHY is forbidden. \
+                        Failure to comply will get you banned from using Miso Bot. \
+                        Please also keep in mind everything you upload is public.",
+                ).set_footer(text="ⓘ This notice is shown to everyone, not based on your content"),
+                view=view,
+            )
+            await view.wait()
+            await compliance_msg.delete()
+
+            if not view.agreed:
+                return
+
+            await self.bot.db.execute(
+                """
+                INSERT INTO popup_seen (user_id, giphy_content_warning)
+                    VALUES (%s, %s)
+                ON DUPLICATE KEY UPDATE
+                    giphy_content_warning = VALUES(giphy_content_warning)
+                """,
+                ctx.author.id,
+                True,
+            )
+
+        gif_already_created = await self.bot.db.fetch_value(
+            """
+            SELECT gif_id FROM user_uploaded_gif WHERE source_url = %s
+            """,
+            media_url,
+        )
+        if gif_already_created:
+            gif_id = gif_already_created
+            msg = None
+        else:
+            URL = "https://upload.giphy.com/v1/gifs"
+            params = {
+                "api_key": self.bot.keychain.GIPHY_API_KEY,
+                "source_image_url": media_url,
+                "tags": ["misobot"] + list(tags),
+                "source_post_url": "https://misobot.xyz",
+            }
+
+            msg = await ctx.send(
+                embed=discord.Embed(
+                    description=f"{emojis.LOADING} **Creating your gif...**",
+                    color=int("8a3cff", 16),
+                ).set_footer(text="Powered by GIPHY")
+            )
+
+            async with self.bot.session.post(URL, json=params) as response:
+                if response.status == 200:
+                    data = await response.json(loads=orjson.loads)
+                    gif_id = data["data"]["id"]
+                else:
+                    await msg.delete()
+                    if response.status == 500:
+                        raise exceptions.CommandWarning(
+                            "Gif creation failed! Most likely the url provided is not a valid video source."
+                        )
+                    response.raise_for_status()
+                    return
+
+            await self.bot.db.execute(
+                """
+                INSERT INTO user_uploaded_gif
+                    (user_id, guild_id, gif_id, source_url)
+                    VALUES(%s, %s, %s, %s)
+                """,
+                ctx.author.id,
+                ctx.guild.id if ctx.guild else None,
+                gif_id,
+                media_url,
+            )
+
+        async with self.bot.session.get(
+            f"https://api.giphy.com/v1/gifs/{gif_id}",
             params={
                 "api_key": self.bot.keychain.GIPHY_API_KEY,
             },
         ) as response:
             gif_data = await response.json(loads=orjson.loads)
 
-        await self.bot.db.execute(
-            """
-            INSERT INTO user_uploaded_gif
-                (user_id, guild_id, gif_id, source_url)
-                VALUES(%s, %s, %s, %s)
-            """,
-            ctx.author.id,
-            ctx.guild.id if ctx.guild else None,
-            gif_data["data"]["id"],
-            media_url,
-        )
+            try:
+                gif_url = gif_data["data"]["url"]
+            except TypeError:
+                error_message = gif_data["meta"]["msg"]
+                raise exceptions.CommandError("GIPHY Error: " + error_message)
 
-        await msg.edit(embed=None, content=gif_data["data"]["url"])
+        if msg:
+            await msg.edit(embed=None, content=gif_url)
+        else:
+            await ctx.send(gif_url)
 
     @commands.command()
     async def stock(self, ctx: commands.Context, *, symbol):
@@ -1029,21 +1152,6 @@ def temp(celsius: float, convert_to_f: bool = False) -> str:
     if convert_to_f:
         return f"{int((celsius * 9.0 / 5.0) + 32)} °F"
     return f"{int(celsius)} °C"
-
-
-async def gfycat_oauth(bot):
-    url = "https://api.gfycat.com/v1/oauth/token"
-    params = {
-        "grant_type": "client_credentials",
-        "client_id": bot.keychain.GFYCAT_CLIENT_ID,
-        "client_secret": bot.keychain.GFYCAT_SECRET,
-    }
-
-    async with bot.session.post(url, json=params) as response:
-        data = await response.json(loads=orjson.loads)
-        access_token = data["access_token"]
-
-    return {"Authorization": f"Bearer {access_token}"}
 
 
 class WeatherUnitToggler(discord.ui.View):

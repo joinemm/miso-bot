@@ -268,6 +268,12 @@ CREATE TABLE IF NOT EXISTS user_uploaded_gif (
     PRIMARY KEY (gif_id)
 );
 
+CREATE TABLE IF NOT EXISTS popup_seen (
+    user_id BIGINT,
+    giphy_content_warning BOOLEAN DEFAULT FALSE,
+    PRIMARY KEY (user_id)
+);
+
 CREATE TABLE IF NOT EXISTS starboard_settings (
     guild_id BIGINT,
     channel_id BIGINT DEFAULT NULL,
