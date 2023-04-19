@@ -337,7 +337,7 @@ class User(commands.Cog):
                 else:
                     user = ctx.guild.get_member(user_id)
 
-                if user is None or fishy_count == 0:
+                if user is None or user.bot or fishy_count == 0:
                     continue
 
                 ranking = medal_emoji[i - 1] if i <= len(medal_emoji) else f"`#{i:2}`"
@@ -372,7 +372,7 @@ class User(commands.Cog):
             i = 1
             for userid, wpm, test_date, word_count in data:
                 user = self.bot.get_user(userid) if _global_ else ctx.guild.get_member(userid)
-                if user is None:
+                if user is None or user.bot:
                     continue
 
                 if i <= len(self.medal_emoji):
@@ -411,7 +411,7 @@ class User(commands.Cog):
         if data:
             for i, (user_id, amount) in enumerate(data, start=1):
                 user = ctx.guild.get_member(user_id)
-                if user is None:
+                if user is None or user.bot:
                     continue
 
                 if i <= len(self.medal_emoji):
@@ -430,7 +430,7 @@ class User(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.command()
+    @commands.command(enabled=False)
     async def profile(
         self, ctx: commands.Context, user: Union[discord.Member, discord.User, None] = None
     ):
