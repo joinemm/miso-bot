@@ -829,7 +829,7 @@ class Utility(commands.Cog):
             ctx.author.id,
         )
         if not has_seen_warning:
-            view = Compliance()
+            view = Compliance(ctx.author)
             compliance_msg = await ctx.send(
                 embed=discord.Embed(
                     color=int("5c68ee", 16),

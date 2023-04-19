@@ -134,21 +134,24 @@ class RowPaginator(BaseButtonPaginator):
 
 
 class Compliance(discord.ui.View):
-    def __init__(self):
+    def __init__(self, author: discord.Member | discord.User):
         super().__init__()
+        self.author = author
         self.agreed = None
 
     @discord.ui.button(style=discord.ButtonStyle.primary, label="Continue")
     async def confirm(self, interaction: discord.Interaction, _button: discord.ui.Button):
-        await interaction.response.defer()
-        self.agreed = True
-        self.stop()
+        if interaction.user == self.author:
+            await interaction.response.defer()
+            self.agreed = True
+            self.stop()
 
     @discord.ui.button(style=discord.ButtonStyle.secondary, label="Cancel")
     async def cancel(self, interaction: discord.Interaction, _button: discord.ui.Button):
-        await interaction.response.defer()
-        self.agreed = False
-        self.stop()
+        if interaction.user == self.author:
+            await interaction.response.defer()
+            self.agreed = False
+            self.stop()
 
     async def on_timeout(self):
         self.stop()
