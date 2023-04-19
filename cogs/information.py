@@ -93,6 +93,9 @@ class Information(commands.Cog):
 
                 donators.append(f"**{user}**")
 
+        n = 20
+        chunks = [donators[i * n : (i + 1) * n] for i in range((len(donators) + n - 1) // n)]
+
         if not donators:
             raise exceptions.CommandInfo(
                 "There are no donators :thinking: Maybe you should be the first one"
@@ -109,8 +112,10 @@ class Information(commands.Cog):
         content = discord.Embed(
             title=":heart: Miso Bot donators",
             color=int("dd2e44", 16),
-            description=description + "\n\n" + ("\n".join(donators)),
+            description=description,
         )
+        for chunk in chunks:
+            content.add_field(name="───── ⋆⋅☆⋅⋆ ─────", value="\n".join(chunk))
 
         await ctx.send(embed=content)
 
