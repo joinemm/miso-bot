@@ -34,6 +34,11 @@ class InstagramStory:
     story_pk: str
 
 
+@dataclass
+class Options:
+    captions: bool = False
+
+
 def filesize_limit(guild: discord.Guild | None):
     """discord normally has 8MB file size limit,
     but it can be increased in some guilds due to boosting
@@ -50,18 +55,30 @@ class BaseEmbedder:
     def __init__(self, bot) -> None:
         self.bot: MisoBot = bot
 
+    @staticmethod
+    def get_options(text: str):
+        options = Options()
+        words = text.lower().split()
+        if "-c" in words or "--caption" in words:
+            options.captions = True
+
+        return options
+
     async def process(self, ctx: commands.Context, user_input: str):
         """Process user input and embed any links found"""
         results = self.extract_links(user_input)
+        options = self.get_options(user_input)
         if not results:
             raise exceptions.CommandWarning(self.NO_RESULTS_ERROR)
 
         for result in results:
-            await self.send(ctx, result)
+            await self.send(ctx, result, options=options)
 
         await util.suppress(ctx.message)
 
-    async def create_message(self, channel: "discord.abc.MessageableChannel", media: Any):
+    async def create_message(
+        self, channel: "discord.abc.MessageableChannel", media: Any, options: Options | None = None
+    ):
         """Create the message parameters for later sending"""
         raise NotImplementedError
 
@@ -113,9 +130,9 @@ class BaseEmbedder:
         except ClientConnectorError:
             return media_url
 
-    async def send(self, ctx: commands.Context, media: Any):
+    async def send(self, ctx: commands.Context, media: Any, options: Options | None = None):
         """Send the media to given context"""
-        message_contents = await self.create_message(ctx.channel, media)
+        message_contents = await self.create_message(ctx.channel, media, options=options)
         msg = await ctx.send(**message_contents)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(ctx.author)
@@ -174,6 +191,7 @@ class InstagramEmbedder(BaseEmbedder):
         self,
         channel: "discord.abc.MessageableChannel",
         instagram_asset: InstagramPost | InstagramStory,
+        options: Options | None = None,
     ):
         if isinstance(instagram_asset, InstagramPost):
             post = await self.bot.datalama.get_post_v1(instagram_asset.shortcode)
@@ -186,6 +204,8 @@ class InstagramEmbedder(BaseEmbedder):
 
         username = discord.utils.escape_markdown(post.user.username)
         caption = f"{self.EMOJI} **@{username}** <t:{post.timestamp}:d>"
+        if options and options.captions:
+            caption += f"\n>>> {post.caption}"
         tasks = []
         for n, media in enumerate(post.media, start=1):
             ext = "mp4" if media.media_type == instagram.MediaType.VIDEO else "jpg"
@@ -238,7 +258,12 @@ class TikTokEmbedder(BaseEmbedder):
 
         return validated_urls
 
-    async def create_message(self, channel: "discord.abc.MessageableChannel", tiktok_url: str):
+    async def create_message(
+        self,
+        channel: "discord.abc.MessageableChannel",
+        tiktok_url: str,
+        options: Options | None = None,
+    ):
         video = await self.downloader.get_video(tiktok_url)
         file = await self.download_media(
             video.video_url,
@@ -247,6 +272,8 @@ class TikTokEmbedder(BaseEmbedder):
             url_tags=["tiktok"],
         )
         caption = f"{self.EMOJI} **@{video.user}**"
+        if options and options.captions:
+            caption += f"\n>>> {video.description}"
 
         ui = MediaUI("View on TikTok", tiktok_url)
 
@@ -294,7 +321,12 @@ class TwitterEmbedder(BaseEmbedder):
 
         return results
 
-    async def create_message(self, channel: "discord.abc.MessageableChannel", tweet_id: int):
+    async def create_message(
+        self,
+        channel: "discord.abc.MessageableChannel",
+        tweet_id: int,
+        options: Options | None = None,
+    ):
         response = await self.tweepy.get_tweet(
             tweet_id,
             tweet_fields=["attachments", "created_at"],
@@ -345,6 +377,8 @@ class TwitterEmbedder(BaseEmbedder):
 
         username = discord.utils.escape_markdown(screen_name)
         caption = f"{self.EMOJI} **@{username}** <t:{int(timestamp.timestamp())}:d>"
+        if options and options.captions:
+            caption += f"\n>>> {tweet.text.rsplit(maxsplit=1)[0]}"
 
         files = []
         too_big_files = []

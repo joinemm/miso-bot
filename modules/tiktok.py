@@ -84,7 +84,6 @@ class TikTok:
                 raise TiktokError(error_code_to_message(error_code))
 
             text = await response.text()
-            # print(text)
 
         soup = BeautifulSoup(text, "lxml")
 

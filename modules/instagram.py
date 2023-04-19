@@ -59,6 +59,7 @@ class IgPost:
     user: IgUser
     media: list[IgMedia]
     timestamp: int
+    caption: str = ""
 
 
 class InstagramIdCodec:
@@ -181,6 +182,7 @@ class Datalama:
             self.parse_user(data),
             media,
             data["taken_at_ts"],
+            data["caption_text"],
         )
 
     async def get_story_v1(self, username: str, story_pk: str) -> IgPost:
