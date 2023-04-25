@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
+import asyncio
 from typing import Generic, TypeVar
 
 import discord
@@ -139,14 +140,20 @@ class Compliance(discord.ui.View):
         self.author = author
         self.agreed = None
 
-    @discord.ui.button(style=discord.ButtonStyle.primary, label="Continue")
+    async def read_timer(self, n: int, message: discord.Message):
+        await asyncio.sleep(n)
+        self.confirm.disabled = False
+        self.cancel.disabled = False
+        await message.edit(view=self)
+
+    @discord.ui.button(style=discord.ButtonStyle.primary, label="I Understand", disabled=True)
     async def confirm(self, interaction: discord.Interaction, _button: discord.ui.Button):
         if interaction.user == self.author:
             await interaction.response.defer()
             self.agreed = True
             self.stop()
 
-    @discord.ui.button(style=discord.ButtonStyle.secondary, label="Cancel")
+    @discord.ui.button(style=discord.ButtonStyle.secondary, label="Cancel", disabled=True)
     async def cancel(self, interaction: discord.Interaction, _button: discord.ui.Button):
         if interaction.user == self.author:
             await interaction.response.defer()
