@@ -834,9 +834,11 @@ class Utility(commands.Cog):
                 embed=discord.Embed(
                     color=int("5c68ee", 16),
                     title="IMPORTANT NOTICE",
-                    description="Uploading NSFW content on GIPHY is forbidden. \
-                        Failure to comply will get you banned from using Miso Bot. \
-                        Please also keep in mind everything you upload is public.",
+                    description=(
+                        "Uploading NSFW content on GIPHY is forbidden. "
+                        "Failure to comply will get you banned from using Miso Bot. "
+                        "Please also keep in mind everything you upload is public."
+                    ),
                 ).set_footer(text="ⓘ This notice is shown to everyone, not based on your content"),
                 view=view,
             )
