@@ -847,7 +847,7 @@ async def send_tasks_result_list(ctx, successful_operations, failed_operations, 
     content.description = "\n".join(rows)
     if title:
         content.title = title
-    await ctx.send(embed=content)
+    await send_as_pages(ctx, content, rows, maxrows=20)
 
 
 async def patron_check(ctx):
