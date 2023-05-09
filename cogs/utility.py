@@ -449,37 +449,39 @@ class Utility(commands.Cog):
         location = await self.get_user_location(ctx)
         lat, lon, address = await self.geolocate(location)
         local_time, country_code = await self.get_country_information(lat, lon)
-        params = {
-            "apikey": self.bot.keychain.TOMORROWIO_TOKEN,
+        body = {
             "location": f"{lat},{lon}",
-            "fields": ",".join(
-                [
-                    "precipitationProbability",
-                    "precipitationType",
-                    "windSpeed",
-                    "windGust",
-                    "windDirection",
-                    "temperature",
-                    "temperatureApparent",
-                    "cloudCover",
-                    "weatherCode",
-                    "humidity",
-                    "temperatureMin",
-                    "temperatureMax",
-                ]
-            ),
+            "fields": [  # ",".join(
+                "precipitationProbability",
+                "precipitationType",
+                "windSpeed",
+                "windGust",
+                "windDirection",
+                "temperature",
+                "temperatureApparent",
+                "cloudCover",
+                "weatherCode",
+                "humidity",
+                "temperatureMin",
+                "temperatureMax",
+            ],  # ),
             "units": "metric",
-            "timesteps": "1d",
-            "endTime": arrow.utcnow().shift(days=+7).isoformat(),
+            "timesteps": ["1d"],
+            "startTime": "now",
+            "endTime": "nowPlus5d",
         }
 
         if isinstance(local_time.tzinfo, ZoneInfo):
-            params["timezone"] = str(local_time.tzinfo)
+            body["timezone"] = str(local_time.tzinfo)
         else:
             logger.warning("Arrow object must be constructed with ZoneInfo timezone object")
 
-        async with self.bot.session.get(
-            "https://api.tomorrow.io/v4/timelines", params=params
+        async with self.bot.session.post(
+            "https://api.tomorrow.io/v4/timelines",
+            json=body,
+            params={
+                "apikey": self.bot.keychain.TOMORROWIO_TOKEN,
+            },
         ) as response:
             if response.status != 200:
                 logger.error(response.status)
