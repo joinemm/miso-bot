@@ -46,7 +46,7 @@ class KeywordArguments:
     @classmethod
     def from_arguments(cls, args: tuple):
         try:
-            return cls(**{k: v for d in args for k, v in d.items()})
+            return cls(**{k: v for d in args for k, v in d.items()})  # type: ignore
         except TypeError as e:
             arg = str(e).split("'")[1]
             options = [f"`{o}`" for o in cls.__init__.__code__.co_varnames[1:]]

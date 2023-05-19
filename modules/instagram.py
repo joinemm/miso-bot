@@ -9,9 +9,9 @@ from urllib import parse
 from urllib.parse import urlencode
 
 import aiohttp
-import aioredis
 import arrow
 import orjson
+import redis
 from loguru import logger
 
 if TYPE_CHECKING:
@@ -117,7 +117,7 @@ class Datalama:
     async def try_cache(self, cache_key: str) -> dict | None:
         try:
             cached_response = await self.bot.redis.get(cache_key)
-        except aioredis.ConnectionError:
+        except redis.ConnectionError:
             logger.warning("Could not get cached content from redis (ConnectionError)")
             cached_response = None
 
@@ -132,7 +132,7 @@ class Datalama:
         try:
             await self.bot.redis.set(cache_key, orjson.dumps(data), lifetime)
             logger.info(f"Instagram request was cached (expires in {lifetime}) {cache_key}")
-        except aioredis.ConnectionError:
+        except redis.ConnectionError:
             logger.warning("Could not save content into redis cache (ConnectionError)")
 
     async def api_request(self, endpoint: str, params: dict) -> dict:

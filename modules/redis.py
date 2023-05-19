@@ -4,19 +4,17 @@
 
 import os
 
-import aioredis
+import redis.asyncio as redis
 
 
 class Redis:
     def __init__(self) -> None:
         self.enabled = os.environ.get("USE_REDIS_CACHE") == "1"
-        self.pool: aioredis.Redis
+        self.pool: redis.Redis
 
     async def start(self):
         if self.enabled:
-            self.pool = await aioredis.from_url(
-                "redis://redis", encoding="utf-8", decode_responses=True
-            )
+            self.pool = await redis.from_url("redis://redis")
 
     async def set(self, key, value, expiry: int | None = None):
         if not self.enabled:

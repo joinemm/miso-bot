@@ -24,7 +24,7 @@ prometheus-async
 markdownify
 lxml
 loguru
-aioredis
+redis
 shazamio
 random_user_agent
 minestat
