@@ -64,6 +64,10 @@ class Events(commands.Cog):
             if ctx.guild is not None:
                 await queries.save_command_usage(ctx)
 
+            if random.randint(1, 100) == 1 and not queries.is_donator(ctx, ctx.author):
+                logger.info("Sending donation beg message")
+                await util.send_donation_beg(ctx.channel)
+
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         """Called when the bot joins a new guild"""

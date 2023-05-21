@@ -867,6 +867,15 @@ def patrons_only():
     return commands.check(predicate)
 
 
+async def send_donation_beg(channel: "discord.abc.MessageableChannel"):
+    donate_link = "https://misobot.xyz/donate"
+    content = discord.Embed(
+        color=int("be1931", 16),
+        description=f":loudspeaker: Miso Bot is running solely on donations; Consider [donating]({donate_link}) if you like the bot!",
+    )
+    await channel.send(embed=content, delete_after=15)
+
+
 def format_html(template, replacements):
     def dictsub(m):
         return str(replacements[m.group().strip("$")])
