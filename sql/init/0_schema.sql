@@ -279,7 +279,7 @@ CREATE TABLE IF NOT EXISTS starboard_settings (
     channel_id BIGINT DEFAULT NULL,
     is_enabled BOOLEAN DEFAULT TRUE,
     reaction_count INT DEFAULT 3,
-    emoji_name VARCHAR(64) DEFAULT ':star:' NOT NULL,
+    emoji_name VARCHAR(64) DEFAULT ':star:',
     emoji_id BIGINT DEFAULT NULL,
     emoji_type ENUM('unicode', 'custom') DEFAULT 'unicode' NOT NULL,
     log_channel_id BIGINT DEFAULT NULL,
