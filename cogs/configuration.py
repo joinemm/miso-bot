@@ -309,6 +309,10 @@ class Configuration(commands.Cog):
 
         if emoji[0] == "<":
             # is custom emoji
+            if not await queries.is_donator(ctx, ctx.author, 2):
+                raise exceptions.CommandInfo(
+                    "You have to be a [donator](https://misobot.xyz/donate) to use custom emojis with the starboard!"
+                )
             emoji_obj = await util.get_emoji(ctx, emoji)
             if emoji_obj is None:
                 raise exceptions.CommandWarning("I don't know this emoji!")

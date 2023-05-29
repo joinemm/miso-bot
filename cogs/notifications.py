@@ -10,7 +10,7 @@ import regex
 from discord.ext import commands
 from loguru import logger
 
-from modules import emojis, exceptions, util
+from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
 
 
@@ -158,14 +158,15 @@ class Notifications(commands.Cog):
                 "Global notifications have been removed for performance reasons."
             )
 
-        amount = await self.bot.db.fetch_value(
-            "SELECT COUNT(*) FROM notification WHERE user_id = %s",
-            ctx.author.id,
-        )
-        if amount and amount >= 30:
-            raise exceptions.CommandWarning(
-                f"You can only have a maximum of **30** notifications. You have **{amount}**"
+        if not await queries.is_donator(ctx, ctx.author, 2):
+            amount = await self.bot.db.fetch_value(
+                "SELECT COUNT(*) FROM notification WHERE user_id = %s",
+                ctx.author.id,
             )
+            if amount and amount >= 25:
+                raise exceptions.CommandWarning(
+                    f"You can only have a maximum of **25** notifications. You have **{amount}** (Become a [donator](https://misobot.xyz/donate) for unlimited notifications)"
+                )
 
         try:
             await ctx.message.delete()
