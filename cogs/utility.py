@@ -753,7 +753,7 @@ class Utility(commands.Cog):
             else:
                 await ctx.send(":shrug:")
 
-    @commands.command()
+    @commands.command(enabled=False)
     async def mygifs(self, ctx: commands.Context):
         """See the gifs you have uploaded"""
         data = await self.bot.db.fetch(
@@ -794,34 +794,7 @@ class Utility(commands.Cog):
             rows,
         ).run(ctx)
 
-    # GIPHY doesnt actually have delete endpoint so I haven't figured out how to actually do this yet
-    #
-    # @commands.command()
-    # async def deletegif(self, ctx: commands.Context, gif_id: str):
-    #     """Delete a gif you have uploaded"""
-    #     gif_owner = await self.bot.db.fetch_value(
-    #         """
-    #         SELECT user_id FROM user_uploaded_gif WHERE gif_id = %s
-    #         """,
-    #         gif_id,
-    #     )
-    #     if gif_owner is None:
-    #         raise exceptions.CommandWarning(
-    #             f"Gif with id `{gif_id}` does not exist. Please check `{ctx.prefix}mygifs`"
-    #         )
-    #     if gif_owner != ctx.author.id:
-    #         raise exceptions.CommandWarning(
-    #             f"You don't own this gif. Please check `{ctx.prefix}mygifs`"
-    #         )
-
-    #     await self.bot.db.execute(
-    #         """
-    #         DELETE FROM user_uploaded_gif WHERE gif_id = %s
-    #         """,
-    #         gif_id,
-    #     )
-
-    @commands.command()
+    @commands.command(enabled=False)
     async def creategif(self, ctx: commands.Context, media_url: str, *tags: str):
         """Create a gif and upload it to GIPHY"""
         has_seen_warning = await self.bot.db.fetch_value(

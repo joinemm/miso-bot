@@ -66,7 +66,6 @@ extensions = [
     "user",
     "utility",
     "typings",
-    "crypto",
     "kpop",
 ]
 

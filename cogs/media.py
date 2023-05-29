@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
+import asyncio
 import random
 from typing import Literal, Optional
 
@@ -120,7 +121,40 @@ class Media(commands.Cog):
         """Retrieve video without watermark from a TikTok"""
         await TikTokEmbedder(self.bot).process(ctx, links)
 
-    @commands.command(aliases=["gif"])
+    @commands.command(aliases=["gif", "gfy"])
+    async def gfycat(self, ctx: commands.Context, *, query):
+        """Search for a gfycat gif"""
+
+        async def extract_scripts(session, url):
+            async with session.get(url) as response:
+                data = await response.text()
+                soup = BeautifulSoup(data, "lxml")
+                return soup.find_all("script", {"type": "application/ld+json"})
+
+        scripts = []
+        tasks = []
+        if len(query.split(" ")) == 1:
+            tasks.append(extract_scripts(self.bot.session, f"https://gfycat.com/gifs/tag/{query}"))
+
+        tasks.append(extract_scripts(self.bot.session, f"https://gfycat.com/gifs/search/{query}"))
+        scripts = sum(await asyncio.gather(*tasks), [])
+
+        urls = []
+        for script in scripts:
+            try:
+                data = orjson.loads(str(script.contents[0]))
+                for x in data["itemListElement"]:
+                    if "url" in x:
+                        urls.append(x)
+            except orjson.JSONDecodeError:
+                continue
+
+        if not urls:
+            return await ctx.send("Found nothing!")
+
+        await GiphyUI(urls).run(ctx)
+
+    @commands.command(enabled=False)
     async def giphy(self, ctx: commands.Context, *, query):
         """Search for gif from Giphy"""
         URL = "https://api.giphy.com/v1/gifs/search"
@@ -227,11 +261,11 @@ class GiphyUI(discord.ui.View):
         await interaction.response.defer()
         await self.remove_ui()
 
-    @discord.ui.button(
-        label="Powered by GIPHY", style=discord.ButtonStyle.secondary, disabled=True
-    )
-    async def giphy_label(self, _, __):
-        pass
+    # @discord.ui.button(
+    #     label="Powered by GIPHY", style=discord.ButtonStyle.secondary, disabled=True
+    # )
+    # async def giphy_label(self, _, __):
+    #     pass
 
     async def remove_ui(self):
         for item in self.children:
