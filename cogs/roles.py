@@ -200,9 +200,7 @@ class Roles(commands.Cog):
             existing_role_id: int | None = dict(existing_roles).get(str(color))
             color_role = ctx.guild.get_role(existing_role_id) if existing_role_id else None
 
-            if old_roles := list(
-                filter(lambda r: r.id in existing_roles_ids, ctx.author.roles)
-            ):
+            if old_roles := list(filter(lambda r: r.id in existing_roles_ids, ctx.author.roles)):
                 await ctx.author.remove_roles(*old_roles, atomic=True, reason="Changed color")
 
             # remove manually deleted roles
@@ -216,7 +214,6 @@ class Roles(commands.Cog):
                     )
 
         if color_role is None:
-
             # create a new role
             color_role = await ctx.guild.create_role(
                 name=str(color),
@@ -364,9 +361,7 @@ class Roles(commands.Cog):
             title=f":scroll: Available roles in {ctx.guild.name}",
             color=int("ffd983", 16),
         )
-        if rows := [
-            f"`{role_name}` : <@&{role_id}>" for role_name, role_id in sorted(data)
-        ]:
+        if rows := [f"`{role_name}` : <@&{role_id}>" for role_name, role_id in sorted(data)]:
             await util.send_as_pages(ctx, content, rows)
         else:
             content.description = "Nothing yet!"

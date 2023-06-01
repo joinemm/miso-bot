@@ -397,9 +397,7 @@ class Utility(commands.Cog):
 
             data = await response.json(loads=orjson.loads)
 
-        current_data = next(
-            filter(lambda t: t["timestep"] == "current", data["data"]["timelines"])
-        )
+        current_data = next(filter(lambda t: t["timestep"] == "current", data["data"]["timelines"]))
         daily_data = next(filter(lambda t: t["timestep"] == "1d", data["data"]["timelines"]))
         values_current = current_data["intervals"][0]["values"]
         values_today = daily_data["intervals"][0]["values"]
@@ -412,14 +410,13 @@ class Utility(commands.Cog):
         icon = self.weather_constants["id_to_icon"][str(values_current["weatherCode"])]
         summary = self.weather_constants["id_to_description"][str(values_current["weatherCode"])]
 
-        if (
-            values_today["precipitationType"] != 0
-            and values_today["precipitationProbability"] != 0
-        ):
+        if values_today["precipitationType"] != 0 and values_today["precipitationProbability"] != 0:
             precipitation_type = self.weather_constants["precipitation"][
                 str(values_today["precipitationType"])
             ]
-            summary += f", with {values_today['precipitationProbability']}% chance of {precipitation_type}"
+            summary += (
+                f", with {values_today['precipitationProbability']}% chance of {precipitation_type}"
+            )
 
         content = discord.Embed(color=int("e1e8ed", 16))
         content.title = f":flag_{country_code.lower()}: {address}"

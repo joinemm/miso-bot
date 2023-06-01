@@ -35,9 +35,7 @@ class ErrorHander(commands.Cog):
         self.bot: MisoBot = bot
 
     @staticmethod
-    def log_format(
-        ctx: commands.Context, error: Exception | None, message: str | None = None
-    ):
+    def log_format(ctx: commands.Context, error: Exception | None, message: str | None = None):
         return f"{ctx.guild} @ {ctx.author} : {ctx.message.content} => {type(error).__name__}: {message or str(error)}"
 
     async def reinvoke_command(self, ctx: commands.Context):
@@ -97,7 +95,9 @@ class ErrorHander(commands.Cog):
             case 8:
                 message = "There was a problem connecting to LastFM servers. LastFM might be down. Try again later."
             case 17:
-                message = "Unable to get listening information. Please check you LastFM privacy settings."
+                message = (
+                    "Unable to get listening information. Please check you LastFM privacy settings."
+                )
             case 29:
                 message = "LastFM rate limit exceeded. Please try again later."
             case _:
@@ -248,9 +248,7 @@ class ErrorHander(commands.Cog):
                 await self.send_warning(ctx, error.message)
 
             case _:
-                await self.send_error(
-                    ctx, f"{type(error).__name__}: {error}", error, language="ex"
-                )
+                await self.send_error(ctx, f"{type(error).__name__}: {error}", error, language="ex")
                 logger.opt(exception=error).error("Unhandled exception traceback:")
 
 

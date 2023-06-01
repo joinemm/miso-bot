@@ -33,9 +33,7 @@ class Typings(commands.Cog):
         return "".join(letter_dict.get(letter, letter) for letter in text)
 
     def anticheat(self, message):
-        remainder = "".join(
-            set(message.content).intersection(self.font + "".join(self.separators))
-        )
+        remainder = "".join(set(message.content).intersection(self.font + "".join(self.separators)))
         return remainder != ""
 
     @commands.group()
@@ -261,9 +259,7 @@ class Typings(commands.Cog):
                 )
                 return player, 0, 0
             await message.add_reaction("✅")
-            await self.save_wpm(
-                message.author, ctx.guild, wpm, accuracy, wordcount, language, True
-            )
+            await self.save_wpm(message.author, ctx.guild, wpm, accuracy, wordcount, language, True)
             return player, wpm, accuracy
 
     @typing.command(name="history")

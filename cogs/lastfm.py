@@ -1439,9 +1439,7 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(
-                self.get_server_top(lastfm_username, "artist", period=arguments["period"])
-            )
+            tasks.append(self.get_server_top(lastfm_username, "artist", period=arguments["period"]))
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -2214,9 +2212,7 @@ class LastFm(commands.Cog):
                         "image": track["image"],
                     }
 
-            albumsdata = sorted(
-                formatted_data.values(), key=lambda x: x["playcount"], reverse=True
-            )
+            albumsdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
             return {
                 "topalbums": {
                     "album": albumsdata,
@@ -2241,9 +2237,7 @@ class LastFm(commands.Cog):
                         "image": track["image"],
                     }
 
-            tracksdata = sorted(
-                formatted_data.values(), key=lambda x: x["playcount"], reverse=True
-            )
+            tracksdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
             return {
                 "toptracks": {
                     "track": tracksdata,
@@ -2266,9 +2260,7 @@ class LastFm(commands.Cog):
                         "image": track["image"],
                     }
 
-            artistdata = sorted(
-                formatted_data.values(), key=lambda x: x["playcount"], reverse=True
-            )
+            artistdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
             return {
                 "topartists": {
                     "artist": artistdata,

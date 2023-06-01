@@ -236,9 +236,7 @@ class Configuration(commands.Cog):
             ctx.guild.id,
             channel.id,
         )
-        await util.send_success(
-            ctx, f"No longer logging any messages deleted in {channel.mention}"
-        )
+        await util.send_success(ctx, f"No longer logging any messages deleted in {channel.mention}")
 
     @logger_deleted.command(name="unignore")
     async def deleted_unignore(self, ctx: commands.Context, *, channel: discord.TextChannel):
@@ -716,9 +714,7 @@ class Configuration(commands.Cog):
     @commands.is_owner()
     async def blacklist_global(self, ctx: commands.Context, user: discord.User, *, reason):
         """Blacklist someone globally from Miso Bot"""
-        await self.bot.db.execute(
-            "INSERT IGNORE blacklisted_user VALUES (%s, %s)", user.id, reason
-        )
+        await self.bot.db.execute("INSERT IGNORE blacklisted_user VALUES (%s, %s)", user.id, reason)
         self.bot.cache.blacklist["global"]["user"].add(user.id)
         await util.send_success(ctx, f"**{user}** can no longer use Miso Bot!")
 

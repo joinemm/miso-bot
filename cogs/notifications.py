@@ -286,9 +286,7 @@ class Notifications(commands.Cog):
             rows.append(f"**{guild}** : `{keyword}` - Triggered **{times_triggered}** times")
 
         try:
-            await util.send_as_pages(
-                ctx, content, rows, maxpages=1, maxrows=50, send_to=ctx.author
-            )
+            await util.send_as_pages(ctx, content, rows, maxpages=1, maxrows=50, send_to=ctx.author)
         except discord.errors.Forbidden:
             raise exceptions.CommandWarning(
                 "I was unable to send you a DM! Please change your settings."
