@@ -22,7 +22,7 @@ aiomysql==0.1.1
     # via -r requirements.in
 aiosignal==1.3.1
     # via aiohttp
-anyio==3.6.2
+anyio==3.7.0
     # via shazamio
 arrow==1.2.3
     # via -r requirements.in
@@ -120,7 +120,7 @@ oauthlib==3.2.2
     # via
     #   requests-oauthlib
     #   tweepy
-orjson==3.8.12
+orjson==3.8.14
     # via discord-py
 packaging==23.1
     # via
@@ -135,7 +135,7 @@ pluggy==1.0.0
     # via pytest
 prometheus-async==22.2.0
     # via -r requirements.in
-prometheus-client==0.16.0
+prometheus-client==0.17.0
     # via prometheus-async
 psutil==5.9.5
     # via -r requirements.in
@@ -143,7 +143,7 @@ pycares==4.3.0
     # via aiodns
 pycparser==2.21
     # via cffi
-pydantic==1.10.7
+pydantic==1.10.8
     # via shazamio
 pydub==0.25.1
     # via shazamio
@@ -169,7 +169,7 @@ redis==4.5.5
     # via -r requirements.in
 regex==2023.5.5
     # via -r requirements.in
-requests==2.30.0
+requests==2.31.0
     # via
     #   requests-oauthlib
     #   tweepy
@@ -191,7 +191,7 @@ soupsieve==2.4.1
     # via beautifulsoup4
 tweepy[async]==4.14.0
     # via -r requirements.in
-typing-extensions==4.5.0
+typing-extensions==4.6.2
     # via
     #   async-lru
     #   pydantic
