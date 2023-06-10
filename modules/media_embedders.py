@@ -9,8 +9,6 @@ from typing import Any
 import arrow
 import discord
 import regex
-import tweepy
-import tweepy.asynchronous as aiotweepy
 import yarl
 from aiohttp import ClientConnectorError
 from attr import dataclass
@@ -311,13 +309,6 @@ class TwitterEmbedder(BaseEmbedder):
     EMOJI = "<:twitter:937425165241946162>"
     NO_RESULTS_ERROR = "Found no Twitter links to embed!"
 
-    def __init__(self, bot: "MisoBot"):
-        self.tweepy = aiotweepy.AsyncClient(
-            bot.keychain.TWITTER_BEARER_TOKEN,
-            wait_on_rate_limit=True,
-        )
-        super().__init__(bot)
-
     @staticmethod
     def extract_links(text: str, include_id_only=True):
         text = "\n".join(text.split())
@@ -343,45 +334,39 @@ class TwitterEmbedder(BaseEmbedder):
         tweet_id: int,
         options: Options | None = None,
     ):
-        response = await self.tweepy.get_tweet(
-            tweet_id,
-            tweet_fields=["attachments", "created_at"],
-            expansions=["attachments.media_keys", "author_id"],
-            media_fields=["variants", "url", "alt_text"],
-            user_fields=["profile_image_url"],
-        )
-
-        if response.errors:  # type: ignore
-            raise exceptions.CommandWarning(response.errors[0]["detail"])  # type: ignore
-
-        tweet: tweepy.Tweet = response.data  # type: ignore
         media_urls = []
-
-        user = response.includes["users"][0]  # type: ignore
-        screen_name = user.username
-        tweet_url = f"https://twitter.com/{screen_name}/status/{tweet.id}"
-
-        media: tweepy.Media
-        for media in response.includes.get("media", []):  # type: ignore
-            if media.type == "photo":
-                base, extension = media.url.rsplit(".", 1)
-                media_urls.append(("jpg", f"{base}?format={extension}&name=orig"))
-            else:
-                variants = sorted(
-                    filter(lambda x: x["content_type"] == "video/mp4", media.data["variants"]),
-                    key=lambda y: y["bit_rate"],
-                    reverse=True,
+        async with self.bot.session.get(
+            f"https://api.fxtwitter.com/i/status/{tweet_id}"
+        ) as response:
+            data = await response.json()
+            if data["code"] != 200:
+                raise exceptions.CommandError(
+                    f"Error from API: {data['message']}",
                 )
-                media_urls.append(("mp4", variants[0]["url"]))
+
+        tweet = data["tweet"]
+        screen_name = tweet["author"]["screen_name"]
+
+        for media in data["tweet"]["media"]["all"]:
+            if media["type"] == "photo":
+                base, extension = media["url"].rsplit(".", 1)
+                media_urls.append(
+                    ("jpg", f"{base}?format={extension}&name=orig"),
+                )
+            else:
+                media_urls.append(("mp4", media["url"]))
 
         if not media_urls:
-            raise exceptions.CommandWarning(f"Tweet `{tweet_url}` does not include any media.")
+            raise exceptions.CommandWarning(
+                f"Tweet `{tweet['url']}` does not include any media.",
+            )
 
-        timestamp = arrow.get(tweet.created_at)
+        timestamp = arrow.get(tweet["created_timestamp"])
 
         tasks = []
         for n, (extension, media_url) in enumerate(media_urls, start=1):
-            filename = f"{timestamp.format('YYMMDD')}-@{screen_name}-{tweet.id}-{n}.{extension}"
+            ts_format = timestamp.format("YYMMDD")
+            filename = f"{ts_format}-@{screen_name}-{tweet_id}-{n}.{extension}"
             tasks.append(
                 self.download_media(
                     media_url,
@@ -395,7 +380,7 @@ class TwitterEmbedder(BaseEmbedder):
         username = discord.utils.escape_markdown(screen_name)
         caption = f"{self.EMOJI} **@{username}** <t:{int(timestamp.timestamp())}:d>"
         if options and options.captions:
-            caption += f"\n>>> {tweet.text.rsplit(maxsplit=1)[0]}"
+            caption += f"\n>>> {tweet['text']}"
 
         files = []
         too_big_files = []
@@ -410,7 +395,7 @@ class TwitterEmbedder(BaseEmbedder):
         return {
             "content": caption,
             "files": files,
-            "view": MediaUI("View on Twitter", tweet_url),
+            "view": MediaUI("View on Twitter", tweet["url"]),
         }
 
 

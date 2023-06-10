@@ -18,10 +18,8 @@ dill==0.3.6
     # via pylint
 distlib==0.3.6
     # via virtualenv
-filelock==3.12.0
+filelock==3.12.1
     # via virtualenv
-flake8==6.0.0
-    # via -r dev-requirements.in
 identify==2.5.24
     # via pre-commit
 isort==5.12.0
@@ -31,9 +29,7 @@ isort==5.12.0
 lazy-object-proxy==1.9.0
     # via astroid
 mccabe==0.7.0
-    # via
-    #   flake8
-    #   pylint
+    # via pylint
 mypy-extensions==1.0.0
     # via black
 nodeenv==1.8.0
@@ -44,21 +40,19 @@ packaging==23.1
     #   black
 pathspec==0.11.1
     # via black
-platformdirs==3.5.1
+platformdirs==3.5.3
     # via
     #   black
     #   pylint
     #   virtualenv
 pre-commit==3.3.2
     # via -r dev-requirements.in
-pycodestyle==2.10.0
-    # via flake8
-pyflakes==3.0.1
-    # via flake8
 pylint==2.17.4
     # via -r dev-requirements.in
 pyyaml==6.0
     # via pre-commit
+ruff==0.0.272
+    # via -r dev-requirements.in
 tomlkit==0.11.8
     # via pylint
 virtualenv==20.23.0

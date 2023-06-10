@@ -120,7 +120,7 @@ oauthlib==3.2.2
     # via
     #   requests-oauthlib
     #   tweepy
-orjson==3.8.14
+orjson==3.9.1
     # via discord-py
 packaging==23.1
     # via
@@ -143,7 +143,7 @@ pycares==4.3.0
     # via aiodns
 pycparser==2.21
     # via cffi
-pydantic==1.10.8
+pydantic==1.10.9
     # via shazamio
 pydub==0.25.1
     # via shazamio
@@ -167,7 +167,7 @@ random-user-agent==1.0.1
     # via -r requirements.in
 redis==4.5.5
     # via -r requirements.in
-regex==2023.5.5
+regex==2023.6.3
     # via -r requirements.in
 requests==2.31.0
     # via
@@ -191,11 +191,11 @@ soupsieve==2.4.1
     # via beautifulsoup4
 tweepy[async]==4.14.0
     # via -r requirements.in
-typing-extensions==4.6.2
+typing-extensions==4.6.3
     # via
     #   async-lru
     #   pydantic
-urllib3==2.0.2
+urllib3==2.0.3
     # via requests
 uvloop==0.17.0
     # via -r requirements.in
