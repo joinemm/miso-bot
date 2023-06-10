@@ -64,7 +64,7 @@ class Events(commands.Cog):
             if ctx.guild is not None:
                 await queries.save_command_usage(ctx)
 
-            if random.randint(1, 100) == 1 and not await queries.is_donator(ctx, ctx.author):
+            if random.randint(1, 69) == 1 and not await queries.is_donator(ctx, ctx.author):
                 logger.info("Sending donation beg message")
                 await util.send_donation_beg(ctx.channel)
 
