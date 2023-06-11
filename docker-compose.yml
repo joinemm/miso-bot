@@ -1,12 +1,16 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 version: '3.7'
 
 services:
-  nginx: 
+  nginx:
     image: nginx:latest
     container_name: miso-nginx
     restart: unless-stopped
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./infra/nginx.conf:/etc/nginx/nginx.conf
       - /etc/letsencrypt/:/etc/letsencrypt/
     ports:
       - 80:80
@@ -28,7 +32,7 @@ services:
       - MARIADB_PASSWORD=botpw
       - MARIADB_DATABASE=misobot
       - MARIADB_ROOT_PASSWORD=secure-af
-    
+
   shlink-db:
     container_name: miso-shlink-db
     image: mariadb
@@ -48,7 +52,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-storage:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -123,8 +127,9 @@ services:
       - EMOJIFIER_HOST=emojifier
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
+      - USE_REDIS_CACHE=1
     tty: true
-  
+
   redis:
     container_name: miso-redis
     image: "redis:alpine"

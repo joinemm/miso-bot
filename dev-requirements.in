@@ -1,5 +1,7 @@
 -c requirements.txt
 pre-commit
-flake8
 black
 pylint
+isort
+ruff
+pyright

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import os
 
 from aiohttp import web
@@ -7,11 +11,8 @@ from prometheus_async import aio
 
 from modules.misobot import MisoBot
 
-USE_HTTPS = os.environ.get("WEBSERVER_USE_HTTPS", "no")
 HOST = os.environ.get("WEBSERVER_HOSTNAME")
 PORT = int(os.environ.get("WEBSERVER_PORT", 8080))
-SSL_CERT = os.environ.get("WEBSERVER_SSL_CERT")
-SSL_KEY = os.environ.get("WEBSERVER_SSL_KEY")
 
 
 class WebServer(commands.Cog):
@@ -116,18 +117,15 @@ class WebServer(commands.Cog):
         subcommands = []
         if hasattr(command, "commands"):
             for subcommand in command.commands:
-                subcommand_structure = self.get_command_structure(subcommand)
-                if subcommand_structure:
+                if subcommand_structure := self.get_command_structure(subcommand):
                     subcommands.append(subcommand_structure)
 
-        result = {
+        return {
             "name": command.name,
             "usage": command.usage or command.signature,
             "description": command.short_doc,
             "subcommands": subcommands,
         }
-
-        return result
 
     def generate_command_list(self):
         ignored_cogs = ["Jishaku", "Owner"]
@@ -142,8 +140,7 @@ class WebServer(commands.Cog):
 
             command_list = []
             for command in cog_commands:
-                command_structure = self.get_command_structure(command)
-                if command_structure:
+                if command_structure := self.get_command_structure(command):
                     command_list.append(command_structure)
 
             if not command_list:

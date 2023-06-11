@@ -3,45 +3,46 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/84479f7c0f4c44a6aa2ba435e0215436)](https://app.codacy.com/manual/joinemm/miso-bot?utm_source=github.com&utm_medium=referral&utm_content=joinemm/miso-bot&utm_campaign=Badge_Grade_Dashboard)
 [![DeepSource](https://deepsource.io/gh/joinemm/miso-bot.svg/?label=active+issues&show_trend=true&token=0E1BBh1I4k_HkqRvfRy86yMc)](https://deepsource.io/gh/joinemm/miso-bot/?ref=repository-badge)
+[![License](https://img.shields.io/github/license/joinemm/miso-bot)](https://img.shields.io/github/license/joinemm/miso-bot)
+
 [![Discord](https://img.shields.io/discord/652904322706833409.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/RzDW3Ne)
 [![Patreon](https://img.shields.io/badge/Patreon-donate-orange.svg)](https://www.patreon.com/joinemm)
+[![Sponsor](https://img.shields.io/github/sponsors/joinemm?color=%23db61a2)](https://github.com/sponsors/joinemm)
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B824LWC)
+
 
 * * *
 
-A discord bot with almost 100 commands and features, including but not limited to:
+A discord bot with over 100 commands and features, including but not limited to:
 
+-   Fishing
 -   LastFM Integration
 -   Melon charts
 -   Youtube search
--   Twitter image extractor
--   Instagram image extractor
--   Moderation (ban, mute, etc)
--   Logs bans, leaves, joins, messages
+-   Twitter media extractor
+-   Instagram media extractor
+-   TikTok media extractor
+-   Moderation (ban, mute, timeout, etc)
+-   Logs bans, leaves, joins, deleted messages
 -   Server and user information
--   Levels and XP leaderboards
 -   Customizable profiles
--   Server activity graph
 -   Minecraft server status
 -   Starboard
--   Voting channels
--   Fishing
 -   DuckDuckGo bangs
 -   Colors and color palettes
--   Create Gfycats and Streamables 
--   Gfycat search
--   xkcd
+-   Create and search gifs
 -   Horoscope
 -   Weather
 -   Keyword notifications
 -   Rolepicker
+-   Color roles
 -   Typing tests and Typeracer
--   Papago Naver translator
--   Google Translate
+-   Papago Naver and google translator
 -   Wolfram alpha
 -   Reminders
 -   Custom commands
--   Changeable prefix
--   OPGG
+-   Configurable prefix
 -   Cryptocurrency data
 -   Kpop idol database
 
@@ -50,6 +51,10 @@ A discord bot with almost 100 commands and features, including but not limited t
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=joinemm/miso-bot&type=Date)](https://star-history.com/#joinemm/miso-bot&Date)
+
+## Contributor wall
+
+[![Contributors](https://contrib.rocks/image?repo=joinemm/miso-bot)](https://github.com/joinemm/miso-bot/graphs/contributors)
 
 ## Deployment using docker
 

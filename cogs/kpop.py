@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import asyncio
 import csv
 import datetime
@@ -37,9 +41,7 @@ class Kpop(commands.Cog):
             results = await self.google_client.search(keyword, safesearch=False, image_search=True)
         except async_cse.search.APIError:
             return ""
-        if results:
-            return results[0].image_url
-        return ""
+        return results[0].image_url if results else ""
 
     @commands.group(case_insensitive=True)
     async def idol(self, ctx: commands.Context):
@@ -64,11 +66,10 @@ class Kpop(commands.Cog):
                 "There was a problem fetching idol data from the database"
             )
 
-        rows = []
-        for gender, group, name, dob in idol_data:
-            rows.append(
-                f"{self.gender_icon.get(gender, '')} **{f'{group} ' if group is not None else ''} {name}** ({dob.year})"
-            )
+        rows = [
+            f"{self.gender_icon.get(gender, '')} **{f'{group} ' if group is not None else ''} {name}** ({dob.year})"
+            for gender, group, name, dob in idol_data
+        ]
         content = discord.Embed(title=f"Kpop idols born on {humanize.naturalday(dt)}")
         if not rows:
             content.description = "No idols found with this birthday :("
@@ -211,7 +212,7 @@ class Kpop(commands.Cog):
                 for p in outer:
                     for artist in p.find_all("a"):
                         artist = artist.text.replace("Profile", "").replace("profile", "").strip()
-                        if not artist == "":
+                        if artist != "":
                             artists.append([artist, category])
             return artists
 

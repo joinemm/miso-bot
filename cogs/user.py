@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import asyncio
 from typing import Optional, Union
 
@@ -90,18 +94,24 @@ class User(commands.Cog):
         )
         content.set_thumbnail(url=user.display_avatar.url)
         content.set_footer(text=f"#{user.id}")
-        content.add_field(name="Badges", value="> " + " ".join(util.flags_to_badges(user)))
+
+        user_badges = util.flags_to_badges(user)
+        other_badges = []
+        if ctx.guild.owner == user:
+            other_badges.append("<:guild_owner:1083027791500546170>")
+
+        content.add_field(name="Badges", value=" ".join(user_badges + other_badges))
         content.add_field(name="Mention", value=user.mention)
         content.add_field(name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M"))
 
         if isinstance(user, discord.Member):
             content.colour = user.color
 
-            member_number = 1
-            for member in ctx.guild.members:
-                if member.joined_at and user.joined_at and member.joined_at < user.joined_at:
-                    member_number += 1
-
+            member_number = 1 + sum(
+                1
+                for member in ctx.guild.members
+                if member.joined_at and user.joined_at and member.joined_at < user.joined_at
+            )
             boosting_date = None
             if user.premium_since:
                 boosting_date = humanize.naturaldelta(discord.utils.utcnow() - user.premium_since)
@@ -118,10 +128,7 @@ class User(commands.Cog):
 
             if self.bot.intents.presences:
                 activity_display = util.UserActivity(user.activities).display()
-                if user.is_on_mobile():  # and user.status is discord.Status.online:
-                    status = "mobile"
-                else:
-                    status = user.status.name
+                status = "mobile" if user.is_on_mobile() else user.status.name
                 status_display = f"{emojis.Status[status].value} {user.status.name.capitalize()}"
 
                 content.add_field(name="Status", value=status_display)
@@ -192,12 +199,11 @@ class User(commands.Cog):
             content.set_author(name=f"{user} Banner", icon_url=user.display_avatar.url)
             return await ctx.send(embed=content)
 
-        content.set_author(
-            name=f"{user} Banner", url=user.banner.url, icon_url=user.display_avatar.url
-        )
+        banner_url = util.asset_full_size(user.banner)
 
-        content.set_image(url=user.banner.url)
-        stats = await util.image_info_from_url(self.bot.session, user.banner.url)
+        content.set_author(name=f"{user} Banner", url=banner_url, icon_url=user.display_avatar.url)
+        content.set_image(url=banner_url)
+        stats = await util.image_info_from_url(self.bot.session, banner_url)
         color = await util.color_from_image_url(
             self.bot.session, user.banner.replace(size=64, format="png").url
         )
@@ -224,14 +230,16 @@ class User(commands.Cog):
         if not guild.banner:
             raise exceptions.CommandWarning("This server has no banner")
 
+        banner_url = util.asset_full_size(guild.banner)
+
         content.set_author(
             name=f"{guild} Banner",
-            url=guild.banner.url,
+            url=banner_url,
             icon_url=guild.icon.url if guild.icon else None,
         )
 
-        content.set_image(url=guild.banner.url)
-        stats = await util.image_info_from_url(self.bot.session, guild.banner.url)
+        content.set_image(url=banner_url)
+        stats = await util.image_info_from_url(self.bot.session, banner_url)
         color = await util.color_from_image_url(
             self.bot.session, guild.banner.replace(size=64, format="png").url
         )
@@ -297,13 +305,10 @@ class User(commands.Cog):
             raise exceptions.CommandError("Unable to get current guild")
 
         content = discord.Embed(title=f"Roles in {ctx.guild.name}")
-        rows = []
-        for role in reversed(ctx.guild.roles):
-            rows.append(
-                f"[`{role.id} | {str(role.color)}`] **x{len(role.members)}**"
-                f"{':warning:' if len(role.members) == 0 else ''}: {role.mention}"
-            )
-
+        rows = [
+            f"[`{role.id} | {str(role.color)}`] **x{len(role.members)}**{':warning:' if len(role.members) == 0 else ''}: {role.mention}"
+            for role in reversed(ctx.guild.roles)
+        ]
         await util.send_as_pages(ctx, content, rows)
 
     @commands.group(case_insensitive=True, aliases=["lb"])
@@ -323,23 +328,19 @@ class User(commands.Cog):
         )
 
         rows = []
-        medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
-        i = 1
         if data:
+            medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
+            i = 1
             for user_id, fishy_count in data:
                 if global_data:
                     user = self.bot.get_user(user_id)
                 else:
                     user = ctx.guild.get_member(user_id)
 
-                if user is None or fishy_count == 0:
+                if user is None or user.bot or fishy_count == 0:
                     continue
 
-                if i <= len(medal_emoji):
-                    ranking = medal_emoji[i - 1]
-                else:
-                    ranking = f"`#{i:2}`"
-
+                ranking = medal_emoji[i - 1] if i <= len(medal_emoji) else f"`#{i:2}`"
                 rows.append(f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy")
                 i += 1
         if not rows:
@@ -367,15 +368,11 @@ class User(commands.Cog):
         )
 
         rows = []
-        i = 1
         if data:
+            i = 1
             for userid, wpm, test_date, word_count in data:
-                if _global_:
-                    user = self.bot.get_user(userid)
-                else:
-                    user = ctx.guild.get_member(userid)
-
-                if user is None:
+                user = self.bot.get_user(userid) if _global_ else ctx.guild.get_member(userid)
+                if user is None or user.bot:
                     continue
 
                 if i <= len(self.medal_emoji):
@@ -414,7 +411,7 @@ class User(commands.Cog):
         if data:
             for i, (user_id, amount) in enumerate(data, start=1):
                 user = ctx.guild.get_member(user_id)
-                if user is None:
+                if user is None or user.bot:
                     continue
 
                 if i <= len(self.medal_emoji):
@@ -433,7 +430,7 @@ class User(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.command()
+    @commands.command(enabled=False)
     async def profile(
         self, ctx: commands.Context, user: Union[discord.Member, discord.User, None] = None
     ):
@@ -457,9 +454,7 @@ class User(commands.Cog):
                 return "24px"
             if length < 20:
                 return "18px"
-            if length < 25:
-                return "15px"
-            return "11px"
+            return "15px" if length < 25 else "11px"
 
         def make_badge(classname):
             return f'<li class="badge-container"><i class="corner-logo {classname}"></i></li>'
@@ -510,11 +505,11 @@ class User(commands.Cog):
             if description is not None:
                 description = bleach.clean(
                     description.replace("\n", "<br>"),
-                    tags=bleach.sanitizer.ALLOWED_TAGS + ["br"],
+                    tags=bleach.sanitizer.ALLOWED_TAGS + ["br"],  # type: ignore
                 )
             background_url = background_url or ""
             background_color = (
-                ("#" + background_color) if background_color is not None else user.color
+                f"#{background_color}" if background_color is not None else user.color
             )
         else:
             background_color = user.color
@@ -602,10 +597,7 @@ class User(commands.Cog):
                     description=f":revolving_hearts: **{util.displayname(user)}** and **{util.displayname(ctx.author)}** are now married :wedding:",
                 )
             )
-            new_proposals = set()
-            for el in self.proposals:
-                if el[0] not in [user.id, ctx.author.id]:
-                    new_proposals.add(el)
+            new_proposals = {el for el in self.proposals if el[0] not in [user.id, ctx.author.id]}
             self.proposals = new_proposals
         else:
             self.proposals.add((ctx.author.id, user.id))
@@ -708,41 +700,6 @@ class User(commands.Cog):
             )
         else:
             await ctx.send("You are not married!")
-
-    @commands.command()
-    async def marriages(self, ctx: commands.Context):
-        """View the longest surviving marriages"""
-        content = discord.Embed(title=":wedding: Longest marriages")
-
-        data = (
-            await self.bot.db.fetch(
-                """
-            SELECT first_user_id, second_user_id, marriage_date
-            FROM marriage ORDER BY marriage_date
-            """
-            )
-            or []
-        )
-
-        rows = []
-        for first_user_id, second_user_id, marriage_date in data:
-            first_user = self.bot.get_user(first_user_id)
-            second_user = self.bot.get_user(second_user_id)
-
-            # if neither user is reachable then ignore this marriage
-            if first_user is None or second_user is None:
-                continue
-
-            length = humanize.naturaldelta(
-                arrow.utcnow().timestamp() - marriage_date.timestamp(), months=False
-            )
-
-            rows.append(f"{first_user.name} :heart: {second_user.name} - **{length}**")
-
-        if not rows:
-            raise exceptions.CommandWarning("No one is married yet!")
-
-        await util.send_as_pages(ctx, content, rows)
 
 
 async def setup(bot):

@@ -1,18 +1,24 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
+import base64
 import os
 import random
 import re
 from dataclasses import dataclass
-from typing import Tuple, Union
+from typing import Literal, Tuple, Union
 
 import arrow
 import discord
+import minestat
 import orjson
 from aiohttp import ClientResponseError
+from bs4 import BeautifulSoup
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
-from libraries import emoji_literals, minestat
-from modules import exceptions, util
+from modules import emoji_literals, exceptions, util
 from modules.misobot import MisoBot
 
 EMOJIFIER_HOST = os.environ.get("EMOJIFIER_HOST")
@@ -25,65 +31,77 @@ class Misc(commands.Cog):
         self.bot: MisoBot = bot
         self.icon = "🔮"
         self.hs = {
-            "aquarius": {
-                "name": "Aquarius",
-                "emoji": ":aquarius:",
-                "date_range": "Jan 20 - Feb 18",
-            },
-            "pisces": {
-                "name": "Pisces",
-                "emoji": ":pisces:",
-                "date_range": "Feb 19 - Mar 20",
-            },
             "aries": {
                 "name": "Aries",
                 "emoji": ":aries:",
                 "date_range": "Mar 21 - Apr 19",
+                "id": 1,
             },
             "taurus": {
                 "name": "Taurus",
                 "emoji": ":taurus:",
                 "date_range": "Apr 20 - May 20",
+                "id": 2,
             },
             "gemini": {
                 "name": "Gemini",
                 "emoji": ":gemini:",
                 "date_range": "May 21 - Jun 20",
+                "id": 3,
             },
             "cancer": {
                 "name": "Cancer",
                 "emoji": ":cancer:",
                 "date_range": "Jun 21 - Jul 22",
+                "id": 4,
             },
             "leo": {
                 "name": "Leo",
                 "emoji": ":leo:",
                 "date_range": "Jul 23 - Aug 22",
+                "id": 5,
             },
             "virgo": {
                 "name": "Virgo",
                 "emoji": ":virgo:",
                 "date_range": "Aug 23 - Sep 22",
+                "id": 6,
             },
             "libra": {
                 "name": "Libra",
                 "emoji": ":libra:",
                 "date_range": "Sep 23 - Oct 22",
+                "id": 7,
             },
             "scorpio": {
                 "name": "Scorpio",
                 "emoji": ":scorpius:",
                 "date_range": "Oct 23 - Nov 21",
+                "id": 8,
             },
             "sagittarius": {
                 "name": "Sagittarius",
                 "emoji": ":sagittarius:",
                 "date_range": "Nov 22 - Dec 21",
+                "id": 9,
             },
             "capricorn": {
                 "name": "Capricorn",
                 "emoji": ":capricorn:",
                 "date_range": "Dec 22 - Jan 19",
+                "id": 10,
+            },
+            "aquarius": {
+                "name": "Aquarius",
+                "emoji": ":aquarius:",
+                "date_range": "Jan 20 - Feb 18",
+                "id": 11,
+            },
+            "pisces": {
+                "name": "Pisces",
+                "emoji": ":pisces:",
+                "date_range": "Feb 19 - Mar 20",
+                "id": 12,
             },
         }
 
@@ -185,7 +203,7 @@ class Misc(commands.Cog):
             "Naur",
         ]
         answer = random.choice(choices)
-        question = question + ("?" if not question.endswith("?") else "")
+        question = question + ("" if question.endswith("?") else "?")
         await ctx.send(f"> {question}\n**{answer}**")
 
     @commands.command()
@@ -211,7 +229,7 @@ class Misc(commands.Cog):
             >ship <name> and <name>
         """
         nameslist = names.split(" and ")
-        if not len(nameslist) == 2:
+        if len(nameslist) != 2:
             nameslist = names.split(" ", 1)
             if len(nameslist) < 2:
                 return await ctx.send("Please give two names separated with `and`")
@@ -219,23 +237,22 @@ class Misc(commands.Cog):
         lovenums = [0, 0, 0, 0, 0]
         for c in names:
             c = c.lower()
-            if c == "l":
+            if c == "e":
+                lovenums[3] += 1
+            elif c == "l":
                 lovenums[0] += 1
             elif c == "o":
                 lovenums[1] += 1
-            elif c == "v":
-                lovenums[2] += 1
-            elif c == "e":
-                lovenums[3] += 1
             elif c == "s":
                 lovenums[4] += 1
 
+            elif c == "v":
+                lovenums[2] += 1
         while max(lovenums) > 9:
             newnums = []
             for n in lovenums:
                 if n > 9:
-                    newnums.append(n // 10)
-                    newnums.append(n % 10)
+                    newnums.extend((n // 10, n % 10))
                 else:
                     newnums.append(n)
             lovenums = newnums
@@ -246,42 +263,29 @@ class Misc(commands.Cog):
         while len(lovenums) > 2 and it < maxit and len(lovenums) < maxlen:
             newnums = []
             it += 1
-            for i in range(0, len(lovenums) - 1):
+            for i in range(len(lovenums) - 1):
                 pairsum = lovenums[i] + lovenums[i + 1]
                 if pairsum < 10:
                     newnums.append(pairsum)
                 else:
-                    newnums.append(1)
-                    newnums.append(pairsum % 10)
+                    newnums.extend((1, pairsum % 10))
             lovenums = newnums
 
         # This if-else matches with original site alg handling of non-convergent result. (i.e. defaulting to 1%)
         # Technically, you can leave this section as it was previously and still get a non-trivial outputtable result since the length is always at least 2.
-        if len(lovenums) == 2:
-            percentage = lovenums[0] * 10 + lovenums[1]
-        else:
-            percentage = 1  # Same default that original site algorithm used
-
+        percentage = lovenums[0] * 10 + lovenums[1] if len(lovenums) == 2 else 1
         if percentage < 25:
             emoji = ":broken_heart:"
-            text = "Dr. Love thinks a relationship might work out between {} and {}, but the chance is very small. A successful relationship is possible, but you both have to work on it. Do not sit back and think that it will all work out fine, because it might not be working out the way you wanted it to. Spend as much time with each other as possible. Again, the chance of this relationship working out is very small, so even when you do work hard on it, it still might not work out.".format(
-                nameslist[0], nameslist[1]
-            )
+            text = f"Dr. Love thinks a relationship might work out between {nameslist[0]} and {nameslist[1]}, but the chance is very small. A successful relationship is possible, but you both have to work on it. Do not sit back and think that it will all work out fine, because it might not be working out the way you wanted it to. Spend as much time with each other as possible. Again, the chance of this relationship working out is very small, so even when you do work hard on it, it still might not work out."
         elif percentage < 50:
             emoji = ":heart:"
-            text = "The chance of a relationship working out between {} and {} is not very big, but a relationship is very well possible, if the two of you really want it to, and are prepared to make some sacrifices for it. You'll have to spend a lot of quality time together. You must be aware of the fact that this relationship might not work out at all, no matter how much time you invest in it.".format(
-                nameslist[0], nameslist[1]
-            )
+            text = f"The chance of a relationship working out between {nameslist[0]} and {nameslist[1]} is not very big, but a relationship is very well possible, if the two of you really want it to, and are prepared to make some sacrifices for it. You'll have to spend a lot of quality time together. You must be aware of the fact that this relationship might not work out at all, no matter how much time you invest in it."
         elif percentage < 75:
             emoji = ":heart:"
-            text = "Dr. Love thinks that a relationship between {} and {} has a reasonable chance of working out, but on the other hand, it might not. Your relationship may suffer good and bad times. If things might not be working out as you would like them to, do not hesitate to talk about it with the person involved. Spend time together, talk with each other.".format(
-                nameslist[0], nameslist[1]
-            )
+            text = f"Dr. Love thinks that a relationship between {nameslist[0]} and {nameslist[1]} has a reasonable chance of working out, but on the other hand, it might not. Your relationship may suffer good and bad times. If things might not be working out as you would like them to, do not hesitate to talk about it with the person involved. Spend time together, talk with each other."
         else:
             emoji = ":sparkling_heart:"
-            text = "Dr. Love thinks that a relationship between {} and {} has a very good chance of being successful, but this doesn't mean that you don't have to work on the relationship. Remember that every relationship needs spending time together, talking with each other etc.".format(
-                nameslist[0], nameslist[1]
-            )
+            text = f"Dr. Love thinks that a relationship between {nameslist[0]} and {nameslist[1]} has a very good chance of being successful, but this doesn't mean that you don't have to work on the relationship. Remember that every relationship needs spending time together, talking with each other etc."
 
         content = discord.Embed(
             title=f"{nameslist[0]} {emoji} {nameslist[1]} - {percentage}%",
@@ -343,13 +347,10 @@ class Misc(commands.Cog):
 
             address, port = data
 
-        if port is None:
-            port = 25565
-
         server = await self.bot.loop.run_in_executor(
-            None, lambda: minestat.MineStat(address, int(port))
+            None, lambda: minestat.MineStat(address, int(port) if port else 0)
         )
-        content = discord.Embed(color=discord.Color.green())
+        content = discord.Embed(color=int("70b237", 16))
         if server.online:
             content.add_field(name="Server Address", value=f"`{server.address}`")
             content.add_field(name="Version", value=server.version)
@@ -357,12 +358,23 @@ class Misc(commands.Cog):
                 name="Players", value=f"{server.current_players}/{server.max_players}"
             )
             content.add_field(name="Latency", value=f"{server.latency}ms")
-            content.set_footer(text=f"Message of the day: {server.motd}")
+            content.set_footer(text=f"Message of the day: {server.stripped_motd}")
         else:
             content.title = f"{address}:{port}"
             content.description = ":warning: **Server is offline**"
-        content.set_thumbnail(url="https://i.imgur.com/P1IxD0Q.png")
-        await ctx.send(embed=content)
+
+        if server.favicon_b64:
+            file = discord.File(
+                filename="servericon.png",
+                fp=base64.urlsafe_b64decode(
+                    server.favicon_b64.replace("data:image/png;base64,", "")
+                ),
+            )
+            content.set_thumbnail(url="attachment://servericon.png")
+            await ctx.send(embed=content, file=file)
+        else:
+            content.set_thumbnail(url="https://i.imgur.com/P1IxD0Q.png")
+            await ctx.send(embed=content)
 
     @commands.command()
     async def clap(self, ctx: commands.Context, *sentence):
@@ -373,19 +385,33 @@ class Misc(commands.Cog):
     async def horoscope(self, ctx: commands.Context):
         """Get your daily horoscope"""
         if ctx.invoked_subcommand is None:
-            await self.send_hs(ctx, "today")
+            await self.send_hs(ctx, "daily-today")
 
     @horoscope.command(name="tomorrow")
     async def horoscope_tomorrow(self, ctx: commands.Context):
         """Get tomorrow's horoscope"""
-        await self.send_hs(ctx, "tomorrow")
+        await self.send_hs(ctx, "daily-tomorrow")
 
     @horoscope.command(name="yesterday")
     async def horoscope_yesterday(self, ctx: commands.Context):
         """Get yesterday's horoscope"""
-        await self.send_hs(ctx, "yesterday")
+        await self.send_hs(ctx, "daily-yesterday")
 
-    async def send_hs(self, ctx: commands.Context, day):
+    @horoscope.command(name="weekly", aliases=["week"])
+    async def horoscope_weekly(self, ctx: commands.Context):
+        """Get this week's horoscope"""
+        await self.send_hs(ctx, "weekly")
+
+    @horoscope.command(name="monthly", aliases=["month"])
+    async def horoscope_monthly(self, ctx: commands.Context):
+        """Get this month's horoscope"""
+        await self.send_hs(ctx, "monthly")
+
+    async def send_hs(
+        self,
+        ctx: commands.Context,
+        variant: Literal["daily-yesterday", "daily-today", "daily-tomorrow", "weekly", "monthly"],
+    ):
         sunsign = await self.bot.db.fetch_value(
             "SELECT sunsign FROM user_settings WHERE user_id = %s",
             ctx.author.id,
@@ -395,25 +421,59 @@ class Misc(commands.Cog):
                 "Please save your zodiac sign using `>horoscope set <sign>`\n"
                 "Use `>horoscope list` if you don't know which one you are."
             )
-        params = {"sign": sunsign, "day": day}
-        async with self.bot.session.post(
-            "https://aztro.sameerkumar.website/", params=params
-        ) as response:
-            data = await response.json(loads=orjson.loads)
 
         sign = self.hs[sunsign]
+
+        async with self.bot.session.get(
+            f"https://www.horoscope.com/us/horoscopes/general/horoscope-general-{variant}.aspx",
+            params={"sign": sign["id"]},
+        ) as response:
+            response.raise_for_status()
+            soup = BeautifulSoup(await response.text(), "lxml")
+            paragraph = soup.select_one("p")
+
+        if paragraph is None:
+            raise exceptions.CommandError("Something went wrong trying to get horoscope text")
+
+        date_node = paragraph.find("strong")
+        if date_node is not None:
+            date = date_node.text.strip()
+            date_node.clear()  # type: ignore
+        else:
+            date = "[ERROR]"
+
+        for line_break in paragraph.findAll("br"):
+            line_break.replaceWith("\n")
+        hs_text = paragraph.get_text().strip("- ")
+
         content = discord.Embed(
             color=int("9266cc", 16),
-            title=f"{sign['emoji']} {sign['name']} - {data['current_date']}",
-            description=data["description"],
+            title=f"{sign['emoji']} {sign['name']} | {date}",
+            description=hs_text,
         )
 
-        content.add_field(name="Mood", value=data["mood"], inline=True)
-        content.add_field(name="Compatibility", value=data["compatibility"], inline=True)
-        content.add_field(name="Color", value=data["color"], inline=True)
-        content.add_field(name="Lucky number", value=data["lucky_number"], inline=True)
-        content.add_field(name="Lucky time", value=data["lucky_time"], inline=True)
-        content.add_field(name="Date range", value=data["date_range"], inline=True)
+        if variant.startswith("daily"):
+            async with self.bot.session.get(
+                f"https://www.horoscope.com/star-ratings/{variant.split('-')[-1]}/{sunsign}"
+            ) as response:
+                second_soup = BeautifulSoup(await response.text(), "lxml")
+                wrapper = second_soup.select_one(".module-skin")
+
+            if wrapper:
+                titles = wrapper.findAll("h3")
+                text = wrapper.findAll("p")
+                for title, text in zip(titles, text):
+                    star_count = len(title.select(".highlight"))
+                    stars = star_count * ":star:"
+                    emptystars = (5 - star_count) * "<:no_star:1092503441991008306>"
+                    title_text = title.text.strip()
+                    if title_text == "Sex":
+                        title_text = "Romance"
+                    content.add_field(
+                        name=f"{title_text} {stars}{emptystars}",
+                        value=text.text,
+                        inline=False,
+                    )
 
         await ctx.send(embed=content)
 
@@ -483,6 +543,7 @@ class Misc(commands.Cog):
                 slots = 50 - len(colors)
                 amount = min(source, slots)
                 colors += ["{:06x}".format(random.randint(0, 0xFFFFFF)) for _ in range(amount)]
+                next_is_random_count = False
             # member or role color
             elif isinstance(source, (discord.Member, discord.Role)):
                 colors.append(str(source.color))
@@ -659,6 +720,40 @@ class Misc(commands.Cog):
                 )
             )
 
+    @commands.command(usage="<sticker>")
+    @commands.has_permissions(manage_emojis=True)
+    async def stealsticker(self, ctx: commands.Context):
+        """Steal a sticker to your own server"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
+        if not ctx.message.stickers:
+            await util.send_command_help(ctx)
+
+        for sticker in ctx.message.stickers:
+            fetched_sticker = await sticker.fetch()
+
+            if not isinstance(fetched_sticker, discord.GuildSticker):
+                raise exceptions.CommandWarning("I cannot steal default discord stickers!")
+
+            sticker_file = await fetched_sticker.to_file()
+
+            my_new_sticker = await ctx.guild.create_sticker(
+                name=fetched_sticker.name,
+                description=fetched_sticker.description or "",
+                emoji=fetched_sticker.emoji,
+                file=sticker_file,
+            )
+            content = discord.Embed(
+                description=(
+                    f":pirate_flag: Succesfully stole sticker `{my_new_sticker.name}` "
+                    "and added it to this server"
+                ),
+                color=int("e6e7e8", 16),
+            )
+            content.set_thumbnail(url=my_new_sticker.url)
+            await ctx.send(embed=content)
+
     @commands.command()
     async def emojify(self, ctx: commands.Context, *, text: Union[discord.Message, str]):
         """Emojify your message
@@ -724,7 +819,7 @@ class Misc(commands.Cog):
                     "filename": "images/jihyo.jpg",
                     "boxdimensions": (272, 441, 518, 353),
                     "wm_color": (255, 255, 255, 255),
-                    "angle": 7,
+                    "angle": -7,
                 }
             case "trump":
                 options = {
@@ -737,7 +832,7 @@ class Misc(commands.Cog):
                     "filename": "images/dubu.jpg",
                     "boxdimensions": (287, 454, 512, 347),
                     "wm_color": (255, 255, 255, 255),
-                    "angle": 3,
+                    "angle": -3,
                 }
             case "chaeyoung":
                 options = {
@@ -753,14 +848,16 @@ class Misc(commands.Cog):
                     "wm_color": (255, 255, 255, 255),
                     "angle": 5,
                 }
+            case _:
+                raise exceptions.CommandWarning(f"No meme template called `{template}`")
 
         meme = await self.bot.loop.run_in_executor(
             None, lambda: self.meme_factory(ctx, text=content, **options)
         )
         await ctx.send(file=meme)
 
+    @staticmethod
     def meme_factory(
-        self,
         ctx: commands.Context,
         filename: str,
         boxdimensions: Tuple[int, int, int, int],
@@ -786,9 +883,7 @@ class Misc(commands.Cog):
     def parse_emoji(self, emoji_str: str | int):
         my_emoji = DisplayEmoji(None, "", None)
         if isinstance(emoji_str, int):
-            # user passed emoji id
-            discord_emoji = self.bot.get_emoji(emoji_str)
-            if discord_emoji:
+            if discord_emoji := self.bot.get_emoji(emoji_str):
                 my_emoji.id = discord_emoji.id
                 my_emoji.animated = discord_emoji.animated
                 my_emoji.name = discord_emoji.name
@@ -797,29 +892,22 @@ class Misc(commands.Cog):
                 # cant get any info about it just send the image
                 my_emoji.url = f"https://cdn.discordapp.com/emojis/{emoji_str}"
 
+        elif custom_emoji_match := re.search(r"<(a?)?:(\w+):(\d+)>", emoji_str):
+            # is a custom emoji
+            animated, emoji_name, emoji_id = custom_emoji_match.groups()
+            my_emoji.url = (
+                f"https://cdn.discordapp.com/emojis/{emoji_id}.{'gif' if animated else 'png'}"
+            )
+            my_emoji.name = emoji_name
+            my_emoji.animated = animated == "a"
+            my_emoji.id = int(emoji_id)
+        elif emoji_name := emoji_literals.UNICODE_TO_NAME.get(emoji_str):
+            codepoint = "-".join(f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE[emoji_name])
+            my_emoji.name = emoji_name.strip(":")
+            my_emoji.url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
         else:
-            custom_emoji_match = re.search(r"<(a?)?:(\w+):(\d+)>", emoji_str)
-            if custom_emoji_match:
-                # is a custom emoji
-                animated, emoji_name, emoji_id = custom_emoji_match.groups()
-                my_emoji.url = (
-                    f"https://cdn.discordapp.com/emojis/{emoji_id}.{'gif' if animated else 'png'}"
-                )
-                my_emoji.name = emoji_name
-                my_emoji.animated = animated == "a"
-                my_emoji.id = int(emoji_id)
-            else:
-                # maybe unicode then
-                emoji_name = emoji_literals.UNICODE_TO_NAME.get(emoji_str)
-                if emoji_name:
-                    codepoint = "-".join(
-                        f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE[emoji_name]
-                    )
-                    my_emoji.name = emoji_name.strip(":")
-                    my_emoji.url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
-                else:
-                    # its nothin
-                    raise exceptions.CommandWarning("Invalid emoji!")
+            # its nothin
+            raise exceptions.CommandWarning("Invalid emoji!")
 
         return my_emoji
 
@@ -876,8 +964,9 @@ class ImageObject:
                         line = [newline_words[0]]
                     lines.append(line)
                     if len(word.split("\n")) > 2:
-                        for i in range(1, len(word.split("\n")) - 1):
-                            lines.append([newline_words[i]])
+                        lines.extend(
+                            [newline_words[i]] for i in range(1, len(word.split("\n")) - 1)
+                        )
                     line = [newline_words[-1]]
                 else:
                     new_line = " ".join(line + [word])
@@ -915,7 +1004,7 @@ class ImageObject:
         else:
             txtd = self.draw
         height = y
-        for i, line in enumerate(lines):
+        for line in lines:
             total_size = self.get_text_size(font_size, line)
             x_left = int(x + ((width - total_size[0]) / 2))
             txtd.text((x_left, height), line, font=font, fill=color)

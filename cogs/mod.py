@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import asyncio
 
 import arrow
@@ -47,7 +51,7 @@ class Mod(commands.Cog):
             return
 
         now_ts = arrow.utcnow().int_timestamp
-        for (user_id, guild_id, channel_id, unmute_on) in self.unmute_list:
+        for user_id, guild_id, channel_id, unmute_on in self.unmute_list:
             unmute_ts = unmute_on.timestamp()
             if unmute_ts > now_ts:
                 continue
@@ -56,8 +60,7 @@ class Mod(commands.Cog):
             if guild is None:
                 continue
             await util.require_chunked(guild)
-            user = guild.get_member(user_id)
-            if user:
+            if user := guild.get_member(user_id):
                 mute_role_id = await self.bot.db.fetch_value(
                     """
                     SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
@@ -168,11 +171,10 @@ class Mod(commands.Cog):
             if duration and duration.strip().lower() == "remove":
                 await member.timeout(None)
                 return await util.send_success(ctx, f"Removed timeout from {member.mention}")
-            else:
-                seconds = member.timeout.timestamp() - arrow.now().int_timestamp
-                raise exceptions.CommandInfo(
-                    f"{member.mention} is already timed out (**{util.stringfromtime(seconds)}** remaining)",
-                )
+            seconds = member.timeout.timestamp() - arrow.now().int_timestamp
+            raise exceptions.CommandInfo(
+                f"{member.mention} is already timed out (**{util.stringfromtime(seconds)}** remaining)",
+            )
         else:
             seconds = util.timefromstring(duration)
             if seconds is None:
@@ -295,8 +297,9 @@ class Mod(commands.Cog):
         """Resolve user ids into usernames"""
         if len(ids) > 25:
             raise exceptions.CommandWarning("Only 25 ids at a time please!")
-        elif len(ids) == 0:
-            await util.send_command_help(ctx)
+
+        if not ids:
+            return await util.send_command_help(ctx)
 
         rows = []
         for user_id in ids:
@@ -424,9 +427,9 @@ class Mod(commands.Cog):
 
         async def confirm_ban():
             try:
-                assert isinstance(ctx.guild, discord.Guild)
-                await ctx.guild.ban(user, delete_message_days=0)
-                content.title = ":white_check_mark: Banned user"
+                if ctx.guild is not None:
+                    await ctx.guild.ban(user, delete_message_days=0)
+                    content.title = ":white_check_mark: Banned user"
             except discord.errors.Forbidden:
                 content.title = None
                 content.description = f":no_entry: It seems I don't have the permission to ban **{user}** {user.mention}"

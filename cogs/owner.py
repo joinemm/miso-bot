@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import asyncio
 
 import arrow
@@ -42,9 +46,7 @@ class Owner(commands.Cog):
         message,
     ):
         """Makes the bot dm something to the given user"""
-        await ctx.send(
-            f"Sending message to **{user}** <@{user.id}>\n> {message}", allowed_mentions=None
-        )
+        await ctx.send(f"Sending message to **{user}** <@{user.id}>\n> {message}")
         await user.send(message)
 
     @commands.command()
@@ -54,20 +56,20 @@ class Owner(commands.Cog):
             title=f"Total **{self.bot.guild_count}** guilds, **{self.bot.member_count}** members"
         )
 
-        rows = []
-        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True):
-            rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
-
+        rows = [
+            f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
+            for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True)
+        ]
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
     async def findguild(self, ctx: commands.Context, *, search_term):
         """Find a guild by name"""
-        rows = []
-        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True):
-            if search_term.lower() in guild.name.lower():
-                rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
-
+        rows = [
+            f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
+            for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True)
+            if search_term.lower() in guild.name.lower()
+        ]
         content = discord.Embed(title=f"Found **{len(rows)}** guilds matching search term")
         await util.send_as_pages(ctx, content, rows)
 
@@ -110,11 +112,7 @@ class Owner(commands.Cog):
         self, ctx: commands.Context, user: discord.User, platform, amount: float, ts=None
     ):
         """Add a new single time donation"""
-        if ts is None:
-            ts = arrow.utcnow().datetime
-        else:
-            ts = arrow.get(ts).datetime
-
+        ts = arrow.utcnow().datetime if ts is None else arrow.get(ts).datetime
         await self.bot.db.execute(
             "INSERT INTO donation (user_id, platform, amount, donated_on) VALUES (%s, %s, %s, %s)",
             user.id,
@@ -266,16 +264,10 @@ def clean_codeblock(text):
     """Remove codeblocks and empty lines, return lines"""
     text = text.strip(" `")
     lines = text.split("\n")
-    clean_lines = []
-
     if lines[0] in ["py", "python"]:
         lines = lines[1:]
 
-    for line in lines:
-        if line.strip() != "":
-            clean_lines.append(line)
-
-    return clean_lines
+    return [line for line in lines if line.strip() != ""]
 
 
 async def setup(bot):

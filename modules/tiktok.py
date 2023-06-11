@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
+import re
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
@@ -5,8 +10,10 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 
-class InvalidVideo(Exception):
-    pass
+class TiktokError(Exception):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(message)
 
 
 @dataclass
@@ -14,6 +21,16 @@ class TikTokVideo:
     video_url: str
     user: str
     description: str
+
+
+def error_code_to_message(error_code):
+    match error_code:
+        case "tiktok":
+            return "URL redirected to tiktok home page."
+        case "Video is private!":
+            return "Video is private or unavailable"
+        case _:
+            return error_code
 
 
 class TikTok:
@@ -34,20 +51,22 @@ class TikTok:
     }
     EMOJI = "<:tiktok:1050401570090647582>"
 
+    def __init__(self) -> None:
+        self.input_element = None
+
     async def warmup(self, session: aiohttp.ClientSession):
-        self.request = await session.get(self.BASE_URL)
-        soup = BeautifulSoup(await self.request.text(), "lxml")
+        response = await session.get(self.BASE_URL)
+        soup = BeautifulSoup(await response.text(), "lxml")
         self.input_element = soup.findAll("input")
 
     def generate_post_data(self, url: str):
-        data = {}
-        for index in self.input_element:
-            if index.get("id") == "link_url":
-                data[index.get("name")] = url
-            else:
-                data[index.get("name")] = index.get("value")
+        if self.input_element is None:
+            raise Exception("TikTok downloader was not warmed up!")
 
-        return data
+        return {
+            index.get("name"): url if index.get("id") == "link_url" else index.get("value")
+            for index in self.input_element
+        }
 
     async def download_video(
         self, url: str, session: aiohttp.ClientSession
@@ -57,23 +76,51 @@ class TikTok:
             data=self.generate_post_data(url),
             allow_redirects=True,
         ) as response:
+            if response.status == 302:
+                raise TiktokError("302 Not Found")
+
+            error_code = response.url.query.get("err")
+            if error_code:
+                raise TiktokError(error_code_to_message(error_code))
 
             text = await response.text()
-            if response.status == 302:
-                raise InvalidVideo
-            for error_message in [
-                "This video is currently not available",
-                "Video is private or removed!",
-                "Submitted Url is Invalid, Try Again",
-            ]:
-                if error_message in text:
-                    raise InvalidVideo(error_message)
 
         soup = BeautifulSoup(text, "lxml")
 
-        download_link = soup.findAll("a", attrs={"target": "_blank"})[0].get("href")
-        username, description = [el.text for el in soup.select("h2.white-text")[:2]]
-        return download_link, username, description
+        error_message = re.search(r"html: 'Error: (.*)'", soup.findAll("script")[-1].text)
+        if error_message:
+            raise TiktokError(error_message)
+
+        download_link = soup.findAll(
+            "a",
+            attrs={
+                "target": "_blank",
+                "class": "btn",
+            },
+        )
+        if not download_link:
+            # probably a slideshow with music
+            script = soup.findAll("script")[-2].text
+            data = re.search(r"data: {\s*data:\s*'(.*?)'", script, flags=re.MULTILINE)
+            if data is None:
+                raise TiktokError("Internal Error: Unable to scrape POST data")
+
+            async with session.post(
+                "https://muscdn.xyz/slider", data={"data": data.group(1)}, headers=self.HEADERS
+            ) as response:
+                converted_data = await response.json()
+                username = soup.select_one("h2.white-text")
+                if username:
+                    username = username.text.strip("Download Now: Check out ").strip(
+                        "’s video! #TikTok >"
+                    )
+                else:
+                    username = ""
+                return converted_data["url"], username, ""
+
+        else:
+            username, description = [el.text for el in soup.select("h2.white-text")[:2]]
+            return download_link[0].get("href"), username, description
 
     async def get_video(self, url: str) -> TikTokVideo:
         async with aiohttp.ClientSession() as session:

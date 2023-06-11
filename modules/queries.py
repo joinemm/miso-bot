@@ -1,8 +1,13 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 import discord
+from discord.ext import commands
 
 from modules import exceptions
 
@@ -39,19 +44,26 @@ async def update_setting(ctx, table, setting, new_value):
     )
 
 
-async def is_donator(ctx, user, unlock_tier=1):
+async def is_donator(
+    ctx: commands.Context, user: discord.User | discord.Member, unlock_tier: int | None = None
+):
     if user.id == ctx.bot.owner_id:
         return True
 
-    tier = await ctx.bot.db.fetch_value(
+    data = await ctx.bot.db.fetch_row(
         """
-        SELECT donation_tier FROM donator
+        SELECT donation_tier, currently_active FROM donator
         WHERE user_id = %s
-          AND currently_active
         """,
         user.id,
     )
-    return tier and tier >= unlock_tier
+    if not data:
+        return False
+
+    if unlock_tier is not None:
+        return data[1] and data[0] >= unlock_tier
+
+    return True
 
 
 async def is_vip(bot: MisoBot, user: discord.User | discord.Member):
@@ -60,7 +72,7 @@ async def is_vip(bot: MisoBot, user: discord.User | discord.Member):
         SELECT user_id FROM vip_user
         """
     )
-    return user.id in vips
+    return vips and user.id in vips
 
 
 async def is_blacklisted(ctx):

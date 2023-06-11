@@ -1,10 +1,13 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 from typing import Annotated
 
 import discord
 from discord.ext import commands
 
-from libraries import emoji_literals
-from modules import exceptions, queries, util
+from modules import emoji_literals, exceptions, queries, util
 from modules.misobot import MisoBot
 
 
@@ -233,9 +236,7 @@ class Configuration(commands.Cog):
             ctx.guild.id,
             channel.id,
         )
-        await util.send_success(
-            ctx, f"No longer logging any messages deleted in {channel.mention}"
-        )
+        await util.send_success(ctx, f"No longer logging any messages deleted in {channel.mention}")
 
     @logger_deleted.command(name="unignore")
     async def deleted_unignore(self, ctx: commands.Context, *, channel: discord.TextChannel):
@@ -281,11 +282,7 @@ class Configuration(commands.Cog):
             """,
             ctx.guild.id,
         )
-        if emoji_type == "custom":
-            emoji = self.bot.get_emoji(emoji_id)
-        else:
-            emoji = emoji_name
-
+        emoji = self.bot.get_emoji(emoji_id) if emoji_type == "custom" else emoji_name
         await util.send_success(
             ctx,
             f"Messages now need **{amount}** {emoji} reactions to get into the starboard.",
@@ -310,6 +307,10 @@ class Configuration(commands.Cog):
 
         if emoji[0] == "<":
             # is custom emoji
+            if not await queries.is_donator(ctx, ctx.author, 2):
+                raise exceptions.CommandInfo(
+                    "You have to be a [donator](https://misobot.xyz/donate) to use custom emojis with the starboard!"
+                )
             emoji_obj = await util.get_emoji(ctx, emoji)
             if emoji_obj is None:
                 raise exceptions.CommandWarning("I don't know this emoji!")
@@ -422,11 +423,7 @@ class Configuration(commands.Cog):
             log_channel_id,
         ) = starboard_settings
 
-        if emoji_type == "custom":
-            emoji = self.bot.get_emoji(emoji_id)
-        else:
-            emoji = emoji_name
-
+        emoji = self.bot.get_emoji(emoji_id) if emoji_type == "custom" else emoji_name
         blacklisted_channels: list[int] = await self.bot.db.fetch_flattened(
             """
             SELECT channel_id FROM starboard_blacklist WHERE guild_id = %s
@@ -457,91 +454,6 @@ class Configuration(commands.Cog):
         )
 
         await ctx.send(embed=content)
-
-    @commands.group()
-    @commands.guild_only()
-    @commands.has_permissions(manage_channels=True)
-    async def votechannel(self, ctx: commands.Context):
-        """Configure voting channels"""
-        await util.command_group_help(ctx)
-
-    @votechannel.command(name="add")
-    async def votechannel_add(
-        self, ctx: commands.Context, channel: discord.TextChannel, reaction_type=None
-    ):
-        """
-        Set a channel to be a voting channel.
-
-        Available types: [ vote | rate ]
-        Defaults to vote.
-        """
-        if ctx.guild is None:
-            raise exceptions.CommandError("Unable to get current guild")
-
-        if reaction_type is None:
-            channel_type = "voting"
-        elif reaction_type.lower() in ["rate", "rating"]:
-            channel_type = "rating"
-        elif reaction_type.lower() in ["vote", "voting"]:
-            channel_type = "voting"
-        else:
-            raise exceptions.CommandWarning(
-                f"Unknown reaction type `{reaction_type}`", help_footer=True
-            )
-
-        await self.bot.db.execute(
-            """
-            INSERT INTO voting_channel (guild_id, channel_id, voting_type)
-                VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE
-                voting_type = VALUES(voting_type)
-            """,
-            ctx.guild.id,
-            channel.id,
-            channel_type,
-        )
-        self.bot.cache.votechannels.add(channel.id)
-        await util.send_success(
-            ctx, f"{channel.mention} is now a voting channel of type `{channel_type}`"
-        )
-
-    @votechannel.command(name="remove")
-    async def votechannel_remove(self, ctx: commands.Context, *, channel: discord.TextChannel):
-        """Remove a voting channel"""
-        if ctx.guild is None:
-            raise exceptions.CommandError("Unable to get current guild")
-
-        await self.bot.db.execute(
-            "DELETE FROM voting_channel WHERE guild_id = %s and channel_id = %s",
-            ctx.guild.id,
-            channel.id,
-        )
-        self.bot.cache.votechannels.discard(channel.id)
-        await util.send_success(ctx, f"{channel.mention} is no longer a voting channel.")
-
-    @votechannel.command(name="list")
-    async def votechannel_list(self, ctx: commands.Context):
-        """List all current voting channels on this server"""
-        if ctx.guild is None:
-            raise exceptions.CommandError("Unable to get current guild")
-
-        channels = await self.bot.db.fetch(
-            """
-            SELECT channel_id, voting_type FROM voting_channel WHERE guild_id = %s
-            """,
-            ctx.guild.id,
-        )
-        if not channels:
-            raise exceptions.CommandInfo("There are no voting channels on this server yet!")
-
-        rows = []
-        for channel_id, voting_type in channels:
-            rows.append(f"<#{channel_id}> - `{voting_type}`")
-
-        content = discord.Embed(
-            title=f":1234: Voting channels in {ctx.guild.name}", color=int("3b88c3", 16)
-        )
-        await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
     @commands.guild_only()
@@ -578,10 +490,7 @@ class Configuration(commands.Cog):
             raise exceptions.CommandError("Unable to get current guild")
 
         existing_role = await util.get_role(ctx, role)
-        if existing_role is None:
-            role_id = int(role)
-        else:
-            role_id = existing_role.id
+        role_id = int(role) if existing_role is None else existing_role.id
         await self.bot.db.execute(
             "DELETE FROM autorole WHERE guild_id = %s AND role_id = %s",
             ctx.guild.id,
@@ -603,10 +512,7 @@ class Configuration(commands.Cog):
         content = discord.Embed(
             title=f":scroll: Autoroles in {ctx.guild.name}", color=int("ffd983", 16)
         )
-        rows = []
-        for role_id in roles:
-            rows.append(f"<@&{role_id}> [`{role_id}`]")
-
+        rows = [f"<@&{role_id}> [`{role_id}`]" for role_id in roles]
         if not rows:
             rows = ["No roles have been set up yet!"]
 
@@ -808,9 +714,7 @@ class Configuration(commands.Cog):
     @commands.is_owner()
     async def blacklist_global(self, ctx: commands.Context, user: discord.User, *, reason):
         """Blacklist someone globally from Miso Bot"""
-        await self.bot.db.execute(
-            "INSERT IGNORE blacklisted_user VALUES (%s, %s)", user.id, reason
-        )
+        await self.bot.db.execute("INSERT IGNORE blacklisted_user VALUES (%s, %s)", user.id, reason)
         self.bot.cache.blacklist["global"]["user"].add(user.id)
         await util.send_success(ctx, f"**{user}** can no longer use Miso Bot!")
 

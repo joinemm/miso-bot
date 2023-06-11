@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import asyncio
 import json
 import random
@@ -29,9 +33,7 @@ class Typings(commands.Cog):
         return "".join(letter_dict.get(letter, letter) for letter in text)
 
     def anticheat(self, message):
-        remainder = "".join(
-            set(message.content).intersection(self.font + "".join(self.separators))
-        )
+        remainder = "".join(set(message.content).intersection(self.font + "".join(self.separators)))
         return remainder != ""
 
     @commands.group()
@@ -140,7 +142,7 @@ class Typings(commands.Cog):
             return (
                 _reaction.message.id == enter_message.id
                 and _reaction.emoji in [note_emoji, check_emoji]
-                and not _user == ctx.bot.user
+                and _user != ctx.bot.user
             )
 
         while not race_in_progress:
@@ -257,9 +259,7 @@ class Typings(commands.Cog):
                 )
                 return player, 0, 0
             await message.add_reaction("✅")
-            await self.save_wpm(
-                message.author, ctx.guild, wpm, accuracy, wordcount, language, True
-            )
+            await self.save_wpm(message.author, ctx.guild, wpm, accuracy, wordcount, language, True)
             return player, wpm, accuracy
 
     @typing.command(name="history")
@@ -288,13 +288,10 @@ class Typings(commands.Cog):
             color=int("dd2e44", 16),
         )
         content.set_footer(text=f"Total {len(data)} typing tests taken")
-        rows = []
-        for test_date, wpm, accuracy, word_count, test_language in data:
-            rows.append(
-                f"**{wpm}** WPM, **{int(accuracy)}%** ACC, "
-                f"**{word_count}** words, *{test_language}* ({arrow.get(test_date).to('utc').humanize()})"
-            )
-
+        rows = [
+            f"**{wpm}** WPM, **{int(accuracy)}%** ACC, **{word_count}** words, *{test_language}* ({arrow.get(test_date).to('utc').humanize()})"
+            for test_date, wpm, accuracy, word_count, test_language in data
+        ]
         await util.send_as_pages(ctx, content, rows)
 
     @typing.command(name="cleardata")
@@ -407,7 +404,7 @@ class Typings(commands.Cog):
         wordlist = []
         while len(wordlist) < wordcount:
             word = random.choice(all_words)
-            if not wordlist or not wordlist[-1] == word:
+            if not wordlist or wordlist[-1] != word:
                 wordlist.append(word)
         return wordlist
 

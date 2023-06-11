@@ -1,9 +1,13 @@
-import asyncio
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import html
 import json
 import random
 from time import time
-from typing import Annotated, Any, Optional
+from typing import Optional
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import arrow
@@ -15,6 +19,7 @@ from loguru import logger
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
 from modules.shazam import Shazam
+from modules.ui import BaseButtonPaginator, Compliance, RowPaginator
 
 papago_pairs = [
     "ko/en",
@@ -173,13 +178,15 @@ class Utility(commands.Cog):
         if isinstance(error, commands.CommandNotFound) and ctx.message.content.startswith(
             f"{ctx.prefix}!"
         ):
-            ctx.timer = time()
-            ctx.iscallback = True
+            # type ignores everywhere because this is so hacky
+            ctx.timer = time()  # type: ignore
+            ctx.iscallback = True  # type: ignore
             ctx.command = self.bot.get_command("!")
-            await ctx.command.callback(self, ctx)
+            if ctx.command:
+                await ctx.command.callback(self, ctx)  # type: ignore
 
     async def resolve_bang(self, ctx: commands.Context, bang, args):
-        params = {"q": "!" + bang + " " + args, "format": "json", "no_redirect": 1}
+        params = {"q": f"!{bang} {args}", "format": "json", "no_redirect": 1}
         url = "https://api.duckduckgo.com"
         async with self.bot.session.get(url, params=params) as response:
             data = await response.json(content_type=None)
@@ -187,13 +194,15 @@ class Utility(commands.Cog):
             if location == "":
                 return await ctx.send(":warning: Unknown bang or found nothing!")
 
-            while location:
+            while True:
                 async with self.bot.session.get(url, params=params) as deeper_response:
                     response = deeper_response
-                    location = response.headers.get("location")
+                    new_location = response.headers.get("location")
+                    if not new_location:
+                        break
+                    location = new_location
 
-            content = str(response.url)
-        await ctx.send(content)
+        await ctx.send(location)
 
     @commands.command(name="!", usage="<bang> <query...>")
     async def bang(self, ctx: commands.Context):
@@ -323,30 +332,29 @@ class Utility(commands.Cog):
             )
         )
 
+    async def get_user_location(self, ctx: commands.Context):
+        location = await self.bot.db.fetch_value(
+            "SELECT location_string FROM user_settings WHERE user_id = %s",
+            ctx.author.id,
+        )
+        if location is None:
+            raise exceptions.CommandInfo(
+                f"Please save your location using `{ctx.prefix}weather save <location...>`"
+            )
+        return location
+
     @commands.group()
     async def weather(self, ctx: commands.Context):
         """Show current weather in given location"""
         if ctx.invoked_subcommand is None:
             await util.command_group_help(ctx)
-        else:
-            ctx.location = await self.bot.db.fetch_value(
-                "SELECT location_string FROM user_settings WHERE user_id = %s",
-                ctx.author.id,
-            )
 
     @weather.command(name="now")
     async def weather_now(self, ctx: commands.Context, *, location: Optional[str] = None):
-        if location is None:
-            location = ctx.location
-            if ctx.location is None:
-                raise exceptions.CommandInfo(
-                    f"Please save your location using `{ctx.prefix}weather save <location...>`"
-                )
-
+        location = await self.get_user_location(ctx)
         lat, lon, address = await self.geolocate(location)
         local_time, country_code = await self.get_country_information(lat, lon)
 
-        API_BASE_URL = "https://api.tomorrow.io/v4/timelines"
         params = {
             "apikey": self.bot.keychain.TOMORROWIO_TOKEN,
             "location": f"{lat},{lon}",
@@ -378,17 +386,18 @@ class Utility(commands.Cog):
         else:
             logger.warning("Arrow object must be constructed with ZoneInfo timezone object")
 
-        async with self.bot.session.get(API_BASE_URL, params=params) as response:
+        async with self.bot.session.get(
+            "https://api.tomorrow.io/v4/timelines", params=params
+        ) as response:
             if response.status != 200:
                 logger.error(response.status)
                 logger.error(response.headers)
                 logger.error(await response.text())
                 raise exceptions.CommandError(f"Weather api returned HTTP ERROR {response.status}")
+
             data = await response.json(loads=orjson.loads)
 
-        current_data = next(
-            filter(lambda t: t["timestep"] == "current", data["data"]["timelines"])
-        )
+        current_data = next(filter(lambda t: t["timestep"] == "current", data["data"]["timelines"]))
         daily_data = next(filter(lambda t: t["timestep"] == "1d", data["data"]["timelines"]))
         values_current = current_data["intervals"][0]["values"]
         values_today = daily_data["intervals"][0]["values"]
@@ -401,14 +410,13 @@ class Utility(commands.Cog):
         icon = self.weather_constants["id_to_icon"][str(values_current["weatherCode"])]
         summary = self.weather_constants["id_to_description"][str(values_current["weatherCode"])]
 
-        if (
-            values_today["precipitationType"] != 0
-            and values_today["precipitationProbability"] != 0
-        ):
+        if values_today["precipitationType"] != 0 and values_today["precipitationProbability"] != 0:
             precipitation_type = self.weather_constants["precipitation"][
                 str(values_today["precipitationType"])
             ]
-            summary += f", with {values_today['precipitationProbability']}% chance of {precipitation_type}"
+            summary += (
+                f", with {values_today['precipitationProbability']}% chance of {precipitation_type}"
+            )
 
         content = discord.Embed(color=int("e1e8ed", 16))
         content.title = f":flag_{country_code.lower()}: {address}"
@@ -435,46 +443,43 @@ class Utility(commands.Cog):
 
     @weather.command(name="forecast")
     async def weather_forecast(self, ctx: commands.Context, *, location: Optional[str] = None):
-        if location is None:
-            location = ctx.location
-            if ctx.location is None:
-                raise exceptions.CommandInfo(
-                    f"Please save your location using `{ctx.prefix}weather save <location...>`"
-                )
-
+        location = await self.get_user_location(ctx)
         lat, lon, address = await self.geolocate(location)
         local_time, country_code = await self.get_country_information(lat, lon)
-        API_BASE_URL = "https://api.tomorrow.io/v4/timelines"
-        params = {
-            "apikey": self.bot.keychain.TOMORROWIO_TOKEN,
+        body = {
             "location": f"{lat},{lon}",
-            "fields": ",".join(
-                [
-                    "precipitationProbability",
-                    "precipitationType",
-                    "windSpeed",
-                    "windGust",
-                    "windDirection",
-                    "temperature",
-                    "temperatureApparent",
-                    "cloudCover",
-                    "weatherCode",
-                    "humidity",
-                    "temperatureMin",
-                    "temperatureMax",
-                ]
-            ),
+            "fields": [  # ",".join(
+                "precipitationProbability",
+                "precipitationType",
+                "windSpeed",
+                "windGust",
+                "windDirection",
+                "temperature",
+                "temperatureApparent",
+                "cloudCover",
+                "weatherCode",
+                "humidity",
+                "temperatureMin",
+                "temperatureMax",
+            ],  # ),
             "units": "metric",
-            "timesteps": "1d",
-            "endTime": arrow.utcnow().shift(days=+7).isoformat(),
+            "timesteps": ["1d"],
+            "startTime": "now",
+            "endTime": "nowPlus5d",
         }
 
         if isinstance(local_time.tzinfo, ZoneInfo):
-            params["timezone"] = str(local_time.tzinfo)
+            body["timezone"] = str(local_time.tzinfo)
         else:
             logger.warning("Arrow object must be constructed with ZoneInfo timezone object")
 
-        async with self.bot.session.get(API_BASE_URL, params=params) as response:
+        async with self.bot.session.post(
+            "https://api.tomorrow.io/v4/timelines",
+            json=body,
+            params={
+                "apikey": self.bot.keychain.TOMORROWIO_TOKEN,
+            },
+        ) as response:
             if response.status != 200:
                 logger.error(response.status)
                 logger.error(response.headers)
@@ -627,8 +632,8 @@ class Utility(commands.Cog):
         async with self.bot.session.get(API_BASE_URL, params={"term": word}) as response:
             data = await response.json(loads=orjson.loads)
 
-        pages = []
         if data["list"]:
+            pages = []
             for entry in data["list"]:
                 definition = entry["definition"].replace("]", "**").replace("[", "**")
                 example = entry["example"].replace("]", "**").replace("[", "**")
@@ -636,7 +641,7 @@ class Utility(commands.Cog):
                 content = discord.Embed(colour=discord.Colour.from_rgb(254, 78, 28))
                 content.description = f"{definition}"
 
-                if not example == "":
+                if example != "":
                     content.add_field(name="Example", value=example)
 
                 content.set_footer(
@@ -679,10 +684,7 @@ class Utility(commands.Cog):
         target = ""
         languages = text.partition(" ")[0]
         if "/" in languages or "->" in languages:
-            if "/" in languages:
-                source, target = languages.split("/")
-            elif "->" in languages:
-                source, target = languages.split("->")
+            source, target = languages.split("/") if "/" in languages else languages.split("->")
             text = text.partition(" ")[2]
             if source == "":
                 source = await detect_language(self.bot, text)
@@ -690,10 +692,7 @@ class Utility(commands.Cog):
                 target = "en"
         else:
             source = await detect_language(self.bot, text)
-            if source == "en":
-                target = "ko"
-            else:
-                target = "en"
+            target = "ko" if source == "en" else "en"
         language_pair = f"{source}/{target}"
 
         # we have language and query, now choose the appropriate translator
@@ -751,74 +750,156 @@ class Utility(commands.Cog):
             else:
                 await ctx.send(":shrug:")
 
-    @commands.command()
-    async def creategif(
-        self,
-        ctx: commands.Context,
-        media_url: str,
-        *gifoptions: Annotated[dict[str, Any], util.KeywordCommandArgument],
-    ):
-        """Create a gfycat gif from video url
+    @commands.command(enabled=False)
+    async def mygifs(self, ctx: commands.Context):
+        """See the gifs you have uploaded"""
+        data = await self.bot.db.fetch(
+            """
+            SELECT gif_id, source_url, ts FROM user_uploaded_gif WHERE user_id = %s
+            """,
+            ctx.author.id,
+        )
+        if not data:
+            raise exceptions.CommandWarning("You have not uploaded any gifs yet!")
 
-        Give any options in `option=value` format:
-        >>> `start`: The number of seconds into the video to start the gif from
-        `end`: The time when the gif should end in seconds
+        async with self.bot.session.get(
+            "https://api.giphy.com/v1/gifs",
+            params={
+                "api_key": self.bot.keychain.GIPHY_API_KEY,
+                "ids": ",".join(gif[0] for gif in data),
+            },
+        ) as response:
+            response_data = await response.json()
 
-        """
-        options = GifOptions.from_arguments(gifoptions)
+        if not response_data["data"]:
+            raise exceptions.CommandWarning("You don't have any gifs :(")
 
-        API_URL = "https://api.gfycat.com/v1/gfycats"
-        starttimer = time()
-        auth_headers = await gfycat_oauth(self.bot)
-        params = {
-            "fetchUrl": media_url,
-            "tags": ["misobot"],
-            "title": "Miso Bot",
-            "private": False,
-            "description": "Gif created with Miso Bot https://misobot.xyz",
-        } | options.json()
+        gif_sources = {gif[0]: gif[1] for gif in data}
 
-        async with self.bot.session.post(API_URL, json=params, headers=auth_headers) as response:
-            data = await response.json(loads=orjson.loads)
+        rows = []
+        for gif in response_data["data"]:
+            source = gif_sources[gif["id"]]
+            ts = arrow.get(gif["import_datetime"])
+            rows.append(
+                f"`{gif['id']}` [Source]({source}) | [Gif]({gif['url']}) <t:{int(ts.timestamp())}:R>"
+            )
 
-        gfyname = data.get("gfyname")
-        error = data.get("errorMessage")
-        if gfyname is None:
-            if error is not None:
-                error = orjson.loads(error)
-                raise exceptions.CommandWarning(f"{error['code']}: {error['description']}")
+        await RowPaginator(
+            discord.Embed(color=int("8b3cff", 16)).set_author(
+                name="Your gifs", icon_url=ctx.author.display_avatar.url
+            ),
+            rows,
+        ).run(ctx)
 
-            raise exceptions.CommandWarning("Failed creating gif")
+    @commands.command(enabled=False)
+    async def creategif(self, ctx: commands.Context, media_url: str, *tags: str):
+        """Create a gif and upload it to GIPHY"""
+        has_seen_warning = await self.bot.db.fetch_value(
+            """
+            SELECT giphy_content_warning FROM popup_seen WHERE user_id = %s
+            """,
+            ctx.author.id,
+        )
+        if not has_seen_warning:
+            view = Compliance(ctx.author)
+            compliance_msg = await ctx.send(
+                embed=discord.Embed(
+                    color=int("5c68ee", 16),
+                    title="IMPORTANT NOTICE",
+                    description=(
+                        "Uploading NSFW content on GIPHY is forbidden. "
+                        "Failure to comply will get you banned from using Miso Bot. "
+                        "Please also keep in mind everything you upload is public."
+                    ),
+                ).set_footer(text="ⓘ This notice is shown to everyone, not based on your content"),
+                view=view,
+            )
+            await view.read_timer(3, compliance_msg)
+            await view.wait()
+            await compliance_msg.delete()
 
-        message = await ctx.send(f"Encoding {emojis.LOADING}")
+            if not view.agreed:
+                return
 
-        url = f"{API_URL}/fetch/status/{gfyname}"
-        await asyncio.sleep(1)
-        while True:
-            async with self.bot.session.get(url, headers=auth_headers) as response:
-                data = await response.json(loads=orjson.loads)
-                task = data["task"]
+            await self.bot.db.execute(
+                """
+                INSERT INTO popup_seen (user_id, giphy_content_warning)
+                    VALUES (%s, %s)
+                ON DUPLICATE KEY UPDATE
+                    giphy_content_warning = VALUES(giphy_content_warning)
+                """,
+                ctx.author.id,
+                True,
+            )
 
-            if task == "encoding":
-                pass
+        gif_already_created = await self.bot.db.fetch_value(
+            """
+            SELECT gif_id FROM user_uploaded_gif WHERE source_url = %s
+            """,
+            media_url,
+        )
+        if gif_already_created:
+            gif_id = gif_already_created
+            msg = None
+        else:
+            URL = "https://upload.giphy.com/v1/gifs"
+            params = {
+                "api_key": self.bot.keychain.GIPHY_API_KEY,
+                "source_image_url": media_url,
+                "tags": ["misobot"] + list(tags),
+                "source_post_url": "https://misobot.xyz",
+            }
 
-            elif task == "complete":
-                await message.edit(
-                    content=f"Gif created in **{util.stringfromtime(time() - starttimer, 2)}**"
-                    f"\nhttps://gfycat.com/{data['gfyname']}"
-                )
-                break
+            msg = await ctx.send(
+                embed=discord.Embed(
+                    description=f"{emojis.LOADING} **Creating your gif...**",
+                    color=int("8a3cff", 16),
+                ).set_footer(text="Powered by GIPHY")
+            )
 
-            else:
-                await message.edit(
-                    content=(
-                        "There was an error while creating your gif :("
-                        f"\n> `error: {data['errorMessage']['description']}`"
-                    )
-                )
-                break
+            async with self.bot.session.post(URL, json=params) as response:
+                if response.status == 200:
+                    data = await response.json(loads=orjson.loads)
+                    gif_id = data["data"]["id"]
+                else:
+                    await msg.delete()
+                    if response.status == 500:
+                        raise exceptions.CommandWarning(
+                            "Gif creation failed! Most likely the url provided is not a valid video source."
+                        )
+                    response.raise_for_status()
+                    return
 
-            await asyncio.sleep(1)
+            await self.bot.db.execute(
+                """
+                INSERT INTO user_uploaded_gif
+                    (user_id, guild_id, gif_id, source_url)
+                    VALUES(%s, %s, %s, %s)
+                """,
+                ctx.author.id,
+                ctx.guild.id if ctx.guild else None,
+                gif_id,
+                media_url,
+            )
+
+        async with self.bot.session.get(
+            f"https://api.giphy.com/v1/gifs/{gif_id}",
+            params={
+                "api_key": self.bot.keychain.GIPHY_API_KEY,
+            },
+        ) as response:
+            gif_data = await response.json(loads=orjson.loads)
+
+            try:
+                gif_url = gif_data["data"]["url"]
+            except TypeError:
+                error_message = gif_data["meta"]["msg"]
+                raise exceptions.CommandError("GIPHY Error: " + error_message)
+
+        if msg:
+            await msg.edit(embed=None, content=gif_url)
+        else:
+            await ctx.send(gif_url)
 
     @commands.command()
     async def stock(self, ctx: commands.Context, *, symbol):
@@ -899,11 +980,10 @@ class Utility(commands.Cog):
             "SELECT timezone FROM user_settings WHERE user_id = %s",
             member.id,
         )
-        if tz_str:
-            dt = arrow.now(tz_str)
-            await ctx.send(f":clock2: **{dt.format('MMM Do HH:mm')}**")
-        else:
+        if not tz_str:
             raise exceptions.CommandWarning(f"{member} has not set their timezone yet!")
+        dt = arrow.now(tz_str)
+        await ctx.send(f":clock2: **{dt.format('MMM Do HH:mm')}**")
 
     @timezone.command(name="set")
     async def tz_set(self, ctx: commands.Context, your_timezone):
@@ -967,20 +1047,69 @@ class Utility(commands.Cog):
         if not data:
             raise exceptions.CommandWarning("No one on this server has set their timezone yet!")
 
-        dt_data = []
-        for user_id, tz_str in data:
-            dt_data.append((arrow.now(tz_str), ctx.guild.get_member(user_id)))
-
-        for dt, member in sorted(dt_data, key=lambda x: int(x[0].format("Z"))):
-            if member is None:
-                continue
-            rows.append(f"{dt.format('MMM Do HH:mm')} - **{util.displayname(member)}**")
-
+        dt_data = [(arrow.now(tz_str), ctx.guild.get_member(user_id)) for user_id, tz_str in data]
+        rows.extend(
+            f"{dt.format('MMM Do HH:mm')} - **{util.displayname(member)}**"
+            for dt, member in sorted(dt_data, key=lambda x: int(x[0].format("Z")))
+            if member is not None
+        )
         await util.send_as_pages(ctx, content, rows)
+
+    @commands.group()
+    async def steam(self, ctx: commands.Context):
+        """Steam commands"""
+        await util.command_group_help(ctx)
+
+    @steam.command()
+    async def market(self, ctx: commands.Context, *, search_term: str):
+        """Search the steam community market"""
+        MARKET_SEARCH_URL = "https://steamcommunity.com/market/search/render"
+
+        headers = {"User-Agent": util.random_user_agent()}
+        params = {"norender": 1, "count": 99, "query": search_term}
+        async with self.bot.session.get(
+            MARKET_SEARCH_URL, params=params, headers=headers
+        ) as response:
+            response.raise_for_status()
+            data = await response.json()
+
+        if not data["results"]:
+            raise exceptions.CommandInfo(f"No steam market listings found for `{search_term}`")
+
+        await MarketPaginator(data["results"]).run(ctx)
 
 
 async def setup(bot):
     await bot.add_cog(Utility(bot))
+
+
+class MarketPaginator(BaseButtonPaginator):
+    MARKET_LISTING_URL = "https://steamcommunity.com/market/listings/"
+    IMAGE_BASE_URL = "https://community.akamai.steamstatic.com/economy/image/"
+
+    def __init__(self, entries: list[dict], **kwargs):
+        super().__init__(entries=entries, per_page=1, **kwargs)
+
+    async def format_page(self, entries: list[dict]):
+        # entries should be a list with length of one so just grab the first element
+        result = entries[0]
+        asset = result["asset_description"]
+        item_hash = quote(asset["market_hash_name"])
+        market_link = f"{self.MARKET_LISTING_URL}{ asset['appid']}/{item_hash}"
+        return (
+            discord.Embed(
+                description=asset["type"],
+                color=int("68932f", 16),
+            )
+            .set_author(
+                name=result["name"],
+                url=market_link,
+            )
+            .set_thumbnail(url=self.IMAGE_BASE_URL + asset["icon_url"])
+            .add_field(name="Starting at", value=result["sell_price_text"])
+            .add_field(name="Listings", value=str(result["sell_listings"]))
+            .set_footer(icon_url=result["app_icon"], text=result["app_name"])
+        )
 
 
 async def detect_language(bot, string):
@@ -997,25 +1126,7 @@ async def detect_language(bot, string):
 def temp(celsius: float, convert_to_f: bool = False) -> str:
     if convert_to_f:
         return f"{int((celsius * 9.0 / 5.0) + 32)} °F"
-    else:
-        return f"{int(celsius)} °C"
-
-
-async def gfycat_oauth(bot):
-    url = "https://api.gfycat.com/v1/oauth/token"
-    params = {
-        "grant_type": "client_credentials",
-        "client_id": bot.keychain.GFYCAT_CLIENT_ID,
-        "client_secret": bot.keychain.GFYCAT_SECRET,
-    }
-
-    async with bot.session.post(url, json=params) as response:
-        data = await response.json(loads=orjson.loads)
-        access_token = data["access_token"]
-
-    auth_headers = {"Authorization": f"Bearer {access_token}"}
-
-    return auth_headers
+    return f"{int(celsius)} °C"
 
 
 class WeatherUnitToggler(discord.ui.View):
@@ -1036,7 +1147,7 @@ class WeatherUnitToggler(discord.ui.View):
         self.toggle.label = "°C" if self.F else "°F"
 
     @discord.ui.button(emoji="🌡️", style=discord.ButtonStyle.secondary)
-    async def toggle(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def toggle(self, interaction: discord.Interaction, _button: discord.ui.Button):
         self.F = not self.F
         self.update_label()
 

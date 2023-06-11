@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import asyncio
 from typing import Optional
 
@@ -6,7 +10,7 @@ import regex
 from discord.ext import commands
 from loguru import logger
 
-from modules import emojis, exceptions, util
+from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
 
 
@@ -46,7 +50,8 @@ class Notifications(commands.Cog):
         keywords: list[str],
         test=False,
     ):
-        assert message.guild is not None
+        if message.guild is None:
+            return
 
         content = discord.Embed(color=message.author.color)
         content.set_author(name=f"{message.author}", icon_url=message.author.display_avatar.url)
@@ -140,7 +145,7 @@ class Notifications(commands.Cog):
             if member is not None and message.channel.permissions_for(member).read_messages:
                 asyncio.ensure_future(self.send_notification(member, message, users_words))
 
-    @commands.group(case_insensitive=True, aliases=["noti", "notif"])
+    @commands.group(case_insensitive=True, aliases=["noti", "notif", "notifications"])
     async def notification(self, ctx: commands.Context):
         """Manage your keyword notifications on this server"""
         await util.command_group_help(ctx)
@@ -153,14 +158,15 @@ class Notifications(commands.Cog):
                 "Global notifications have been removed for performance reasons."
             )
 
-        amount = await self.bot.db.fetch_value(
-            "SELECT COUNT(*) FROM notification WHERE user_id = %s",
-            ctx.author.id,
-        )
-        if amount and amount >= 30:
-            raise exceptions.CommandWarning(
-                f"You can only have a maximum of **30** notifications. You have **{amount}**"
+        if not await queries.is_donator(ctx, ctx.author, 2):
+            amount = await self.bot.db.fetch_value(
+                "SELECT COUNT(*) FROM notification WHERE user_id = %s",
+                ctx.author.id,
             )
+            if amount and amount >= 25:
+                raise exceptions.CommandWarning(
+                    f"You can only have a maximum of **25** notifications. You have **{amount}** (Become a [donator](https://misobot.xyz/donate) for unlimited notifications)"
+                )
 
         try:
             await ctx.message.delete()
@@ -280,9 +286,7 @@ class Notifications(commands.Cog):
             rows.append(f"**{guild}** : `{keyword}` - Triggered **{times_triggered}** times")
 
         try:
-            await util.send_as_pages(
-                ctx, content, rows, maxpages=1, maxrows=50, send_to=ctx.author
-            )
+            await util.send_as_pages(ctx, content, rows, maxpages=1, maxrows=50, send_to=ctx.author)
         except discord.errors.Forbidden:
             raise exceptions.CommandWarning(
                 "I was unable to send you a DM! Please change your settings."
@@ -350,13 +354,12 @@ class Notifications(commands.Cog):
 
             pattern = regex.compile(self.keyword_regex, words=keywords, flags=regex.IGNORECASE)
 
-            finds = pattern.findall(message.content)
-            if not finds:
-                await ctx.send(":x: This message would not notify you")
-            else:
+            if finds := pattern.findall(message.content):
                 keywords = list(set(finds))
                 await self.send_notification(ctx.author, message, keywords, test=True)
                 await ctx.send(":ok_hand: Check your DM")
+            else:
+                await ctx.send(":x: This message would not notify you")
 
 
 async def setup(bot):

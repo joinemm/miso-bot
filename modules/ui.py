@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
+import asyncio
 from typing import Generic, TypeVar
 
 import discord
@@ -78,20 +83,19 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
     def _switch_page(self, count: int, /) -> list[T]:
         self._current_page += count
 
-        if self.clamp_pages:
-            if count < 0:  # Going down
-                if self._current_page < 0:
-                    self._current_page = self.max_page - 1
-            elif count > 0:  # Going up
-                if self._current_page > self.max_page - 1:  # - 1 for indexing
-                    self._current_page = 0
+        if count < 0:
+            if self.clamp_pages and self._current_page < 0:
+                self._current_page = self.max_page - 1
+        elif count > 0:
+            if self.clamp_pages and self._current_page > self.max_page - 1:
+                self._current_page = 0
 
         self.page_number.label = f"Page {self._current_page + 1} of {self.max_page}"
         return self.pages[self._current_page]
 
     @discord.ui.button(emoji="<:left:997949561911918643>", style=STYLE)
     async def on_arrow_backward(
-        self, interaction: discord.Interaction, button: discord.ui.Button
+        self, interaction: discord.Interaction, _button: discord.ui.Button
     ) -> None:
         entries = self._switch_page(-1)
         embed = await self.format_page(entries)
@@ -99,13 +103,13 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
 
     @discord.ui.button(label="...", style=STYLE, disabled=True)
     async def page_number(
-        self, interaction: discord.Interaction, button: discord.ui.Button
+        self, _interaction: discord.Interaction, _button: discord.ui.Button
     ) -> None:
         pass
 
     @discord.ui.button(emoji="<:right:997949563665133570>", style=STYLE)
     async def on_arrow_forward(
-        self, interaction: discord.Interaction, button: discord.ui.Button
+        self, interaction: discord.Interaction, _button: discord.ui.Button
     ) -> None:
         entries = self._switch_page(1)
         embed = await self.format_page(entries)
@@ -121,10 +125,40 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
 
 
 class RowPaginator(BaseButtonPaginator):
-    def __init__(self, base_embed, entries, per_page=10, **kwargs):
+    def __init__(self, base_embed, entries: list[str], per_page=10, **kwargs):
         self.embed = base_embed
         super().__init__(entries=entries, per_page=per_page, **kwargs)
 
     async def format_page(self, entries):
         self.embed.description = "\n".join(entries)
         return self.embed
+
+
+class Compliance(discord.ui.View):
+    def __init__(self, author: discord.Member | discord.User):
+        super().__init__()
+        self.author = author
+        self.agreed = None
+
+    async def read_timer(self, n: int, message: discord.Message):
+        await asyncio.sleep(n)
+        self.confirm.disabled = False
+        self.cancel.disabled = False
+        await message.edit(view=self)
+
+    @discord.ui.button(style=discord.ButtonStyle.primary, label="I Understand", disabled=True)
+    async def confirm(self, interaction: discord.Interaction, _button: discord.ui.Button):
+        if interaction.user == self.author:
+            await interaction.response.defer()
+            self.agreed = True
+            self.stop()
+
+    @discord.ui.button(style=discord.ButtonStyle.secondary, label="Cancel", disabled=True)
+    async def cancel(self, interaction: discord.Interaction, _button: discord.ui.Button):
+        if interaction.user == self.author:
+            await interaction.response.defer()
+            self.agreed = False
+            self.stop()
+
+    async def on_timeout(self):
+        self.stop()

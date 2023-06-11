@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -12,7 +16,6 @@ class Cache:
         self.log_emoji = False
         self.prefixes = {}
         self.rolepickers = set()
-        self.votechannels = set()
         self.autoresponse = {}
         self.blacklist = {}
         self.logging_settings = {}
@@ -20,6 +23,7 @@ class Cache:
         self.marriages = []
         self.starboard_settings = {}
         self.starboard_blacklisted_channels = set()
+        self.media_auto_embed = {}
 
     async def cache_starboard_settings(self):
         data = await self.bot.db.fetch(
@@ -84,7 +88,20 @@ class Cache:
                 try:
                     self.autoroles[str(guild_id)].add(role_id)
                 except KeyError:
-                    self.autoroles[str(guild_id)] = set([role_id])
+                    self.autoroles[str(guild_id)] = {role_id}
+
+    async def cache_auto_embedders(self):
+        media_embed_settings = await self.bot.db.fetch(
+            "SELECT guild_id, instagram, twitter, tiktok, reddit FROM media_auto_embed_settings"
+        )
+        if media_embed_settings:
+            for guild_id, instagram, twitter, tiktok, reddit in media_embed_settings:
+                self.media_auto_embed[str(guild_id)] = {
+                    "instagram": instagram,
+                    "twitter": twitter,
+                    "tiktok": tiktok,
+                    "reddit": reddit,
+                }
 
     async def initialize_settings_cache(self):
         logger.info("Caching settings...")
@@ -95,10 +112,6 @@ class Cache:
 
         self.rolepickers = set(
             await self.bot.db.fetch_flattened("SELECT channel_id FROM rolepicker_settings")
-        )
-
-        self.votechannels = set(
-            await self.bot.db.fetch_flattened("SELECT channel_id FROM voting_channel")
         )
 
         guild_settings = await self.bot.db.fetch(
@@ -150,3 +163,4 @@ class Cache:
         await self.cache_starboard_settings()
         await self.cache_logging_settings()
         await self.cache_autoroles()
+        await self.cache_auto_embedders()

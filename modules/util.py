@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import asyncio
 import copy
 import io
@@ -17,9 +21,10 @@ from discord.ext import commands
 from durations_nlp import Duration
 from loguru import logger
 from PIL import Image, UnidentifiedImageError
+from random_user_agent.params import HardwareType
+from random_user_agent.user_agent import UserAgent
 
-from libraries import emoji_literals
-from modules import emojis, exceptions, queries
+from modules import emoji_literals, emojis, exceptions, queries
 
 if TYPE_CHECKING:
     from modules.misobot import MisoBot
@@ -41,7 +46,7 @@ class KeywordArguments:
     @classmethod
     def from_arguments(cls, args: tuple):
         try:
-            return cls(**{k: v for d in args for k, v in d.items()})
+            return cls(**{k: v for d in args for k, v in d.items()})  # type: ignore
         except TypeError as e:
             arg = str(e).split("'")[1]
             options = [f"`{o}`" for o in cls.__init__.__code__.co_varnames[1:]]
@@ -51,15 +56,23 @@ class KeywordArguments:
 
 
 class KeywordCommandArgument:
-    async def convert(self, ctx: commands.Context, argument: str):
+    @staticmethod
+    async def convert(_ctx: commands.Context, argument: str):
         try:
             option, value = argument.split("=", 1)
         except ValueError:
             raise commands.BadArgument(
-                "Cannot parse `{argument`, Please give arguments in `option=value` format.\n"
+                f"Cannot parse `{argument}`, Please give arguments in `option=value` format.\n"
                 "Refer to the command help for list of options (`>help [commandname]`)"
             )
         return {option: value}
+
+
+async def suppress(message: discord.Message):
+    try:
+        await message.edit(suppress=True)
+    except (discord.Forbidden, discord.NotFound):
+        pass
 
 
 def displayname(member: Optional[discord.User | discord.Member], escape=True):
@@ -78,7 +91,8 @@ def displayname(member: Optional[discord.User | discord.Member], escape=True):
 
 def displaychannel(
     channel: Optional[
-        discord.TextChannel
+        discord.StageChannel
+        | discord.TextChannel
         | discord.Thread
         | discord.DMChannel
         | discord.VoiceChannel
@@ -103,13 +117,15 @@ def displaychannel(
 
 async def send_success(target: discord.abc.Messageable, message: str):
     await target.send(
-        embed=discord.Embed(description=":white_check_mark: " + message, color=int("77b255", 16))
+        embed=discord.Embed(
+            description=f":white_check_mark: {message}",
+            color=int("77b255", 16),
+        )
     )
 
 
 async def find_user(bot: "MisoBot", user_id: int) -> discord.User | None:
-    user = bot.get_user(user_id)
-    if user:
+    if user := bot.get_user(user_id):
         return user
 
     try:
@@ -161,7 +177,8 @@ def flags_to_badges(user: discord.User | discord.Member):
             try:
                 result.append(emojis.Badge[flag].value)
             except KeyError:
-                pass
+                logger.warning(f"Badge with no emoji associated with it: {flag}")
+
     if isinstance(user, discord.Member) and user.premium_since is not None:
         result.append(emojis.Badge["boosting"].value)
     return result or ["-"]
@@ -289,7 +306,6 @@ def create_pages(content: discord.Embed, rows: list[str], maxrows=15, maxpages=1
         thisrow += 1
         if len(content.description) + len(row) < 2000 and thisrow < maxrows + 1:
             content.description += f"\n{row}"
-            rowcount -= 1
         else:
             thisrow = 1
             if len(pages) == maxpages - 1:
@@ -301,9 +317,8 @@ def create_pages(content: discord.Embed, rows: list[str], maxrows=15, maxpages=1
             pages.append(content)
             content = copy.deepcopy(content)
             content.description = f"{row}"
-            rowcount -= 1
-
-    if not done and not content.description == "":
+        rowcount -= 1
+    if not done and content.description != "":
         pages.append(content)
 
     return pages
@@ -484,10 +499,7 @@ def xp_from_message(message):
     :returns       : Amount of xp rewarded from given message. Minimum 1
     """
     words = message.content.split(" ")
-    eligible_words = 0
-    for x in words:
-        if len(x) > 1:
-            eligible_words += 1
+    eligible_words = sum(len(x) > 1 for x in words)
     xp = eligible_words + (10 * len(message.attachments))
     if xp == 0:
         xp = 1
@@ -523,9 +535,7 @@ async def get_member(
     try:
         return await commands.MemberConverter().convert(ctx, argument)
     except commands.errors.BadArgument:
-        if try_user:
-            return await get_user(ctx, argument, fallback)
-        return fallback
+        return await get_user(ctx, argument, fallback) if try_user else fallback
 
 
 async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
@@ -543,9 +553,7 @@ async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
         except commands.errors.BadArgument:
             return fallback
     else:
-        result = discord.utils.find(
-            lambda m: argument in (m.name, m.id), guildfilter.text_channels
-        )
+        result = discord.utils.find(lambda m: argument in (m.name, m.id), guildfilter.text_channels)
         return result or fallback
 
 
@@ -575,7 +583,7 @@ async def get_color(ctx, argument: str, fallback=None):
         return await commands.ColourConverter().convert(ctx, argument)
     except commands.errors.BadArgument:
         try:
-            return await commands.ColourConverter().convert(ctx, "#" + argument)
+            return await commands.ColourConverter().convert(ctx, f"#{argument}")
         except commands.errors.BadArgument:
             return fallback
 
@@ -665,8 +673,7 @@ async def color_from_image_url(
     except Exception as e:
         if ignore_errors:
             return fallback
-        else:
-            raise e
+        raise e
 
     return rgb_to_hex(dominant_color)
 
@@ -704,12 +711,8 @@ def find_unicode_emojis(text):
 
 def find_custom_emojis(text):
     """Finds and returns all custom discord emojis from a string"""
-    emoji_list = set()
     data = regex.findall(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>", text)
-    for _a, emoji_name, emoji_id in data:
-        emoji_list.add((emoji_name, emoji_id))
-
-    return emoji_list
+    return {(emoji_name, emoji_id) for _a, emoji_name, emoji_id in data}
 
 
 async def image_info_from_url(session: aiohttp.ClientSession, url) -> Optional[dict]:
@@ -806,11 +809,8 @@ class UserActivity:
                     prefix = "Listening"
                 elif activity.type == discord.ActivityType.watching:
                     prefix = "Watching"
-                elif activity.type == discord.ActivityType.streaming:
-                    prefix = "Streaming"
-
                 if prefix:
-                    self.base = prefix + " "
+                    self.base = f"{prefix} "
                 self.base += f"**{activity.name}**"
 
             elif isinstance(activity, discord.Spotify):
@@ -840,29 +840,38 @@ async def send_tasks_result_list(ctx, successful_operations, failed_operations, 
     content = discord.Embed(
         color=(int("77b255", 16) if successful_operations else int("dd2e44", 16))
     )
-    rows = []
-    for op in successful_operations:
-        rows.append(f":white_check_mark: {op}")
-    for op in failed_operations:
-        rows.append(f":x: {op}")
-
+    rows = [f":white_check_mark: {op}" for op in successful_operations]
+    rows.extend(f":x: {op}" for op in failed_operations)
     content.description = "\n".join(rows)
     if title:
         content.title = title
-    await ctx.send(embed=content)
+    await send_as_pages(ctx, content, rows, maxrows=20)
+
+
+async def patron_check(ctx):
+    if ctx.author.id == ctx.bot.owner_id:
+        return True
+    if await queries.is_donator(ctx, ctx.author):
+        return True
+    if await queries.is_vip(ctx.bot, ctx.author):
+        return True
+    raise PatronCheckFailure
 
 
 def patrons_only():
     async def predicate(ctx):
-        if ctx.author.id == ctx.bot.owner_id:
-            return True
-        if await queries.is_donator(ctx, ctx.author):
-            return True
-        if await queries.is_vip(ctx.bot, ctx.author):
-            return True
-        raise PatronCheckFailure
+        return await patron_check(ctx)
 
     return commands.check(predicate)
+
+
+async def send_donation_beg(channel: "discord.abc.MessageableChannel"):
+    donate_link = "https://misobot.xyz/donate"
+    content = discord.Embed(
+        color=int("be1931", 16),
+        description=f":loudspeaker: Miso Bot is running solely on donations; Consider [donating]({donate_link}) if you like the bot!",
+    )
+    await channel.send(embed=content, delete_after=15)
 
 
 def format_html(template, replacements):
@@ -878,10 +887,9 @@ async def render_html(bot, payload, endpoint="html"):
             f"http://{IMAGE_SERVER_HOST}:3000/{endpoint}", data=payload
         ) as response:
             if response.status == 200:
-                buffer = io.BytesIO(await response.read())
-                return buffer
+                return io.BytesIO(await response.read())
             raise exceptions.RendererError(f"{response.status} : {await response.text()}")
-    except aiohttp.ClientConnectorError:
+    except aiohttp.ClientConnectionError:
         raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
 
 
@@ -897,6 +905,18 @@ async def require_chunked(guild: discord.Guild):
         logger.info(
             f"Chunked [{guild}] with {guild.member_count} members in {time() - start_time:.2f} seconds"
         )
+
+
+user_agent_rotator = UserAgent(hardware_types=[HardwareType.COMPUTER.value], limit=100)
+
+
+def random_user_agent():
+    """Random User Agent String"""
+    return user_agent_rotator.get_random_user_agent()
+
+
+def asset_full_size(asset: discord.Asset) -> str:
+    return asset.replace(size=4096).url
 
 
 class TwoWayIterator:
@@ -940,11 +960,11 @@ def log_command_format(ctx, extra: str = ""):
     return f"{guild} @ {user} : {ctx.message.content} ({took:.2f}s) {extra}"
 
 
-async def shorten_url(bot: "MisoBot", long_url: str, tags: list[str] = list()):
+async def shorten_url(bot: "MisoBot", long_url: str, tags: list[str] | None = None):
     data = {
         "longUrl": long_url,
         "validateUrl": True,
-        "tags": tags,
+        "tags": tags or [],
         "title": "string",
         "crawlable": True,
         "findIfExists": True,

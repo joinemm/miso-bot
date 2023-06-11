@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+-- SPDX-License-Identifier: MPL-2.0
+-- https://git.joinemm.dev/miso-bot
 -- blacklists
 CREATE TABLE IF NOT EXISTS blacklisted_guild (
     guild_id BIGINT,
@@ -247,12 +250,36 @@ CREATE TABLE IF NOT EXISTS guild_settings (
     PRIMARY KEY (guild_id)
 );
 
+CREATE TABLE IF NOT EXISTS media_auto_embed_settings (
+    guild_id BIGINT,
+    instagram BOOLEAN DEFAULT FALSE,
+    twitter BOOLEAN DEFAULT FALSE,
+    tiktok BOOLEAN DEFAULT FALSE,
+    reddit BOOLEAN DEFAULT FALSE,
+    PRIMARY KEY (guild_id)
+);
+
+CREATE TABLE IF NOT EXISTS user_uploaded_gif (
+    user_id BIGINT,
+    guild_id BIGINT,
+    gif_id VARCHAR(32),
+    source_url VARCHAR(2083),
+    ts DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (gif_id)
+);
+
+CREATE TABLE IF NOT EXISTS popup_seen (
+    user_id BIGINT,
+    giphy_content_warning BOOLEAN DEFAULT FALSE,
+    PRIMARY KEY (user_id)
+);
+
 CREATE TABLE IF NOT EXISTS starboard_settings (
     guild_id BIGINT,
     channel_id BIGINT DEFAULT NULL,
     is_enabled BOOLEAN DEFAULT TRUE,
     reaction_count INT DEFAULT 3,
-    emoji_name VARCHAR(64) DEFAULT ':star:' NOT NULL,
+    emoji_name VARCHAR(64) DEFAULT ':star:',
     emoji_id BIGINT DEFAULT NULL,
     emoji_type ENUM('unicode', 'custom') DEFAULT 'unicode' NOT NULL,
     log_channel_id BIGINT DEFAULT NULL,
@@ -349,19 +376,6 @@ CREATE TABLE IF NOT EXISTS marriage (
     second_user_id BIGINT UNIQUE,
     marriage_date DATETIME,
     PRIMARY KEY (first_user_id, second_user_id)
-);
-
-CREATE TABLE IF NOT EXISTS stats (
-    ts DATETIME,
-    messages INT NOT NULL DEFAULT 0,
-    reactions INT NOT NULL DEFAULT 0,
-    commands_used INT NOT NULL DEFAULT 0,
-    guild_count INT NOT NULL DEFAULT 0,
-    member_count INT NOT NULL DEFAULT 0,
-    notifications_sent INT NOT NULL DEFAULT 0,
-    lastfm_api_requests INT NOT NULL DEFAULT 0,
-    html_rendered INT NOT NULL DEFAULT 0,
-    PRIMARY KEY (ts)
 );
 
 CREATE TABLE IF NOT EXISTS stannable_artist (

@@ -1,13 +1,15 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import copy
 import math
 import os
 import time
-from datetime import datetime
 from typing import Optional
 
 import arrow
 import discord
-import humanize
 import orjson
 import psutil
 from discord.ext import commands
@@ -49,14 +51,23 @@ class Information(commands.Cog):
             colour=discord.Colour.orange(),
         )
         content.add_field(
-            name="Github Sponsor (0 fees!)",
+            name="Github Sponsors",
             value="https://github.com/sponsors/joinemm",
             inline=False,
         )
-        content.add_field(name="Ko-fi (0 fees!)", value="https://ko-fi.com/joinemm", inline=False)
         content.add_field(
-            name="Patreon (15% fees :thumbsdown:)",
+            name="Ko-Fi",
+            value="https://ko-fi.com/joinemm",
+            inline=False,
+        )
+        content.add_field(
+            name="Patreon (high fees so not recommended)",
             value="https://www.patreon.com/joinemm",
+            inline=False,
+        )
+        content.add_field(
+            name="Litecoin wallet address",
+            value="`ltc1qsxmy8q8ptdlhdcamypa2uspj8zf8m0ukua9vn5`",
             inline=False,
         )
         content.set_footer(text="Donations will be used to pay for server and upkeep costs")
@@ -64,17 +75,32 @@ class Information(commands.Cog):
 
     @commands.command(aliases=["patrons", "supporters", "sponsors"])
     async def donators(self, ctx: commands.Context):
-        """See who is donating!"""
-        patrons = await self.bot.db.fetch(
+        """See who has donated!"""
+        patrons = await self.bot.db.fetch_flattened(
             """
-            SELECT user_id, currently_active, amount, donating_since
-            FROM donator
+            SELECT user_id FROM donator
             """
         )
-        if not patrons:
+
+        donators = []
+        if patrons:
+            for user_id in patrons:
+                user = self.bot.get_user(user_id)
+                if user is None:
+                    user = await self.bot.fetch_user(user_id)
+                    if user is None or user.name.startswith("Deleted User "):
+                        continue
+
+                donators.append(f"**{user}**")
+
+        n = 20
+        chunks = [donators[i * n : (i + 1) * n] for i in range((len(donators) + n - 1) // n)]
+
+        if not donators:
             raise exceptions.CommandInfo(
                 "There are no donators :thinking: Maybe you should be the first one"
             )
+
         description = " | ".join(
             [
                 "[github](https://github.com/sponsors/joinemm)",
@@ -83,26 +109,13 @@ class Information(commands.Cog):
             ]
         )
 
-        current = []
-        for user_id, is_active, amount, donating_since in sorted(
-            patrons, key=lambda x: x[2], reverse=True
-        ):
-            user = self.bot.get_user(user_id)
-            if user is None:
-                continue
-
-            if is_active:
-                how_long = humanize.naturaldelta(datetime.now() - donating_since)
-                current.append(f"**${int(amount)}** by **{user}** (*for {how_long}*)")
-
-        if current:
-            description += "\n\n" + ("\n".join(current))
-
         content = discord.Embed(
-            title=":heart: Miso Bot supporters",
+            title=":heart: Miso Bot donators",
             color=int("dd2e44", 16),
             description=description,
         )
+        for chunk in chunks:
+            content.add_field(name="───── ⋆⋅☆⋅⋆ ─────", value="\n".join(chunk))
 
         await ctx.send(embed=content)
 
@@ -274,12 +287,7 @@ class Information(commands.Cog):
                 manager = "UNKNOWN"
             content.add_field(name="Managed by", value=manager)
 
-        perms = []
-        for perm, allow in iter(role.permissions):
-            if allow:
-                perms.append(f"`{perm.upper()}`")
-
-        if perms:
+        if perms := [f"`{perm.upper()}`" for perm, allow in iter(role.permissions) if allow]:
             content.add_field(name="Allowed permissions", value=" ".join(perms), inline=False)
 
         await ctx.send(embed=content)
@@ -288,11 +296,10 @@ class Information(commands.Cog):
     async def commandstats(self, ctx: commands.Context):
         """See command usage statistics"""
         if ctx.invoked_subcommand is None:
-            args = ctx.message.content.split()[1:]
-            if not args:
-                await util.send_command_help(ctx)
-            else:
+            if args := ctx.message.content.split()[1:]:
                 await self.commandstats_single(ctx, " ".join(args))
+            else:
+                await util.send_command_help(ctx)
 
     @commandstats.command(name="server")
     async def commandstats_server(
@@ -306,10 +313,7 @@ class Information(commands.Cog):
             title=f":bar_chart: Most used commands in {ctx.guild.name}"
             + ("" if user is None else f" by {user}")
         )
-        opt = []
-        if user is not None:
-            opt = [user.id]
-
+        opt = [user.id] if user is not None else []
         data = await self.bot.db.fetch(
             f"""
             SELECT command_name, SUM(use_sum) as total FROM (
@@ -353,10 +357,7 @@ class Information(commands.Cog):
         content = discord.Embed(
             title=":bar_chart: Most used commands" + ("" if user is None else f" by {user}")
         )
-        opt = []
-        if user is not None:
-            opt = [user.id]
-
+        opt = [user.id] if user is not None else []
         data = await self.bot.db.fetch(
             f"""
             SELECT command_name, SUM(use_sum) as total FROM (
@@ -475,7 +476,7 @@ class Information(commands.Cog):
         # additional data for command groups
         if group:
             content.description = "Command Group"
-            subcommands_tuple = tuple([f"{command.name} {x.name}" for x in command.commands])  # type: ignore
+            subcommands_tuple = tuple(f"{command.name} {x.name}" for x in command.commands)  # type: ignore
             subcommand_usage = await self.bot.db.fetch(
                 """
                 SELECT command_name, SUM(uses) FROM command_usage
@@ -497,10 +498,7 @@ class Information(commands.Cog):
     @commands.command(aliases=["serverdp", "sdp", "guildicon"])
     async def servericon(self, ctx: commands.Context, guild_id: Optional[int] = None):
         """Get the icon of the server"""
-        guild = ctx.guild
-        if guild_id:
-            guild = self.bot.get_guild(guild_id)
-
+        guild = self.bot.get_guild(guild_id) if guild_id else ctx.guild
         if guild is None:
             raise exceptions.CommandError("Can't get guild")
 

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import traceback
 from dataclasses import dataclass
 from time import time
@@ -13,6 +17,7 @@ from loguru import logger
 
 from modules import cache, maria, util
 from modules.help import EmbedHelpCommand
+from modules.instagram import Datalama
 from modules.keychain import Keychain
 from modules.redis import Redis
 
@@ -88,7 +93,9 @@ class MisoBot(commands.AutoShardedBot):
         self.keychain = Keychain()
         self.version = "5.1"
         self.extensions_loaded = False
-        self.redis = Redis()
+        self.redis: Redis = Redis()
+        self.datalama = Datalama(self)
+        self.boot_up_time: float
         self.session: aiohttp.ClientSession
         self.register_hooks()
 
@@ -172,10 +179,8 @@ class MisoBot(commands.AutoShardedBot):
             return True
 
         bucket = ctx.bot.global_cd.get_bucket(ctx.message)
-        if bucket:
-            retry_after = bucket.update_rate_limit()
-            if retry_after:
-                raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.member)
+        if retry_after := bucket.update_rate_limit():
+            raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.member)
         return True
 
     @property

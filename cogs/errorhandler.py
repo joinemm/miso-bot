@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import asyncio
 from dataclasses import dataclass
 
@@ -6,7 +10,9 @@ from discord.ext import commands
 from loguru import logger
 
 from modules import emojis, exceptions, queries, util
+from modules.instagram import InstagramError
 from modules.misobot import MisoBot
+from modules.tiktok import TiktokError
 
 
 @dataclass
@@ -28,9 +34,8 @@ class ErrorHander(commands.Cog):
     def __init__(self, bot):
         self.bot: MisoBot = bot
 
-    def log_format(
-        self, ctx: commands.Context, error: Exception | None, message: str | None = None
-    ):
+    @staticmethod
+    def log_format(ctx: commands.Context, error: Exception | None, message: str | None = None):
         return f"{ctx.guild} @ {ctx.author} : {ctx.message.content} => {type(error).__name__}: {message or str(error)}"
 
     async def reinvoke_command(self, ctx: commands.Context):
@@ -43,8 +48,8 @@ class ErrorHander(commands.Cog):
         except commands.CommandError as e:
             return await self.on_command_error(ctx, e)
 
+    @staticmethod
     async def send_embed(
-        self,
         ctx: commands.Context,
         message: str,
         emoji: str = "",
@@ -75,23 +80,29 @@ class ErrorHander(commands.Cog):
         await self.send_embed(ctx, message, ":warning:", "ffcc4d", **kwargs)
 
     async def send_error(
-        self, ctx: commands.Context, message: str, error: Exception | None = None, **kwargs
+        self,
+        ctx: commands.Context,
+        message: str,
+        error: Exception | None = None,
+        language="",
+        **kwargs,
     ):
         logger.error(self.log_format(ctx, error, message))
-        await self.send_embed(ctx, f"```ex\n{message}```", color="be1931", **kwargs)
+        await self.send_embed(ctx, f"```{language}\n{message}```", color="be1931", **kwargs)
 
     async def send_lastfm_error(self, ctx: commands.Context, error: exceptions.LastFMError):
         match error.error_code:
             case 8:
                 message = "There was a problem connecting to LastFM servers. LastFM might be down. Try again later."
             case 17:
-                message = "Unable to get listening information. Please check you LastFM privacy settings."
+                message = (
+                    "Unable to get listening information. Please check you LastFM privacy settings."
+                )
             case 29:
                 message = "LastFM rate limit exceeded. Please try again later."
             case _:
                 message = error.display()
 
-        logger.error(self.log_format(ctx, error, message))
         await self.send_embed(ctx, message, emojis.LASTFM, "b90000")
 
     async def handle_blacklist(self, ctx: commands.Context, error: exceptions.Blacklist):
@@ -151,7 +162,6 @@ class ErrorHander(commands.Cog):
 
         # handle error based on it's type
         match error:
-
             case commands.CommandNotFound():
                 return
 
@@ -173,13 +183,16 @@ class ErrorHander(commands.Cog):
             case commands.MissingPermissions():
                 permissions = ", ".join(f"`{x}`" for x in error.missing_permissions)
                 await self.send_warning(
-                    ctx, ErrorMessages.missing_permissions.format(permissions), error
+                    ctx,
+                    ErrorMessages.missing_permissions.format(permissions),
+                    error,
                 )
 
             case commands.BotMissingPermissions():
                 permissions = ", ".join(f"`{x}`" for x in error.missing_permissions)
                 await self.send_warning(
-                    ctx, ErrorMessages.bot_missing_permissions.format(permissions, error)
+                    ctx,
+                    ErrorMessages.bot_missing_permissions.format(permissions, error),
                 )
 
             case commands.NoPrivateMessage():
@@ -194,7 +207,7 @@ class ErrorHander(commands.Cog):
             case exceptions.ServerTooBig():
                 await self.send_warning(ctx, ErrorMessages.server_too_big, error)
 
-            case (commands.NotOwner(), commands.CheckFailure()):
+            case commands.NotOwner() | commands.CheckFailure():
                 await self.send_warning(ctx, ErrorMessages.not_allowed, error)
 
             case discord.Forbidden():
@@ -213,7 +226,7 @@ class ErrorHander(commands.Cog):
                 await self.send_lastfm_error(ctx, error)
 
             case exceptions.RendererError():
-                await self.send_error(ctx, "HTML Rendering error: " + str(error), error)
+                await self.send_error(ctx, f"Rendering Error: {str(error)}", error)
 
             case exceptions.Blacklist():
                 await self.handle_blacklist(ctx, error)
@@ -221,8 +234,21 @@ class ErrorHander(commands.Cog):
             case commands.CommandOnCooldown():
                 await self.handle_cooldown(ctx, error)
 
+            case TiktokError():
+                await self.send_warning(ctx, f"TikTok Error: {error.message}")
+
+            case commands.BadLiteralArgument():
+                options = ", ".join(f"`{x}`" for x in error.literals)
+                await self.send_warning(
+                    ctx,
+                    f"Bad Argument: parameter `{error.param.name}` must be one of {options}",
+                )
+
+            case InstagramError():
+                await self.send_warning(ctx, error.message)
+
             case _:
-                await self.send_error(ctx, f"{type(error).__name__}: {error}", error)
+                await self.send_error(ctx, f"{type(error).__name__}: {error}", error, language="ex")
                 logger.opt(exception=error).error("Unhandled exception traceback:")
 
 

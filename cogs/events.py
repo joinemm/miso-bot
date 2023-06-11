@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import random
 from itertools import cycle
 
@@ -6,8 +10,8 @@ import discord
 from discord.ext import commands, tasks
 from loguru import logger
 
-from libraries import emoji_literals
-from modules import queries, util
+from modules import emoji_literals, queries, util
+from modules.media_embedders import InstagramEmbedder, TikTokEmbedder
 from modules.misobot import MisoBot
 
 
@@ -59,6 +63,10 @@ class Events(commands.Cog):
             logger.info(util.log_command_format(ctx))
             if ctx.guild is not None:
                 await queries.save_command_usage(ctx)
+
+            if random.randint(1, 69) == 1 and not await queries.is_donator(ctx, ctx.author):
+                logger.info("Sending donation beg message")
+                await util.send_donation_beg(ctx.channel)
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
@@ -121,8 +129,7 @@ class Events(commands.Cog):
         """Called when a new member joins a guild"""
         await self.bot.wait_until_ready()
         logging_channel_id = None
-        logging_settings = self.bot.cache.logging_settings.get(str(member.guild.id))
-        if logging_settings:
+        if logging_settings := self.bot.cache.logging_settings.get(str(member.guild.id)):
             logging_channel_id = logging_settings.get("member_log_channel_id")
 
         if logging_channel_id:
@@ -168,8 +175,7 @@ class Events(commands.Cog):
         """Called when user gets banned from a server"""
         await self.bot.wait_until_ready()
         logging_channel_id = None
-        logging_settings = self.bot.cache.logging_settings.get(str(guild.id))
-        if logging_settings:
+        if logging_settings := self.bot.cache.logging_settings.get(str(guild.id)):
             logging_channel_id = logging_settings.get("ban_log_channel_id")
 
         if logging_channel_id:
@@ -191,8 +197,7 @@ class Events(commands.Cog):
         """Called when member leaves a guild"""
         await self.bot.wait_until_ready()
         logging_channel_id = None
-        logging_settings = self.bot.cache.logging_settings.get(str(member.guild.id))
-        if logging_settings:
+        if logging_settings := self.bot.cache.logging_settings.get(str(member.guild.id)):
             logging_channel_id = logging_settings.get("member_log_channel_id")
 
         if logging_channel_id:
@@ -251,8 +256,7 @@ class Events(commands.Cog):
             return
 
         channel_id = None
-        logging_settings = self.bot.cache.logging_settings.get(str(message.guild.id))
-        if logging_settings:
+        if logging_settings := self.bot.cache.logging_settings.get(str(message.guild.id)):
             channel_id = logging_settings.get("message_log_channel_id")
         if channel_id:
             log_channel = message.guild.get_channel(channel_id)
@@ -269,7 +273,7 @@ class Events(commands.Cog):
                         pass
 
     @commands.Cog.listener()
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         """Listener that gets called on every message"""
         await self.bot.wait_until_ready()
 
@@ -281,12 +285,39 @@ class Events(commands.Cog):
         if message.author.bot:
             return
 
-        autoresponses = self.bot.cache.autoresponse.get(str(message.guild.id), True)
-        if autoresponses:
+        ctx = await self.bot.get_context(message)
+        if ctx.valid:
+            # a command will be run
+            return
+
+        media_settings = self.bot.cache.media_auto_embed.get(str(message.guild.id), {})
+        if True in media_settings.values():
+            await self.parse_media_auto_embed(message, media_settings)
+
+        if self.bot.cache.autoresponse.get(str(message.guild.id), True):
             await self.easter_eggs(message)
 
+    async def parse_media_auto_embed(self, message: discord.Message, media_settings: dict):
+        if media_settings["instagram"]:
+            embedder = InstagramEmbedder(self.bot)
+            posts = embedder.extract_links(message.content, include_shortcodes=False)
+            for post in posts:
+                async with message.channel.typing():
+                    await embedder.send_reply(message, post)
+            if posts:
+                await util.suppress(message)
+
+        if media_settings["tiktok"]:
+            embedder = TikTokEmbedder(self.bot)
+            links = embedder.extract_links(message.content)
+            for link in links:
+                async with message.channel.typing():
+                    await embedder.send_reply(message, link)
+                if links:
+                    await util.suppress(message)
+
     @staticmethod
-    async def easter_eggs(message):
+    async def easter_eggs(message: discord.Message):
         """Easter eggs handler"""
         # stfu
         if random.randint(1, 5) == 1 and "stfu" in message.content.lower():
@@ -406,11 +437,10 @@ class Events(commands.Cog):
                         reaction_count = react.count
                         reacted_users = [user async for user in react.users()]
                         break
-                else:
-                    if react.emoji == payload.emoji.name:
-                        reaction_count = react.count
-                        reacted_users = [user async for user in react.users()]
-                        break
+                elif react.emoji == payload.emoji.name:
+                    reaction_count = react.count
+                    reacted_users = [user async for user in react.users()]
+                    break
 
             reacted_users = set(reacted_users)
             reacted_users.add(user)

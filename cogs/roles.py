@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import asyncio
 
 import discord
@@ -196,9 +200,7 @@ class Roles(commands.Cog):
             existing_role_id: int | None = dict(existing_roles).get(str(color))
             color_role = ctx.guild.get_role(existing_role_id) if existing_role_id else None
 
-            # remove old color roles if any
-            old_roles = list(filter(lambda r: r.id in existing_roles_ids, ctx.author.roles))
-            if old_roles:
+            if old_roles := list(filter(lambda r: r.id in existing_roles_ids, ctx.author.roles)):
                 await ctx.author.remove_roles(*old_roles, atomic=True, reason="Changed color")
 
             # remove manually deleted roles
@@ -212,7 +214,6 @@ class Roles(commands.Cog):
                     )
 
         if color_role is None:
-
             # create a new role
             color_role = await ctx.guild.create_role(
                 name=str(color),
@@ -235,8 +236,6 @@ class Roles(commands.Cog):
                 str(color),
             )
 
-            # reorder the roles list
-            payload = []
             before_colors = []
             acquired = []
             colors = []
@@ -251,9 +250,7 @@ class Roles(commands.Cog):
                     acquired = []
 
             final = before_colors + colors + acquired
-            for i, role in enumerate(final):
-                payload.append({"id": role.id, "position": i})
-
+            payload = [{"id": role.id, "position": i} for i, role in enumerate(final)]
             await self.bot.http.move_role_position(ctx.guild.id, payload, reason="movin")  # type: ignore
 
         # color the user
@@ -364,11 +361,7 @@ class Roles(commands.Cog):
             title=f":scroll: Available roles in {ctx.guild.name}",
             color=int("ffd983", 16),
         )
-        rows = []
-        for role_name, role_id in sorted(data):
-            rows.append(f"`{role_name}` : <@&{role_id}>")
-
-        if rows:
+        if rows := [f"`{role_name}` : <@&{role_id}>" for role_name, role_id in sorted(data)]:
             await util.send_as_pages(ctx, content, rows)
         else:
             content.description = "Nothing yet!"
@@ -381,11 +374,11 @@ class Roles(commands.Cog):
         await util.send_success(ctx, f"Rolepicker is now **{'enabled' if value else 'disabled'}**")
 
     @commands.Cog.listener()
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         """Rolechannel message handler"""
         await self.bot.wait_until_ready()
 
-        if message.guild is None:
+        if message.guild is None or not isinstance(message.author, discord.Member):
             return
 
         if message.channel.id not in self.bot.cache.rolepickers:
@@ -424,21 +417,15 @@ class Roles(commands.Cog):
                 message.guild.id,
                 rolename.lower(),
             )
-            role = message.guild.get_role(role_id)
+            role = message.guild.get_role(role_id) if role_id else None
             if role is None:
-                await errorhandler.send(
-                    message.channel, "warning", f'Role `"{rolename}"` not found!'
-                )
+                await message.reply(f':warning: Role `"{rolename}"` not found!')
 
             elif command == "+":
                 try:
                     await message.author.add_roles(role)
                 except discord.errors.Forbidden:
-                    await errorhandler.send(
-                        message.channel,
-                        "error",
-                        "I don't have permission to give you this role!",
-                    )
+                    await message.reply(":warning: I don't have permission to give you this role!")
                 else:
                     await message.channel.send(
                         embed=discord.Embed(
@@ -450,10 +437,8 @@ class Roles(commands.Cog):
                 try:
                     await message.author.remove_roles(role)
                 except discord.errors.Forbidden:
-                    await errorhandler.send(
-                        message.channel,
-                        "error",
-                        "I don't have permission to remove this role from you!",
+                    await message.reply(
+                        ":warning: I don't have permission to remove this role from you!"
                     )
                 else:
                     await message.channel.send(
@@ -463,10 +448,8 @@ class Roles(commands.Cog):
                         ),
                     )
         else:
-            await errorhandler.send(
-                message.channel,
-                "warning",
-                f"Unknown action `{command}`. Use `+name` to add roles and `-name` to remove them.",
+            await message.reply(
+                f":warning: Unknown action `{command}`. Use `+name` to add roles and `-name` to remove them."
             )
 
         await asyncio.sleep(5)

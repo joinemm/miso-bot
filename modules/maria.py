@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import asyncio
 import os
 from dataclasses import dataclass
@@ -79,7 +83,10 @@ class MariaDB:
                 async with conn.cursor() as cur:
                     changed: int = await cur.execute(sql, params)
                     return changed, await cur.fetchall()
-        raise exceptions.CommandError("Could not connect to the local MariaDB instance!")
+        else:
+            raise exceptions.CommandError(
+                "Internal error: Unable to acquire database connection pool"
+            )
 
     async def execute(self, statement: str, *params) -> int:
         """Executes sql and returns the number of rows affected"""
@@ -89,30 +96,22 @@ class MariaDB:
     async def fetch(self, statement: str, *params):
         """Fetch data"""
         _, data = await self.run_sql(statement, params)
-        if data:
-            return data
-        return None
+        return data or None
 
     async def fetch_value(self, statement: str, *params):
         """Fetches the first value of the first row of the query"""
         _, data = await self.run_sql(statement, params)
-        if data:
-            return data[0][0]
-        return None
+        return data[0][0] if data else None
 
     async def fetch_row(self, statement: str, *params) -> list:
         """Fetches the first row of the query"""
         _, data = await self.run_sql(statement, params)
-        if data:
-            return data[0]
-        return []
+        return data[0] if data else []
 
     async def fetch_flattened(self, statement: str, *params) -> list:
         """Fetches the first element of every row as a flattened list"""
         _, data = await self.run_sql(statement, params)
-        if data:
-            return [row[0] for row in data]
-        return []
+        return [row[0] for row in data] if data else []
 
     async def executemany(self, statement: str, params: list[tuple]):
         """Execute the same sql with different arguments"""
@@ -122,4 +121,7 @@ class MariaDB:
                 cur: Cursor
                 async with conn.cursor() as cur:
                     await cur.executemany(statement, params)
-        raise exceptions.CommandError("Could not connect to the local MariaDB instance!")
+        else:
+            raise exceptions.CommandError(
+                "Internal Error: Unable to acquire database connection pool"
+            )
