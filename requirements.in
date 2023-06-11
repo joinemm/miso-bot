@@ -18,7 +18,6 @@ psutil
 python-dotenv
 regex
 scipy
-tweepy[async]
 uvloop
 prometheus-async
 markdownify

@@ -58,6 +58,11 @@ class Media(commands.Cog):
         provider: Literal["instagram", "tiktok"],
         state: Optional[bool] = None,
     ):
+        """Set up automatic embeds for various media sources
+
+        The links will be expanded automatically when detected in chat,
+        without requiring the use use the corresponding command
+        """
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 

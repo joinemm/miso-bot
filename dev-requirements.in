@@ -4,3 +4,4 @@ black
 pylint
 isort
 ruff
+pyright
