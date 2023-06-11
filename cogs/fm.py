@@ -3,6 +3,7 @@ import io
 import math
 import os
 import re
+import urllib.parse
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Annotated, Callable, Literal, Optional, Union
@@ -154,7 +155,7 @@ class TrackArgument(StrOrNp):
 
 class AlbumArgument(StrOrNp):
     def extract(self, data: dict):
-        return data["album"]["name"], data["artist"]["#text"]
+        return data["album"]["#text"], data["artist"]["#text"]
 
     def parse(self, argument: str):
         splits = argument.split("|")
@@ -162,7 +163,8 @@ class AlbumArgument(StrOrNp):
             splits = argument.split(" by ")
         if len(splits) < 2:
             raise commands.BadArgument(
-                "Invalid format! Please use `<album> | <artist>`. Example: `master of puppets | one`"
+                "Invalid format! Please use `<album> | <artist>`. "
+                "Example: `Master of Puppets | Metallica`"
             )
 
         return [s.strip() for s in splits]
@@ -307,7 +309,8 @@ class LastFm(commands.Cog):
         content = await self.get_userinfo_embed(username)
         if content is None:
             raise exceptions.CommandWarning(
-                f"Last.fm profile `{username}` was not found. Make sure you didn't leave the brackets in."
+                f"Last.fm profile `{username}` was not found. "
+                "Make sure you gave the username **without brackets**"
             )
 
         await self.bot.db.execute(
@@ -362,7 +365,8 @@ class LastFm(commands.Cog):
         total = int(pre_data["@attr"]["total"])
         if n > total:
             raise exceptions.CommandWarning(
-                f"You have only listened to **{total}** tracks! Unable to show {util.ordinal(n)} track"
+                f"You have only listened to **{total}** tracks! "
+                "Unable to show {util.ordinal(n)} track"
             )
 
         remainder = total % PER_PAGE
@@ -381,8 +385,10 @@ class LastFm(commands.Cog):
 
         tracks = list(reversed(final_data["recenttracks"]["track"]))
         nth_track = tracks[(n % 100) - 1]
+        track_name = nth_track["name"]
+        artist_name = nth_track["artist"]["#text"]
         await ctx.send(
-            f"Your {util.ordinal(n)} scrobble was ***{nth_track['name']}*** by **{nth_track['artist']['#text']}**"
+            f"Your {util.ordinal(n)} scrobble was ***{track_name}*** by **{artist_name}**"
         )
 
     @fm.command(aliases=["np", "no"])
@@ -396,12 +402,19 @@ class LastFm(commands.Cog):
         if image.is_missing() and track["album"].get("image") is not None:
             image = LastFmImage.from_url(track["album"]["image"][-1]["#text"])
 
+        metadata = await self.api.scrape_album_metadata(artist_name, album_name)
+
         content = discord.Embed(
             color=await self.image_color(image),
             description=f":cd: **{escape_markdown(album_name)}**",
             title=f"**{escape_markdown(artist_name)} — *{escape_markdown(track_name)}* **",
         )
         content.set_thumbnail(url=image.as_full())
+
+        if metadata:
+            content.description = (
+                f'{content.description} [{metadata["release_date"].format("YYYY")}]'
+            )
 
         # tags and playcount
         track_info = await self.api.track_get_info(
@@ -415,9 +428,9 @@ class LastFm(commands.Cog):
 
         # play state
         if track["nowplaying"]:
-            state = "> Now Playing"
+            state = "| Now Playing"
         else:
-            state = "- Last track"
+            state = "| Last track"
             content.timestamp = arrow.get(int(track["date"]["uts"])).datetime
 
         content.set_author(
@@ -611,7 +624,7 @@ class LastFm(commands.Cog):
         try:
             albumsdiv, tracksdiv = soup.select(".chartlist", limit=2)
         except ValueError:
-            raise_no_artist_plays(artist, timeframe)
+            return raise_no_artist_plays(artist, timeframe)
 
         albums = self.api.get_library_playcounts(albumsdiv)
         tracks = self.api.get_library_playcounts(tracksdiv)
@@ -627,8 +640,9 @@ class LastFm(commands.Cog):
             content.set_thumbnail(url=image.as_full())
             content.colour = await self.image_color(image)
 
+        username = util.displayname(ctx.lastfmcontext.target_user, escape=False)
         content.set_author(
-            name=f"{util.displayname(ctx.lastfmcontext.target_user, escape=False)} — {formatted_name} — "
+            name=f"{username} — {formatted_name} — "
             + (
                 f"{timeframe.display().capitalize()} overview"
                 if timeframe != timeframe.OVERALL
@@ -685,10 +699,10 @@ class LastFm(commands.Cog):
                 name=f"Last {str(period).lower()}", value=filter_artist(ta_data) or "None"
             )
 
-        album_ranking = [f"**{name}** • {plays}" for (plays, name) in albums[:5]]
-        track_ranking = [f"**{name}** • {plays}" for (plays, name) in tracks[:5]]
+        album_ranking = [f"{name} [**{plays}**]" for (plays, name) in albums[:5]]
+        track_ranking = [f"{name} [**{plays}**]" for (plays, name) in tracks[:5]]
         longest_line = len(max(album_ranking, key=len)) + len(max(track_ranking, key=len))
-        render_inline = longest_line < 80
+        render_inline = longest_line < 79
 
         content.add_field(
             name=f":cd: {albums_count} Albums heard",
@@ -703,6 +717,7 @@ class LastFm(commands.Cog):
 
         content.description = (
             artistinfo["bio"]["summary"].split("<a href")[0].strip().replace("\n\n\n", "\n\n")
+            + f" [read more]({artistinfo['url']})"
         )
 
         content.set_footer(text=", ".join([x["name"] for x in artistinfo["tags"]["tag"]]))
@@ -726,10 +741,14 @@ class LastFm(commands.Cog):
 
         formatted_name = artistinfo["name"]
         row_items = self.api.get_library_playcounts(soup)
+        if not row_items:
+            return raise_no_artist_plays(artist, timeframe)
+
         row_items += await self.api.get_additional_library_pages(soup, url)
 
         img_tag = soup.select_one(".chartlist-image .cover-art img")
         image = LastFmImage.from_url(img_tag.attrs["src"]) if img_tag else None
+        total = artistinfo["stats"]["userplaycount"]
 
         await self.paginated_user_stat_embed(
             ctx,
@@ -741,7 +760,68 @@ class LastFm(commands.Cog):
                 else f"Top {data_type}"
             ),
             image,
-            footer=f"Total {artistinfo['stats']['userplaycount']} plays across {len(row_items)} {data_type}",
+            footer=f"Total {total} plays across {len(row_items)} {data_type}",
+        )
+
+    @fm.command(name="album")
+    async def album(self, ctx: MisoContext, *, album: Annotated[tuple, AlbumArgument]):
+        """Get information about an album"""
+        album_input, artist_input = album
+        albuminfo = await self.api.album_get_info(
+            artist_input, album_input, autocorrect=True, username=ctx.lastfmcontext.username
+        )
+        album_name = albuminfo["name"]
+        artist_name = albuminfo["artist"]
+
+        tracks = albuminfo["tracks"]["track"]
+        if isinstance(tracks, dict):
+            tracks = [tracks]
+
+        library = {
+            name: playcount
+            for playcount, name in self.api.get_library_playcounts(
+                await self.api.scrape_page(
+                    f"https://www.last.fm/user/{ctx.lastfmcontext.username}/library/music/"
+                    f"{urllib.parse.quote_plus(artist_name)}/{urllib.parse.quote_plus(album_name)}"
+                )
+            )
+        }
+
+        content = discord.Embed()
+
+        metadata = await self.api.scrape_album_metadata(artist_name, album_name)
+        if metadata:
+            content.add_field(
+                name="Release Date", value=f"{metadata['release_date'].format('MMM DDD YYYY')} | "
+            )
+
+        if tags := albuminfo["tags"]["tag"]:
+            content.add_field(name="Tags", value=", ".join(t["name"] for t in tags))
+
+        tracklist = []
+        for track in tracks:
+            playcount = library.get(track["name"])
+            if playcount:
+                row = f"`{track['@attr']['rank']:02}` **{track['name']}** [**{playcount}**]"
+            else:
+                row = f"`{track['@attr']['rank']:02}` {track['name']}"
+
+            if track["duration"]:
+                m, s = divmod(track["duration"], 60)
+                h, m = divmod(m, 60)
+                duration_fmt = (f"{h}:" if h > 1 else "") + f"{m}:{s:02}"
+                row += f" `{duration_fmt}`"
+            tracklist.append(row)
+
+        await self.paginated_user_stat_embed(
+            ctx,
+            tracklist,
+            f"{artist_name} — {album_name}",
+            LastFmImage.from_url(albuminfo["image"][-1]["#text"]),
+            footer=f"Total {albuminfo['userplaycount']} plays",
+            title_url=f"https://www.last.fm/music/{urllib.parse.quote_plus(artist_name)}/{urllib.parse.quote_plus(album_name)}",
+            content=content,
+            per_page=20,
         )
 
     @fm.command(name="cover", aliases=["art"])
@@ -761,7 +841,8 @@ class LastFm(commands.Cog):
 
     @fm.command(
         aliases=["chart"],
-        usage="['album' | 'artist' | 'recent'] [timeframe] [[width]x[height]] ['notitle' | 'topster'] ['padded']",
+        usage="['album' | 'artist' | 'recent'] [timeframe] "
+        "[[width]x[height]] ['notitle' | 'topster'] ['padded']",
     )
     async def collage(
         self,
@@ -776,7 +857,8 @@ class LastFm(commands.Cog):
         Collage of your top albums or artists
 
         Usage:
-            >fm chart ['album' | 'artist' | 'recent'] [timeframe] [[width]x[height]] ['notitle' | 'topster'] ['padded']
+            >fm chart ['album' | 'artist' | 'recent'] [timeframe]
+                      [[width]x[height]] ['notitle' | 'topster'] ['padded']
 
         Examples:
             >fm chart (defaults to 3x3 weekly albums)
@@ -851,7 +933,7 @@ class LastFm(commands.Cog):
                 chart_nodes.append(
                     (
                         LastFmImage.from_url(album["image"][0]["#text"]),
-                        f"<strong>{name}</br>{artist}</strong></br>{plays} {'play' if plays == 1 else 'plays'}",
+                        f"<strong>{name}</br>{artist}</strong></br>{plays} {play_s(plays)}",
                     )
                 )
                 if topster:
@@ -867,8 +949,12 @@ class LastFm(commands.Cog):
             topster_labels=topster_labels,
         )
 
-        caption = f"**{util.displayname(ctx.lastfmcontext.target_user)} — {timeframe.display()} {size} {chart_title} collage**"
-        filename = f"miso_collage_{ctx.lastfmcontext.username}_{timeframe}_{arrow.now().int_timestamp}.jpg"
+        username = util.displayname(ctx.lastfmcontext.target_user)
+        caption = f"**{username} — {timeframe.display()} {size} {chart_title} collage**"
+        filename = (
+            f"miso_collage_{ctx.lastfmcontext.username}_"
+            f"{timeframe}_{arrow.now().int_timestamp}.jpg"
+        )
 
         await ctx.send(caption, file=discord.File(fp=buffer, filename=filename))
 
@@ -880,7 +966,6 @@ class LastFm(commands.Cog):
         use_padding=False,
         topster_labels: list[str] = list(),
     ):
-
         resolution = 1080
         font_size = 2.5
         if size.count > 25:
@@ -895,10 +980,8 @@ class LastFm(commands.Cog):
             font_size = 1.0
 
         albums = []
-        for (image, label) in chart_nodes:
-            albums.append(
-                {"image_url": image.as_full(), "label": label if not hide_labels else ""}
-            )
+        for image, label in chart_nodes:
+            albums.append({"image_url": image.as_full(), "label": label if not hide_labels else ""})
 
         image_width = (
             resolution
@@ -1073,7 +1156,9 @@ class LastFm(commands.Cog):
 
                 if previous_crown_holder and (previous_crown_holder != crown_holder):
                     await ctx.send(
-                        f"> **{util.displayname(crown_holder)}** just stole the **{artist_name}** crown from **{util.displayname(previous_crown_holder)}**"
+                        f"> **{util.displayname(crown_holder)}** just stole the "
+                        f"**{artist_name}** crown from "
+                        f"**{util.displayname(previous_crown_holder)}**"
                     )
 
     @commands.command(aliases=["wkt", "whomstknowstrack"], usage="<track> | <artist> 'np'")
@@ -1123,9 +1208,7 @@ class LastFm(commands.Cog):
         # send pages
         await RowPaginator(content, rows).run(ctx)
 
-    @commands.command(
-        aliases=["wka", "wkalb", "whomstknowsalbum"], usage="<album> | <artist> 'np'"
-    )
+    @commands.command(aliases=["wka", "wkalb", "whomstknowsalbum"], usage="<album> | <artist> 'np'")
     @commands.guild_only()
     @is_small_server()
     @commands.cooldown(2, 60, type=commands.BucketType.user)
@@ -1134,8 +1217,8 @@ class LastFm(commands.Cog):
         Who has listened to a given album the most.
 
         Usage:
-            >whoknowstrack <album name> | <artist name>
-            >whoknowstrack np
+            >whoknowsalbum <album name> | <artist name>
+            >whoknowsalbum np
         """
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
@@ -1144,11 +1227,11 @@ class LastFm(commands.Cog):
 
         albuminfo = await self.api.album_get_info(artist_input, album_input, autocorrect=True)
         album_name = albuminfo["name"]
-        artist_name = albuminfo["artist"]["name"]
+        artist_name = albuminfo["artist"]
 
         # function to determine playcount
         async def user_playcount(lastfm_username: str, user_id: int) -> tuple[int, int]:
-            data = await self.api.track_get_info(
+            data = await self.api.album_get_info(
                 artist_input, album_input, lastfm_username, autocorrect=True
             )
             try:
@@ -1179,21 +1262,27 @@ class LastFm(commands.Cog):
         title: str,
         image: Optional[LastFmImage] = None,
         footer: Optional[str] = None,
+        title_url: Optional[str] = None,
+        content: Optional[discord.Embed] = None,
+        **kwargs,
     ):
-        content = discord.Embed()
+        if content is None:
+            content = discord.Embed()
+
         if image:
             content.color = await self.image_color(image)
             content.set_thumbnail(url=image.as_full())
 
         content.set_author(
-            name=f"{util.displayname(ctx.lastfmcontext.target_user, escape=False)} — {title}",
+            name=f"{util.displayname(ctx.lastfmcontext.target_user, escape=False)} | {title}",
             icon_url=ctx.lastfmcontext.target_user.display_avatar.url,
+            url=title_url,
         )
 
         if footer:
             content.set_footer(text=footer)
 
-        await RowPaginator(content, rows).run(ctx)
+        await RowPaginator(content, rows, **kwargs).run(ctx)
 
     def ranked_list(self, data: list[tuple[int, str]]):
         rows = []
@@ -1252,7 +1341,10 @@ class LastFm(commands.Cog):
 
         hex_color = util.rgb_to_hex(color)
         await self.bot.db.execute(
-            "INSERT IGNORE image_color_cache (image_hash, r, g, b, hex) VALUES (%s, %s, %s, %s, %s)",
+            """
+            INSERT IGNORE image_color_cache (image_hash, r, g, b, hex)
+                VALUES (%s, %s, %s, %s, %s)
+            """,
             image.hash,
             color.r,
             color.g,
@@ -1285,7 +1377,8 @@ async def get_lastfm_username(ctx: MisoContext):
     )
     if lastfm_username is None:
         if targets_author:
-            msg = f"No last.fm username saved! Please use `{ctx.prefix}fm set <username>` (without brackets) to save your username (last.fm account required)"
+            msg = f"No last.fm username saved! Please use `{ctx.prefix}fm set <username>` "
+            "[without brackets] to save your username (last.fm account required)"
         else:
             msg = f"{target_user.mention} has not saved their lastfm username yet!"
 
@@ -1300,7 +1393,11 @@ def remove_mentions(text):
 
 
 def format_playcount(count: int):
-    return f"**{count}** play" if count == 1 else f"**{count}** plays"
+    return f"**{count}** {play_s(count)}"
+
+
+def play_s(count: int):
+    return "play" if count == 1 else "plays"
 
 
 def parse_playcount(text: str):

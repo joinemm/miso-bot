@@ -179,8 +179,9 @@ class MisoBot(commands.AutoShardedBot):
             return True
 
         bucket = ctx.bot.global_cd.get_bucket(ctx.message)
-        if retry_after := bucket.update_rate_limit():
-            raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.member)
+        if bucket:
+            if retry_after := bucket.update_rate_limit():
+                raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.member)
         return True
 
     @property

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import math
 import urllib.parse
 from enum import Enum
@@ -147,7 +148,7 @@ class LastFmApi:
                     message=content.get("message"),
                 )
 
-            logger.info(content)
+            logger.info(json.dumps(content, indent=4))
             return content
 
     ###############
@@ -450,6 +451,31 @@ class LastFmApi:
         image = soup.select_one(".cover-art img")
         return LastFmImage.from_url(image.attrs["src"]) if image else None
 
+    async def scrape_album_metadata(self, artist: str, album: str) -> dict | None:
+        """Get more info about an album."""
+        url = f"https://www.last.fm/music/{urllib.parse.quote_plus(artist)}/{urllib.parse.quote_plus(album)}"
+        soup = await self.scrape_page(url)
+        metadata = soup.select(".catalogue-metadata-description")
+        if metadata:
+            length_str, release_date_str = metadata[:2]
+            release_date = arrow.get(release_date_str.text, "D MMMM YYYY")
+            lengthdata = length_str.text.split(",")
+            length = None
+            tracks = None
+            if len(lengthdata) > 1:
+                tracks, length = lengthdata
+                tracks = int(tracks.split()[0])
+                length = length.strip()
+
+            return {
+                "track_count": tracks,
+                "length": length,
+                "release_date": release_date,
+            }
+
+        logger.warning(f"{artist} | {album} : metadata={metadata}")
+        return None
+
     async def library_artist_images(
         self,
         username: str,
@@ -457,7 +483,9 @@ class LastFmApi:
         period: Period,
     ) -> list[LastFmImage]:
         """Get image hashes for user's top n artists"""
-        url: str = f"https://www.last.fm/user/{username}/library/artists?date_preset={period.web_format()}"
+        url: str = (
+            f"https://www.last.fm/user/{username}/library/artists?date_preset={period.web_format()}"
+        )
         tasks = []
         for i in range(1, math.ceil(amount / 50) + 1):
             params = {"page": str(i)} if i > 1 else None
@@ -472,4 +500,5 @@ class LastFmApi:
             imagedivs = soup.select(".chartlist-image .avatar img")
             images += [LastFmImage.from_url(div.attrs["src"]) for div in imagedivs]
 
+        return images
         return images
