@@ -215,7 +215,7 @@ class Typings(commands.Cog):
         ):
             values.append((ctx.guild.id, player.id, 1, 1 if i == 1 else 0))
             rows.append(
-                f"{f'`#{i}`' if i > 1 else ':trophy:'} **{player.display_name}** — "
+                f"{f'`#{i}`' if i > 1 else ':trophy:'} **{util.displayname(player)}** — "
                 + (f"**{int(wpm)} WPM / {int(accuracy)}% Accuracy**" if wpm != 0 else ":x:")
             )
 

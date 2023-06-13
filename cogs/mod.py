@@ -409,8 +409,10 @@ class Mod(commands.Cog):
                 except discord.errors.Forbidden:
                     await ctx.send(
                         embed=discord.Embed(
-                            description=":no_entry: It seems I don't have the "
-                            f"permission to ban **{user}**",
+                            description=(
+                                ":no_entry: It seems I don't have the "
+                                f"permission to ban **{user}**"
+                            ),
                             color=int("be1931", 16),
                         )
                     )
@@ -442,8 +444,10 @@ class Mod(commands.Cog):
                     content.title = ":white_check_mark: Banned user"
             except discord.errors.Forbidden:
                 content.title = None
-                content.description = ":no_entry: It seems I don't have the permission to "
-                f"ban **{user}** {user.mention}"
+                content.description = (
+                    ":no_entry: It seems I don't have the permission to "
+                    f"ban **{user}** {user.mention}"
+                )
                 content.colour = int("be1931", 16)
             await msg.edit(embed=content)
 

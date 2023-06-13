@@ -606,8 +606,10 @@ class User(commands.Cog):
             await ctx.send(
                 embed=discord.Embed(
                     color=int("dd2e44", 16),
-                    description=f":revolving_hearts: **{util.displayname(member=user)}** and "
-                    f"**{ctx.author.display_name}** are now married :wedding:",
+                    description=(
+                        f":revolving_hearts: **{util.displayname(member=user)}** and "
+                        f"**{ctx.author.display_name}** are now married :wedding:"
+                    ),
                 )
             )
             new_proposals = {el for el in self.proposals if el[0] not in [user.id, ctx.author.id]}
@@ -661,9 +663,11 @@ class User(commands.Cog):
             await ctx.send(
                 embed=discord.Embed(
                     color=int("ffcc4d", 16),
-                    description=":pensive: You "
-                    + (f"and **{util.displayname(partner)}** " if partner else "")
-                    + "are now divorced...",
+                    description=(
+                        ":pensive: You "
+                        + (f"and **{util.displayname(partner)}** " if partner else "")
+                        + "are now divorced..."
+                    ),
                 )
             )
 

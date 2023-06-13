@@ -263,8 +263,10 @@ class Utility(commands.Cog):
         content.set_author(
             name="Shazam result",
             url=result.url,
-            icon_url="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/"
-            "Shazam_icon.svg/84px-Shazam_icon.svg.png",
+            icon_url=(
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/"
+                "Shazam_icon.svg/84px-Shazam_icon.svg.png"
+            ),
         )
         content.set_thumbnail(url=result.cover_art)
         await ctx.send(embed=content)
@@ -424,12 +426,18 @@ class Utility(commands.Cog):
 
         def render(F: bool):
             information_rows = [
-                f":thermometer: Currently **{temp(temperature, F)}**, "
-                f"feels like **{temp(temperature_apparent, F)}**",
-                f":calendar: Daily low **{temp(values_today['temperatureMin'], F)}**, "
-                f"high **{temp(values_today['temperatureMax'], F)}**",
-                f":dash: Wind speed **{values_current['windSpeed']} m/s** "
-                f"with gusts of **{values_current['windGust']} m/s**",
+                (
+                    f":thermometer: Currently **{temp(temperature, F)}**, "
+                    f"feels like **{temp(temperature_apparent, F)}**"
+                ),
+                (
+                    f":calendar: Daily low **{temp(values_today['temperatureMin'], F)}**, "
+                    f"high **{temp(values_today['temperatureMax'], F)}**"
+                ),
+                (
+                    f":dash: Wind speed **{values_current['windSpeed']} m/s** "
+                    f"with gusts of **{values_current['windGust']} m/s**"
+                ),
                 f":sunrise: Sunrise at **{sunrise}**, sunset at **{sunset}**",
                 f":sweat_drops: Air humidity **{values_current['humidity']}%**",
                 f":map: [See on map](https://www.google.com/maps/search/?api=1&query={lat},{lon})",
@@ -1006,7 +1014,7 @@ class Utility(commands.Cog):
         user_ids = [user.id for user in ctx.guild.members]
         data = await self.bot.db.fetch(
             """
-            SELECT user_id, timezone FROM user_settings 
+            SELECT user_id, timezone FROM user_settings
             WHERE user_id IN %s AND timezone IS NOT NULL
             """,
             user_ids,

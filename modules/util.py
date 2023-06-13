@@ -865,8 +865,10 @@ async def send_donation_beg(channel: "discord.abc.MessageableChannel"):
     donate_link = "https://misobot.xyz/donate"
     content = discord.Embed(
         color=int("be1931", 16),
-        description=f":loudspeaker: Miso Bot is running solely on donations; "
-        f"Consider [donating]({donate_link}) if you like the bot!",
+        description=(
+            f":loudspeaker: Miso Bot is running solely on donations; "
+            f"Consider [donating]({donate_link}) if you like the bot!"
+        ),
     )
     await channel.send(embed=content, delete_after=15)
 
