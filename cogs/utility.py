@@ -19,7 +19,7 @@ from loguru import logger
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
 from modules.shazam import Shazam
-from modules.ui import BaseButtonPaginator, Compliance, RowPaginator
+from modules.ui import BaseButtonPaginator, Compliance
 
 papago_pairs = [
     "ko/en",
@@ -136,9 +136,8 @@ class Utility(commands.Cog):
 
                 date = arrow.get(created_on)
                 if now_ts - reminder_ts > 21600:
-                    logger.info(
-                        f"Deleting reminder set for {date.format('DD/MM/YYYY HH:mm:ss')} for being over 6 hours late"
-                    )
+                    date_fmt = date.format("DD/MM/YYYY HH:mm:ss")
+                    logger.info(f"Deleting reminder set for {date_fmt} for being over 6 hours late")
                 else:
                     embed = discord.Embed(
                         color=int("d3a940", 16),
@@ -264,7 +263,8 @@ class Utility(commands.Cog):
         content.set_author(
             name="Shazam result",
             url=result.url,
-            icon_url="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Shazam_icon.svg/84px-Shazam_icon.svg.png",
+            icon_url="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/"
+            "Shazam_icon.svg/84px-Shazam_icon.svg.png",
         )
         content.set_thumbnail(url=result.cover_art)
         await ctx.send(embed=content)
@@ -310,7 +310,8 @@ class Utility(commands.Cog):
 
         await self.bot.db.execute(
             """
-            INSERT INTO reminder (user_id, guild_id, created_on, reminder_date, content, original_message_url)
+            INSERT INTO reminder (user_id, guild_id, created_on, reminder_date,
+                                  content, original_message_url)
                 VALUES(%s, %s, %s, %s, %s, %s)
             """,
             ctx.author.id,
@@ -414,9 +415,8 @@ class Utility(commands.Cog):
             precipitation_type = self.weather_constants["precipitation"][
                 str(values_today["precipitationType"])
             ]
-            summary += (
-                f", with {values_today['precipitationProbability']}% chance of {precipitation_type}"
-            )
+            precipitation_chance = values_today["precipitationProbability"]
+            summary += f", with {precipitation_chance}% chance of {precipitation_type}"
 
         content = discord.Embed(color=int("e1e8ed", 16))
         content.title = f":flag_{country_code.lower()}: {address}"
@@ -424,9 +424,12 @@ class Utility(commands.Cog):
 
         def render(F: bool):
             information_rows = [
-                f":thermometer: Currently **{temp(temperature, F)}**, feels like **{temp(temperature_apparent, F)}**",
-                f":calendar: Daily low **{temp(values_today['temperatureMin'], F)}**, high **{temp(values_today['temperatureMax'], F)}**",
-                f":dash: Wind speed **{values_current['windSpeed']} m/s** with gusts of **{values_current['windGust']} m/s**",
+                f":thermometer: Currently **{temp(temperature, F)}**, "
+                f"feels like **{temp(temperature_apparent, F)}**",
+                f":calendar: Daily low **{temp(values_today['temperatureMin'], F)}**, "
+                f"high **{temp(values_today['temperatureMax'], F)}**",
+                f":dash: Wind speed **{values_current['windSpeed']} m/s** "
+                f"with gusts of **{values_current['windGust']} m/s**",
                 f":sunrise: Sunrise at **{sunrise}**, sunset at **{sunset}**",
                 f":sweat_drops: Air humidity **{values_current['humidity']}%**",
                 f":map: [See on map](https://www.google.com/maps/search/?api=1&query={lat},{lon})",
@@ -750,48 +753,8 @@ class Utility(commands.Cog):
             else:
                 await ctx.send(":shrug:")
 
-    @commands.command(enabled=False)
-    async def mygifs(self, ctx: commands.Context):
-        """See the gifs you have uploaded"""
-        data = await self.bot.db.fetch(
-            """
-            SELECT gif_id, source_url, ts FROM user_uploaded_gif WHERE user_id = %s
-            """,
-            ctx.author.id,
-        )
-        if not data:
-            raise exceptions.CommandWarning("You have not uploaded any gifs yet!")
-
-        async with self.bot.session.get(
-            "https://api.giphy.com/v1/gifs",
-            params={
-                "api_key": self.bot.keychain.GIPHY_API_KEY,
-                "ids": ",".join(gif[0] for gif in data),
-            },
-        ) as response:
-            response_data = await response.json()
-
-        if not response_data["data"]:
-            raise exceptions.CommandWarning("You don't have any gifs :(")
-
-        gif_sources = {gif[0]: gif[1] for gif in data}
-
-        rows = []
-        for gif in response_data["data"]:
-            source = gif_sources[gif["id"]]
-            ts = arrow.get(gif["import_datetime"])
-            rows.append(
-                f"`{gif['id']}` [Source]({source}) | [Gif]({gif['url']}) <t:{int(ts.timestamp())}:R>"
-            )
-
-        await RowPaginator(
-            discord.Embed(color=int("8b3cff", 16)).set_author(
-                name="Your gifs", icon_url=ctx.author.display_avatar.url
-            ),
-            rows,
-        ).run(ctx)
-
-    @commands.command(enabled=False)
+    @commands.is_owner()
+    @commands.command()
     async def creategif(self, ctx: commands.Context, media_url: str, *tags: str):
         """Create a gif and upload it to GIPHY"""
         has_seen_warning = await self.bot.db.fetch_value(
@@ -865,7 +828,8 @@ class Utility(commands.Cog):
                     await msg.delete()
                     if response.status == 500:
                         raise exceptions.CommandWarning(
-                            "Gif creation failed! Most likely the url provided is not a valid video source."
+                            "Gif creation failed! "
+                            "Most likely the url provided is not a valid video source."
                         )
                     response.raise_for_status()
                     return
@@ -1041,7 +1005,10 @@ class Utility(commands.Cog):
         rows = []
         user_ids = [user.id for user in ctx.guild.members]
         data = await self.bot.db.fetch(
-            "SELECT user_id, timezone FROM user_settings WHERE user_id IN %s AND timezone IS NOT NULL",
+            """
+            SELECT user_id, timezone FROM user_settings 
+            WHERE user_id IN %s AND timezone IS NOT NULL
+            """,
             user_ids,
         )
         if not data:

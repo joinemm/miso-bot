@@ -67,7 +67,8 @@ class Kpop(commands.Cog):
             )
 
         rows = [
-            f"{self.gender_icon.get(gender, '')} **{f'{group} ' if group is not None else ''} {name}** ({dob.year})"
+            f"{self.gender_icon.get(gender, '')} "
+            f"**{f'{group} ' if group is not None else ''} {name}** ({dob.year})"
             for gender, group, name, dob in idol_data
         ]
         content = discord.Embed(title=f"Kpop idols born on {humanize.naturalday(dt)}")

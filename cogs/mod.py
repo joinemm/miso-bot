@@ -44,7 +44,10 @@ class Mod(commands.Cog):
         if self.cache_needs_refreshing:
             self.cache_needs_refreshing = False
             self.unmute_list = await self.bot.db.fetch(
-                "SELECT user_id, guild_id, channel_id, unmute_on FROM muted_user WHERE unmute_on IS NOT NULL"
+                """
+                SELECT user_id, guild_id, channel_id, unmute_on
+                FROM muted_user WHERE unmute_on IS NOT NULL
+                """
             )
 
         if not self.unmute_list:
@@ -56,42 +59,6 @@ class Mod(commands.Cog):
             if unmute_ts > now_ts:
                 continue
 
-            guild = self.bot.get_guild(guild_id)
-            if guild is None:
-                continue
-            await util.require_chunked(guild)
-            if user := guild.get_member(user_id):
-                mute_role_id = await self.bot.db.fetch_value(
-                    """
-                    SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
-                    """,
-                    guild.id,
-                )
-                mute_role = guild.get_role(mute_role_id) if mute_role_id else None
-                if not mute_role:
-                    return logger.warning("Mute role not set in unmuting loop")
-                channel = self.bot.get_partial_messageable(channel_id, guild_id=guild.id)
-                if channel is not None:
-                    try:
-                        await user.remove_roles(mute_role)
-                    except discord.errors.Forbidden:
-                        pass
-                    try:
-                        await channel.send(
-                            embed=discord.Embed(
-                                description=f":stopwatch: Unmuted {user.mention} (mute duration passed)",
-                                color=int("66757f", 16),
-                            )
-                        )
-                    except discord.errors.Forbidden:
-                        logger.warning(
-                            "Unable to send unmuting message due to missing permissions!"
-                        )
-            else:
-                logger.info(
-                    f"Deleted expired mute of unknown user {user_id} or unknown guild {guild_id}"
-                )
-
             await self.bot.db.execute(
                 """
                 DELETE FROM muted_user
@@ -101,6 +68,46 @@ class Mod(commands.Cog):
                 guild_id,
             )
             self.cache_needs_refreshing = True
+
+            guild = self.bot.get_guild(guild_id)
+            if guild is None:
+                logger.info(f"Deleted expired mute in unknown guild {guild_id}")
+                continue
+
+            await util.require_chunked(guild)
+            user = guild.get_member(user_id)
+            if not user:
+                logger.info(f"Deleted expired mute of unknown user {user_id}")
+                continue
+
+            mute_role_id = await self.bot.db.fetch_value(
+                """
+                SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
+                """,
+                guild.id,
+            )
+            mute_role = guild.get_role(mute_role_id) if mute_role_id else None
+            if not mute_role:
+                logger.warning(f"Mute role not set in unmuting loop for {guild}")
+                continue
+
+            try:
+                await user.remove_roles(mute_role)
+            except discord.errors.Forbidden:
+                pass
+            channel = self.bot.get_partial_messageable(channel_id, guild_id=guild.id)
+            if channel is None:
+                continue
+
+            try:
+                await channel.send(
+                    embed=discord.Embed(
+                        description=f":stopwatch: Unmuted {user.mention} (mute duration passed)",
+                        color=int("66757f", 16),
+                    )
+                )
+            except discord.errors.Forbidden:
+                logger.warning("Unable to send unmuting message due to missing permissions!")
 
     @commands.command(aliases=["clean"], usage="<amount> [@mentions...]")
     @commands.guild_only()
@@ -173,7 +180,8 @@ class Mod(commands.Cog):
                 return await util.send_success(ctx, f"Removed timeout from {member.mention}")
             seconds = member.timeout.timestamp() - arrow.now().int_timestamp
             raise exceptions.CommandInfo(
-                f"{member.mention} is already timed out (**{util.stringfromtime(seconds)}** remaining)",
+                f"{member.mention} is already timed out "
+                f"(**{util.stringfromtime(seconds)}** remaining)",
             )
         else:
             seconds = util.timefromstring(duration)
@@ -370,7 +378,8 @@ class Mod(commands.Cog):
 
         if len(discord_users) > 4:
             raise exceptions.CommandInfo(
-                f"It seems you are trying to ban a lot of users at once.\nPlease use `{ctx.prefix}massban ...` instead"
+                f"It seems you are trying to ban a lot of users at once.\n"
+                f"Please use `{ctx.prefix}massban ...` instead"
             )
 
         for discord_user in discord_users:
@@ -400,7 +409,8 @@ class Mod(commands.Cog):
                 except discord.errors.Forbidden:
                     await ctx.send(
                         embed=discord.Embed(
-                            description=f":no_entry: It seems I don't have the permission to ban **{user}**",
+                            description=":no_entry: It seems I don't have the "
+                            f"permission to ban **{user}**",
                             color=int("be1931", 16),
                         )
                     )
@@ -432,7 +442,8 @@ class Mod(commands.Cog):
                     content.title = ":white_check_mark: Banned user"
             except discord.errors.Forbidden:
                 content.title = None
-                content.description = f":no_entry: It seems I don't have the permission to ban **{user}** {user.mention}"
+                content.description = ":no_entry: It seems I don't have the permission to "
+                f"ban **{user}** {user.mention}"
                 content.colour = int("be1931", 16)
             await msg.edit(embed=content)
 

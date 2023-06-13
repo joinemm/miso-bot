@@ -161,7 +161,10 @@ class CustomCommands(commands.Cog, name="Commands"):
             and not ctx.author.guild_permissions.manage_guild
         ):
             raise exceptions.CommandWarning(
-                f"`{ctx.prefix}{name}` can only be removed by **{owner}** unless you have `manage_server` permission."
+                (
+                    f"`{ctx.prefix}{name}` can only be removed by **{owner}** "
+                    "unless you have `manage_server` permission."
+                )
             )
 
         await self.bot.db.execute(
@@ -290,7 +293,10 @@ class CustomCommands(commands.Cog, name="Commands"):
             raise exceptions.CommandWarning("This server has no custom commands yet!")
 
         content = discord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
-        content.description = f"This action will delete all **{count}** custom commands on this server and is **irreversible**."
+        content.description = (
+            f"This action will delete all **{count}** custom commands on "
+            "this server and is **irreversible**."
+        )
         msg = await ctx.send(embed=content)
 
         async def confirm():

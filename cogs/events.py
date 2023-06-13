@@ -155,7 +155,10 @@ class Events(commands.Cog):
 
         # welcome message
         greeter = await self.bot.db.fetch_row(
-            "SELECT channel_id, is_enabled, message_format FROM greeter_settings WHERE guild_id = %s",
+            """
+            SELECT channel_id, is_enabled, message_format
+            FROM greeter_settings WHERE guild_id = %s
+            """,
             member.guild.id,
         )
         if greeter:
@@ -212,7 +215,10 @@ class Events(commands.Cog):
 
         # goodbye message
         goodbye = await self.bot.db.fetch_row(
-            "SELECT channel_id, is_enabled, message_format FROM goodbye_settings WHERE guild_id = %s",
+            """
+            SELECT channel_id, is_enabled, message_format 
+                FROM goodbye_settings WHERE guild_id = %s
+            """,
             member.guild.id,
         )
         if goodbye:
@@ -470,7 +476,10 @@ class Events(commands.Cog):
                     board_message = await board_channel.send(embed=content)
                 except discord.Forbidden:
                     return await message.reply(
-                        f"I tried to starboard this but I don't have permission to send embed in {board_channel.mention} :("
+                        (
+                            "I tried to starboard this but I don't have permission to "
+                            f"send embed in {board_channel.mention} :("
+                        )
                     )
                 await self.bot.db.execute(
                     """

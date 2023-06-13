@@ -77,16 +77,12 @@ async def suppress(message: discord.Message):
 
 def displayname(member: Optional[discord.User | discord.Member], escape=True):
     if member is None:
-        return None
-
-    name = member.name
-    if isinstance(member, discord.Member) and member.nick is not None:
-        name = member.nick
+        return "[unknown user]"
 
     if escape:
-        name = discord.utils.escape_markdown(name)
+        return discord.utils.escape_markdown(member.display_name)
 
-    return name
+    return member.display_name
 
 
 def displaychannel(
@@ -869,7 +865,8 @@ async def send_donation_beg(channel: "discord.abc.MessageableChannel"):
     donate_link = "https://misobot.xyz/donate"
     content = discord.Embed(
         color=int("be1931", 16),
-        description=f":loudspeaker: Miso Bot is running solely on donations; Consider [donating]({donate_link}) if you like the bot!",
+        description=f":loudspeaker: Miso Bot is running solely on donations; "
+        f"Consider [donating]({donate_link}) if you like the bot!",
     )
     await channel.send(embed=content, delete_after=15)
 
@@ -903,7 +900,8 @@ async def require_chunked(guild: discord.Guild):
         start_time = time()
         await guild.chunk(cache=True)
         logger.info(
-            f"Chunked [{guild}] with {guild.member_count} members in {time() - start_time:.2f} seconds"
+            f"Chunked [{guild}] with {guild.member_count} members "
+            f"in {time() - start_time:.2f} seconds"
         )
 
 

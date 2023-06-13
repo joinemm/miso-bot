@@ -123,14 +123,15 @@ class Roles(commands.Cog):
     async def baserole(self, ctx: commands.Context, role: discord.Role):
         """Set the base role to inherit permissions and position from
 
-        You should set this to something lower than the bot but high enough for the color to show up.
+        You should set this to something lower than the bot
+        but high enough for the color to show up.
         """
         if ctx.guild is None or isinstance(ctx.author, discord.User):
             raise exceptions.CommandError("Unable to get current guild")
 
         if role > ctx.author.top_role:
             raise exceptions.CommandWarning(
-                "You cannot set the colorizer baserole to something higher than you in the hierarchy"
+                "You cannot set the colorizer baserole to a role higher than you in the hierarchy"
             )
 
         await self.bot.db.execute(
@@ -251,7 +252,11 @@ class Roles(commands.Cog):
 
             final = before_colors + colors + acquired
             payload = [{"id": role.id, "position": i} for i, role in enumerate(final)]
-            await self.bot.http.move_role_position(ctx.guild.id, payload, reason="movin")  # type: ignore
+            await self.bot.http.move_role_position(
+                ctx.guild.id,
+                payload,
+                reason="Colorizer action",
+            )  # type: ignore
 
         # color the user
         await ctx.author.add_roles(color_role)
@@ -449,7 +454,8 @@ class Roles(commands.Cog):
                     )
         else:
             await message.reply(
-                f":warning: Unknown action `{command}`. Use `+name` to add roles and `-name` to remove them."
+                f":warning: Unknown action `{command}`. "
+                "Use `+name` to add roles and `-name` to remove them."
             )
 
         await asyncio.sleep(5)

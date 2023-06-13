@@ -363,7 +363,8 @@ class Instagram:
             "query_hash": "9f8827793ef34641b2fb195d4d41151c",
             "variables": '{"shortcode": "'
             + shortcode
-            + '", "child_comment_count": 3, "fetch_comment_count": 40, "parent_comment_count": 24, "has_threaded_comments": "true"}',
+            + '", "child_comment_count": 3, "fetch_comment_count": 40, '
+            + '"parent_comment_count": 24, "has_threaded_comments": "true"}',
         }
         headers = {
             "Host": "www.instagram.com",

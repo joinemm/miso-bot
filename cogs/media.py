@@ -83,7 +83,10 @@ class Media(commands.Cog):
 
             return await ctx.send(
                 embed=discord.Embed(
-                    description=f"{provider.capitalize()} automatic embeds are currently **{current_state}** for this server"
+                    description=(
+                        f"{provider.capitalize()} automatic embeds are "
+                        f"currently **{current_state}** for this server"
+                    )
                 )
             )
 
@@ -108,7 +111,8 @@ class Media(commands.Cog):
 
         await util.send_success(
             ctx,
-            f"{provider.capitalize()} automatic embeds are now **{'ON' if state else 'OFF'}** for this server",
+            f"{provider.capitalize()} automatic embeds are now "
+            f"**{'ON' if state else 'OFF'}** for this server",
         )
 
     @commands.command(aliases=["ig", "insta"])
@@ -190,7 +194,8 @@ class Media(commands.Cog):
         url = f"https://www.melon.com/chart/{timeframe}/index.htm"
         headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; "
+            "Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0",
         }
         async with self.bot.session.get(url, headers=headers) as response:
             text = await response.text()
@@ -229,7 +234,8 @@ class Media(commands.Cog):
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Connection": "keep-alive",
                 "Referer": "https://xkcd.com/",
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0",
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:66.0) "
+                "Gecko/20100101 Firefox/66.0",
             }
             async with self.bot.session.get(url, headers=headers) as response:
                 location = str(response.url)

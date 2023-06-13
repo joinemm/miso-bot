@@ -337,7 +337,8 @@ class Information(commands.Cog):
         for i, (command_name, count) in enumerate(data, start=1):
             total += count
             rows.append(
-                f"`#{i:2}` **{count}** use{'' if count == 1 else 's'} : `{ctx.prefix}{command_name}`"
+                f"`#{i:2}` **{count}** use{'' if count == 1 else 's'} : "
+                f"`{ctx.prefix}{command_name}`"
             )
 
         if rows:
@@ -379,7 +380,8 @@ class Information(commands.Cog):
         for i, (command_name, count) in enumerate(data, start=1):
             total += count
             rows.append(
-                f"`#{i:2}` **{count}** use{'' if count == 1 else 's'} : `{ctx.prefix}{command_name}`"
+                f"`#{i:2}` **{count}** use{'' if count == 1 else 's'} : "
+                f"`{ctx.prefix}{command_name}`"
             )
 
         if rows:
@@ -401,7 +403,7 @@ class Information(commands.Cog):
         group = hasattr(command, "commands")
         if group:
             command_name = tuple(
-                [f"{command.name} {x.name}" for x in command.commands] + [command_name]  # type: ignore
+                [f"{command.name} {x.name}" for x in command.commands] + [command_name]
             )
         else:
             command_name = command.qualified_name
@@ -476,7 +478,7 @@ class Information(commands.Cog):
         # additional data for command groups
         if group:
             content.description = "Command Group"
-            subcommands_tuple = tuple(f"{command.name} {x.name}" for x in command.commands)  # type: ignore
+            subcommands_tuple = tuple(f"{command.name} {x.name}" for x in command.commands)
             subcommand_usage = await self.bot.db.fetch(
                 """
                 SELECT command_name, SUM(uses) FROM command_usage

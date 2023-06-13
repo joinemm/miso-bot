@@ -46,6 +46,7 @@ executionEnvironments = [
 ]
 exclude = [
     "**/__pycache__",
+    ".venv"
 ]
 venvPath = "."
 venv = "venv"

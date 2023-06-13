@@ -211,7 +211,11 @@ class LastFm(commands.Cog):
             )
         per_page = 100
         pre_data = await self.api_request(
-            {"user": ctx.username, "method": "user.getrecenttracks", "limit": per_page}  # type: ignore
+            {
+                "user": ctx.username,
+                "method": "user.getrecenttracks",
+                "limit": per_page,
+            }  # type: ignore
         )
 
         total = int(pre_data["recenttracks"]["@attr"]["total"])

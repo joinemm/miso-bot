@@ -306,7 +306,8 @@ class User(commands.Cog):
 
         content = discord.Embed(title=f"Roles in {ctx.guild.name}")
         rows = [
-            f"[`{role.id} | {str(role.color)}`] **x{len(role.members)}**{':warning:' if len(role.members) == 0 else ''}: {role.mention}"
+            f"[`{role.id} | {str(role.color)}`] **x{len(role.members)}**"
+            f"{':warning:' if len(role.members) == 0 else ''}: {role.mention}"
             for role in reversed(ctx.guild.roles)
         ]
         await util.send_as_pages(ctx, content, rows)
@@ -381,7 +382,8 @@ class User(commands.Cog):
                     ranking = f"`#{i:2}`"
 
                 rows.append(
-                    f"{ranking} **{util.displayname(user)}** — **{int(wpm)}** WPM ({word_count} words, {arrow.get(test_date).to('utc').humanize()})"
+                    f"{ranking} **{util.displayname(user)}** — **{int(wpm)}** "
+                    f"WPM ({word_count} words, {arrow.get(test_date).to('utc').humanize()})"
                 )
                 i += 1
 
@@ -469,7 +471,10 @@ class User(commands.Cog):
             badges.append(make_badge(badge_classes["patreon"]))
 
         user_settings = await self.bot.db.fetch_row(
-            "SELECT lastfm_username, sunsign, location_string FROM user_settings WHERE user_id = %s",
+            """
+            SELECT lastfm_username, sunsign, location_string
+                FROM user_settings WHERE user_id = %s
+            """,
             user.id,
         )
         if user_settings:
@@ -575,12 +580,19 @@ class User(commands.Cog):
                     partner = ctx.guild.get_member(pair[0]) or await util.find_user(
                         self.bot, pair[0]
                     )
+                if partner is None:
+                    return await ctx.send(
+                        ":confused: You are already married to someone but I don't know who it is"
+                        "... Please divorce before marrying someone else!"
+                    )
                 return await ctx.send(
-                    f":confused: You are already married to **{util.displayname(partner)}**! You must divorce before marrying someone else..."
+                    f":confused: You are already married to **{util.displayname(partner)}**! "
+                    "You must divorce before marrying someone else..."
                 )
             if user.id in el:
                 return await ctx.send(
-                    f":grimacing: **{user}** is already married to someone else, sorry!"
+                    f":grimacing: **{util.displayname(member=user)}** "
+                    "is already married to someone else, sorry!"
                 )
 
         if (user.id, ctx.author.id) in self.proposals:
@@ -594,7 +606,8 @@ class User(commands.Cog):
             await ctx.send(
                 embed=discord.Embed(
                     color=int("dd2e44", 16),
-                    description=f":revolving_hearts: **{util.displayname(user)}** and **{util.displayname(ctx.author)}** are now married :wedding:",
+                    description=f":revolving_hearts: **{util.displayname(member=user)}** and "
+                    f"**{ctx.author.display_name}** are now married :wedding:",
                 )
             )
             new_proposals = {el for el in self.proposals if el[0] not in [user.id, ctx.author.id]}
@@ -614,26 +627,25 @@ class User(commands.Cog):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        partner = ""
+        partner = None
         to_remove = []
         for el in self.bot.cache.marriages:
             if ctx.author.id in el:
                 to_remove.append(el)
                 pair = list(el)
                 if ctx.author.id == pair[0]:
-                    partner = ctx.guild.get_member(pair[1]) or await util.find_user(
-                        self.bot, pair[1]
-                    )
+                    partner = pair[1]
                 else:
-                    partner = ctx.guild.get_member(pair[0]) or await util.find_user(
-                        self.bot, pair[0]
-                    )
+                    partner = pair[0]
 
-        if partner == "":
+        if partner is None:
             return await ctx.send(":thinking: You are not married!")
 
+        partner = ctx.guild.get_member(partner) or await util.find_user(self.bot, partner)
+
         content = discord.Embed(
-            description=f":broken_heart: Divorce **{util.displayname(partner)}**?",
+            description=":broken_heart:"
+            + (f"Divorce **{util.displayname(partner)}**?" if partner else "Divorce?"),
             color=int("dd2e44", 16),
         )
         msg = await ctx.send(embed=content)
@@ -649,7 +661,9 @@ class User(commands.Cog):
             await ctx.send(
                 embed=discord.Embed(
                     color=int("ffcc4d", 16),
-                    description=f":pensive: You and **{util.displayname(partner)}** are now divorced...",
+                    description=":pensive: You "
+                    + (f"and **{util.displayname(partner)}** " if partner else "")
+                    + "are now divorced...",
                 )
             )
 
@@ -694,7 +708,9 @@ class User(commands.Cog):
                     color=int("f4abba", 16),
                     description=(
                         f":wedding: {'You have' if member == ctx.author else f'**{member}** has'} "
-                        f"been married to **{util.displayname(partner)}** for **{length}**"
+                        "been married to "
+                        + (f"**{partner.display_name}**" if partner else "someone")
+                        + f"for **{length}**"
                     ),
                 )
             )

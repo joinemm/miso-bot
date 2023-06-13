@@ -134,7 +134,12 @@ class Notifications(commands.Cog):
                     f"User {user_id} not found, deleting their notification for {users_words}"
                 )
                 await self.bot.db.execute(
-                    """DELETE FROM notification WHERE guild_id = %s AND user_id = %s AND keyword IN %s""",
+                    """
+                    DELETE FROM notification
+                        WHERE guild_id = %s
+                        AND user_id = %s
+                        AND keyword IN %s
+                    """,
                     message.guild.id,
                     user_id,
                     users_words,
@@ -165,7 +170,8 @@ class Notifications(commands.Cog):
             )
             if amount and amount >= 25:
                 raise exceptions.CommandWarning(
-                    f"You can only have a maximum of **25** notifications. You have **{amount}** (Become a [donator](https://misobot.xyz/donate) for unlimited notifications)"
+                    f"You can only have a maximum of **25** notifications. You have **{amount}** "
+                    "(Become a [donator](https://misobot.xyz/donate) for unlimited notifications)"
                 )
 
         try:
@@ -239,7 +245,8 @@ class Notifications(commands.Cog):
         try:
             await util.send_success(
                 ctx.author,
-                f"The keyword notification for `{keyword}` that you set in **{ctx.guild.name}** has been removed.",
+                f"The keyword notification for `{keyword}` that you set in "
+                f"**{ctx.guild.name}** has been removed.",
             )
         except discord.errors.Forbidden:
             raise exceptions.CommandWarning(
@@ -264,7 +271,9 @@ class Notifications(commands.Cog):
         """List your current notifications"""
         words = await self.bot.db.fetch(
             """
-            SELECT guild_id, keyword, times_triggered FROM notification WHERE user_id = %s ORDER BY keyword
+            SELECT guild_id, keyword, times_triggered 
+            FROM notification WHERE user_id = %s 
+            ORDER BY keyword
             """,
             ctx.author.id,
         )

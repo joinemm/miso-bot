@@ -171,13 +171,8 @@ class Typings(commands.Cog):
                         if len(players) < 2:
                             cant_race_alone = await ctx.send("You can't race alone!")
                             await asyncio.sleep(1)
-                            try:
-                                await cant_race_alone.delete()
-                                await enter_message.remove_reaction(check_emoji, user)
-                            except discord.errors.Forbidden:
-                                await ctx.send(
-                                    "`error: i'm missing required discord permission [ manage messages ]`"
-                                )
+                            await cant_race_alone.delete()
+                            await enter_message.remove_reaction(check_emoji, user)
                         else:
                             race_in_progress = True
                     else:
@@ -214,12 +209,13 @@ class Typings(commands.Cog):
         content = discord.Embed(title=":checkered_flag: Race complete!", color=int("e1e8ed", 16))
         rows = []
         values = []
+        player: discord.Member
         for i, (player, wpm, accuracy) in enumerate(
             sorted(results, key=itemgetter(1), reverse=True), start=1
         ):
             values.append((ctx.guild.id, player.id, 1, 1 if i == 1 else 0))
             rows.append(
-                f"{f'`#{i}`' if i > 1 else ':trophy:'} **{util.displayname(player)}** — "
+                f"{f'`#{i}`' if i > 1 else ':trophy:'} **{player.display_name}** — "
                 + (f"**{int(wpm)} WPM / {int(accuracy)}% Accuracy**" if wpm != 0 else ":x:")
             )
 
@@ -259,7 +255,15 @@ class Typings(commands.Cog):
                 )
                 return player, 0, 0
             await message.add_reaction("✅")
-            await self.save_wpm(message.author, ctx.guild, wpm, accuracy, wordcount, language, True)
+            await self.save_wpm(
+                message.author,
+                ctx.guild,
+                wpm,
+                accuracy,
+                wordcount,
+                language,
+                True,
+            )
             return player, wpm, accuracy
 
     @typing.command(name="history")
@@ -284,12 +288,13 @@ class Typings(commands.Cog):
             )
 
         content = discord.Embed(
-            title=f":stopwatch: {util.displayname(member)} Typing test history",
+            title=f":stopwatch: {member.display_name} Typing test history",
             color=int("dd2e44", 16),
         )
         content.set_footer(text=f"Total {len(data)} typing tests taken")
         rows = [
-            f"**{wpm}** WPM, **{int(accuracy)}%** ACC, **{word_count}** words, *{test_language}* ({arrow.get(test_date).to('utc').humanize()})"
+            f"**{wpm}** WPM, **{int(accuracy)}%** ACC, **{word_count}** words, "
+            f"*{test_language}* ({arrow.get(test_date).to('utc').humanize()})"
             for test_date, wpm, accuracy, word_count, test_language in data
         ]
         await util.send_as_pages(ctx, content, rows)
