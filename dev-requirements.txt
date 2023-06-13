@@ -18,7 +18,7 @@ dill==0.3.6
     # via pylint
 distlib==0.3.6
     # via virtualenv
-filelock==3.12.1
+filelock==3.12.2
     # via virtualenv
 identify==2.5.24
     # via pre-commit
@@ -33,7 +33,9 @@ mccabe==0.7.0
 mypy-extensions==1.0.0
     # via black
 nodeenv==1.8.0
-    # via pre-commit
+    # via
+    #   pre-commit
+    #   pyright
 packaging==23.1
     # via
     #   -c requirements.txt
@@ -48,6 +50,8 @@ platformdirs==3.5.3
 pre-commit==3.3.2
     # via -r dev-requirements.in
 pylint==2.17.4
+    # via -r dev-requirements.in
+pyright==1.1.313
     # via -r dev-requirements.in
 pyyaml==6.0
     # via pre-commit

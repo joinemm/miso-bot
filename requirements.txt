@@ -15,10 +15,9 @@ aiohttp==3.8.4
     #   async-cse
     #   discord-py
     #   shazamio
-    #   tweepy
 aiohttp-cors==0.7.0
     # via -r requirements.in
-aiomysql==0.1.1
+aiomysql==0.2.0
     # via -r requirements.in
 aiosignal==1.3.1
     # via aiohttp
@@ -30,8 +29,6 @@ astunparse==1.6.3
     # via import-expression
 async-cse==0.3.0
     # via -r requirements.in
-async-lru==2.0.2
-    # via tweepy
 async-timeout==4.0.2
     # via aiohttp
 attrs==23.1.0
@@ -46,14 +43,10 @@ braceexpand==0.1.7
     # via jishaku
 brotli==1.0.9
     # via discord-py
-certifi==2023.5.7
-    # via requests
 cffi==1.15.1
     # via pycares
 charset-normalizer==3.1.0
-    # via
-    #   aiohttp
-    #   requests
+    # via aiohttp
 click==8.1.3
     # via jishaku
 colorgram-py==1.2.0
@@ -64,13 +57,13 @@ cycler==0.11.0
     # via matplotlib
 dataclass-factory==2.16
     # via shazamio
-discord-py[speed]==2.2.3
+discord-py[speed]==2.3.0
     # via -r requirements.in
 dnspython==2.3.0
     # via minestat
 durations-nlp==1.0.1
     # via -r requirements.in
-fonttools==4.39.4
+fonttools==4.40.0
     # via matplotlib
 frozenlist==1.3.3
     # via
@@ -81,7 +74,6 @@ humanize==4.6.0
 idna==3.4
     # via
     #   anyio
-    #   requests
     #   yarl
 import-expression==1.1.4
     # via jishaku
@@ -116,10 +108,6 @@ numpy==1.24.3
     #   matplotlib
     #   scipy
     #   shazamio
-oauthlib==3.2.2
-    # via
-    #   requests-oauthlib
-    #   tweepy
 orjson==3.9.1
     # via discord-py
 packaging==23.1
@@ -151,7 +139,7 @@ pymysql==1.0.3
     # via aiomysql
 pyparsing==3.0.9
     # via matplotlib
-pytest==7.3.1
+pytest==7.3.2
     # via
     #   pytest-asyncio
     #   shazamio
@@ -169,12 +157,6 @@ redis==4.5.5
     # via -r requirements.in
 regex==2023.6.3
     # via -r requirements.in
-requests==2.31.0
-    # via
-    #   requests-oauthlib
-    #   tweepy
-requests-oauthlib==1.3.1
-    # via tweepy
 scipy==1.10.1
     # via -r requirements.in
 shazamio==0.4.0.1
@@ -189,14 +171,8 @@ sniffio==1.3.0
     # via anyio
 soupsieve==2.4.1
     # via beautifulsoup4
-tweepy[async]==4.14.0
-    # via -r requirements.in
 typing-extensions==4.6.3
-    # via
-    #   async-lru
-    #   pydantic
-urllib3==2.0.3
-    # via requests
+    # via pydantic
 uvloop==0.17.0
     # via -r requirements.in
 webencodings==0.5.1

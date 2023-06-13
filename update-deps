@@ -1,0 +1,5 @@
+#!/bin/sh
+
+pip-compile requirements.in > requirements.txt --resolver=backtracking
+pip-compile dev-requirements.in > dev-requirements.txt --resolver=backtracking
+
