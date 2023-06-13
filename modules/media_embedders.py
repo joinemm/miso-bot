@@ -173,8 +173,7 @@ class InstagramEmbedder(BaseEmbedder):
     @staticmethod
     def extract_links(text: str, include_shortcodes=True) -> list[InstagramPost | InstagramStory]:
         text = "\n".join(text.split())
-        instagram_regex = r"(?:https?:\/\/)?(?:www.)?instagram.com\/?([a-zA-Z0-9\.\_\-]+)?\/([p]+)?"
-        r"([reel]+)?([tv]+)?([stories]+)?\/([a-zA-Z0-9\-\_\.]+)\/?([0-9]+)?"
+        instagram_regex = r"(?:https?:\/\/)?(?:www.)?instagram.com\/?([a-zA-Z0-9\.\_\-]+)?\/([p]+)? ([reel]+)?([tv]+)?([stories]+)?\/([a-zA-Z0-9\-\_\.]+)\/?([0-9]+)?"
         results = []
         for match in regex.finditer(instagram_regex, text):
             # group 1 for username
@@ -260,8 +259,7 @@ class TikTokEmbedder(BaseEmbedder):
     @staticmethod
     def extract_links(text: str):
         text = "\n".join(text.split())
-        pattern = r"\bhttps?:\/\/(?:m|www|vm)\.tiktok\.com\/.*\b"
-        r"(?:(?:usr|v|embed|user|video|t)\/|\?shareId=|\&item_id=)(\d+)\b"
+        pattern = r"\bhttps?:\/\/(?:m|www|vm)\.tiktok\.com\/.*\b(?:(?:usr|v|embed|user|video|t)\/|\?shareId=|\&item_id=)(\d+)\b"
         vm_pattern = r"\bhttps?:\/\/(?:vm|vt)\.tiktok\.com\/.*\b(\S+)\b"
 
         validated_urls = [
