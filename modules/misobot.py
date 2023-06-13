@@ -32,7 +32,7 @@ class LastFmContext:
 class MisoContext(commands.Context):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.lastfmcontext: LastFmContext
+        self.lfm: LastFmContext
         self.bot: MisoBot
         self.timer: float
 

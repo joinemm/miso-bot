@@ -121,7 +121,7 @@ class StrOrNp:
         if stripped_argument.lower() == "np":
             assert isinstance(ctx.cog, LastFm)
             if hasattr(ctx, "lastfmcontext"):
-                username = ctx.lastfmcontext.username
+                username = ctx.lfm.username
             else:
                 ctxdata = await get_lastfm_username(ctx)
                 username = ctxdata[2]
@@ -347,7 +347,7 @@ class LastFm(commands.Cog):
     @fm.command()
     async def profile(self, ctx: MisoContext):
         """See your Last.fm profile"""
-        await ctx.send(embed=await self.get_userinfo_embed(ctx.lastfmcontext.username))
+        await ctx.send(embed=await self.get_userinfo_embed(ctx.lfm.username))
 
     @fm.command()
     async def milestone(self, ctx: MisoContext, n: int):
@@ -358,7 +358,7 @@ class LastFm(commands.Cog):
             )
         PER_PAGE = 100
         pre_data = await self.api.user_get_recent_tracks(
-            ctx.lastfmcontext.username,
+            ctx.lfm.username,
             limit=PER_PAGE,
         )
 
@@ -378,7 +378,7 @@ class LastFm(commands.Cog):
             containing_page = total_pages
 
         final_data = await self.api.user_get_recent_tracks(
-            ctx.lastfmcontext.username,
+            ctx.lfm.username,
             limit=PER_PAGE,
             page=containing_page,
         )
@@ -394,7 +394,7 @@ class LastFm(commands.Cog):
     @fm.command(aliases=["np", "no"])
     async def nowplaying(self, ctx: MisoContext):
         """See your currently playing song"""
-        track = await self.api.user_get_now_playing(ctx.lastfmcontext.username)
+        track = await self.api.user_get_now_playing(ctx.lfm.username)
         artist_name = track["artist"]["#text"]
         album_name = track["album"]["#text"]
         track_name = track["name"]
@@ -417,9 +417,7 @@ class LastFm(commands.Cog):
             )
 
         # tags and playcount
-        track_info = await self.api.track_get_info(
-            artist_name, track_name, ctx.lastfmcontext.username
-        )
+        track_info = await self.api.track_get_info(artist_name, track_name, ctx.lfm.username)
         if track_info is not None:
             play_count = int(track_info["userplaycount"])
             if play_count > 0:
@@ -434,8 +432,8 @@ class LastFm(commands.Cog):
             content.timestamp = arrow.get(int(track["date"]["uts"])).datetime
 
         content.set_author(
-            name=f"{util.displayname(ctx.lastfmcontext.target_user, escape=False)} {state}",
-            icon_url=ctx.lastfmcontext.target_user.display_avatar.url,
+            name=f"{util.displayname(ctx.lfm.target_user, escape=False)} {state}",
+            icon_url=ctx.lfm.target_user.display_avatar.url,
         )
 
         message = await ctx.send(embed=content)
@@ -459,7 +457,7 @@ class LastFm(commands.Cog):
     ):
         """See your top 100 artists for given timeframe"""
         data = await self.api.user_get_top_artists(
-            ctx.lastfmcontext.username,
+            ctx.lfm.username,
             timeframe,
             100,
         )
@@ -480,7 +478,7 @@ class LastFm(commands.Cog):
     ):
         """See your top 100 tracks for given timeframe"""
         data = await self.api.user_get_top_tracks(
-            ctx.lastfmcontext.username,
+            ctx.lfm.username,
             timeframe,
             100,
         )
@@ -504,7 +502,7 @@ class LastFm(commands.Cog):
     ):
         """See your top 100 albums for given timeframe"""
         data = await self.api.user_get_top_albums(
-            ctx.lastfmcontext.username,
+            ctx.lfm.username,
             timeframe,
             100,
         )
@@ -526,7 +524,7 @@ class LastFm(commands.Cog):
     async def recent(self, ctx: MisoContext):
         """See your 100 most recent scrobbles"""
         data = await self.api.user_get_recent_tracks(
-            ctx.lastfmcontext.username,
+            ctx.lfm.username,
             100,
         )
         rows = []
@@ -548,7 +546,7 @@ class LastFm(commands.Cog):
     @fm.command(aliases=["yt"], usage="")
     async def youtube(self, ctx: MisoContext):
         """Find your currently playing track on youtube"""
-        track = await self.api.user_get_now_playing(ctx.lastfmcontext.username)
+        track = await self.api.user_get_now_playing(ctx.lfm.username)
 
         artist_name = track["artist"]["#text"]
         track_name = track["name"]
@@ -574,9 +572,7 @@ class LastFm(commands.Cog):
         video_id = data["items"][0]["id"]["videoId"]
         video_url = YOUTUBE_VIDEO_BASE_URL + video_id
 
-        await ctx.send(
-            f"**{util.displayname(ctx.lastfmcontext.target_user)} — {state}** :cd:\n{video_url}"
-        )
+        await ctx.send(f"**{util.displayname(ctx.lfm.target_user)} — {state}** :cd:\n{video_url}")
 
     @fm.command(aliases=["a"], usage="[timeframe] <toptracks | topartists | topalbums> <artist>")
     async def artist(
@@ -613,12 +609,10 @@ class LastFm(commands.Cog):
     # helpers
 
     async def artist_overview(self, ctx: MisoContext, timeframe: Period, artist: str):
-        artistinfo = await self.api.artist_get_info(
-            artist, ctx.lastfmcontext.username, autocorrect=True
-        )
+        artistinfo = await self.api.artist_get_info(artist, ctx.lfm.username, autocorrect=True)
 
         artist_url_format = artistinfo["url"].split("/")[-1]
-        url = f"https://last.fm/user/{ctx.lastfmcontext.username}/library/music/{artist_url_format}?date_preset={timeframe.web_format()}"
+        url = f"https://last.fm/user/{ctx.lfm.username}/library/music/{artist_url_format}?date_preset={timeframe.web_format()}"
         soup = await self.api.scrape_page(url, authenticated=True)
 
         try:
@@ -640,7 +634,7 @@ class LastFm(commands.Cog):
             content.set_thumbnail(url=image.as_full())
             content.colour = await self.image_color(image)
 
-        username = util.displayname(ctx.lastfmcontext.target_user, escape=False)
+        username = util.displayname(ctx.lfm.target_user, escape=False)
         content.set_author(
             name=f"{username} — {formatted_name} — "
             + (
@@ -648,7 +642,7 @@ class LastFm(commands.Cog):
                 if timeframe != timeframe.OVERALL
                 else "Overview"
             ),
-            icon_url=ctx.lastfmcontext.target_user.display_avatar.url,
+            icon_url=ctx.lfm.target_user.display_avatar.url,
             url=url,
         )
 
@@ -667,13 +661,13 @@ class LastFm(commands.Cog):
                 ctx.guild.id,
                 formatted_name,
             )
-            if crown_holder_id == ctx.lastfmcontext.target_user.id:
+            if crown_holder_id == ctx.lfm.target_user.id:
                 crownstate = ":crown: "
 
         api_data = await asyncio.gather(
-            self.api.user_get_top_artists(ctx.lastfmcontext.username, Period.OVERALL, limit=1000),
-            self.api.user_get_top_artists(ctx.lastfmcontext.username, Period.MONTH, limit=1000),
-            self.api.user_get_top_artists(ctx.lastfmcontext.username, Period.WEEK, limit=1000),
+            self.api.user_get_top_artists(ctx.lfm.username, Period.OVERALL, limit=1000),
+            self.api.user_get_top_artists(ctx.lfm.username, Period.MONTH, limit=1000),
+            self.api.user_get_top_artists(ctx.lfm.username, Period.WEEK, limit=1000),
         )
 
         def filter_artist(ta_data: dict):
@@ -731,12 +725,10 @@ class LastFm(commands.Cog):
         artist: str,
         data_type: Literal["tracks", "albums"],
     ):
-        artistinfo = await self.api.artist_get_info(
-            artist, ctx.lastfmcontext.username, autocorrect=True
-        )
+        artistinfo = await self.api.artist_get_info(artist, ctx.lfm.username, autocorrect=True)
 
         artist_url_format = artistinfo["url"].split("/")[-1]
-        url = f"https://last.fm/user/{ctx.lastfmcontext.username}/library/music/{artist_url_format}/+{data_type}?date_preset={timeframe.web_format()}"
+        url = f"https://last.fm/user/{ctx.lfm.username}/library/music/{artist_url_format}/+{data_type}?date_preset={timeframe.web_format()}"
         soup = await self.api.scrape_page(url, authenticated=True)
 
         formatted_name = artistinfo["name"]
@@ -768,7 +760,7 @@ class LastFm(commands.Cog):
         """Get information about an album"""
         album_input, artist_input = album
         albuminfo = await self.api.album_get_info(
-            artist_input, album_input, autocorrect=True, username=ctx.lastfmcontext.username
+            artist_input, album_input, autocorrect=True, username=ctx.lfm.username
         )
         album_name = albuminfo["name"]
         artist_name = albuminfo["artist"]
@@ -781,7 +773,7 @@ class LastFm(commands.Cog):
             name: playcount
             for playcount, name in self.api.get_library_playcounts(
                 await self.api.scrape_page(
-                    f"https://www.last.fm/user/{ctx.lastfmcontext.username}/library/music/"
+                    f"https://www.last.fm/user/{ctx.lfm.username}/library/music/"
                     f"{urllib.parse.quote_plus(artist_name)}/{urllib.parse.quote_plus(album_name)}"
                 )
             )
@@ -827,7 +819,7 @@ class LastFm(commands.Cog):
     @fm.command(name="cover", aliases=["art"])
     async def album_cover(self, ctx: MisoContext):
         """See the full album cover of your current song"""
-        track = await self.api.user_get_now_playing(ctx.lastfmcontext.username)
+        track = await self.api.user_get_now_playing(ctx.lfm.username)
         image = LastFmImage.from_url(track["image"][-1]["#text"])
         artist_name = track["artist"]["#text"]
         album_name = track["album"]["#text"]
@@ -884,11 +876,9 @@ class LastFm(commands.Cog):
         topster = "topster" in args
         if "artist" in args:
             chart_title = "top artist"
-            data = await self.api.user_get_top_artists(
-                ctx.lastfmcontext.username, timeframe, size.count
-            )
+            data = await self.api.user_get_top_artists(ctx.lfm.username, timeframe, size.count)
             scraped_images = await self.api.library_artist_images(
-                ctx.lastfmcontext.username, size.count, timeframe
+                ctx.lfm.username, size.count, timeframe
             )
             for i, artist in enumerate(data["artist"]):
                 name = artist["name"]
@@ -906,7 +896,7 @@ class LastFm(commands.Cog):
 
         elif "recent" in args or "recents" in args:
             chart_title = "recent tracks"
-            data = await self.api.user_get_recent_tracks(ctx.lastfmcontext.username, size.count)
+            data = await self.api.user_get_recent_tracks(ctx.lfm.username, size.count)
             for i, track in enumerate(data["track"]):
                 name = track["name"]
                 artist = track["artist"]["#text"]
@@ -923,9 +913,7 @@ class LastFm(commands.Cog):
 
         else:
             chart_title = "top album"
-            data = await self.api.user_get_top_albums(
-                ctx.lastfmcontext.username, timeframe, size.count
-            )
+            data = await self.api.user_get_top_albums(ctx.lfm.username, timeframe, size.count)
             for i, album in enumerate(data["album"]):
                 name = album["name"]
                 artist = album["artist"]["name"]
@@ -949,11 +937,10 @@ class LastFm(commands.Cog):
             topster_labels=topster_labels,
         )
 
-        username = util.displayname(ctx.lastfmcontext.target_user)
+        username = util.displayname(ctx.lfm.target_user)
         caption = f"**{username} — {timeframe.display()} {size} {chart_title} collage**"
         filename = (
-            f"miso_collage_{ctx.lastfmcontext.username}_"
-            f"{timeframe}_{arrow.now().int_timestamp}.jpg"
+            f"miso_collage_{ctx.lfm.username}_" f"{timeframe}_{arrow.now().int_timestamp}.jpg"
         )
 
         await ctx.send(caption, file=discord.File(fp=buffer, filename=filename))
@@ -1274,8 +1261,8 @@ class LastFm(commands.Cog):
             content.set_thumbnail(url=image.as_full())
 
         content.set_author(
-            name=f"{util.displayname(ctx.lastfmcontext.target_user, escape=False)} | {title}",
-            icon_url=ctx.lastfmcontext.target_user.display_avatar.url,
+            name=f"{util.displayname(ctx.lfm.target_user, escape=False)} | {title}",
+            icon_url=ctx.lfm.target_user.display_avatar.url,
             url=title_url,
         )
 
@@ -1364,7 +1351,7 @@ async def create_lastfm_context(ctx: MisoContext):
         return
 
     data = await get_lastfm_username(ctx)
-    ctx.lastfmcontext = LastFmContext(*data)
+    ctx.lfm = LastFmContext(*data)
 
 
 async def get_lastfm_username(ctx: MisoContext):
