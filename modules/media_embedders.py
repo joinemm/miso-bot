@@ -275,7 +275,7 @@ class TikTokEmbedder(BaseEmbedder):
             for match in regex.finditer(video_id_pattern, text)
         ]
         validated_urls.extend(
-            f"https://vm.tiktok.com/{match.group(1)}"
+            f"https://vm.tiktok.com/{match.group(2)}"
             for match in regex.finditer(shortcode_pattern, text)
         )
 
