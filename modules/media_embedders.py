@@ -263,17 +263,20 @@ class TikTokEmbedder(BaseEmbedder):
     @staticmethod
     def extract_links(text: str):
         text = "\n".join(text.split())
-        pattern = (
+        video_id_pattern = (
             r"\bhttps?:\/\/(?:m|www|vm)\.tiktok\.com\/.*\b(?:(?:usr|v|embed|user|video|t)\/"
-            r"|\?shareId=|\&item_id=)(\d+)\b"
+            r"|\?shareId=|\&item_id=)(\d+)(\b|\S+\b)"
         )
-        vm_pattern = r"\bhttps?:\/\/(?:vm|vt)\.tiktok\.com\/.*\b(\S+)\b"
+
+        shortcode_pattern = r"\bhttps?:\/\/(?:vm|vt|www)\.tiktok\.com\/(t/|)(\w+)/?"
 
         validated_urls = [
-            f"https://m.tiktok.com/v/{match.group(1)}" for match in regex.finditer(pattern, text)
+            f"https://m.tiktok.com/v/{match.group(1)}"
+            for match in regex.finditer(video_id_pattern, text)
         ]
         validated_urls.extend(
-            f"https://vm.tiktok.com/{match.group(1)}" for match in regex.finditer(vm_pattern, text)
+            f"https://vm.tiktok.com/{match.group(1)}"
+            for match in regex.finditer(shortcode_pattern, text)
         )
 
         return validated_urls
