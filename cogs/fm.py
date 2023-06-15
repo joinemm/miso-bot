@@ -784,17 +784,20 @@ class LastFm(commands.Cog):
         metadata = await self.api.scrape_album_metadata(artist_name, album_name)
         if metadata:
             content.add_field(
-                name="Release Date", value=f"{metadata['release_date'].format('MMM DDD YYYY')} | "
+                name="Release Date", value=f"{metadata['release_date'].format('MMM D YYYY')}"
             )
 
+        content.add_field(name="Total plays", value=albuminfo["userplaycount"])
+
+        tags_list = None
         if tags := albuminfo["tags"]["tag"]:
-            content.add_field(name="Tags", value=", ".join(t["name"] for t in tags))
+            tags_list = ", ".join(t["name"] for t in tags)
 
         tracklist = []
         for track in tracks:
             playcount = library.get(track["name"])
             if playcount:
-                row = f"`{track['@attr']['rank']:02}` **{track['name']}** [**{playcount}**]"
+                row = f"`{track['@attr']['rank']:02}` **{track['name']}**"
             else:
                 row = f"`{track['@attr']['rank']:02}` {track['name']}"
 
@@ -803,6 +806,9 @@ class LastFm(commands.Cog):
                 h, m = divmod(m, 60)
                 duration_fmt = (f"{h}:" if h > 1 else "") + f"{m}:{s:02}"
                 row += f" `{duration_fmt}`"
+
+            if playcount:
+                row += f" [**{playcount}**]"
             tracklist.append(row)
 
         await self.paginated_user_stat_embed(
@@ -810,7 +816,7 @@ class LastFm(commands.Cog):
             tracklist,
             f"{artist_name} — {album_name}",
             LastFmImage.from_url(albuminfo["image"][-1]["#text"]),
-            footer=f"Total {albuminfo['userplaycount']} plays",
+            footer=tags_list,
             title_url=f"https://www.last.fm/music/{urllib.parse.quote_plus(artist_name)}/{urllib.parse.quote_plus(album_name)}",
             content=content,
             per_page=20,
@@ -832,11 +838,11 @@ class LastFm(commands.Cog):
             )
 
     @fm.command(
-        aliases=["chart"],
+        aliases=["collage"],
         usage="['album' | 'artist' | 'recent'] [timeframe] "
         "[[width]x[height]] ['notitle' | 'topster'] ['padded']",
     )
-    async def collage(
+    async def chart(
         self,
         ctx: MisoContext,
         *args: Union[
