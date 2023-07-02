@@ -383,7 +383,6 @@ class TwitterEmbedder(BaseEmbedder):
 
         tasks = []
         for n, (extension, media_url) in enumerate(media_urls, start=1):
-            ts_format = timestamp.format("YYMMDD")
             filename = f"{ts_format}-@{screen_name}-{tweet_id}-{n}.{extension}"
             tasks.append(
                 self.download_media(
