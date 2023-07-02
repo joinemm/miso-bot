@@ -15,10 +15,10 @@ from attr import dataclass
 from discord.ext import commands
 from discord.ui import View
 from loguru import logger
-
-from modules import emojis, exceptions, instagram, util
 from modules.misobot import MisoBot
 from modules.tiktok import TikTok
+
+from modules import emojis, exceptions, instagram, util
 
 
 @dataclass
@@ -371,7 +371,15 @@ class TwitterEmbedder(BaseEmbedder):
                 f"Tweet `{tweet['url']}` does not include any media.",
             )
 
-        timestamp = arrow.get(tweet["created_timestamp"])
+        username = discord.utils.escape_markdown(screen_name)
+        caption = f"{self.EMOJI} **@{username}**"
+
+        try:
+            timestamp = arrow.get(tweet["created_timestamp"])
+            ts_format = timestamp.format("YYMMDD")
+            caption += f" <t:{int(timestamp.timestamp())}:d>"
+        except KeyError:
+            ts_format = "000000"
 
         tasks = []
         for n, (extension, media_url) in enumerate(media_urls, start=1):
@@ -387,8 +395,6 @@ class TwitterEmbedder(BaseEmbedder):
                 )
             )
 
-        username = discord.utils.escape_markdown(screen_name)
-        caption = f"{self.EMOJI} **@{username}** <t:{int(timestamp.timestamp())}:d>"
         if options and options.captions:
             caption += f"\n>>> {tweet['text']}"
 
