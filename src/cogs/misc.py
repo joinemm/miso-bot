@@ -880,6 +880,8 @@ class Misc(commands.Cog):
             case _:
                 raise exceptions.CommandWarning(f"No meme template called `{template}`")
 
+        options["filename"] = os.path.join(os.path.dirname(__file__), f"../{options['filename']}")
+
         meme = await self.bot.loop.run_in_executor(
             None, lambda: self.meme_factory(ctx, text=content, **options)
         )

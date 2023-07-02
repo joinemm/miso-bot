@@ -371,11 +371,18 @@ class TwitterEmbedder(BaseEmbedder):
                 f"Tweet `{tweet['url']}` does not include any media.",
             )
 
-        timestamp = arrow.get(tweet["created_timestamp"])
+        username = discord.utils.escape_markdown(screen_name)
+        caption = f"{self.EMOJI} **@{username}**"
+
+        try:
+            timestamp = arrow.get(tweet["created_timestamp"])
+            ts_format = timestamp.format("YYMMDD")
+            caption += f" <t:{int(timestamp.timestamp())}:d>"
+        except KeyError:
+            ts_format = "000000"
 
         tasks = []
         for n, (extension, media_url) in enumerate(media_urls, start=1):
-            ts_format = timestamp.format("YYMMDD")
             filename = f"{ts_format}-@{screen_name}-{tweet_id}-{n}.{extension}"
             tasks.append(
                 self.download_media(
@@ -387,8 +394,6 @@ class TwitterEmbedder(BaseEmbedder):
                 )
             )
 
-        username = discord.utils.escape_markdown(screen_name)
-        caption = f"{self.EMOJI} **@{username}** <t:{int(timestamp.timestamp())}:d>"
         if options and options.captions:
             caption += f"\n>>> {tweet['text']}"
 

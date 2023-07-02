@@ -3,9 +3,10 @@
 # https://git.joinemm.dev/miso-bot
 
 import json
+import os
 
 LITERALS = {}
-with open("data/emoji_map.json") as f:
+with open(os.path.join(os.path.dirname(__file__), "../data/emoji_map.json")) as f:
     LITERALS = json.load(f)
 
 NAME_TO_UNICODE = {f":{k}:": v for k, v in LITERALS.items()}

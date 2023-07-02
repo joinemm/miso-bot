@@ -3,7 +3,6 @@
 # https://git.joinemm.dev/miso-bot
 
 import html
-import json
 import random
 from time import time
 from typing import Optional
@@ -55,6 +54,68 @@ papago_pairs = [
     "zh-tw/zh-tw",
 ]
 
+weather_constants = {
+    "id_to_icon": {
+        "0": "",
+        "1000": ":sunny:",
+        "1100": ":white_sun_small_cloud:",
+        "1101": ":partly_sunny:",
+        "1102": ":white_sun_cloud:",
+        "1001": ":cloud:",
+        "2000": ":foggy:",
+        "2100": ":foggy:",
+        "4000": ":cloud_rain:",
+        "4001": ":cloud_rain:",
+        "4200": ":cloud_rain:",
+        "4201": ":cloud_rain:",
+        "5000": ":cloud_snow:",
+        "5001": ":cloud_snow:",
+        "5100": ":cloud_snow:",
+        "5101": ":cloud_snow:",
+        "6000": ":cloud_rain:",
+        "6001": ":cloud_snow:",
+        "6200": ":cloud_rain:",
+        "6201": ":cloud_snow:",
+        "7000": ":ice_cube:",
+        "7101": ":ice_cube:",
+        "7102": ":ice_cube:",
+        "8000": ":cloud_lightning:",
+    },
+    "id_to_description": {
+        "0": "Unknown",
+        "1000": "Clear, Sunny",
+        "1100": "Mostly Clear",
+        "1101": "Partly Cloudy",
+        "1102": "Mostly Cloudy",
+        "1001": "Cloudy",
+        "2000": "Fog",
+        "2100": "Light Fog",
+        "4000": "Drizzle",
+        "4001": "Rain",
+        "4200": "Light Rain",
+        "4201": "Heavy Rain",
+        "5000": "Snow",
+        "5001": "Flurries",
+        "5100": "Light Snow",
+        "5101": "Heavy Snow",
+        "6000": "Freezing Drizzle",
+        "6001": "Freezing Rain",
+        "6200": "Light Freezing Rain",
+        "6201": "Heavy Freezing Rain",
+        "7000": "Ice Pellets",
+        "7101": "Heavy Ice Pellets",
+        "7102": "Light Ice Pellets",
+        "8000": "Thunderstorm",
+    },
+    "precipitation": {
+        "0": "N/A",
+        "1": "Rain",
+        "2": "Snow",
+        "3": "Freezing Rain",
+        "4": "Ice Pellets",
+    },
+}
+
 
 class GifOptions(util.KeywordArguments):
     def __init__(self, start: float | None = None, end: float | None = None):
@@ -81,8 +142,6 @@ class Utility(commands.Cog):
         self.reminder_list = []
         self.cache_needs_refreshing = True
         self.shazam_client = Shazam(bot)
-        with open("data/weather.json") as f:
-            self.weather_constants = json.load(f)
 
     async def cog_load(self):
         self.reminder_loop.start()
@@ -410,11 +469,11 @@ class Utility(commands.Cog):
         sunrise = arrow.get(values_current["sunriseTime"]).to(local_time.tzinfo).format("HH:mm")
         sunset = arrow.get(values_current["sunsetTime"]).to(local_time.tzinfo).format("HH:mm")
 
-        icon = self.weather_constants["id_to_icon"][str(values_current["weatherCode"])]
-        summary = self.weather_constants["id_to_description"][str(values_current["weatherCode"])]
+        icon = weather_constants["id_to_icon"][str(values_current["weatherCode"])]
+        summary = weather_constants["id_to_description"][str(values_current["weatherCode"])]
 
         if values_today["precipitationType"] != 0 and values_today["precipitationProbability"] != 0:
-            precipitation_type = self.weather_constants["precipitation"][
+            precipitation_type = weather_constants["precipitation"][
                 str(values_today["precipitationType"])
             ]
             precipitation_chance = values_today["precipitationProbability"]
@@ -510,10 +569,8 @@ class Utility(commands.Cog):
                 values = day["values"]
                 minTemp = values["temperatureMin"]
                 maxTemp = values["temperatureMax"]
-                icon = self.weather_constants["id_to_icon"][str(values["weatherCode"])]
-                description = self.weather_constants["id_to_description"][
-                    str(values["weatherCode"])
-                ]
+                icon = weather_constants["id_to_icon"][str(values["weatherCode"])]
+                description = weather_constants["id_to_description"][str(values["weatherCode"])]
                 days.append(
                     f"{date} {icon} **{temp(maxTemp, F)}** / **{temp(minTemp, F)}** — {description}"
                 )

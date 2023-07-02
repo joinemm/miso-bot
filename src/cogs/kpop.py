@@ -5,6 +5,7 @@
 import asyncio
 import csv
 import datetime
+import os
 import random
 
 import arrow
@@ -243,10 +244,14 @@ class Kpop(commands.Cog):
         """Rebuild the kpop idol database"""
         if groups:
             await self.bot.db.execute("""DELETE FROM kpop_group""")
-            with open("data/kpopdb_girlgroups.tsv") as tsv_file:
+            with open(
+                os.path.join(os.path.dirname(__file__), "../data/kpopdb_girlgroups.tsv")
+            ) as tsv_file:
                 values = []
                 read_tsv_gg = csv.reader(tsv_file, delimiter="\t")
-                with open("data/kpopdb_boygroups.tsv") as tsv_file:
+                with open(
+                    os.path.join(os.path.dirname(__file__), "../data/kpopdb_boygroups.tsv")
+                ) as tsv_file:
                     read_tsv_bg = csv.reader(tsv_file, delimiter="\t")
                     next(read_tsv_gg)
                     next(read_tsv_bg)
@@ -292,7 +297,10 @@ class Kpop(commands.Cog):
         if idols:
             await self.bot.db.execute("""DELETE FROM kpop_idol""")
             values = []
-            with open("data/kpopdb_idols.tsv") as tsv_file:
+
+            with open(
+                os.path.join(os.path.dirname(__file__), "../data/kpopdb_idols.tsv")
+            ) as tsv_file:
                 read_tsv = csv.reader(tsv_file, delimiter="\t")
                 next(read_tsv)
                 for row in read_tsv:

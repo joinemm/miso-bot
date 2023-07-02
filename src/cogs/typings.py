@@ -4,6 +4,7 @@
 
 import asyncio
 import json
+import os
 import random
 from operator import itemgetter
 
@@ -23,7 +24,7 @@ class Typings(commands.Cog):
         self.icon = "⌨️"
         self.separators = [" ", " ", " ", "  ", "  ", " "]
         self.font = "𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣"
-        with open("data/wordlist.json") as f:
+        with open(os.path.join(os.path.dirname(__file__), "../data/wordlist.json")) as f:
             self.languages = json.load(f)
 
     def obfuscate(self, text):

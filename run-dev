@@ -4,4 +4,4 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
-./venv/bin/python main.py dev
+./venv/bin/python src/main.py dev

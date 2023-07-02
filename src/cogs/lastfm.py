@@ -5,6 +5,7 @@
 import asyncio
 import io
 import math
+import os
 import random
 import re
 import urllib.parse
@@ -80,7 +81,11 @@ class LastFm(commands.Cog):
             "https://lastfm.freetls.fastly.net/i/u/300x300/{0}",
             "https://lastfm.freetls.fastly.net/i/u/{0}",
         ]
-        with open("html/fm_chart.min.html", "r", encoding="utf-8") as file:
+        with open(
+            os.path.join(os.path.dirname(__file__), "../html/fm_chart.min.html"),
+            "r",
+            encoding="utf-8",
+        ) as file:
             self.chart_html = file.read().replace("\n", "")
 
     @commands.group(case_insensitive=True, aliases=["lastfm"])

@@ -3,6 +3,7 @@
 # https://git.joinemm.dev/miso-bot
 
 import asyncio
+import os
 from typing import Optional, Union
 
 import arrow
@@ -23,7 +24,11 @@ class User(commands.Cog):
         self.icon = "👤"
         self.proposals = set()
         self.medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
-        with open("html/profile.min.html", "r", encoding="utf-8") as file:
+        with open(
+            os.path.join(os.path.dirname(__file__), "../html/profile.min.html"),
+            "r",
+            encoding="utf-8",
+        ) as file:
             self.profile_html = file.read()
 
     @commands.command(aliases=["dp", "av", "pfp"])
