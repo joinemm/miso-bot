@@ -15,11 +15,11 @@ import discord
 import orjson
 from discord.ext import commands, tasks
 from loguru import logger
-
-from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
 from modules.shazam import Shazam
 from modules.ui import BaseButtonPaginator, Compliance
+
+from modules import emojis, exceptions, queries, util
 
 papago_pairs = [
     "ko/en",
@@ -354,7 +354,9 @@ class Utility(commands.Cog):
 
     @weather.command(name="now")
     async def weather_now(self, ctx: commands.Context, *, location: Optional[str] = None):
-        location = await self.get_user_location(ctx)
+        if location is None:
+            location = await self.get_user_location(ctx)
+
         lat, lon, address = await self.geolocate(location)
         local_time, country_code = await self.get_country_information(lat, lon)
 
@@ -454,7 +456,9 @@ class Utility(commands.Cog):
 
     @weather.command(name="forecast")
     async def weather_forecast(self, ctx: commands.Context, *, location: Optional[str] = None):
-        location = await self.get_user_location(ctx)
+        if location is None:
+            location = await self.get_user_location(ctx)
+
         lat, lon, address = await self.geolocate(location)
         local_time, country_code = await self.get_country_information(lat, lon)
         body = {
