@@ -264,7 +264,7 @@ class TikTokEmbedder(BaseEmbedder):
     def extract_links(text: str):
         text = "\n".join(text.split())
         video_id_pattern = (
-            r"\bhttps?:\/\/(?:m|www|vm)\.tiktok\.com\/.*\b(?:(?:usr|v|embed|user|video|t)\/"
+            r"\bhttps?:\/\/(?:m\.|www\.|vm\.|)tiktok\.com\/.*\b(?:(?:usr|v|embed|user|video|t)\/"
             r"|\?shareId=|\&item_id=)(\d+)(\b|\S+\b)"
         )
 
