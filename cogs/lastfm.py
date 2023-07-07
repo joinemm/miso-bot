@@ -19,11 +19,11 @@ import orjson
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from loguru import logger
+from modules.genius import Genius
+from modules.misobot import MisoBot
 from PIL import Image
 
 from modules import emojis, exceptions, util
-from modules.genius import Genius
-from modules.misobot import MisoBot
 
 MISSING_IMAGE_HASH = "2a96cbd8b46e442fc41c2b86b821562f"
 
@@ -1117,7 +1117,11 @@ class LastFm(commands.Cog):
             )
 
         if arguments["period"] == "today":
-            data = await self.custom_period(ctx.username, arguments["method"])
+            data = await self.custom_period(
+                ctx.username,
+                arguments["method"],
+                limit=arguments["amount"],
+            )
         else:
             data = await self.api_request(
                 {
@@ -2176,7 +2180,7 @@ class LastFm(commands.Cog):
                     message=content.get("message"),
                 )
 
-    async def custom_period(self, user, group_by, shift_hours=24):
+    async def custom_period(self, user, group_by, shift_hours=24, limit=None):
         """Parse recent tracks to get custom duration data (24 hour)"""
         limit_timestamp = arrow.utcnow().shift(hours=-shift_hours)
         data = await self.api_request(
@@ -2184,7 +2188,7 @@ class LastFm(commands.Cog):
                 "user": user,
                 "method": "user.getrecenttracks",
                 "from": limit_timestamp.int_timestamp,
-                "limit": 200,
+                "limit": 300,
             }
         )
         loops = int(data["recenttracks"]["@attr"]["totalPages"])
@@ -2195,7 +2199,7 @@ class LastFm(commands.Cog):
                         "user": user,
                         "method": "user.getrecenttracks",
                         "from": limit_timestamp.int_timestamp,
-                        "limit": 200,
+                        "limit": 300,
                         "page": i,
                     }
                 )
@@ -2217,6 +2221,8 @@ class LastFm(commands.Cog):
                     }
 
             albumsdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
+            if limit:
+                albumsdata = albumsdata[:limit]
             return {
                 "topalbums": {
                     "album": albumsdata,
@@ -2227,7 +2233,7 @@ class LastFm(commands.Cog):
                 }
             }
 
-        if group_by in ["track", "user.gettoptracks"]:
+        elif group_by in ["track", "user.gettoptracks"]:
             for track in data["recenttracks"]["track"]:
                 track_name = track["name"]
                 artist_name = track["artist"]["#text"]
@@ -2242,6 +2248,8 @@ class LastFm(commands.Cog):
                     }
 
             tracksdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
+            if limit:
+                tracksdata = tracksdata[:limit]
             return {
                 "toptracks": {
                     "track": tracksdata,
@@ -2252,7 +2260,7 @@ class LastFm(commands.Cog):
                 }
             }
 
-        if group_by in ["artist", "user.gettopartists"]:
+        elif group_by in ["artist", "user.gettopartists"]:
             for track in data["recenttracks"]["track"]:
                 artist_name = track["artist"]["#text"]
                 if artist_name in formatted_data:
@@ -2265,6 +2273,8 @@ class LastFm(commands.Cog):
                     }
 
             artistdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
+            if limit:
+                artistdata = artistdata[:limit]
             return {
                 "topartists": {
                     "artist": artistdata,

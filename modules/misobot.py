@@ -13,12 +13,12 @@ from discord import Activity, ActivityType, AllowedMentions, Intents, Status
 from discord.errors import Forbidden
 from discord.ext import commands
 from loguru import logger
-
-from modules import cache, maria, util
 from modules.help import EmbedHelpCommand
 from modules.instagram import Datalama
 from modules.keychain import Keychain
 from modules.redis import Redis
+
+from modules import cache, maria, util
 
 
 class MisoBot(commands.AutoShardedBot):
@@ -80,7 +80,11 @@ class MisoBot(commands.AutoShardedBot):
         )
         await self.redis.start()
         await self.db.initialize_pool()
-        await self.cache.initialize_settings_cache()
+        try:
+            await self.cache.initialize_settings_cache()
+        except Exception as e:
+            logger.error(e)
+
         await self.load_all_extensions()
         self.boot_up_time = time() - self.start_time
 
