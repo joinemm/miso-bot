@@ -13,9 +13,9 @@ import discord
 import orjson
 import psutil
 from discord.ext import commands
+from modules.misobot import MisoBot
 
 from modules import emojis, exceptions, util
-from modules.misobot import MisoBot
 
 
 class Information(commands.Cog):
@@ -204,6 +204,7 @@ class Information(commands.Cog):
 
     @commands.command()
     async def shardof(self, ctx: commands.Context, guild_id: int):
+        """Find the shard ID of given guild ID"""
         guild = self.bot.get_guild(guild_id)
         if guild is None:
             raise exceptions.CommandWarning(f"Guild `{guild_id}` not found")

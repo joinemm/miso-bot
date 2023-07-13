@@ -10,10 +10,10 @@ import discord
 import orjson
 from bs4 import BeautifulSoup
 from discord.ext import commands
-
-from modules import emojis, exceptions, util
 from modules.media_embedders import InstagramEmbedder, TikTokEmbedder, TwitterEmbedder
 from modules.misobot import MisoBot
+
+from modules import emojis, exceptions, util
 
 
 class Media(commands.Cog):
@@ -51,22 +51,26 @@ class Media(commands.Cog):
             index_entries=True,
         )
 
-    @commands.command()
+    @commands.command(usage="<instagram | tiktok> <on | off>")
     async def autoembedder(
         self,
         ctx: commands.Context,
         provider: Literal["instagram", "tiktok"],
-        state: Optional[bool] = None,
+        enabled: Optional[bool] = None,
     ):
         """Set up automatic embeds for various media sources
 
         The links will be expanded automatically when detected in chat,
         without requiring the use use the corresponding command
+
+        Example:
+            >autoembedder instagram on
+            >autoembedder tiktok off
         """
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        if state is None:
+        if enabled is None:
             # show current state
             data = await self.bot.db.fetch_value(
                 f"""
@@ -91,7 +95,7 @@ class Media(commands.Cog):
             )
 
         # set new state
-        if state:
+        if enabled:
             # check for donation status if trying to turn on
             await util.patron_check(ctx)
 
@@ -103,8 +107,8 @@ class Media(commands.Cog):
                 {provider} = %s
             """,
             ctx.guild.id,
-            state,
-            state,
+            enabled,
+            enabled,
         )
 
         await self.bot.cache.cache_auto_embedders()
@@ -112,20 +116,29 @@ class Media(commands.Cog):
         await util.send_success(
             ctx,
             f"{provider.capitalize()} automatic embeds are now "
-            f"**{'ON' if state else 'OFF'}** for this server",
+            f"**{'ON' if enabled else 'OFF'}** for this server",
         )
 
-    @commands.command(aliases=["ig", "insta"])
+    @commands.command(
+        aliases=["ig", "insta"],
+        usage="[-c | --caption]  [-s | --spoiler]  [-d | --delete] <links...>",
+    )
     async def instagram(self, ctx: commands.Context, *, links: str):
         """Retrieve media from Instagram post, reel or story"""
         await InstagramEmbedder(self.bot).process(ctx, links)
 
-    @commands.command(aliases=["twt"])
+    @commands.command(
+        aliases=["twt"],
+        usage="[-c | --caption]  [-s | --spoiler]  [-d | --delete] <links...>",
+    )
     async def twitter(self, ctx: commands.Context, *, links: str):
         """Retrieve media from a tweet"""
         await TwitterEmbedder(self.bot).process(ctx, links)
 
-    @commands.command(aliases=["tik", "tok", "tt"])
+    @commands.command(
+        aliases=["tik", "tok", "tt"],
+        usage="[-c | --caption]  [-s | --spoiler]  [-d | --delete] <links...>",
+    )
     async def tiktok(self, ctx: commands.Context, *, links: str):
         """Retrieve video without watermark from a TikTok"""
         await TikTokEmbedder(self.bot).process(ctx, links)

@@ -6,9 +6,9 @@ from typing import Annotated
 
 import discord
 from discord.ext import commands
+from modules.misobot import MisoBot
 
 from modules import emoji_literals, exceptions, queries, util
-from modules.misobot import MisoBot
 
 
 class ChannelSetting(commands.TextChannelConverter):
@@ -96,6 +96,13 @@ class Configuration(commands.Cog):
         Change the greeter welcome message format
 
         Use with "default" to reset to the default format.
+
+        Use placeholders within {curly braces}:
+
+        available placeholders: `mention`, `user`, `id`, `server`, `guild`, `username`
+
+        Example:
+            >greeter message "{user} just joined {server}!"
         """
         if message.lower() == "default":
             message = None
@@ -136,6 +143,13 @@ class Configuration(commands.Cog):
         Change the goodbye message format
 
         Use with "default" to reset to the default format.
+
+        Use placeholders within {curly braces}:
+
+        available placeholders: `mention`, `user`, `id`, `server`, `guild`, `username`
+
+        Example:
+            >goodbyemessage message "{user} just left {server}!"
         """
         if message.lower() == "default":
             message = None
