@@ -121,26 +121,44 @@ class Media(commands.Cog):
 
     @commands.command(
         aliases=["ig", "insta"],
-        usage="[-c | --caption]  [-s | --spoiler]  [-d | --delete] <links...>",
+        usage="[OPTIONS] <links...>",
     )
     async def instagram(self, ctx: commands.Context, *, links: str):
-        """Retrieve media from Instagram post, reel or story"""
+        """Retrieve media from Instagram post, reel or story
+
+        OPTIONS
+            `-c`, `--caption` : also include the caption/text of the media
+            `-s`, `--spoiler` : spoiler the uploaded images and text
+            `-d`, `--delete`  : delete your message when the media is done embedding
+        """
         await InstagramEmbedder(self.bot).process(ctx, links)
 
     @commands.command(
         aliases=["twt"],
-        usage="[-c | --caption]  [-s | --spoiler]  [-d | --delete] <links...>",
+        usage="[OPTIONS] <links...>",
     )
     async def twitter(self, ctx: commands.Context, *, links: str):
-        """Retrieve media from a tweet"""
+        """Retrieve media from a tweet
+
+        OPTIONS
+            `-c`, `--caption` : also include the caption/text of the media
+            `-s`, `--spoiler` : spoiler the uploaded images and text
+            `-d`, `--delete`  : delete your message when the media is done embedding
+        """
         await TwitterEmbedder(self.bot).process(ctx, links)
 
     @commands.command(
         aliases=["tik", "tok", "tt"],
-        usage="[-c | --caption]  [-s | --spoiler]  [-d | --delete] <links...>",
+        usage="[OPTIONS] <links...>",
     )
     async def tiktok(self, ctx: commands.Context, *, links: str):
-        """Retrieve video without watermark from a TikTok"""
+        """Retrieve video without watermark from a TikTok
+
+        OPTIONS
+            `-c`, `--caption` : also include the caption/text of the media
+            `-s`, `--spoiler` : spoiler the uploaded images and text
+            `-d`, `--delete`  : delete your message when the media is done embedding
+        """
         await TikTokEmbedder(self.bot).process(ctx, links)
 
     @commands.command(aliases=["gif", "gfy"])
