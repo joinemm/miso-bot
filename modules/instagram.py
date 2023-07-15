@@ -104,6 +104,10 @@ class Datalama:
     def get_url_expiry(media_url: str):
         return int(parse.parse_qs(parse.urlparse(media_url).query)["oe"][0], 16)
 
+    @staticmethod
+    def calculate_post_lifetime(media: list) -> int:
+        return min([m.expires for m in media]) - arrow.utcnow().int_timestamp
+
     async def api_request_with_cache(self, endpoint: str, params: dict) -> tuple[dict, bool, str]:
         cache_key = self.make_cache_key(endpoint, params)
 
@@ -172,9 +176,7 @@ class Datalama:
         media = self.parse_resource_v1(data)
 
         if not was_cached and media:
-            lifetime = (
-                (media[0].expires - arrow.utcnow().int_timestamp) if media[0].expires else 86400
-            )
+            lifetime = self.calculate_post_lifetime(media)
             await self.save_cache(cache_key, data, lifetime)
 
         return IgPost(
@@ -214,9 +216,7 @@ class Datalama:
                 raise TypeError(f"Unknown IG media type {data['media_type']}")
 
         if not was_cached and media:
-            lifetime = (
-                (media[0].expires - arrow.utcnow().int_timestamp) if media[0].expires else 86400
-            )
+            lifetime = self.calculate_post_lifetime(media)
             await self.save_cache(cache_key, data, lifetime)
 
         timestamp = int(arrow.get(data["taken_at"]).timestamp())
