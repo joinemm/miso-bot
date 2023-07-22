@@ -4,13 +4,18 @@
 
 import asyncio
 import random
-from typing import Literal, Optional
+from typing import Literal
 
 import discord
 import orjson
 from bs4 import BeautifulSoup
 from discord.ext import commands
-from modules.media_embedders import InstagramEmbedder, TikTokEmbedder, TwitterEmbedder
+from modules.media_embedders import (
+    BaseEmbedder,
+    InstagramEmbedder,
+    TikTokEmbedder,
+    TwitterEmbedder,
+)
 from modules.misobot import MisoBot
 
 from modules import emojis, exceptions, util
@@ -21,7 +26,7 @@ class Media(commands.Cog):
 
     def __init__(self, bot):
         self.bot: MisoBot = bot
-        self.icon = "🌐"
+        self.icon = "🖼️"
 
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx: commands.Context, *, query):
@@ -51,72 +56,129 @@ class Media(commands.Cog):
             index_entries=True,
         )
 
-    @commands.command(usage="<instagram | tiktok> <on | off>")
-    async def autoembedder(
-        self,
-        ctx: commands.Context,
-        provider: Literal["instagram", "tiktok"],
-        enabled: Optional[bool] = None,
-    ):
+    @util.patrons_only()
+    @commands.group()
+    async def autoembedder(self, ctx: commands.Context, provider: Literal["instagram", "tiktok"]):
         """Set up automatic embeds for various media sources
 
         The links will be expanded automatically when detected in chat,
-        without requiring the use use the corresponding command
-
-        Example:
-            >autoembedder instagram on
-            >autoembedder tiktok off
+        without requiring the use of the corresponding command
         """
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        if enabled is None:
-            # show current state
-            data = await self.bot.db.fetch_value(
+        if ctx.invoked_subcommand is None:
+            enabled = await self.bot.db.fetch_value(
                 f"""
-                SELECT {provider} FROM media_auto_embed_settings WHERE guild_id = %s
+                SELECT {provider} FROM media_auto_embed_enabled WHERE guild_id = %s
                 """,
                 ctx.guild.id,
             )
-            if data is None:
-                current_state = "Not configured"
-            elif data:
-                current_state = "ON"
+            options_data = await self.bot.db.fetch_row(
+                """
+                SELECT options, reply FROM media_auto_embed_options
+                    WHERE guild_id = %s AND provider = %s
+                """,
+                ctx.guild.id,
+                provider,
+            )
+            if options_data:
+                options, reply = options_data
             else:
-                current_state = "OFF"
+                options, reply = None, None
 
-            return await ctx.send(
+            await ctx.send(
                 embed=discord.Embed(
+                    title=f"{provider.capitalize()} autoembedder",
                     description=(
-                        f"{provider.capitalize()} automatic embeds are "
-                        f"currently **{current_state}** for this server"
-                    )
+                        f"ENABLED: {':white_check_mark:' if enabled else ':x:'}\n"
+                        f"OPTIONS: `{options}`\n"
+                        f"REPLIES: {':white_check_mark:' if reply else ':x:'}"
+                    ),
                 )
             )
+        else:
+            ctx.provider = provider
 
-        # set new state
-        if enabled:
-            # check for donation status if trying to turn on
-            await util.patron_check(ctx)
-
-        await self.bot.db.execute(
+    @autoembedder.command(name="toggle")
+    async def autoembedder_toggle(self, ctx: commands.Context):
+        """Toggle the autoembedder on or off for given media provider"""
+        data = await self.bot.db.fetch_value(
             f"""
-            INSERT INTO media_auto_embed_settings (guild_id, {provider})
-                VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE
-                {provider} = %s
+            SELECT {ctx.provider} FROM media_auto_embed_enabled WHERE guild_id = %s
             """,
             ctx.guild.id,
-            enabled,
-            enabled,
+        )
+        await self.bot.db.execute(
+            f"""
+            INSERT INTO media_auto_embed_enabled (guild_id, {ctx.provider})
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                {ctx.provider} = %s
+            """,
+            ctx.guild.id,
+            not data,
+            not data,
         )
 
         await self.bot.cache.cache_auto_embedders()
 
         await util.send_success(
             ctx,
-            f"{provider.capitalize()} automatic embeds are now "
-            f"**{'ON' if enabled else 'OFF'}** for this server",
+            f"{ctx.provider.capitalize()} automatic embeds are now "
+            f"**{'OFF' if data else 'ON'}** for this server",
+        )
+
+    @autoembedder.command(name="options")
+    async def autoembedder_options(self, ctx: commands.Context, *, options: str):
+        """Set options to be applied to an automatic embed
+
+        Refer to the help of the embedder commands for list of options.
+        """
+        parsed_options = BaseEmbedder.get_options(options)
+        options = parsed_options.sanitized_string
+
+        await self.bot.db.execute(
+            """
+            INSERT INTO media_auto_embed_options (guild_id, provider, options)
+                VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                options = %s
+            """,
+            ctx.guild.id,
+            ctx.provider,
+            options,
+            options,
+        )
+
+        await util.send_success(
+            ctx,
+            f"{ctx.provider.capitalize()} automatic embed OPTIONS are now:\n"
+            f"```yml\nCAPTIONS: {parsed_options.captions}\n"
+            f"DELETE_AFTER: {parsed_options.delete_after}\n"
+            f"SPOILER: {parsed_options.spoiler}```\n",
+        )
+
+    @autoembedder.command(name="reply", usage="<on | off>")
+    async def autoembedder_reply(self, ctx: commands.Context, on_or_off: bool):
+        """Should the automatic embed be a reply to the invoking message"""
+        await self.bot.db.execute(
+            """
+            INSERT INTO media_auto_embed_options (guild_id, provider, reply)
+                VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                reply = %s
+            """,
+            ctx.guild.id,
+            ctx.provider,
+            on_or_off,
+            on_or_off,
+        )
+
+        await util.send_success(
+            ctx,
+            f"{ctx.provider.capitalize()} automatic embed is now "
+            f"{'' if on_or_off else 'NOT '}a reply",
         )
 
     @commands.command(

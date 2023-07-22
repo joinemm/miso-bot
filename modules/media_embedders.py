@@ -37,6 +37,7 @@ class Options:
     captions: bool = False
     delete_after: bool = False
     spoiler: bool = False
+    sanitized_string: str = ""
 
 
 def filesize_limit(guild: discord.Guild | None):
@@ -56,18 +57,24 @@ class BaseEmbedder:
         self.bot: MisoBot = bot
 
     @staticmethod
-    def get_options(text: str):
+    def get_options(text: str) -> Options:
         options = Options()
+        valid_options = []
         words = text.lower().split()
+
         if "-c" in words or "--caption" in words:
             options.captions = True
+            valid_options.append("-c")
 
         if "-d" in words or "--delete" in words:
             options.delete_after = True
+            valid_options.append("-d")
 
         if "-s" in words or "--spoiler" in words:
             options.spoiler = True
+            valid_options.append("-s")
 
+        options.sanitized_string = " ".join(valid_options)
         return options
 
     async def process(self, ctx: commands.Context, user_input: str):
@@ -150,17 +157,23 @@ class BaseEmbedder:
         message_contents["view"].approved_deletors.append(ctx.author)
 
     async def send_contextless(
-        self, channel: "discord.abc.MessageableChannel", author: discord.User, media: Any
+        self,
+        channel: "discord.abc.MessageableChannel",
+        author: discord.User,
+        media: Any,
+        options: Options | None = None,
     ):
         """Send the media without relying on command context, for example in a message event"""
-        message_contents = await self.create_message(channel, media)
+        message_contents = await self.create_message(channel, media, options=options)
         msg = await channel.send(**message_contents)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(author)
 
-    async def send_reply(self, message: discord.Message, media: Any):
+    async def send_reply(
+        self, message: discord.Message, media: Any, options: Options | None = None
+    ):
         """Send the media as a reply to another message"""
-        message_contents = await self.create_message(message.channel, media)
+        message_contents = await self.create_message(message.channel, media, options=options)
         msg = await message.reply(**message_contents, mention_author=False)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(message.author)

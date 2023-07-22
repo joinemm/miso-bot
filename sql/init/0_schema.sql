@@ -250,7 +250,15 @@ CREATE TABLE IF NOT EXISTS guild_settings (
     PRIMARY KEY (guild_id)
 );
 
-CREATE TABLE IF NOT EXISTS media_auto_embed_settings (
+CREATE TABLE IF NOT EXISTS media_auto_embed_options (
+    guild_id BIGINT,
+    provider ENUM('instagram', 'twitter', 'tiktok', 'reddit') NOT NULL,
+    options VARCHAR(32),
+    reply BOOLEAN DEFAULT TRUE,
+    PRIMARY KEY (guild_id, provider)
+);
+
+CREATE TABLE IF NOT EXISTS media_auto_embed_enabled (
     guild_id BIGINT,
     instagram BOOLEAN DEFAULT FALSE,
     twitter BOOLEAN DEFAULT FALSE,
