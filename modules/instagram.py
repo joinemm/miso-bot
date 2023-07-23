@@ -157,7 +157,8 @@ class Datalama:
                     or data.get("detail") is not None
                 ):
                     raise InstagramError(
-                        f"ERROR {response.status} | {data.get('exc_type')} | {data.get('detail')}"
+                        f"API returned **{response.status} {data.get('detail')}**"
+                        f"```json\n{params}```"
                     )
 
                 return data
