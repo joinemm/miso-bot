@@ -333,6 +333,23 @@ class TwitterEmbedder(BaseEmbedder):
     NO_RESULTS_ERROR = "Found no Twitter links to embed!"
 
     @staticmethod
+    def remove_tco(text: str) -> str:
+        """Get rid of the t.co link to the same tweet"""
+        if text.startswith("https://t.co"):
+            # the caption is only the link
+            return ""
+
+        try:
+            pre_text, tco = text.rsplit(maxsplit=1)
+        except ValueError:
+            return text
+
+        if tco.startswith("https://t.co"):
+            return pre_text
+        else:
+            return pre_text + " " + tco
+
+    @staticmethod
     def extract_links(text: str, include_id_only=True):
         text = "\n".join(text.split())
         results = [
@@ -389,14 +406,14 @@ class TwitterEmbedder(BaseEmbedder):
 
         try:
             timestamp = arrow.get(tweet["created_timestamp"])
-            ts_format = timestamp.format("YYMMDD")
+            ts_format = timestamp.format("YYMMDD") + "-"
             caption += f" <t:{int(timestamp.timestamp())}:d>"
         except KeyError:
-            ts_format = "000000"
+            ts_format = ""
 
         tasks = []
         for n, (extension, media_url) in enumerate(media_urls, start=1):
-            filename = f"{ts_format}-@{screen_name}-{tweet_id}-{n}.{extension}"
+            filename = f"{ts_format}@{screen_name}-{tweet_id}-{n}.{extension}"
             tasks.append(
                 self.download_media(
                     media_url,
@@ -407,9 +424,6 @@ class TwitterEmbedder(BaseEmbedder):
                 )
             )
 
-        if options and options.captions:
-            caption += f"\n>>> {tweet['text']}"
-
         files = []
         too_big_files = []
         results = await asyncio.gather(*tasks)
@@ -418,6 +432,11 @@ class TwitterEmbedder(BaseEmbedder):
                 files.append(result)
             else:
                 too_big_files.append(result)
+
+        if options and options.captions:
+            tweet_text = self.remove_tco(tweet["text"])
+            if tweet_text:
+                caption += f"\n>>> {tweet_text}"
 
         caption = "\n".join([caption] + too_big_files)
         return {
