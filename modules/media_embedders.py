@@ -210,7 +210,7 @@ class InstagramEmbedder(BaseEmbedder):
                 results.append(InstagramPost(match.group(6)))
 
         if include_shortcodes:
-            shortcode_regex = r"(?:\s|^)([a-zA-Z0-9\-\_\.]+)(?=\s|$)"
+            shortcode_regex = r"(?:\s|^)([^-][a-zA-Z0-9\-\_\.]{9,})(?=\s|$)"
             for match in regex.finditer(shortcode_regex, text):
                 results.append(InstagramPost(match.group(1)))
 
