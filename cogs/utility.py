@@ -406,7 +406,6 @@ class Utility(commands.Cog):
         daily_data = next(filter(lambda t: t["timestep"] == "1d", data["data"]["timelines"]))
         values_current = current_data["intervals"][0]["values"]
         values_today = daily_data["intervals"][0]["values"]
-        #  values_tomorrow = daily_data["intervals"][1]["values"]
         temperature = values_current["temperature"]
         temperature_apparent = values_current["temperatureApparent"]
         sunrise = arrow.get(values_current["sunriseTime"]).to(local_time.tzinfo).format("HH:mm")

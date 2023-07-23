@@ -8,9 +8,9 @@ import arrow
 import discord
 from discord.ext import commands, tasks
 from loguru import logger
+from modules.misobot import MisoBot
 
 from modules import exceptions, util
-from modules.misobot import MisoBot
 
 
 class Mod(commands.Cog):
@@ -178,21 +178,22 @@ class Mod(commands.Cog):
             if duration and duration.strip().lower() == "remove":
                 await member.timeout(None)
                 return await util.send_success(ctx, f"Removed timeout from {member.mention}")
+
             seconds = member.timeout.timestamp() - arrow.now().int_timestamp
             raise exceptions.CommandInfo(
                 f"{member.mention} is already timed out "
                 f"(**{util.stringfromtime(seconds)}** remaining)",
             )
-        else:
-            seconds = util.timefromstring(duration)
-            if seconds is None:
-                raise exceptions.CommandWarning(f"Invalid duration `{duration}`")
-            until = arrow.now().shift(seconds=+seconds).datetime
 
-            await member.timeout(until)
-            await util.send_success(
-                ctx, f"Timed out {member.mention} for **{util.stringfromtime(seconds)}**"
-            )
+        seconds = util.timefromstring(duration)
+        if seconds is None:
+            raise exceptions.CommandWarning(f"Invalid duration `{duration}`")
+        until = arrow.now().shift(seconds=+seconds).datetime
+
+        await member.timeout(until)
+        await util.send_success(
+            ctx, f"Timed out {member.mention} for **{util.stringfromtime(seconds)}**"
+        )
 
     @commands.command()
     @commands.guild_only()

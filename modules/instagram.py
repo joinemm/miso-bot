@@ -106,7 +106,7 @@ class Datalama:
 
     @staticmethod
     def calculate_post_lifetime(media: list) -> int:
-        return min([m.expires for m in media]) - arrow.utcnow().int_timestamp
+        return min(m.expires for m in media) - arrow.utcnow().int_timestamp
 
     async def api_request_with_cache(self, endpoint: str, params: dict) -> tuple[dict, bool, str]:
         cache_key = self.make_cache_key(endpoint, params)

@@ -8,9 +8,9 @@ import arrow
 import discord
 from discord.ext import commands
 from loguru import logger
+from modules.misobot import MisoBot
 
 from modules import util
-from modules.misobot import MisoBot
 
 
 class Owner(commands.Cog):
@@ -137,7 +137,7 @@ class Owner(commands.Cog):
 
         await self.bot.db.execute(
             """
-            INSERT INTO donator (user_id, platform, external_username, 
+            INSERT INTO donator (user_id, platform, external_username,
                                  donation_tier, donating_since, amount)
             VALUES (%s, %s, %s, %s, %s, %s)
             """,

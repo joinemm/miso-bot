@@ -1955,7 +1955,7 @@ class LastFm(commands.Cog):
                     except ValueError:
                         return False
                     else:
-                        return num <= len(results) and num > 0
+                        return len(results) <= num > 0
                 else:
                     return False
 
@@ -2050,7 +2050,6 @@ class LastFm(commands.Cog):
     async def listening_report(self, ctx: commands.Context, timeframe):
         current_day_floor = arrow.utcnow().floor("day")
         week = []
-        # for i in range(7, 0, -1):
         for i in range(1, 8):
             dt = current_day_floor.shift(days=-i)
             week.append(
@@ -2107,7 +2106,6 @@ class LastFm(commands.Cog):
             value=f"{scrobbles_average} Scrobbles",
             inline=False,
         )
-        # content.add_field(name="Listening time", value=listening_time)
         await ctx.send(embed=content)
 
     async def get_artist_image(self, artist):
@@ -2233,7 +2231,7 @@ class LastFm(commands.Cog):
                 }
             }
 
-        elif group_by in ["track", "user.gettoptracks"]:
+        if group_by in ["track", "user.gettoptracks"]:
             for track in data["recenttracks"]["track"]:
                 track_name = track["name"]
                 artist_name = track["artist"]["#text"]
@@ -2260,7 +2258,7 @@ class LastFm(commands.Cog):
                 }
             }
 
-        elif group_by in ["artist", "user.gettopartists"]:
+        if group_by in ["artist", "user.gettopartists"]:
             for track in data["recenttracks"]["track"]:
                 artist_name = track["artist"]["#text"]
                 if artist_name in formatted_data:

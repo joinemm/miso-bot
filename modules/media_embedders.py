@@ -341,13 +341,12 @@ class TwitterEmbedder(BaseEmbedder):
 
         try:
             pre_text, tco = text.rsplit(maxsplit=1)
+            if tco.startswith("https://t.co"):
+                return pre_text
         except ValueError:
-            return text
+            pass
 
-        if tco.startswith("https://t.co"):
-            return pre_text
-        else:
-            return pre_text + " " + tco
+        return text
 
     @staticmethod
     def extract_links(text: str, include_id_only=True):

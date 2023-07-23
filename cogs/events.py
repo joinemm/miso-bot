@@ -317,8 +317,8 @@ class Events(commands.Cog):
         print(options_data)
         if options_data:
             return options_data
-        else:
-            return None, None
+
+        return None, None
 
     async def parse_media_auto_embed(self, message: discord.Message, media_settings: dict):
         if media_settings["instagram"]:

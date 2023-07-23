@@ -9,9 +9,9 @@ import discord
 import regex
 from discord.ext import commands
 from loguru import logger
+from modules.misobot import MisoBot
 
 from modules import emojis, exceptions, queries, util
-from modules.misobot import MisoBot
 
 
 class Notifications(commands.Cog):
@@ -271,8 +271,8 @@ class Notifications(commands.Cog):
         """List your current notifications"""
         words = await self.bot.db.fetch(
             """
-            SELECT guild_id, keyword, times_triggered 
-            FROM notification WHERE user_id = %s 
+            SELECT guild_id, keyword, times_triggered
+            FROM notification WHERE user_id = %s
             ORDER BY keyword
             """,
             ctx.author.id,

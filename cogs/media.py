@@ -367,12 +367,6 @@ class GiphyUI(discord.ui.View):
         await interaction.response.defer()
         await self.remove_ui()
 
-    # @discord.ui.button(
-    #     label="Powered by GIPHY", style=discord.ButtonStyle.secondary, disabled=True
-    # )
-    # async def giphy_label(self, _, __):
-    #     pass
-
     async def remove_ui(self):
         for item in self.children:
             item.disabled = True  # type: ignore
