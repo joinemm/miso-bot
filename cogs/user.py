@@ -10,9 +10,9 @@ import bleach
 import discord
 import humanize
 from discord.ext import commands
+from modules.misobot import MisoBot
 
 from modules import emojis, exceptions, queries, util
-from modules.misobot import MisoBot
 
 
 class User(commands.Cog):
@@ -317,9 +317,49 @@ class User(commands.Cog):
         """Show various leaderboards"""
         await util.command_group_help(ctx)
 
+    @leaderboard.command(name="fishygifted")
+    async def leaderboard_fishy_gifted(self, ctx: commands.Context, scope=""):
+        """Most altruistic fishers leaderboard"""
+        if ctx.guild is None:
+            raise exceptions.CommandError("Unable to get current guild")
+
+        global_data = scope.lower() == "global"
+        data = await self.bot.db.fetch(
+            "SELECT user_id, fishy_gifted_count FROM fishy ORDER BY fishy_gifted_count DESC"
+        )
+
+        rows = []
+        if data:
+            medal_emoji = [":first_place:", ":second_place:", ":third_place:"]
+            i = 1
+            for user_id, fishy_count in data:
+                if global_data:
+                    user = self.bot.get_user(user_id)
+                else:
+                    user = ctx.guild.get_member(user_id)
+
+                if user is None or user.bot or fishy_count == 0:
+                    continue
+
+                ranking = medal_emoji[i - 1] if i <= len(medal_emoji) else f"`#{i:2}`"
+                rows.append(
+                    f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy gifted"
+                )
+                i += 1
+        if not rows:
+            raise exceptions.CommandInfo("Nobody has gifted fish yet!")
+
+        content = discord.Embed(
+            title=(
+                f":fish: {'Global' if global_data else ctx.guild.name} " "gifted fishy leaderboard"
+            ),
+            color=int("55acee", 16),
+        )
+        await util.send_as_pages(ctx, content, rows)
+
     @leaderboard.command(name="fishy")
     async def leaderboard_fishy(self, ctx: commands.Context, scope=""):
-        """Fishy leaderboard"""
+        """Fishers leaderboard"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
