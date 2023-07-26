@@ -59,7 +59,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         for command in filtered_commands:
             embed.add_field(
                 name=f"{self.get_command_signature(command)}",
-                value=(command.help or command.short_doc or "") + self.get_subcommands(command),
+                value=(command.short_doc or "") + self.get_subcommands(command),
                 inline=False,
             )
 
