@@ -28,7 +28,10 @@ class User(commands.Cog):
 
     @commands.command(aliases=["dp", "av", "pfp"])
     async def avatar(
-        self, ctx: commands.Context, *, user: Union[discord.Member, discord.User, None] = None
+        self,
+        ctx: commands.Context,
+        *,
+        user: Union[discord.Member, discord.User, None] = None,
     ):
         """Get user's profile picture"""
         if ctx.guild is None:
@@ -80,7 +83,10 @@ class User(commands.Cog):
     @commands.command(aliases=["uinfo"])
     @commands.cooldown(3, 30, type=commands.BucketType.user)
     async def userinfo(
-        self, ctx: commands.Context, *, user: Union[discord.Member, discord.User, None] = None
+        self,
+        ctx: commands.Context,
+        *,
+        user: Union[discord.Member, discord.User, None] = None,
     ):
         """Get information about discord user"""
         if ctx.guild is None:
@@ -102,7 +108,9 @@ class User(commands.Cog):
 
         content.add_field(name="Badges", value=" ".join(user_badges + other_badges))
         content.add_field(name="Mention", value=user.mention)
-        content.add_field(name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M"))
+        content.add_field(
+            name="Account created", value=user.created_at.strftime("%d/%m/%Y %H:%M")
+        )
 
         if isinstance(user, discord.Member):
             content.colour = user.color
@@ -110,29 +118,41 @@ class User(commands.Cog):
             member_number = 1 + sum(
                 1
                 for member in ctx.guild.members
-                if member.joined_at and user.joined_at and member.joined_at < user.joined_at
+                if member.joined_at
+                and user.joined_at
+                and member.joined_at < user.joined_at
             )
             boosting_date = None
             if user.premium_since:
-                boosting_date = humanize.naturaldelta(discord.utils.utcnow() - user.premium_since)
+                boosting_date = humanize.naturaldelta(
+                    discord.utils.utcnow() - user.premium_since
+                )
 
-            content.add_field(name="Member", value=f"#{member_number} / {len(ctx.guild.members)}")
+            content.add_field(
+                name="Member", value=f"#{member_number} / {len(ctx.guild.members)}"
+            )
             content.add_field(
                 name="Boosting", value=f"For {boosting_date}" if boosting_date else "No"
             )
 
             content.add_field(
                 name="Joined server",
-                value=user.joined_at.strftime("%d/%m/%Y %H:%M") if user.joined_at else "Unknown",
+                value=user.joined_at.strftime("%d/%m/%Y %H:%M")
+                if user.joined_at
+                else "Unknown",
             )
 
             if self.bot.intents.presences:
                 activity_display = util.UserActivity(user.activities).display()
                 status = "mobile" if user.is_on_mobile() else user.status.name
-                status_display = f"{emojis.Status[status].value} {user.status.name.capitalize()}"
+                status_display = (
+                    f"{emojis.Status[status].value} {user.status.name.capitalize()}"
+                )
 
                 content.add_field(name="Status", value=status_display)
-                content.add_field(name="Activity", value=activity_display or "Unavailable")
+                content.add_field(
+                    name="Activity", value=activity_display or "Unavailable"
+                )
 
             content.add_field(
                 name="Roles",
@@ -171,7 +191,9 @@ class User(commands.Cog):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        sorted_members = sorted(ctx.guild.members, key=lambda x: x.joined_at or 0, reverse=True)
+        sorted_members = sorted(
+            ctx.guild.members, key=lambda x: x.joined_at or 0, reverse=True
+        )
         membercount = len(sorted_members)
         content = discord.Embed(title=f"{ctx.guild.name} members")
         rows = []
@@ -183,7 +205,9 @@ class User(commands.Cog):
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
-    async def banner(self, ctx: commands.Context, *, user: Optional[discord.User] = None):
+    async def banner(
+        self, ctx: commands.Context, *, user: Optional[discord.User] = None
+    ):
         """Get user's banner"""
         # banners are not cached so an api call is required
         user = await self.bot.fetch_user(user.id if user else ctx.author.id)
@@ -192,7 +216,9 @@ class User(commands.Cog):
 
         if not user.banner:
             if not user.accent_color:
-                raise exceptions.CommandWarning(f"**{user}** has not set banner or accent color.")
+                raise exceptions.CommandWarning(
+                    f"**{user}** has not set banner or accent color."
+                )
 
             content.color = user.accent_color
             content.description = f":art: Solid color `{user.accent_color}`"
@@ -201,7 +227,9 @@ class User(commands.Cog):
 
         banner_url = util.asset_full_size(user.banner)
 
-        content.set_author(name=f"{user} Banner", url=banner_url, icon_url=user.display_avatar.url)
+        content.set_author(
+            name=f"{user} Banner", url=banner_url, icon_url=user.display_avatar.url
+        )
         content.set_image(url=banner_url)
         stats = await util.image_info_from_url(self.bot.session, banner_url)
         color = await util.color_from_image_url(
@@ -216,7 +244,9 @@ class User(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["sbanner", "guildbanner"])
-    async def serverbanner(self, ctx: commands.Context, *, guild: Optional[discord.Guild] = None):
+    async def serverbanner(
+        self, ctx: commands.Context, *, guild: Optional[discord.Guild] = None
+    ):
         """Get server's banner"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
@@ -252,7 +282,9 @@ class User(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command(aliases=["sinfo", "guildinfo"])
-    async def serverinfo(self, ctx: commands.Context, *, guild: Optional[discord.Guild] = None):
+    async def serverinfo(
+        self, ctx: commands.Context, *, guild: Optional[discord.Guild] = None
+    ):
         """Get various information on server"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
@@ -281,14 +313,22 @@ class User(commands.Cog):
         content.add_field(name="Members", value=str(guild.member_count))
         content.add_field(
             name="Channels",
-            value=(f"{len(guild.text_channels)} Text, {len(guild.voice_channels)} Voice"),
+            value=(
+                f"{len(guild.text_channels)} Text, {len(guild.voice_channels)} Voice"
+            ),
         )
         content.add_field(name="Roles", value=str(len(guild.roles)))
         content.add_field(name="Threads", value=str(len(guild.threads)))
         content.add_field(name="NSFW filter", value=guild.explicit_content_filter.name)
-        content.add_field(name="Emojis", value=f"{len(guild.emojis)} / {guild.emoji_limit}")
-        content.add_field(name="Stickers", value=f"{len(guild.stickers)} / {guild.sticker_limit}")
-        content.add_field(name="Created at", value=guild.created_at.strftime("%d/%m/%Y %H:%M"))
+        content.add_field(
+            name="Emojis", value=f"{len(guild.emojis)} / {guild.emoji_limit}"
+        )
+        content.add_field(
+            name="Stickers", value=f"{len(guild.stickers)} / {guild.sticker_limit}"
+        )
+        content.add_field(
+            name="Created at", value=guild.created_at.strftime("%d/%m/%Y %H:%M")
+        )
         if guild.features:
             content.add_field(
                 name="Features",
@@ -351,7 +391,8 @@ class User(commands.Cog):
 
         content = discord.Embed(
             title=(
-                f":fish: {'Global' if global_data else ctx.guild.name} " "gifted fishy leaderboard"
+                f":fish: {'Global' if global_data else ctx.guild.name} "
+                "gifted fishy leaderboard"
             ),
             color=int("55acee", 16),
         )
@@ -382,7 +423,9 @@ class User(commands.Cog):
                     continue
 
                 ranking = medal_emoji[i - 1] if i <= len(medal_emoji) else f"`#{i:2}`"
-                rows.append(f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy")
+                rows.append(
+                    f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy"
+                )
                 i += 1
         if not rows:
             raise exceptions.CommandInfo("Nobody has any fish yet!")
@@ -412,7 +455,11 @@ class User(commands.Cog):
         if data:
             i = 1
             for userid, wpm, test_date, word_count in data:
-                user = self.bot.get_user(userid) if _global_ else ctx.guild.get_member(userid)
+                user = (
+                    self.bot.get_user(userid)
+                    if _global_
+                    else ctx.guild.get_member(userid)
+                )
                 if user is None or user.bot:
                     continue
 
@@ -461,7 +508,9 @@ class User(commands.Cog):
                 else:
                     ranking = f"`#{i:2}`"
 
-                rows.append(f"{ranking} **{util.displayname(user)}** — **{amount}** crowns")
+                rows.append(
+                    f"{ranking} **{util.displayname(user)}** — **{amount}** crowns"
+                )
         if not rows:
             rows = ["No data."]
 
@@ -474,7 +523,9 @@ class User(commands.Cog):
 
     @commands.command(enabled=False)
     async def profile(
-        self, ctx: commands.Context, user: Union[discord.Member, discord.User, None] = None
+        self,
+        ctx: commands.Context,
+        user: Union[discord.Member, discord.User, None] = None,
     ):
         """Your personal customizable user profile"""
         if user is None:
@@ -597,7 +648,9 @@ class User(commands.Cog):
             "imageFormat": "png",
         }
         buffer = await util.render_html(self.bot, payload)
-        await ctx.send(file=discord.File(fp=buffer, filename=f"profile_{user.name}.png"))
+        await ctx.send(
+            file=discord.File(fp=buffer, filename=f"profile_{user.name}.png")
+        )
 
     @commands.command()
     async def marry(self, ctx: commands.Context, user: discord.Member):
@@ -652,7 +705,9 @@ class User(commands.Cog):
                     ),
                 )
             )
-            new_proposals = {el for el in self.proposals if el[0] not in [user.id, ctx.author.id]}
+            new_proposals = {
+                el for el in self.proposals if el[0] not in [user.id, ctx.author.id]
+            }
             self.proposals = new_proposals
         else:
             self.proposals.add((ctx.author.id, user.id))
@@ -683,7 +738,9 @@ class User(commands.Cog):
         if partner is None:
             return await ctx.send(":thinking: You are not married!")
 
-        partner = ctx.guild.get_member(partner) or await util.find_user(self.bot, partner)
+        partner = ctx.guild.get_member(partner) or await util.find_user(
+            self.bot, partner
+        )
 
         content = discord.Embed(
             description=":broken_heart:"
@@ -716,7 +773,9 @@ class User(commands.Cog):
 
         functions = {"✅": confirm, "❌": cancel}
         asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+            util.reaction_buttons(
+                ctx, msg, functions, only_author=True, single_use=True
+            )
         )
 
     @commands.command()
@@ -740,9 +799,13 @@ class User(commands.Cog):
         )
         if data:
             if data[0] == member.id:
-                partner = ctx.guild.get_member(data[1]) or await util.find_user(self.bot, data[1])
+                partner = ctx.guild.get_member(data[1]) or await util.find_user(
+                    self.bot, data[1]
+                )
             else:
-                partner = ctx.guild.get_member(data[0]) or await util.find_user(self.bot, data[0])
+                partner = ctx.guild.get_member(data[0]) or await util.find_user(
+                    self.bot, data[0]
+                )
             marriage_date = data[2]
             length = humanize.naturaldelta(
                 arrow.utcnow().timestamp() - marriage_date.timestamp(), months=False

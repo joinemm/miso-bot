@@ -34,7 +34,9 @@ class Owner(commands.Cog):
     ):
         """Makes the bot say something in the given channel"""
         channel = self.bot.get_partial_messageable(channel_id)
-        await ctx.send(f"Sending message to **{channel.guild}** <#{channel.id}>\n> {message}")
+        await ctx.send(
+            f"Sending message to **{channel.guild}** <#{channel.id}>\n> {message}"
+        )
         await channel.send(message)
 
     @commands.command(rest_is_raw=True)
@@ -58,7 +60,9 @@ class Owner(commands.Cog):
 
         rows = [
             f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
-            for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True)
+            for guild in sorted(
+                self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True
+            )
         ]
         await util.send_as_pages(ctx, content, rows)
 
@@ -67,22 +71,32 @@ class Owner(commands.Cog):
         """Find a guild by name"""
         rows = [
             f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
-            for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True)
+            for guild in sorted(
+                self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True
+            )
             if search_term.lower() in guild.name.lower()
         ]
-        content = discord.Embed(title=f"Found **{len(rows)}** guilds matching search term")
+        content = discord.Embed(
+            title=f"Found **{len(rows)}** guilds matching search term"
+        )
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
     async def userguilds(self, ctx: commands.Context, user: discord.User):
         """Get all guilds user is part of"""
         rows = []
-        for guild in sorted(self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True):
+        for guild in sorted(
+            self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True
+        ):
             guildmember = guild.get_member(user.id)
             if guildmember is not None:
-                rows.append(f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**")
+                rows.append(
+                    f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
+                )
 
-        content = discord.Embed(title=f"User **{user}** found in **{len(rows)}** guilds")
+        content = discord.Embed(
+            title=f"User **{user}** found in **{len(rows)}** guilds"
+        )
         await util.send_as_pages(ctx, content, rows)
 
     @commands.command()
@@ -109,7 +123,12 @@ class Owner(commands.Cog):
 
     @donator.command(name="addsingle")
     async def donator_addsingle(
-        self, ctx: commands.Context, user: discord.User, platform, amount: float, ts=None
+        self,
+        ctx: commands.Context,
+        user: discord.User,
+        platform,
+        amount: float,
+        ts=None,
     ):
         """Add a new single time donation"""
         ts = arrow.utcnow().datetime if ts is None else arrow.get(ts).datetime
@@ -127,7 +146,14 @@ class Owner(commands.Cog):
 
     @donator.command(name="add")
     async def donator_add(
-        self, ctx, user: discord.User, username, platform, tier: int, amount: int, since_ts=None
+        self,
+        ctx,
+        user: discord.User,
+        username,
+        platform,
+        tier: int,
+        amount: int,
+        since_ts=None,
     ):
         """Add a new monthly donator"""
         if since_ts is None:
@@ -176,7 +202,9 @@ class Owner(commands.Cog):
         await util.send_success(ctx, f"**{user}** donator status changed.")
 
     @donator.command(name="tier")
-    async def donator_tier(self, ctx: commands.Context, user: discord.User, new_tier: int):
+    async def donator_tier(
+        self, ctx: commands.Context, user: discord.User, new_tier: int
+    ):
         """Change user's donation tier"""
         await self.bot.db.execute(
             """
@@ -185,7 +213,9 @@ class Owner(commands.Cog):
             new_tier,
             user.id,
         )
-        await util.send_success(ctx, f"**{user}** donation changed to **Tier {new_tier}**")
+        await util.send_success(
+            ctx, f"**{user}** donation changed to **Tier {new_tier}**"
+        )
 
     @commands.command(name="db", aliases=["dbe", "dbq"])
     @commands.is_owner()

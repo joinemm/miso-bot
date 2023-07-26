@@ -111,7 +111,9 @@ class Cache:
                 self.prefixes[str(guild_id)] = prefix
 
         self.rolepickers = set(
-            await self.bot.db.fetch_flattened("SELECT channel_id FROM rolepicker_settings")
+            await self.bot.db.fetch_flattened(
+                "SELECT channel_id FROM rolepicker_settings"
+            )
         )
 
         guild_settings = await self.bot.db.fetch(
@@ -124,18 +126,26 @@ class Cache:
         self.blacklist = {
             "global": {
                 "user": set(
-                    await self.bot.db.fetch_flattened("SELECT user_id FROM blacklisted_user")
+                    await self.bot.db.fetch_flattened(
+                        "SELECT user_id FROM blacklisted_user"
+                    )
                 ),
                 "guild": set(
-                    await self.bot.db.fetch_flattened("SELECT guild_id FROM blacklisted_guild")
+                    await self.bot.db.fetch_flattened(
+                        "SELECT guild_id FROM blacklisted_guild"
+                    )
                 ),
                 "channel": set(
-                    await self.bot.db.fetch_flattened("SELECT channel_id FROM blacklisted_channel")
+                    await self.bot.db.fetch_flattened(
+                        "SELECT channel_id FROM blacklisted_channel"
+                    )
                 ),
             }
         }
 
-        pairs = await self.bot.db.fetch("SELECT first_user_id, second_user_id FROM marriage")
+        pairs = await self.bot.db.fetch(
+            "SELECT first_user_id, second_user_id FROM marriage"
+        )
         self.marriages = [set(pair) for pair in pairs] if pairs else []
 
         blacklisted_members = await self.bot.db.fetch(
@@ -146,7 +156,10 @@ class Cache:
                 try:
                     self.blacklist[str(guild_id)]["member"].add(user_id)
                 except KeyError:
-                    self.blacklist[str(guild_id)] = {"member": {user_id}, "command": set()}
+                    self.blacklist[str(guild_id)] = {
+                        "member": {user_id},
+                        "command": set(),
+                    }
         blacklisted_commands = await self.bot.db.fetch(
             "SELECT guild_id, command_name FROM blacklisted_command"
         )

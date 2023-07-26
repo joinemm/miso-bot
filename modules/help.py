@@ -14,7 +14,9 @@ class EmbedHelpCommand(commands.HelpCommand):
 
     def get_command_signature(self, command: commands.Command):
         sig = " ".join(
-            reversed([f"{p.name} {p.signature}".strip() for p in [command] + command.parents])
+            reversed(
+                [f"{p.name} {p.signature}".strip() for p in [command] + command.parents]
+            )
         )
         return self.context.clean_prefix + sig
 
@@ -45,7 +47,9 @@ class EmbedHelpCommand(commands.HelpCommand):
         embed.set_footer(
             text=f"{self.context.clean_prefix}help [category] for more details. (case sensitive)"
         )
-        embed.description = "For more information on all the commands, visit https://misobot.xyz"
+        embed.description = (
+            "For more information on all the commands, visit https://misobot.xyz"
+        )
         await self.get_destination().send(embed=embed)
 
     async def send_cog_help(self, cog):
@@ -63,7 +67,9 @@ class EmbedHelpCommand(commands.HelpCommand):
                 inline=False,
             )
 
-        embed.set_footer(text=f"{self.context.clean_prefix}help [command] for more details.")
+        embed.set_footer(
+            text=f"{self.context.clean_prefix}help [command] for more details."
+        )
         await self.get_destination().send(embed=embed)
 
     async def send_group_help(self, group: commands.Group):
@@ -73,7 +79,9 @@ class EmbedHelpCommand(commands.HelpCommand):
             description=group.help or group.short_doc or "",
         )
 
-        embed.description += "\n\n:small_orange_diamond: __**subcommands**__ :small_orange_diamond:"
+        embed.description += (
+            "\n\n:small_orange_diamond: __**subcommands**__ :small_orange_diamond:"
+        )
         filtered_commands = await self.filter_commands(group.commands, sort=True)
         for command in filtered_commands:
             embed.add_field(
@@ -106,5 +114,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         embed = discord.Embed(colour=self.COLOUR)
         embed.description = "`" + (ctx.prefix or ">") + group.qualified_name
         embed.description += f" [{' | '.join(c.name for c in group.commands)}]`"
-        embed.set_footer(text=f"{ctx.prefix}help {group.qualified_name} for more detailed help")
+        embed.set_footer(
+            text=f"{ctx.prefix}help {group.qualified_name} for more detailed help"
+        )
         await ctx.send(embed=embed)

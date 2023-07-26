@@ -22,7 +22,9 @@ from modules import cache, maria, util
 
 
 class MisoBot(commands.AutoShardedBot):
-    def __init__(self, extensions: list[str], default_prefix: str, **kwargs: dict[str, Any]):
+    def __init__(
+        self, extensions: list[str], default_prefix: str, **kwargs: dict[str, Any]
+    ):
         super().__init__(
             help_command=EmbedHelpCommand(),
             activity=Activity(type=ActivityType.playing, name="Booting up..."),
@@ -60,7 +62,9 @@ class MisoBot(commands.AutoShardedBot):
         self.default_prefix = default_prefix
         self.extensions_to_load = extensions
         self.start_time = time()
-        self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
+        self.global_cd = commands.CooldownMapping.from_cooldown(
+            15, 60, commands.BucketType.member
+        )
         self.db = maria.MariaDB()
         self.cache = cache.Cache(self)
         self.keychain = Keychain()
@@ -120,7 +124,9 @@ class MisoBot(commands.AutoShardedBot):
 
     async def on_ready(self):
         """Overrides built-in on_ready()"""
-        logger.info(f"Boot up process completed in {util.stringfromtime(self.boot_up_time)}")
+        logger.info(
+            f"Boot up process completed in {util.stringfromtime(self.boot_up_time)}"
+        )
         latencies = self.latencies
         logger.info(f"Loading complete | running {len(latencies)} shards")
         for shard_id, latency in latencies:
@@ -151,7 +157,9 @@ class MisoBot(commands.AutoShardedBot):
 
         bucket = ctx.bot.global_cd.get_bucket(ctx.message)
         if retry_after := bucket.update_rate_limit():
-            raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.member)
+            raise commands.CommandOnCooldown(
+                bucket, retry_after, commands.BucketType.member
+            )
         return True
 
     @property

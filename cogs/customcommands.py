@@ -58,7 +58,9 @@ class CustomCommands(commands.Cog, name="Commands"):
             "SELECT command_trigger FROM custom_command WHERE guild_id = %s", guild_id
         )
         return {
-            command_trigger for command_trigger in data if match == "" or match in command_trigger
+            command_trigger
+            for command_trigger in data
+            if match == "" or match in command_trigger
         }
 
     @commands.Cog.listener()
@@ -107,14 +109,19 @@ class CustomCommands(commands.Cog, name="Commands"):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        if not ctx.author.guild_permissions.manage_guild and await self.bot.db.fetch_value(
-            "SELECT restrict_custom_commands FROM guild_settings WHERE guild_id = %s",
-            ctx.guild.id,
+        if (
+            not ctx.author.guild_permissions.manage_guild
+            and await self.bot.db.fetch_value(
+                "SELECT restrict_custom_commands FROM guild_settings WHERE guild_id = %s",
+                ctx.guild.id,
+            )
         ):
             raise commands.MissingPermissions(["manage_server"])
 
         if name in self.bot_command_list():
-            raise exceptions.CommandWarning(f"`{ctx.prefix}{name}` is already a built in command!")
+            raise exceptions.CommandWarning(
+                f"`{ctx.prefix}{name}` is already a built in command!"
+            )
         if await self.bot.db.fetch_value(
             "SELECT content FROM custom_command WHERE guild_id = %s AND command_trigger = %s",
             ctx.guild.id,
@@ -153,7 +160,9 @@ class CustomCommands(commands.Cog, name="Commands"):
             ctx.guild.id,
         )
         if not owner_id:
-            raise exceptions.CommandWarning(f"Custom command `{ctx.prefix}{name}` does not exist")
+            raise exceptions.CommandWarning(
+                f"Custom command `{ctx.prefix}{name}` does not exist"
+            )
 
         owner = ctx.guild.get_member(owner_id)
         if (
@@ -173,7 +182,9 @@ class CustomCommands(commands.Cog, name="Commands"):
             ctx.guild.id,
             name,
         )
-        await util.send_success(ctx, f"Custom command `{ctx.prefix}{name}` has been deleted")
+        await util.send_success(
+            ctx, f"Custom command `{ctx.prefix}{name}` has been deleted"
+        )
 
     @command.command(name="search")
     async def command_search(self, ctx: commands.Context, name):
@@ -207,13 +218,16 @@ class CustomCommands(commands.Cog, name="Commands"):
             raise exceptions.CommandError("Unable to get current guild")
 
         rows = [
-            f"{ctx.prefix}{command}" for command in await self.custom_command_list(ctx.guild.id)
+            f"{ctx.prefix}{command}"
+            for command in await self.custom_command_list(ctx.guild.id)
         ]
         if rows:
             content = discord.Embed(title=f"{ctx.guild.name} custom commands")
             await util.send_as_pages(ctx, content, rows)
         else:
-            raise exceptions.CommandInfo("No custom commands have been added on this server yet")
+            raise exceptions.CommandInfo(
+                "No custom commands have been added on this server yet"
+            )
 
     @command.command(name="import")
     @commands.has_permissions(manage_guild=True)
@@ -233,7 +247,9 @@ class CustomCommands(commands.Cog, name="Commands"):
         ```
         """
         if not ctx.message.attachments:
-            raise exceptions.CommandWarning("Please attach a `.json` file to the message")
+            raise exceptions.CommandWarning(
+                "Please attach a `.json` file to the message"
+            )
 
         jsonfile = ctx.message.attachments[0]
         imported = json.loads(await jsonfile.read())
@@ -264,7 +280,9 @@ class CustomCommands(commands.Cog, name="Commands"):
             ctx.guild.id,
         )
         if not data:
-            raise exceptions.CommandInfo("No custom commands have been added on this server yet")
+            raise exceptions.CommandInfo(
+                "No custom commands have been added on this server yet"
+            )
 
         jsondata = [
             {
@@ -299,7 +317,10 @@ class CustomCommands(commands.Cog, name="Commands"):
             ctx.guild.id,
             name,
         ):
-            return False, f"Custom command `{ctx.prefix}{name}` already exists on this server!"
+            return (
+                False,
+                f"Custom command `{ctx.prefix}{name}` already exists on this server!",
+            )
 
         await self.bot.db.execute(
             "INSERT INTO custom_command VALUES(%s, %s, %s, %s, %s)",
@@ -315,7 +336,9 @@ class CustomCommands(commands.Cog, name="Commands"):
     @commands.has_permissions(manage_guild=True)
     async def command_restrict(self, ctx: commands.Context, value: bool):
         """Restrict command management to only people with manage_server permission"""
-        await queries.update_setting(ctx, "guild_settings", "restrict_custom_commands", value)
+        await queries.update_setting(
+            ctx, "guild_settings", "restrict_custom_commands", value
+        )
         if value:
             await util.send_success(
                 ctx, "Adding custom commands is now restricted to server managers."
@@ -345,7 +368,9 @@ class CustomCommands(commands.Cog, name="Commands"):
         if count < 1:
             raise exceptions.CommandWarning("This server has no custom commands yet!")
 
-        content = discord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
+        content = discord.Embed(
+            title=":warning: Are you sure?", color=int("ffcc4d", 16)
+        )
         content.description = (
             f"This action will delete all **{count}** custom commands on "
             "this server and is **irreversible**."
@@ -370,7 +395,9 @@ class CustomCommands(commands.Cog, name="Commands"):
 
         functions = {"✅": confirm, "❌": cancel}
         asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+            util.reaction_buttons(
+                ctx, msg, functions, only_author=True, single_use=True
+            )
         )
 
 

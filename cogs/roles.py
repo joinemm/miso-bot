@@ -5,11 +5,11 @@
 import asyncio
 
 import discord
-from discord.ext import commands
-
 from cogs.errorhandler import ErrorHander
-from modules import emojis, exceptions, queries, util
+from discord.ext import commands
 from modules.misobot import MisoBot
+
+from modules import emojis, exceptions, queries, util
 
 
 class Roles(commands.Cog):
@@ -98,7 +98,9 @@ class Roles(commands.Cog):
                 ctx.guild.id,  # type: ignore
             )
 
-            content.title = f":white_check_mark: Deleted all {len(matching_roles)} color roles"
+            content.title = (
+                f":white_check_mark: Deleted all {len(matching_roles)} color roles"
+            )
             content.description = ""
             content.color = int("77b255", 16)
             await msg.edit(content=None, embed=content)
@@ -145,7 +147,8 @@ class Roles(commands.Cog):
             role.id,
         )
         await util.send_success(
-            ctx, f"New color roles will now inherit permissions and position from {role.mention}"
+            ctx,
+            f"New color roles will now inherit permissions and position from {role.mention}",
         )
 
     @commands.guild_only()
@@ -199,10 +202,16 @@ class Roles(commands.Cog):
         color_role = None
         if existing_roles is not None:
             existing_role_id: int | None = dict(existing_roles).get(str(color))
-            color_role = ctx.guild.get_role(existing_role_id) if existing_role_id else None
+            color_role = (
+                ctx.guild.get_role(existing_role_id) if existing_role_id else None
+            )
 
-            if old_roles := list(filter(lambda r: r.id in existing_roles_ids, ctx.author.roles)):
-                await ctx.author.remove_roles(*old_roles, atomic=True, reason="Changed color")
+            if old_roles := list(
+                filter(lambda r: r.id in existing_roles_ids, ctx.author.roles)
+            ):
+                await ctx.author.remove_roles(
+                    *old_roles, atomic=True, reason="Changed color"
+                )
 
             # remove manually deleted roles
             for role_id in existing_roles_ids:
@@ -270,7 +279,8 @@ class Roles(commands.Cog):
 
         # clean up any roles that are left with 0 users
         unused_roles = filter(
-            lambda r: r.id in [x[1] for x in existing_roles or []] and len(r.members) == 0,
+            lambda r: r.id in [x[1] for x in existing_roles or []]
+            and len(r.members) == 0,
             ctx.guild.roles,
         )
         for role in unused_roles:
@@ -336,9 +346,13 @@ class Roles(commands.Cog):
         )
 
     @rolepicker.command(name="channel")
-    async def rolepicker_channel(self, ctx: commands.Context, channel: discord.TextChannel):
+    async def rolepicker_channel(
+        self, ctx: commands.Context, channel: discord.TextChannel
+    ):
         """Set the channel you want to add and remove roles in"""
-        await queries.update_setting(ctx, "rolepicker_settings", "channel_id", channel.id)
+        await queries.update_setting(
+            ctx, "rolepicker_settings", "channel_id", channel.id
+        )
         self.bot.cache.rolepickers.add(channel.id)
         await util.send_success(
             ctx,
@@ -366,7 +380,9 @@ class Roles(commands.Cog):
             title=f":scroll: Available roles in {ctx.guild.name}",
             color=int("ffd983", 16),
         )
-        if rows := [f"`{role_name}` : <@&{role_id}>" for role_name, role_id in sorted(data)]:
+        if rows := [
+            f"`{role_name}` : <@&{role_id}>" for role_name, role_id in sorted(data)
+        ]:
             await util.send_as_pages(ctx, content, rows)
         else:
             content.description = "Nothing yet!"
@@ -376,7 +392,9 @@ class Roles(commands.Cog):
     async def rolepicker_enabled(self, ctx: commands.Context, value: bool):
         """Enable or disable the rolepicker"""
         await queries.update_setting(ctx, "rolepicker_settings", "is_enabled", value)
-        await util.send_success(ctx, f"Rolepicker is now **{'enabled' if value else 'disabled'}**")
+        await util.send_success(
+            ctx, f"Rolepicker is now **{'enabled' if value else 'disabled'}**"
+        )
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -430,7 +448,9 @@ class Roles(commands.Cog):
                 try:
                     await message.author.add_roles(role)
                 except discord.errors.Forbidden:
-                    await message.reply(":warning: I don't have permission to give you this role!")
+                    await message.reply(
+                        ":warning: I don't have permission to give you this role!"
+                    )
                 else:
                     await message.channel.send(
                         embed=discord.Embed(

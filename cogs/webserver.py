@@ -7,9 +7,8 @@ import os
 from aiohttp import web
 from discord.ext import commands, tasks
 from loguru import logger
-from prometheus_async import aio
-
 from modules.misobot import MisoBot
+from prometheus_async import aio
 
 HOST = os.environ.get("WEBSERVER_HOSTNAME")
 PORT = int(os.environ.get("WEBSERVER_PORT", 8080))
@@ -47,7 +46,9 @@ class WebServer(commands.Cog):
 
     @tasks.loop(minutes=1)
     async def cache_stats(self):
-        command_count = await self.bot.db.fetch_value("SELECT SUM(uses) FROM command_usage") or 0
+        command_count = (
+            await self.bot.db.fetch_value("SELECT SUM(uses) FROM command_usage") or 0
+        )
         self.cached["commands"] = int(command_count)
         self.cached["guilds"] = self.bot.guild_count
         self.cached["users"] = self.bot.member_count
@@ -94,7 +95,11 @@ class WebServer(commands.Cog):
             for user_id, amount in sorted(data, key=lambda x: x[1], reverse=True):
                 user = await self.bot.fetch_user(user_id)
                 donators.append(
-                    {"name": user.name, "avatar": user.display_avatar.url, "amount": amount}
+                    {
+                        "name": user.name,
+                        "avatar": user.display_avatar.url,
+                        "amount": amount,
+                    }
                 )
         return donators
 

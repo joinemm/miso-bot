@@ -64,7 +64,9 @@ class Events(commands.Cog):
             if ctx.guild is not None:
                 await queries.save_command_usage(ctx)
 
-            if random.randint(1, 69) == 1 and not await queries.is_donator(ctx, ctx.author):
+            if random.randint(1, 69) == 1 and not await queries.is_donator(
+                ctx, ctx.author
+            ):
                 logger.info("Sending donation beg message")
                 await util.send_donation_beg(ctx.channel)
 
@@ -79,7 +81,9 @@ class Events(commands.Cog):
             guild.id,
         )
         if blacklisted:
-            logger.info(f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}")
+            logger.info(
+                f"Tried to join guild {guild}. Reason for blacklist: {blacklisted}"
+            )
             return await guild.leave()
 
         logger.info(f"New guild : {guild}")
@@ -129,7 +133,9 @@ class Events(commands.Cog):
         """Called when a new member joins a guild"""
         await self.bot.wait_until_ready()
         logging_channel_id = None
-        if logging_settings := self.bot.cache.logging_settings.get(str(member.guild.id)):
+        if logging_settings := self.bot.cache.logging_settings.get(
+            str(member.guild.id)
+        ):
             logging_channel_id = logging_settings.get("member_log_channel_id")
 
         if logging_channel_id:
@@ -168,7 +174,9 @@ class Events(commands.Cog):
                 if greeter_channel is not None:
                     try:
                         await greeter_channel.send(
-                            embed=util.create_welcome_embed(member, member.guild, message_format)
+                            embed=util.create_welcome_embed(
+                                member, member.guild, message_format
+                            )
                         )
                     except discord.errors.Forbidden:
                         pass
@@ -200,7 +208,9 @@ class Events(commands.Cog):
         """Called when member leaves a guild"""
         await self.bot.wait_until_ready()
         logging_channel_id = None
-        if logging_settings := self.bot.cache.logging_settings.get(str(member.guild.id)):
+        if logging_settings := self.bot.cache.logging_settings.get(
+            str(member.guild.id)
+        ):
             logging_channel_id = logging_settings.get("member_log_channel_id")
 
         if logging_channel_id:
@@ -231,7 +241,9 @@ class Events(commands.Cog):
 
                     try:
                         await channel.send(
-                            util.create_goodbye_message(member, member.guild, message_format)
+                            util.create_goodbye_message(
+                                member, member.guild, message_format
+                            )
                         )
                     except discord.errors.Forbidden:
                         pass
@@ -262,7 +274,9 @@ class Events(commands.Cog):
             return
 
         channel_id = None
-        if logging_settings := self.bot.cache.logging_settings.get(str(message.guild.id)):
+        if logging_settings := self.bot.cache.logging_settings.get(
+            str(message.guild.id)
+        ):
             channel_id = logging_settings.get("message_log_channel_id")
         if channel_id:
             log_channel = message.guild.get_channel(channel_id)
@@ -320,7 +334,9 @@ class Events(commands.Cog):
 
         return None, None
 
-    async def parse_media_auto_embed(self, message: discord.Message, media_settings: dict):
+    async def parse_media_auto_embed(
+        self, message: discord.Message, media_settings: dict
+    ):
         if media_settings["instagram"]:
             embedder = InstagramEmbedder(self.bot)
             posts = embedder.extract_links(message.content, include_shortcodes=False)
@@ -430,7 +446,9 @@ class Events(commands.Cog):
         if payload.channel_id in self.bot.cache.starboard_blacklisted_channels:
             return
 
-        starboard_settings = self.bot.cache.starboard_settings.get(str(payload.guild_id))
+        starboard_settings = self.bot.cache.starboard_settings.get(
+            str(payload.guild_id)
+        )
         if not starboard_settings:
             return
 
@@ -499,7 +517,9 @@ class Events(commands.Cog):
                 payload.message_id,
             )
             emoji_display = (
-                "⭐" if emoji_type == "custom" else emoji_literals.NAME_TO_UNICODE[emoji_name]
+                "⭐"
+                if emoji_type == "custom"
+                else emoji_literals.NAME_TO_UNICODE[emoji_name]
             )
 
             board_message = None
@@ -549,7 +569,9 @@ class Events(commands.Cog):
                         value="\n".join(str(x) for x in reacted_users)[:1023],
                         inline=False,
                     )
-                    log_content.add_field(name="Most recent reaction by", value=str(user))
+                    log_content.add_field(
+                        name="Most recent reaction by", value=str(user)
+                    )
                     try:
                         await log_channel.send(embed=log_content)
                     except discord.HTTPException:
@@ -570,7 +592,9 @@ def starboard_embed(message: discord.Message, reaction_count: int, emoji: str):
         name=f"{message.author}",
         icon_url=message.author.display_avatar.url,
     )
-    content.set_footer(text=f"{reaction_count} {emoji} {util.displaychannel(message.channel)}")
+    content.set_footer(
+        text=f"{reaction_count} {emoji} {util.displaychannel(message.channel)}"
+    )
 
     if message.attachments:
         content.set_image(url=message.attachments[0].url)

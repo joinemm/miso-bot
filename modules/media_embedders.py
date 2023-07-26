@@ -93,7 +93,10 @@ class BaseEmbedder:
             await util.suppress(ctx.message)
 
     async def create_message(
-        self, channel: "discord.abc.MessageableChannel", media: Any, options: Options | None = None
+        self,
+        channel: "discord.abc.MessageableChannel",
+        media: Any,
+        options: Options | None = None,
     ):
         """Create the message parameters for later sending"""
         raise NotImplementedError
@@ -125,9 +128,9 @@ class BaseEmbedder:
                 logger.error(error_message)
                 return f"`[{error_message}]`"
 
-            content_length = response.headers.get("Content-Length") or response.headers.get(
-                "x-full-image-content-length"
-            )
+            content_length = response.headers.get(
+                "Content-Length"
+            ) or response.headers.get("x-full-image-content-length")
             if content_length and int(content_length) < max_filesize:
                 buffer = io.BytesIO(await response.read())
                 return discord.File(fp=buffer, filename=filename, spoiler=spoiler)
@@ -138,20 +141,28 @@ class BaseEmbedder:
                     buffer += chunk
                     if len(buffer) > max_filesize:
                         raise ValueError
-                return discord.File(fp=io.BytesIO(buffer), filename=filename, spoiler=spoiler)
+                return discord.File(
+                    fp=io.BytesIO(buffer), filename=filename, spoiler=spoiler
+                )
             except ValueError:
                 pass
 
         try:
             if spoiler:
-                return f"||{await util.shorten_url(self.bot, media_url, tags=url_tags)}||"
+                return (
+                    f"||{await util.shorten_url(self.bot, media_url, tags=url_tags)}||"
+                )
             return await util.shorten_url(self.bot, media_url, tags=url_tags)
         except ClientConnectorError:
             return media_url
 
-    async def send(self, ctx: commands.Context, media: Any, options: Options | None = None):
+    async def send(
+        self, ctx: commands.Context, media: Any, options: Options | None = None
+    ):
         """Send the media to given context"""
-        message_contents = await self.create_message(ctx.channel, media, options=options)
+        message_contents = await self.create_message(
+            ctx.channel, media, options=options
+        )
         msg = await ctx.send(**message_contents)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(ctx.author)
@@ -173,7 +184,9 @@ class BaseEmbedder:
         self, message: discord.Message, media: Any, options: Options | None = None
     ):
         """Send the media as a reply to another message"""
-        message_contents = await self.create_message(message.channel, media, options=options)
+        message_contents = await self.create_message(
+            message.channel, media, options=options
+        )
         msg = await message.reply(**message_contents, mention_author=False)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(message.author)
@@ -184,7 +197,9 @@ class InstagramEmbedder(BaseEmbedder):
     NO_RESULTS_ERROR = "Found no Instagram links to embed!"
 
     @staticmethod
-    def extract_links(text: str, include_shortcodes=True) -> list[InstagramPost | InstagramStory]:
+    def extract_links(
+        text: str, include_shortcodes=True
+    ) -> list[InstagramPost | InstagramStory]:
         text = "\n".join(text.split())
         instagram_regex = (
             r"(?:https?:\/\/)?(?:www.)?instagram.com\/"
@@ -455,7 +470,9 @@ class MediaUI(View):
         self._children.reverse()
 
     @discord.ui.button(emoji=emojis.REMOVE, style=discord.ButtonStyle.danger)
-    async def delete_button(self, interaction: discord.Interaction, _button: discord.ui.Button):
+    async def delete_button(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
         if self.message_ref and interaction.user in self.approved_deletors:
             await self.message_ref.delete()
         else:

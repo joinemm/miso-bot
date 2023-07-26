@@ -107,7 +107,9 @@ class Mod(commands.Cog):
                     )
                 )
             except discord.errors.Forbidden:
-                logger.warning("Unable to send unmuting message due to missing permissions!")
+                logger.warning(
+                    "Unable to send unmuting message due to missing permissions!"
+                )
 
     @commands.command(aliases=["clean"], usage="<amount> [@mentions...]")
     @commands.guild_only()
@@ -125,7 +127,9 @@ class Mod(commands.Cog):
             raise exceptions.CommandWarning("This command cannot be used here.")
 
         if amount > 100:
-            raise exceptions.CommandWarning("You cannot delete more than 100 messages at a time.")
+            raise exceptions.CommandWarning(
+                "You cannot delete more than 100 messages at a time."
+            )
 
         await ctx.message.delete()
 
@@ -154,7 +158,10 @@ class Mod(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def giverole(
-        self, ctx: commands.Context, role: discord.Role, members: commands.Greedy[discord.Member]
+        self,
+        ctx: commands.Context,
+        role: discord.Role,
+        members: commands.Greedy[discord.Member],
     ):
         """Give a role to multiple people"""
         success = []
@@ -172,12 +179,16 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(moderate_members=True)
-    async def timeout(self, ctx: commands.Context, member: discord.Member, *, duration="1 hour"):
+    async def timeout(
+        self, ctx: commands.Context, member: discord.Member, *, duration="1 hour"
+    ):
         """Timeout user. Pass 'remove' as the duration to remove"""
         if member.is_timed_out():
             if duration and duration.strip().lower() == "remove":
                 await member.timeout(None)
-                return await util.send_success(ctx, f"Removed timeout from {member.mention}")
+                return await util.send_success(
+                    ctx, f"Removed timeout from {member.mention}"
+                )
 
             seconds = member.timeout.timestamp() - arrow.now().int_timestamp
             raise exceptions.CommandInfo(
@@ -198,7 +209,9 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
-    async def mute(self, ctx: commands.Context, member: discord.Member, *, duration=None):
+    async def mute(
+        self, ctx: commands.Context, member: discord.Member, *, duration=None
+    ):
         """Mute user"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
@@ -227,10 +240,14 @@ class Mod(commands.Cog):
                 raise exceptions.CommandWarning(f'Invalid mute duration "{duration}"')
 
             if seconds < 60:
-                raise exceptions.CommandInfo("The minimum duration of a mute is **1 minute**")
+                raise exceptions.CommandInfo(
+                    "The minimum duration of a mute is **1 minute**"
+                )
 
             if seconds > 604800:
-                raise exceptions.CommandInfo("The maximum duration of a mute is **1 week**")
+                raise exceptions.CommandInfo(
+                    "The maximum duration of a mute is **1 week**"
+                )
 
         try:
             await member.add_roles(mute_role)
@@ -242,7 +259,11 @@ class Mod(commands.Cog):
         await util.send_success(
             ctx,
             f"Muted {member.mention}"
-            + (f" for **{util.stringfromtime(seconds)}**" if seconds is not None else ""),
+            + (
+                f" for **{util.stringfromtime(seconds)}**"
+                if seconds is not None
+                else ""
+            ),
         )
 
         if seconds is not None:
@@ -364,7 +385,10 @@ class Mod(commands.Cog):
                 success.append(f"`{user}` Banned :hammer:")
 
         await util.send_tasks_result_list(
-            ctx, success, failure, f":hammer: Attempting to ban {len(discord_users)} users..."
+            ctx,
+            success,
+            failure,
+            f":hammer: Attempting to ban {len(discord_users)} users...",
         )
 
     @commands.command()
@@ -435,7 +459,9 @@ class Mod(commands.Cog):
     @staticmethod
     async def send_ban_confirmation(ctx: commands.Context, user):
         content = discord.Embed(title=":hammer: Ban user?", color=int("f4900c", 16))
-        content.description = f"{user.mention}\n**{user.name}#{user.discriminator}**\n{user.id}"
+        content.description = (
+            f"{user.mention}\n**{user.name}#{user.discriminator}**\n{user.id}"
+        )
         msg = await ctx.send(embed=content)
 
         async def confirm_ban():
@@ -458,7 +484,9 @@ class Mod(commands.Cog):
 
         functions = {"✅": confirm_ban, "❌": cancel_ban}
         asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+            util.reaction_buttons(
+                ctx, msg, functions, only_author=True, single_use=True
+            )
         )
 
     @commands.command()
@@ -485,9 +513,13 @@ class Mod(commands.Cog):
                     f"It seems I don't have the permission to unban **{user}** {user.mention}"
                 )
             except discord.errors.NotFound:
-                raise exceptions.CommandWarning(f"Unable to unban. **{user}** is not banned")
+                raise exceptions.CommandWarning(
+                    f"Unable to unban. **{user}** is not banned"
+                )
             else:
-                return await util.send_success(ctx, f"Unbanned **{user}** {user.mention}")
+                return await util.send_success(
+                    ctx, f"Unbanned **{user}** {user.mention}"
+                )
 
         success = []
         failure = []
@@ -510,7 +542,10 @@ class Mod(commands.Cog):
                 success.append(f"`{user}` Unbanned")
 
         await util.send_tasks_result_list(
-            ctx, success, failure, f":memo: Attempting to unban {len(discord_users)} users..."
+            ctx,
+            success,
+            failure,
+            f":memo: Attempting to unban {len(discord_users)} users...",
         )
 
 

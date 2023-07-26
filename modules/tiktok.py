@@ -68,7 +68,9 @@ class TikTok:
             raise Exception("TikTok downloader was not warmed up!")
 
         return {
-            index.get("name"): url if index.get("id") == "link_url" else index.get("value")
+            index.get("name"): url
+            if index.get("id") == "link_url"
+            else index.get("value")
             for index in self.input_element
         }
 
@@ -91,7 +93,9 @@ class TikTok:
 
         soup = BeautifulSoup(text, "lxml")
 
-        error_message = re.search(r"html: 'Error: (.*)'", soup.findAll("script")[-1].text)
+        error_message = re.search(
+            r"html: 'Error: (.*)'", soup.findAll("script")[-1].text
+        )
         if error_message:
             raise TiktokError(error_message)
 
@@ -110,7 +114,9 @@ class TikTok:
                 raise TiktokError("Internal Error: Unable to scrape POST data")
 
             async with session.post(
-                "https://muscdn.xyz/slider", data={"data": data.group(1)}, headers=self.HEADERS
+                "https://muscdn.xyz/slider",
+                data={"data": data.group(1)},
+                headers=self.HEADERS,
             ) as response:
                 converted_data = await response.json()
                 username = soup.select_one("h2.white-text")

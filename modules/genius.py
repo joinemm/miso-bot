@@ -4,7 +4,6 @@
 
 from bs4 import BeautifulSoup
 from markdownify import MarkdownConverter
-
 from modules.misobot import MisoBot
 
 
@@ -30,7 +29,9 @@ class Genius:
         }
         params = {"q": query}
 
-        async with self.bot.session.get(url, params=params, headers=headers) as response:
+        async with self.bot.session.get(
+            url, params=params, headers=headers
+        ) as response:
             data = await response.json()
             return [song["result"] for song in data["response"]["hits"]]
 
@@ -46,5 +47,7 @@ class Genius:
             content = await response.text()
             soup = BeautifulSoup(content, "lxml")
             lyric_containers = soup.find_all("div", {"data-lyrics-container": "true"})
-            lyrics.extend(MDText().convert_soup(container) for container in lyric_containers)
+            lyrics.extend(
+                MDText().convert_soup(container) for container in lyric_containers
+            )
         return lyrics

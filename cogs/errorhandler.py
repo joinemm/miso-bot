@@ -8,21 +8,27 @@ from dataclasses import dataclass
 import discord
 from discord.ext import commands
 from loguru import logger
-
-from modules import emojis, exceptions, queries, util
 from modules.instagram import InstagramError
 from modules.misobot import MisoBot
 from modules.tiktok import TiktokError
 
+from modules import emojis, exceptions, queries, util
+
 
 @dataclass
 class ErrorMessages:
-    disabled_command = "This command is temporarily disabled, sorry for the inconvenience!"
+    disabled_command = (
+        "This command is temporarily disabled, sorry for the inconvenience!"
+    )
     no_private_message = "This command cannot be used in a DM!"
     missing_permissions = "You require {0} permission to use this command!"
-    bot_missing_permissions = "Unable execute command due to missing permissions! (I need {0})"
+    bot_missing_permissions = (
+        "Unable execute command due to missing permissions! (I need {0})"
+    )
     not_donator = "This command is exclusive to Miso Bot donators! Consider donating to get access"
-    server_too_big = "This command cannot be used in large servers for performance reasons!"
+    server_too_big = (
+        "This command cannot be used in large servers for performance reasons!"
+    )
     not_allowed = "You cannot use this command."
     max_concurrency = "Stop spamming! >:("
     command_on_cooldown = "You are on cooldown! Please wait `{0:.0f} seconds.`"
@@ -35,7 +41,9 @@ class ErrorHander(commands.Cog):
         self.bot: MisoBot = bot
 
     @staticmethod
-    def log_format(ctx: commands.Context, error: Exception | None, message: str | None = None):
+    def log_format(
+        ctx: commands.Context, error: Exception | None, message: str | None = None
+    ):
         return (
             f"{ctx.guild} @ {ctx.author} : {ctx.message.content} "
             f"=> {type(error).__name__}: {message or str(error)}"
@@ -68,16 +76,26 @@ class ErrorHander(commands.Cog):
                 **kwargs,
             )
         except discord.Forbidden:
-            logger.warning(f"403 Forbidden when trying to send error message : {message}")
+            logger.warning(
+                f"403 Forbidden when trying to send error message : {message}"
+            )
 
     async def send_info(
-        self, ctx: commands.Context, message: str, error: Exception | None = None, **kwargs
+        self,
+        ctx: commands.Context,
+        message: str,
+        error: Exception | None = None,
+        **kwargs,
     ):
         logger.info(self.log_format(ctx, error, message))
         await self.send_embed(ctx, message, ":information_source:", "3b88c3", **kwargs)
 
     async def send_warning(
-        self, ctx: commands.Context, message: str, error: Exception | None = None, **kwargs
+        self,
+        ctx: commands.Context,
+        message: str,
+        error: Exception | None = None,
+        **kwargs,
     ):
         logger.warning(self.log_format(ctx, error, message))
         await self.send_embed(ctx, message, ":warning:", "ffcc4d", **kwargs)
@@ -91,9 +109,13 @@ class ErrorHander(commands.Cog):
         **kwargs,
     ):
         logger.error(self.log_format(ctx, error, message))
-        await self.send_embed(ctx, f"```{language}\n{message}```", color="be1931", **kwargs)
+        await self.send_embed(
+            ctx, f"```{language}\n{message}```", color="be1931", **kwargs
+        )
 
-    async def send_lastfm_error(self, ctx: commands.Context, error: exceptions.LastFMError):
+    async def send_lastfm_error(
+        self, ctx: commands.Context, error: exceptions.LastFMError
+    ):
         match error.error_code:
             case 8:
                 message = (
@@ -112,7 +134,9 @@ class ErrorHander(commands.Cog):
 
         await self.send_embed(ctx, message, emojis.LASTFM, "b90000")
 
-    async def handle_blacklist(self, ctx: commands.Context, error: exceptions.Blacklist):
+    async def handle_blacklist(
+        self, ctx: commands.Context, error: exceptions.Blacklist
+    ):
         if ctx.author.id == ctx.bot.owner_id or (
             isinstance(
                 error,
@@ -145,7 +169,9 @@ class ErrorHander(commands.Cog):
             await asyncio.sleep(5)
             await ctx.message.delete()
 
-    async def handle_cooldown(self, ctx: commands.Context, error: commands.CommandOnCooldown):
+    async def handle_cooldown(
+        self, ctx: commands.Context, error: commands.CommandOnCooldown
+    ):
         if (
             ctx.author.id == ctx.bot.owner_id
             or await queries.is_donator(ctx, ctx.author, 2)
@@ -161,7 +187,9 @@ class ErrorHander(commands.Cog):
             )
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx: commands.Context, error_wrapper: commands.CommandError):
+    async def on_command_error(
+        self, ctx: commands.Context, error_wrapper: commands.CommandError
+    ):
         """The event triggered when an error is raised while invoking a command"""
 
         # extract the original error from the CommandError wrapper
@@ -255,7 +283,9 @@ class ErrorHander(commands.Cog):
                 await self.send_warning(ctx, error.message)
 
             case _:
-                await self.send_error(ctx, f"{type(error).__name__}: {error}", error, language="ex")
+                await self.send_error(
+                    ctx, f"{type(error).__name__}: {error}", error, language="ex"
+                )
                 logger.opt(exception=error).error("Unhandled exception traceback:")
 
 

@@ -10,9 +10,9 @@ from operator import itemgetter
 import arrow
 import discord
 from discord.ext import commands
+from modules.misobot import MisoBot
 
 from modules import exceptions, util
-from modules.misobot import MisoBot
 
 
 class Typings(commands.Cog):
@@ -33,7 +33,9 @@ class Typings(commands.Cog):
         return "".join(letter_dict.get(letter, letter) for letter in text)
 
     def anticheat(self, message):
-        remainder = "".join(set(message.content).intersection(self.font + "".join(self.separators)))
+        remainder = "".join(
+            set(message.content).intersection(self.font + "".join(self.separators))
+        )
         return remainder != ""
 
     @commands.group()
@@ -42,7 +44,9 @@ class Typings(commands.Cog):
         await util.command_group_help(ctx)
 
     @typing.command(name="test")
-    async def typing_test(self, ctx: commands.Context, language=None, wordcount: int = 25):
+    async def typing_test(
+        self, ctx: commands.Context, language=None, wordcount: int = 25
+    ):
         """Take a typing test"""
         if language is None:
             language = wordcount
@@ -65,7 +69,9 @@ class Typings(commands.Cog):
                 f"Currently supported languages are:\n>>> {langs}"
             )
 
-        words_message = await ctx.reply(f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
+        words_message = await ctx.reply(
+            f"```\n{self.obfuscate(' '.join(wordlist))}\n```"
+        )
 
         def check(_message):
             return _message.author == ctx.author and _message.channel == ctx.channel
@@ -76,7 +82,9 @@ class Typings(commands.Cog):
             return await ctx.send(f"{ctx.author.mention} Too slow.")
 
         else:
-            wpm, accuracy, not_long_enough = calculate_entry(message, words_message, wordlist)
+            wpm, accuracy, not_long_enough = calculate_entry(
+                message, words_message, wordlist
+            )
             if self.anticheat(message) or wpm > 300:
                 return await message.reply("Stop cheating >:(")
 
@@ -91,7 +99,9 @@ class Typings(commands.Cog):
                 )
 
     @typing.command(name="race")
-    async def typing_race(self, ctx: commands.Context, language=None, wordcount: int = 25):
+    async def typing_race(
+        self, ctx: commands.Context, language=None, wordcount: int = 25
+    ):
         """Challenge your friends into a typing race"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
@@ -126,7 +136,9 @@ class Typings(commands.Cog):
             "React with :white_check_mark: to start the race."
         )
 
-        content.add_field(name="Participants", value=f"**{util.displayname(ctx.author)}**")
+        content.add_field(
+            name="Participants", value=f"**{util.displayname(ctx.author)}**"
+        )
         enter_message = await ctx.send(embed=content)
 
         note_emoji = "🗒"
@@ -147,11 +159,15 @@ class Typings(commands.Cog):
 
         while not race_in_progress:
             try:
-                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=120.0, check=check)
+                reaction, user = await ctx.bot.wait_for(
+                    "reaction_add", timeout=120.0, check=check
+                )
             except asyncio.TimeoutError:
                 try:
                     for emoji in [note_emoji, check_emoji]:
-                        asyncio.ensure_future(enter_message.remove_reaction(emoji, ctx.bot.user))
+                        asyncio.ensure_future(
+                            enter_message.remove_reaction(emoji, ctx.bot.user)
+                        )
                 except (discord.errors.NotFound, discord.errors.Forbidden):
                     pass
                 break
@@ -194,7 +210,9 @@ class Typings(commands.Cog):
         await asyncio.sleep(1)
 
         await words_message.delete()
-        words_message = await ctx.send(f"```\n{self.obfuscate(' '.join(wordlist))}\n```")
+        words_message = await ctx.send(
+            f"```\n{self.obfuscate(' '.join(wordlist))}\n```"
+        )
 
         tasks = []
         for player in players:
@@ -206,7 +224,9 @@ class Typings(commands.Cog):
 
         results = await asyncio.gather(*tasks)
 
-        content = discord.Embed(title=":checkered_flag: Race complete!", color=int("e1e8ed", 16))
+        content = discord.Embed(
+            title=":checkered_flag: Race complete!", color=int("e1e8ed", 16)
+        )
         rows = []
         values = []
         player: discord.Member
@@ -216,7 +236,11 @@ class Typings(commands.Cog):
             values.append((ctx.guild.id, player.id, 1, 1 if i == 1 else 0))
             rows.append(
                 f"{f'`#{i}`' if i > 1 else ':trophy:'} **{util.displayname(player)}** — "
-                + (f"**{int(wpm)} WPM / {int(accuracy)}% Accuracy**" if wpm != 0 else ":x:")
+                + (
+                    f"**{int(wpm)} WPM / {int(accuracy)}% Accuracy**"
+                    if wpm != 0
+                    else ":x:"
+                )
             )
 
         await self.bot.db.executemany(
@@ -239,12 +263,16 @@ class Typings(commands.Cog):
             return _message.author == player and _message.channel == ctx.channel
 
         try:
-            message = await self.bot.wait_for("message", timeout=300.0, check=progress_check)
+            message = await self.bot.wait_for(
+                "message", timeout=300.0, check=progress_check
+            )
         except asyncio.TimeoutError:
             await ctx.send(f"{player.mention} too slow!")
             return player, 0, 0
         else:
-            wpm, accuracy, not_long_enough = calculate_entry(message, words_message, wordlist)
+            wpm, accuracy, not_long_enough = calculate_entry(
+                message, words_message, wordlist
+            )
             if self.anticheat(message) or wpm > 300:
                 await message.reply("Stop cheating >:(")
                 return player, 0, 0
@@ -302,10 +330,10 @@ class Typings(commands.Cog):
     @typing.command(name="cleardata")
     async def typing_clear(self, ctx: commands.Context):
         """Clear your typing data"""
-        content = discord.Embed(title=":warning: Are you sure?", color=int("ffcc4d", 16))
-        content.description = (
-            "This action will delete *all* of your saved typing data and is **irreversible**."
+        content = discord.Embed(
+            title=":warning: Are you sure?", color=int("ffcc4d", 16)
         )
+        content.description = "This action will delete *all* of your saved typing data and is **irreversible**."
         msg = await ctx.send(embed=content)
 
         async def confirm():
@@ -334,7 +362,9 @@ class Typings(commands.Cog):
 
         functions = {"✅": confirm, "❌": cancel}
         asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+            util.reaction_buttons(
+                ctx, msg, functions, only_author=True, single_use=True
+            )
         )
 
     @typing.command(name="stats")

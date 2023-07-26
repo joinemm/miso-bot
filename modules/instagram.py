@@ -108,7 +108,9 @@ class Datalama:
     def calculate_post_lifetime(media: list) -> int:
         return min(m.expires for m in media) - arrow.utcnow().int_timestamp
 
-    async def api_request_with_cache(self, endpoint: str, params: dict) -> tuple[dict, bool, str]:
+    async def api_request_with_cache(
+        self, endpoint: str, params: dict
+    ) -> tuple[dict, bool, str]:
         cache_key = self.make_cache_key(endpoint, params)
 
         data = await self.try_cache(cache_key)
@@ -135,7 +137,9 @@ class Datalama:
     async def save_cache(self, cache_key: str, data: dict, lifetime: int):
         try:
             await self.bot.redis.set(cache_key, orjson.dumps(data), lifetime)
-            logger.info(f"Instagram request was cached (expires in {lifetime}) {cache_key}")
+            logger.info(
+                f"Instagram request was cached (expires in {lifetime}) {cache_key}"
+            )
         except redis.ConnectionError:
             logger.warning("Could not save content into redis cache (ConnectionError)")
 
@@ -289,7 +293,9 @@ class Datalama:
                 )
 
             case MediaType.PHOTO:
-                media_url = get_best_candidate(resource["image_versions2"]["candidates"])
+                media_url = get_best_candidate(
+                    resource["image_versions2"]["candidates"]
+                )
                 media.append(
                     IgMedia(
                         MediaType.PHOTO,
@@ -464,7 +470,9 @@ class Instagram:
         )
 
     async def get_user(self, username) -> IgUser:
-        data = await self.v1_api_request("users/web_profile_info/", {"username": username})
+        data = await self.v1_api_request(
+            "users/web_profile_info/", {"username": username}
+        )
         user = data["data"]["user"]
         return IgUser(user["id"], user["username"], user["profile_pic_url"])
 
@@ -493,7 +501,9 @@ class Instagram:
             user["username"],
             user["profile_pic_url"],
         )
-        return IgPost(f"https://www.instagram.com/p/{shortcode}", user, media, timestamp)
+        return IgPost(
+            f"https://www.instagram.com/p/{shortcode}", user, media, timestamp
+        )
 
     async def get_post_graphql(self, shortcode: str) -> IgPost:
         data = await self.graphql_request(shortcode)
@@ -518,7 +528,9 @@ class Instagram:
             user["username"],
             user["profile_pic_url"],
         )
-        return IgPost(f"https://www.instagram.com/p/{shortcode}", user, media, timestamp)
+        return IgPost(
+            f"https://www.instagram.com/p/{shortcode}", user, media, timestamp
+        )
 
 
 def to_mediatype(typename: str) -> MediaType:
@@ -534,14 +546,21 @@ def to_mediatype(typename: str) -> MediaType:
 
 
 def get_best_candidate(
-    candidates: list[dict], og_width: Optional[int] = None, og_height: Optional[int] = None
+    candidates: list[dict],
+    og_width: Optional[int] = None,
+    og_height: Optional[int] = None,
 ) -> str:
     """Filter out the best image candidate, based on resolution. Returns media url"""
     if og_height and og_width:
         best = next(
-            filter(lambda img: img["width"] == og_width and img["height"] == og_height, candidates)
+            filter(
+                lambda img: img["width"] == og_width and img["height"] == og_height,
+                candidates,
+            )
         )
     else:
-        best = sorted(candidates, key=lambda img: img["width"] * img["height"], reverse=True)[0]
+        best = sorted(
+            candidates, key=lambda img: img["width"] * img["height"], reverse=True
+        )[0]
 
     return best["url"]

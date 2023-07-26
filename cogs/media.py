@@ -50,7 +50,10 @@ class Media(commands.Cog):
 
         await util.paginate_list(
             ctx,
-            [f"https://youtube.com/watch?v={item['id']['videoId']}" for item in data.get("items")],
+            [
+                f"https://youtube.com/watch?v={item['id']['videoId']}"
+                for item in data.get("items")
+            ],
             use_locking=True,
             only_author=True,
             index_entries=True,
@@ -58,7 +61,9 @@ class Media(commands.Cog):
 
     @util.patrons_only()
     @commands.group()
-    async def autoembedder(self, ctx: commands.Context, provider: Literal["instagram", "tiktok"]):
+    async def autoembedder(
+        self, ctx: commands.Context, provider: Literal["instagram", "tiktok"]
+    ):
         """Set up automatic embeds for various media sources
 
         The links will be expanded automatically when detected in chat,
@@ -236,9 +241,15 @@ class Media(commands.Cog):
         scripts = []
         tasks = []
         if len(query.split(" ")) == 1:
-            tasks.append(extract_scripts(self.bot.session, f"https://gfycat.com/gifs/tag/{query}"))
+            tasks.append(
+                extract_scripts(
+                    self.bot.session, f"https://gfycat.com/gifs/tag/{query}"
+                )
+            )
 
-        tasks.append(extract_scripts(self.bot.session, f"https://gfycat.com/gifs/search/{query}"))
+        tasks.append(
+            extract_scripts(self.bot.session, f"https://gfycat.com/gifs/search/{query}")
+        )
         scripts = sum(await asyncio.gather(*tasks), [])
 
         urls = []
@@ -305,7 +316,9 @@ class Media(commands.Cog):
             if not title or not artist:
                 raise exceptions.CommandError("Failure parsing Melon page")
 
-            rows.append(f"`#{i:2}` **{artist.attrs['title']}** — ***{title.attrs['title']}***")
+            rows.append(
+                f"`#{i:2}` **{artist.attrs['title']}** — ***{title.attrs['title']}***"
+            )
 
         content = discord.Embed(color=discord.Color.from_rgb(0, 205, 60))
         content.set_author(
@@ -353,17 +366,23 @@ class GiphyUI(discord.ui.View):
         self.message = await ctx.send(random.choice(self.gifs)["url"], view=self)
 
     @discord.ui.button(emoji=emojis.REMOVE, style=discord.ButtonStyle.danger)
-    async def toggle(self, interaction: discord.Interaction, _button: discord.ui.Button):
+    async def toggle(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
         await interaction.response.defer()
         await self.message.delete()
 
     @discord.ui.button(emoji=emojis.REPEAT, style=discord.ButtonStyle.primary)
-    async def randomize(self, interaction: discord.Interaction, _button: discord.ui.Button):
+    async def randomize(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
         await interaction.response.defer()
         await self.message.edit(content=random.choice(self.gifs)["url"])
 
     @discord.ui.button(emoji=emojis.CONFIRM, style=discord.ButtonStyle.secondary)
-    async def confirm(self, interaction: discord.Interaction, _button: discord.ui.Button):
+    async def confirm(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
         await interaction.response.defer()
         await self.remove_ui()
 

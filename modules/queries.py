@@ -45,7 +45,9 @@ async def update_setting(ctx, table, setting, new_value):
 
 
 async def is_donator(
-    ctx: commands.Context, user: discord.User | discord.Member, unlock_tier: int | None = None
+    ctx: commands.Context,
+    user: discord.User | discord.Member,
+    unlock_tier: int | None = None,
 ):
     if user.id == ctx.bot.owner_id:
         return True

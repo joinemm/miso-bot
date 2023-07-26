@@ -16,10 +16,10 @@ import orjson
 from aiohttp import ClientResponseError
 from bs4 import BeautifulSoup
 from discord.ext import commands
+from modules.misobot import MisoBot
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
 from modules import emoji_literals, exceptions, util
-from modules.misobot import MisoBot
 
 EMOJIFIER_HOST = os.environ.get("EMOJIFIER_HOST")
 
@@ -116,7 +116,9 @@ class Misc(commands.Cog):
         try:
             values = [int(x) for x in number_range.split("-")]
         except ValueError:
-            return await ctx.send(":warning: Please give a valid number range to choose from")
+            return await ctx.send(
+                ":warning: Please give a valid number range to choose from"
+            )
         if len(values) == 2:
             start, end = values
         else:
@@ -162,7 +164,9 @@ class Misc(commands.Cog):
     @commands.command(aliases=["imbored"])
     async def iambored(self, ctx: commands.Context):
         """Get something to do"""
-        async with self.bot.session.get("http://www.boredapi.com/api/activity/") as response:
+        async with self.bot.session.get(
+            "http://www.boredapi.com/api/activity/"
+        ) as response:
             data = await response.json(loads=orjson.loads)
 
         # https://www.boredapi.com/documentation
@@ -258,7 +262,9 @@ class Misc(commands.Cog):
             lovenums = newnums
 
         it = 0
-        maxit = 100  # Maximum iterations allowed in below algorithm to attempt convergence
+        maxit = (
+            100  # Maximum iterations allowed in below algorithm to attempt convergence
+        )
         maxlen = 100  # Maximum length of generated list allowed (some cases grow list infinitely)
         while len(lovenums) > 2 and it < maxit and len(lovenums) < maxlen:
             newnums = []
@@ -439,7 +445,9 @@ class Misc(commands.Cog):
     async def send_hs(
         self,
         ctx: commands.Context,
-        variant: Literal["daily-yesterday", "daily-today", "daily-tomorrow", "weekly", "monthly"],
+        variant: Literal[
+            "daily-yesterday", "daily-today", "daily-tomorrow", "weekly", "monthly"
+        ],
     ):
         sunsign = await self.bot.db.fetch_value(
             "SELECT sunsign FROM user_settings WHERE user_id = %s",
@@ -462,7 +470,9 @@ class Misc(commands.Cog):
             paragraph = soup.select_one("p")
 
         if paragraph is None:
-            raise exceptions.CommandError("Something went wrong trying to get horoscope text")
+            raise exceptions.CommandError(
+                "Something went wrong trying to get horoscope text"
+            )
 
         date_node = paragraph.find("strong")
         if date_node is not None:
@@ -525,7 +535,9 @@ class Misc(commands.Cog):
             ctx.author.id,
             sign,
         )
-        await ctx.send(f"Zodiac saved as **{sign.capitalize()}** {self.hs[sign]['emoji']}")
+        await ctx.send(
+            f"Zodiac saved as **{sign.capitalize()}** {self.hs[sign]['emoji']}"
+        )
 
     @horoscope.command(name="list")
     async def horoscope_list(self, ctx: commands.Context):
@@ -540,7 +552,9 @@ class Misc(commands.Cog):
         )
         return await ctx.send(embed=content)
 
-    @commands.command(aliases=["colour"], usage="<hex | @member | @role | 'random' | url> ...")
+    @commands.command(
+        aliases=["colour"], usage="<hex | @member | @role | 'random' | url> ..."
+    )
     async def color(
         self,
         ctx: commands.Context,
@@ -571,7 +585,9 @@ class Misc(commands.Cog):
             if next_is_random_count and isinstance(source, int):
                 slots = 50 - len(colors)
                 amount = min(source, slots)
-                colors += ["{:06x}".format(random.randint(0, 0xFFFFFF)) for _ in range(amount)]
+                colors += [
+                    "{:06x}".format(random.randint(0, 0xFFFFFF)) for _ in range(amount)
+                ]
                 next_is_random_count = False
             # member or role color
             elif isinstance(source, (discord.Member, discord.Role)):
@@ -763,7 +779,9 @@ class Misc(commands.Cog):
             fetched_sticker = await sticker.fetch()
 
             if not isinstance(fetched_sticker, discord.GuildSticker):
-                raise exceptions.CommandWarning("I cannot steal default discord stickers!")
+                raise exceptions.CommandWarning(
+                    "I cannot steal default discord stickers!"
+                )
 
             sticker_file = await fetched_sticker.to_file()
 
@@ -784,7 +802,9 @@ class Misc(commands.Cog):
             await ctx.send(embed=content)
 
     @commands.command()
-    async def emojify(self, ctx: commands.Context, *, text: Union[discord.Message, str]):
+    async def emojify(
+        self, ctx: commands.Context, *, text: Union[discord.Message, str]
+    ):
         """Emojify your message
 
         Usage:
@@ -811,7 +831,9 @@ class Misc(commands.Cog):
             try:
                 await ctx.send(result)
             except discord.errors.HTTPException:
-                raise exceptions.CommandWarning("Your text once emojified is too long to send!")
+                raise exceptions.CommandWarning(
+                    "Your text once emojified is too long to send!"
+                )
 
     @commands.command()
     async def meme(self, ctx: commands.Context, template: str, *, content):
@@ -924,14 +946,14 @@ class Misc(commands.Cog):
         elif custom_emoji_match := re.search(r"<(a?)?:(\w+):(\d+)>", emoji_str):
             # is a custom emoji
             animated, emoji_name, emoji_id = custom_emoji_match.groups()
-            my_emoji.url = (
-                f"https://cdn.discordapp.com/emojis/{emoji_id}.{'gif' if animated else 'png'}"
-            )
+            my_emoji.url = f"https://cdn.discordapp.com/emojis/{emoji_id}.{'gif' if animated else 'png'}"
             my_emoji.name = emoji_name
             my_emoji.animated = animated == "a"
             my_emoji.id = int(emoji_id)
         elif emoji_name := emoji_literals.UNICODE_TO_NAME.get(emoji_str):
-            codepoint = "-".join(f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE[emoji_name])
+            codepoint = "-".join(
+                f"{ord(e):x}" for e in emoji_literals.NAME_TO_UNICODE[emoji_name]
+            )
             my_emoji.name = emoji_name.strip(":")
             my_emoji.url = f"https://twemoji.maxcdn.com/v/13.0.1/72x72/{codepoint}.png"
         else:
@@ -994,7 +1016,8 @@ class ImageObject:
                     lines.append(line)
                     if len(word.split("\n")) > 2:
                         lines.extend(
-                            [newline_words[i]] for i in range(1, len(word.split("\n")) - 1)
+                            [newline_words[i]]
+                            for i in range(1, len(word.split("\n")) - 1)
                         )
                     line = [newline_words[-1]]
                 else:
