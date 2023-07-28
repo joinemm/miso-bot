@@ -827,11 +827,11 @@ class LastFm(commands.Cog):
 
         soup = BeautifulSoup(data, "lxml")
         try:
-            albumsdiv, tracksdiv, _ = soup.findAll(
-                "tbody", {"data-playlisting-add-entries": ""}
-            )
+            tbodies = soup.findAll("tbody", {"data-playlisting-add-entries": ""})
 
-        except ValueError:
+            albumsdiv = tbodies[1]
+            tracksdiv = tbodies[3]
+        except IndexError:
             artistname = discord.utils.escape_markdown(artistname)
             if period == "overall":
                 return await ctx.send(f"You have never listened to **{artistname}**!")
@@ -2744,7 +2744,7 @@ async def fetch_html(bot: MisoBot, url: str, params: Optional[dict] = None):
     """Returns tuple of (data, error)"""
     headers = headers = {
         "Host": "www.last.fm",
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0",
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/114.0",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "fi,en;q=0.7,en-US;q=0.3",
         "Accept-Encoding": "gzip, deflate, br",
@@ -2812,7 +2812,7 @@ def remove_mentions(text):
 def get_list_contents(soup):
     """Scrape lastfm for listing pages"""
     try:
-        chartlist = soup.find("tbody", {"data-playlisting-add-entries": ""})
+        chartlist = soup.findAll("tbody", {"data-playlisting-add-entries": ""})[-2]
     except ValueError:
         return []
 
