@@ -2603,7 +2603,8 @@ class LastFm(commands.Cog):
                 raise exceptions.LastFMError(0, error)
 
             soup = BeautifulSoup(data, "lxml")
-            imagedivs = soup.findAll("td", {"class": "chartlist-image"})
+            tbody = soup.findAll("tbody", {"data-playlisting-add-entries": ""})[-2]
+            imagedivs = tbody.findAll("td", {"class": "chartlist-image"})
             images += [
                 div.find("img")["src"].replace("/avatar70s/", "/300x300/")
                 for div in imagedivs
