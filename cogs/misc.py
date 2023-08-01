@@ -984,7 +984,7 @@ class ImageObject:
 
     def get_text_size(self, font_size, text):
         font = ImageFont.truetype(self.font, font_size)
-        return font.getsize(text)
+        return font.getbbox(text)[2:4]
 
     def save(self, filename=None):
         self.image.save(filename or self.filename)
