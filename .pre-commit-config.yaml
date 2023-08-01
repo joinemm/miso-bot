@@ -17,3 +17,8 @@ repos:
     hooks:
       - id: isort
         args: ["--profile", "black", "--filter-files"]
+
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v2.1.0
+    hooks:
+    - id: reuse
