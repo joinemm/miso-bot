@@ -390,19 +390,18 @@ class TwitterEmbedder(BaseEmbedder):
     ):
         media_urls = []
         async with self.bot.session.get(
-            f"https://api.fxtwitter.com/i/status/{tweet_id}"
+            f"https://api.vxtwitter.com/u/status/{tweet_id}"
         ) as response:
-            data = await response.json()
-            if data["code"] != 200:
-                raise exceptions.CommandError(
-                    f"Error from API: {data['message']}",
-                )
+            response.raise_for_status()
+            tweet = await response.json()
 
-        tweet = data["tweet"]
-        screen_name = tweet["author"]["screen_name"]
+        if not tweet["media_extended"]:
+            raise exceptions.CommandWarning(
+                f"Tweet `{tweet['url']}` does not include any media.",
+            )
 
-        for media in data["tweet"]["media"]["all"]:
-            if media["type"] == "photo":
+        for media in tweet["media_extended"]:
+            if media["type"] == "image":
                 base, extension = media["url"].rsplit(".", 1)
                 media_urls.append(
                     ("jpg", f"{base}?format={extension}&name=orig"),
@@ -410,20 +409,12 @@ class TwitterEmbedder(BaseEmbedder):
             else:
                 media_urls.append(("mp4", media["url"]))
 
-        if not media_urls:
-            raise exceptions.CommandWarning(
-                f"Tweet `{tweet['url']}` does not include any media.",
-            )
+        screen_name = tweet["user_screen_name"]
+        caption = f"{self.EMOJI} **@{discord.utils.escape_markdown(screen_name)}**"
 
-        username = discord.utils.escape_markdown(screen_name)
-        caption = f"{self.EMOJI} **@{username}**"
-
-        try:
-            timestamp = arrow.get(tweet["created_timestamp"])
-            ts_format = timestamp.format("YYMMDD") + "-"
-            caption += f" <t:{int(timestamp.timestamp())}:d>"
-        except KeyError:
-            ts_format = ""
+        timestamp = arrow.get(tweet["date_epoch"])
+        ts_format = timestamp.format("YYMMDD") + "-"
+        caption += f" <t:{int(timestamp.timestamp())}:d>"
 
         tasks = []
         for n, (extension, media_url) in enumerate(media_urls, start=1):
@@ -456,7 +447,7 @@ class TwitterEmbedder(BaseEmbedder):
         return {
             "content": caption,
             "files": files,
-            "view": MediaUI("View on Twitter", tweet["url"]),
+            "view": MediaUI("View on Twitter", tweet["tweetURL"]),
         }
 
 
