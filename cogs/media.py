@@ -201,7 +201,7 @@ class Media(commands.Cog):
         await InstagramEmbedder(self.bot).process(ctx, links)
 
     @commands.command(
-        aliases=["twt"],
+        aliases=["twt", "x"],
         usage="[OPTIONS] <links...>",
     )
     async def twitter(self, ctx: commands.Context, *, links: str):

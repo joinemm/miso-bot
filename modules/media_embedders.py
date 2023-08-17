@@ -344,8 +344,8 @@ class TikTokEmbedder(BaseEmbedder):
 
 
 class TwitterEmbedder(BaseEmbedder):
-    EMOJI = "<:twitter:937425165241946162>"
-    NO_RESULTS_ERROR = "Found no Twitter links to embed!"
+    EMOJI = "<:x_:1135484782642466897>"
+    NO_RESULTS_ERROR = "Found no Twitter/X links to embed!"
 
     @staticmethod
     def remove_tco(text: str) -> str:
@@ -369,7 +369,7 @@ class TwitterEmbedder(BaseEmbedder):
         results = [
             int(match.group(2))
             for match in regex.finditer(
-                r"(?:https?:\/\/)?(?:www.)?twitter.com/(\w+)/status/(\d+)", text
+                r"(?:https?:\/\/)?(?:www.)?(?:twitter|x).com/(\w+)/status/(\d+)", text
             )
         ]
 
@@ -447,7 +447,9 @@ class TwitterEmbedder(BaseEmbedder):
         return {
             "content": caption,
             "files": files,
-            "view": MediaUI("View on Twitter", tweet["tweetURL"]),
+            "view": MediaUI(
+                "View on X", f"https://x.com/{screen_name}/status/{tweet_id}"
+            ),
         }
 
 
