@@ -817,7 +817,7 @@ class User(commands.Cog):
                         f":wedding: {'You have' if member == ctx.author else f'**{member}** has'} "
                         "been married to "
                         + (f"**{partner.display_name}**" if partner else "someone")
-                        + f"for **{length}**"
+                        + f" for **{length}**"
                     ),
                 )
             )
