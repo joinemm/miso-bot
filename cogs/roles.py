@@ -5,7 +5,7 @@
 import asyncio
 
 import discord
-from cogs.errorhandler import ErrorHander
+from cogs.errorhandler import ErrorHandler
 from discord.ext import commands
 from modules.misobot import MisoBot
 
@@ -428,8 +428,8 @@ class Roles(commands.Cog):
 
         command = message.content[0]
         rolename = message.content[1:].strip()
-        errorhandler = self.bot.get_cog("ErrorHander")
-        if not isinstance(errorhandler, ErrorHander):
+        errorhandler = self.bot.get_cog("ErrorHandler")
+        if not isinstance(errorhandler, ErrorHandler):
             return message.channel.send("Internal Error: Could not get ErrorHandler")
 
         if command in ["+", "-"]:

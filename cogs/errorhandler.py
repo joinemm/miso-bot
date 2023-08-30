@@ -34,7 +34,7 @@ class ErrorMessages:
     command_on_cooldown = "You are on cooldown! Please wait `{0:.0f} seconds.`"
 
 
-class ErrorHander(commands.Cog):
+class ErrorHandler(commands.Cog):
     """Any errors during command invocation will propagate here"""
 
     def __init__(self, bot):
@@ -290,4 +290,4 @@ class ErrorHander(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(ErrorHander(bot))
+    await bot.add_cog(ErrorHandler(bot))
