@@ -312,7 +312,10 @@ class Events(commands.Cog):
 
         media_settings = self.bot.cache.media_auto_embed.get(str(message.guild.id), {})
         if True in media_settings.values():
-            await self.parse_media_auto_embed(message, media_settings)
+            try:
+                await self.parse_media_auto_embed(message, media_settings)
+            except Exception as e:
+                await self.bot.get_cog("ErrorHandler").on_command_error(ctx, e)
 
         if self.bot.cache.autoresponse.get(str(message.guild.id), True):
             await self.easter_eggs(message)

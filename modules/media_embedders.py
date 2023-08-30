@@ -448,7 +448,7 @@ class TwitterEmbedder(BaseEmbedder):
             "content": caption,
             "files": files,
             "view": MediaUI(
-                "View on X", f"https://x.com/{screen_name}/status/{tweet_id}"
+                "View on X", f"https://twitter.com/{screen_name}/status/{tweet_id}"
             ),
         }
 
