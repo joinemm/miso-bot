@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 import asyncio
 import json
 import math
@@ -9,9 +13,9 @@ import arrow
 import orjson
 from bs4 import BeautifulSoup, Tag
 from loguru import logger
+from modules.misobot import MisoBot
 
 from modules import exceptions
-from modules.misobot import MisoBot
 
 
 def int_bool(value: bool | None) -> int | None:
@@ -134,7 +138,9 @@ class LastFmApi:
 
         print(request_params)
 
-        async with self.bot.session.get(self.API_BASE_URL, params=request_params) as response:
+        async with self.bot.session.get(
+            self.API_BASE_URL, params=request_params
+        ) as response:
             try:
                 content = await response.json(loads=orjson.loads)
             except aiohttp.ContentTypeError:
@@ -175,7 +181,8 @@ class LastFmApi:
         extended: bool | None = None,
     ) -> dict:
         """Returns a list of the tracks recently scrobbled by this user.
-        Adds a nowplaying flag with a boolean value if the user is currently scrobbling."""
+        Adds a nowplaying flag with a boolean value if the user is currently scrobbling.
+        """
         data = await self.api_request(
             "user.getrecenttracks",
             {
@@ -328,9 +335,13 @@ class LastFmApi:
         try:
             track: dict = data["track"][0]
         except KeyError:
-            raise exceptions.LastFMError(error_code=0, message="Last.fm returned no data")
+            raise exceptions.LastFMError(
+                error_code=0, message="Last.fm returned no data"
+            )
 
-        now_playing = bool(track.get("@attr") and track["@attr"].get("nowplaying") == "true")
+        now_playing = bool(
+            track.get("@attr") and track["@attr"].get("nowplaying") == "true"
+        )
         track.pop("@attr", None)
         track["nowplaying"] = now_playing
         return track
@@ -339,7 +350,9 @@ class LastFmApi:
     # WEB SCRAPING #
     ################
 
-    async def scrape_page(self, page_url: str, params: dict | None = None, authenticated=False):
+    async def scrape_page(
+        self, page_url: str, params: dict | None = None, authenticated=False
+    ):
         """Scrapes the given url returning a Soup."""
         headers = {
             "Host": "www.last.fm",
@@ -483,9 +496,7 @@ class LastFmApi:
         period: Period,
     ) -> list[LastFmImage]:
         """Get image hashes for user's top n artists"""
-        url: str = (
-            f"https://www.last.fm/user/{username}/library/artists?date_preset={period.web_format()}"
-        )
+        url: str = f"https://www.last.fm/user/{username}/library/artists?date_preset={period.web_format()}"
         tasks = []
         for i in range(1, math.ceil(amount / 50) + 1):
             params = {"page": str(i)} if i > 1 else None
