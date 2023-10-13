@@ -8,9 +8,9 @@ import arrow
 import discord
 from discord.ext import commands, tasks
 from loguru import logger
+from modules.misobot import MisoBot
 
 from modules import exceptions, util
-from modules.misobot import MisoBot
 
 
 class Mod(commands.Cog):
@@ -44,7 +44,10 @@ class Mod(commands.Cog):
         if self.cache_needs_refreshing:
             self.cache_needs_refreshing = False
             self.unmute_list = await self.bot.db.fetch(
-                "SELECT user_id, guild_id, channel_id, unmute_on FROM muted_user WHERE unmute_on IS NOT NULL"
+                """
+                SELECT user_id, guild_id, channel_id, unmute_on
+                FROM muted_user WHERE unmute_on IS NOT NULL
+                """
             )
 
         if not self.unmute_list:
@@ -56,42 +59,6 @@ class Mod(commands.Cog):
             if unmute_ts > now_ts:
                 continue
 
-            guild = self.bot.get_guild(guild_id)
-            if guild is None:
-                continue
-            await util.require_chunked(guild)
-            if user := guild.get_member(user_id):
-                mute_role_id = await self.bot.db.fetch_value(
-                    """
-                    SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
-                    """,
-                    guild.id,
-                )
-                mute_role = guild.get_role(mute_role_id) if mute_role_id else None
-                if not mute_role:
-                    return logger.warning("Mute role not set in unmuting loop")
-                channel = self.bot.get_partial_messageable(channel_id, guild_id=guild.id)
-                if channel is not None:
-                    try:
-                        await user.remove_roles(mute_role)
-                    except discord.errors.Forbidden:
-                        pass
-                    try:
-                        await channel.send(
-                            embed=discord.Embed(
-                                description=f":stopwatch: Unmuted {user.mention} (mute duration passed)",
-                                color=int("66757f", 16),
-                            )
-                        )
-                    except discord.errors.Forbidden:
-                        logger.warning(
-                            "Unable to send unmuting message due to missing permissions!"
-                        )
-            else:
-                logger.info(
-                    f"Deleted expired mute of unknown user {user_id} or unknown guild {guild_id}"
-                )
-
             await self.bot.db.execute(
                 """
                 DELETE FROM muted_user
@@ -101,6 +68,48 @@ class Mod(commands.Cog):
                 guild_id,
             )
             self.cache_needs_refreshing = True
+
+            guild = self.bot.get_guild(guild_id)
+            if guild is None:
+                logger.info(f"Deleted expired mute in unknown guild {guild_id}")
+                continue
+
+            await util.require_chunked(guild)
+            user = guild.get_member(user_id)
+            if not user:
+                logger.info(f"Deleted expired mute of unknown user {user_id}")
+                continue
+
+            mute_role_id = await self.bot.db.fetch_value(
+                """
+                SELECT mute_role_id FROM guild_settings WHERE guild_id = %s
+                """,
+                guild.id,
+            )
+            mute_role = guild.get_role(mute_role_id) if mute_role_id else None
+            if not mute_role:
+                logger.warning(f"Mute role not set in unmuting loop for {guild}")
+                continue
+
+            try:
+                await user.remove_roles(mute_role)
+            except discord.errors.Forbidden:
+                pass
+            channel = self.bot.get_partial_messageable(channel_id, guild_id=guild.id)
+            if channel is None:
+                continue
+
+            try:
+                await channel.send(
+                    embed=discord.Embed(
+                        description=f":stopwatch: Unmuted {user.mention} (mute duration passed)",
+                        color=int("66757f", 16),
+                    )
+                )
+            except discord.errors.Forbidden:
+                logger.warning(
+                    "Unable to send unmuting message due to missing permissions!"
+                )
 
     @commands.command(aliases=["clean"], usage="<amount> [@mentions...]")
     @commands.guild_only()
@@ -118,7 +127,9 @@ class Mod(commands.Cog):
             raise exceptions.CommandWarning("This command cannot be used here.")
 
         if amount > 100:
-            raise exceptions.CommandWarning("You cannot delete more than 100 messages at a time.")
+            raise exceptions.CommandWarning(
+                "You cannot delete more than 100 messages at a time."
+            )
 
         await ctx.message.delete()
 
@@ -147,7 +158,10 @@ class Mod(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def giverole(
-        self, ctx: commands.Context, role: discord.Role, members: commands.Greedy[discord.Member]
+        self,
+        ctx: commands.Context,
+        role: discord.Role,
+        members: commands.Greedy[discord.Member],
     ):
         """Give a role to multiple people"""
         success = []
@@ -165,31 +179,39 @@ class Mod(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(moderate_members=True)
-    async def timeout(self, ctx: commands.Context, member: discord.Member, *, duration="1 hour"):
+    async def timeout(
+        self, ctx: commands.Context, member: discord.Member, *, duration="1 hour"
+    ):
         """Timeout user. Pass 'remove' as the duration to remove"""
         if member.is_timed_out():
             if duration and duration.strip().lower() == "remove":
                 await member.timeout(None)
-                return await util.send_success(ctx, f"Removed timeout from {member.mention}")
+                return await util.send_success(
+                    ctx, f"Removed timeout from {member.mention}"
+                )
+
             seconds = member.timeout.timestamp() - arrow.now().int_timestamp
             raise exceptions.CommandInfo(
-                f"{member.mention} is already timed out (**{util.stringfromtime(seconds)}** remaining)",
+                f"{member.mention} is already timed out "
+                f"(**{util.stringfromtime(seconds)}** remaining)",
             )
-        else:
-            seconds = util.timefromstring(duration)
-            if seconds is None:
-                raise exceptions.CommandWarning(f"Invalid duration `{duration}`")
-            until = arrow.now().shift(seconds=+seconds).datetime
 
-            await member.timeout(until)
-            await util.send_success(
-                ctx, f"Timed out {member.mention} for **{util.stringfromtime(seconds)}**"
-            )
+        seconds = util.timefromstring(duration)
+        if seconds is None:
+            raise exceptions.CommandWarning(f"Invalid duration `{duration}`")
+        until = arrow.now().shift(seconds=+seconds).datetime
+
+        await member.timeout(until)
+        await util.send_success(
+            ctx, f"Timed out {member.mention} for **{util.stringfromtime(seconds)}**"
+        )
 
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
-    async def mute(self, ctx: commands.Context, member: discord.Member, *, duration=None):
+    async def mute(
+        self, ctx: commands.Context, member: discord.Member, *, duration=None
+    ):
         """Mute user"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
@@ -218,10 +240,14 @@ class Mod(commands.Cog):
                 raise exceptions.CommandWarning(f'Invalid mute duration "{duration}"')
 
             if seconds < 60:
-                raise exceptions.CommandInfo("The minimum duration of a mute is **1 minute**")
+                raise exceptions.CommandInfo(
+                    "The minimum duration of a mute is **1 minute**"
+                )
 
             if seconds > 604800:
-                raise exceptions.CommandInfo("The maximum duration of a mute is **1 week**")
+                raise exceptions.CommandInfo(
+                    "The maximum duration of a mute is **1 week**"
+                )
 
         try:
             await member.add_roles(mute_role)
@@ -233,7 +259,11 @@ class Mod(commands.Cog):
         await util.send_success(
             ctx,
             f"Muted {member.mention}"
-            + (f" for **{util.stringfromtime(seconds)}**" if seconds is not None else ""),
+            + (
+                f" for **{util.stringfromtime(seconds)}**"
+                if seconds is not None
+                else ""
+            ),
         )
 
         if seconds is not None:
@@ -355,7 +385,10 @@ class Mod(commands.Cog):
                 success.append(f"`{user}` Banned :hammer:")
 
         await util.send_tasks_result_list(
-            ctx, success, failure, f":hammer: Attempting to ban {len(discord_users)} users..."
+            ctx,
+            success,
+            failure,
+            f":hammer: Attempting to ban {len(discord_users)} users...",
         )
 
     @commands.command()
@@ -370,7 +403,8 @@ class Mod(commands.Cog):
 
         if len(discord_users) > 4:
             raise exceptions.CommandInfo(
-                f"It seems you are trying to ban a lot of users at once.\nPlease use `{ctx.prefix}massban ...` instead"
+                f"It seems you are trying to ban a lot of users at once.\n"
+                f"Please use `{ctx.prefix}massban ...` instead"
             )
 
         for discord_user in discord_users:
@@ -400,7 +434,10 @@ class Mod(commands.Cog):
                 except discord.errors.Forbidden:
                     await ctx.send(
                         embed=discord.Embed(
-                            description=f":no_entry: It seems I don't have the permission to ban **{user}**",
+                            description=(
+                                ":no_entry: It seems I don't have the "
+                                f"permission to ban **{user}**"
+                            ),
                             color=int("be1931", 16),
                         )
                     )
@@ -422,7 +459,9 @@ class Mod(commands.Cog):
     @staticmethod
     async def send_ban_confirmation(ctx: commands.Context, user):
         content = discord.Embed(title=":hammer: Ban user?", color=int("f4900c", 16))
-        content.description = f"{user.mention}\n**{user.name}#{user.discriminator}**\n{user.id}"
+        content.description = (
+            f"{user.mention}\n**{user.name}#{user.discriminator}**\n{user.id}"
+        )
         msg = await ctx.send(embed=content)
 
         async def confirm_ban():
@@ -432,7 +471,10 @@ class Mod(commands.Cog):
                     content.title = ":white_check_mark: Banned user"
             except discord.errors.Forbidden:
                 content.title = None
-                content.description = f":no_entry: It seems I don't have the permission to ban **{user}** {user.mention}"
+                content.description = (
+                    ":no_entry: It seems I don't have the permission to "
+                    f"ban **{user}** {user.mention}"
+                )
                 content.colour = int("be1931", 16)
             await msg.edit(embed=content)
 
@@ -442,7 +484,9 @@ class Mod(commands.Cog):
 
         functions = {"✅": confirm_ban, "❌": cancel_ban}
         asyncio.ensure_future(
-            util.reaction_buttons(ctx, msg, functions, only_author=True, single_use=True)
+            util.reaction_buttons(
+                ctx, msg, functions, only_author=True, single_use=True
+            )
         )
 
     @commands.command()
@@ -469,9 +513,13 @@ class Mod(commands.Cog):
                     f"It seems I don't have the permission to unban **{user}** {user.mention}"
                 )
             except discord.errors.NotFound:
-                raise exceptions.CommandWarning(f"Unable to unban. **{user}** is not banned")
+                raise exceptions.CommandWarning(
+                    f"Unable to unban. **{user}** is not banned"
+                )
             else:
-                return await util.send_success(ctx, f"Unbanned **{user}** {user.mention}")
+                return await util.send_success(
+                    ctx, f"Unbanned **{user}** {user.mention}"
+                )
 
         success = []
         failure = []
@@ -494,7 +542,10 @@ class Mod(commands.Cog):
                 success.append(f"`{user}` Unbanned")
 
         await util.send_tasks_result_list(
-            ctx, success, failure, f":memo: Attempting to unban {len(discord_users)} users..."
+            ctx,
+            success,
+            failure,
+            f":memo: Attempting to unban {len(discord_users)} users...",
         )
 
 

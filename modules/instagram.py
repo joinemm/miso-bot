@@ -14,6 +14,8 @@ import orjson
 import redis
 from loguru import logger
 
+from modules import exceptions
+
 if TYPE_CHECKING:
     from modules.misobot import MisoBot
 
@@ -104,7 +106,13 @@ class Datalama:
     def get_url_expiry(media_url: str):
         return int(parse.parse_qs(parse.urlparse(media_url).query)["oe"][0], 16)
 
-    async def api_request_with_cache(self, endpoint: str, params: dict) -> tuple[dict, bool, str]:
+    @staticmethod
+    def calculate_post_lifetime(media: list) -> int:
+        return min(m.expires for m in media) - arrow.utcnow().int_timestamp
+
+    async def api_request_with_cache(
+        self, endpoint: str, params: dict
+    ) -> tuple[dict, bool, str]:
         cache_key = self.make_cache_key(endpoint, params)
 
         data = await self.try_cache(cache_key)
@@ -131,11 +139,16 @@ class Datalama:
     async def save_cache(self, cache_key: str, data: dict, lifetime: int):
         try:
             await self.bot.redis.set(cache_key, orjson.dumps(data), lifetime)
-            logger.info(f"Instagram request was cached (expires in {lifetime}) {cache_key}")
+            logger.info(
+                f"Instagram request was cached (expires in {lifetime}) {cache_key}"
+            )
         except redis.ConnectionError:
             logger.warning("Could not save content into redis cache (ConnectionError)")
 
     async def api_request(self, endpoint: str, params: dict) -> dict:
+        raise exceptions.CommandWarning(
+            "The Instagram scraper was taken down by Meta Inc :("
+        )
         headers = {
             "accept": "application/json",
             "x-access-key": self.bot.keychain.DATALAMA_ACCESS_KEY,
@@ -153,7 +166,8 @@ class Datalama:
                     or data.get("detail") is not None
                 ):
                     raise InstagramError(
-                        f"ERROR {response.status} | {data.get('exc_type')} | {data.get('detail')}"
+                        f"API returned **{response.status} {data.get('detail')}**"
+                        f"```json\n{params}```"
                     )
 
                 return data
@@ -172,9 +186,7 @@ class Datalama:
         media = self.parse_resource_v1(data)
 
         if not was_cached and media:
-            lifetime = (
-                (media[0].expires - arrow.utcnow().int_timestamp) if media[0].expires else 86400
-            )
+            lifetime = self.calculate_post_lifetime(media)
             await self.save_cache(cache_key, data, lifetime)
 
         return IgPost(
@@ -214,9 +226,7 @@ class Datalama:
                 raise TypeError(f"Unknown IG media type {data['media_type']}")
 
         if not was_cached and media:
-            lifetime = (
-                (media[0].expires - arrow.utcnow().int_timestamp) if media[0].expires else 86400
-            )
+            lifetime = self.calculate_post_lifetime(media)
             await self.save_cache(cache_key, data, lifetime)
 
         timestamp = int(arrow.get(data["taken_at"]).timestamp())
@@ -288,7 +298,9 @@ class Datalama:
                 )
 
             case MediaType.PHOTO:
-                media_url = get_best_candidate(resource["image_versions2"]["candidates"])
+                media_url = get_best_candidate(
+                    resource["image_versions2"]["candidates"]
+                )
                 media.append(
                     IgMedia(
                         MediaType.PHOTO,
@@ -363,7 +375,8 @@ class Instagram:
             "query_hash": "9f8827793ef34641b2fb195d4d41151c",
             "variables": '{"shortcode": "'
             + shortcode
-            + '", "child_comment_count": 3, "fetch_comment_count": 40, "parent_comment_count": 24, "has_threaded_comments": "true"}',
+            + '", "child_comment_count": 3, "fetch_comment_count": 40, '
+            + '"parent_comment_count": 24, "has_threaded_comments": "true"}',
         }
         headers = {
             "Host": "www.instagram.com",
@@ -462,7 +475,9 @@ class Instagram:
         )
 
     async def get_user(self, username) -> IgUser:
-        data = await self.v1_api_request("users/web_profile_info/", {"username": username})
+        data = await self.v1_api_request(
+            "users/web_profile_info/", {"username": username}
+        )
         user = data["data"]["user"]
         return IgUser(user["id"], user["username"], user["profile_pic_url"])
 
@@ -491,7 +506,9 @@ class Instagram:
             user["username"],
             user["profile_pic_url"],
         )
-        return IgPost(f"https://www.instagram.com/p/{shortcode}", user, media, timestamp)
+        return IgPost(
+            f"https://www.instagram.com/p/{shortcode}", user, media, timestamp
+        )
 
     async def get_post_graphql(self, shortcode: str) -> IgPost:
         data = await self.graphql_request(shortcode)
@@ -516,7 +533,9 @@ class Instagram:
             user["username"],
             user["profile_pic_url"],
         )
-        return IgPost(f"https://www.instagram.com/p/{shortcode}", user, media, timestamp)
+        return IgPost(
+            f"https://www.instagram.com/p/{shortcode}", user, media, timestamp
+        )
 
 
 def to_mediatype(typename: str) -> MediaType:
@@ -532,14 +551,21 @@ def to_mediatype(typename: str) -> MediaType:
 
 
 def get_best_candidate(
-    candidates: list[dict], og_width: Optional[int] = None, og_height: Optional[int] = None
+    candidates: list[dict],
+    og_width: Optional[int] = None,
+    og_height: Optional[int] = None,
 ) -> str:
     """Filter out the best image candidate, based on resolution. Returns media url"""
     if og_height and og_width:
         best = next(
-            filter(lambda img: img["width"] == og_width and img["height"] == og_height, candidates)
+            filter(
+                lambda img: img["width"] == og_width and img["height"] == og_height,
+                candidates,
+            )
         )
     else:
-        best = sorted(candidates, key=lambda img: img["width"] * img["height"], reverse=True)[0]
+        best = sorted(
+            candidates, key=lambda img: img["width"] * img["height"], reverse=True
+        )[0]
 
     return best["url"]

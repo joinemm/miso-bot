@@ -9,9 +9,9 @@ import discord
 import regex
 from discord.ext import commands
 from loguru import logger
+from modules.misobot import MisoBot
 
 from modules import emojis, exceptions, queries, util
-from modules.misobot import MisoBot
 
 
 class Notifications(commands.Cog):
@@ -54,9 +54,15 @@ class Notifications(commands.Cog):
             return
 
         content = discord.Embed(color=message.author.color)
-        content.set_author(name=f"{message.author}", icon_url=message.author.display_avatar.url)
-        pattern = regex.compile(self.keyword_regex, words=keywords, flags=regex.IGNORECASE)
-        highlighted_text = regex.sub(pattern, lambda x: f"**{x.group(0)}**", message.content)
+        content.set_author(
+            name=f"{message.author}", icon_url=message.author.display_avatar.url
+        )
+        pattern = regex.compile(
+            self.keyword_regex, words=keywords, flags=regex.IGNORECASE
+        )
+        highlighted_text = regex.sub(
+            pattern, lambda x: f"**{x.group(0)}**", message.content
+        )
 
         content.description = highlighted_text[:2047]
         content.add_field(
@@ -134,7 +140,12 @@ class Notifications(commands.Cog):
                     f"User {user_id} not found, deleting their notification for {users_words}"
                 )
                 await self.bot.db.execute(
-                    """DELETE FROM notification WHERE guild_id = %s AND user_id = %s AND keyword IN %s""",
+                    """
+                    DELETE FROM notification
+                        WHERE guild_id = %s
+                        AND user_id = %s
+                        AND keyword IN %s
+                    """,
                     message.guild.id,
                     user_id,
                     users_words,
@@ -142,8 +153,13 @@ class Notifications(commands.Cog):
                 await self.create_cache()
                 continue
 
-            if member is not None and message.channel.permissions_for(member).read_messages:
-                asyncio.ensure_future(self.send_notification(member, message, users_words))
+            if (
+                member is not None
+                and message.channel.permissions_for(member).read_messages
+            ):
+                asyncio.ensure_future(
+                    self.send_notification(member, message, users_words)
+                )
 
     @commands.group(case_insensitive=True, aliases=["noti", "notif", "notifications"])
     async def notification(self, ctx: commands.Context):
@@ -165,7 +181,8 @@ class Notifications(commands.Cog):
             )
             if amount and amount >= 25:
                 raise exceptions.CommandWarning(
-                    f"You can only have a maximum of **25** notifications. You have **{amount}** (Become a [donator](https://misobot.xyz/donate) for unlimited notifications)"
+                    f"You can only have a maximum of **25** notifications. You have **{amount}** "
+                    "(Become a [donator](https://misobot.xyz/donate) for unlimited notifications)"
                 )
 
         try:
@@ -208,7 +225,9 @@ class Notifications(commands.Cog):
 
         # remake notification cache
         await self.create_cache()
-        await util.send_success(ctx, f"New notification set! Check your DM {emojis.VIVISMIRK}")
+        await util.send_success(
+            ctx, f"New notification set! Check your DM {emojis.VIVISMIRK}"
+        )
 
     @notification.command(name="remove")
     async def notification_remove(self, ctx: commands.Context, *, keyword: str):
@@ -239,7 +258,8 @@ class Notifications(commands.Cog):
         try:
             await util.send_success(
                 ctx.author,
-                f"The keyword notification for `{keyword}` that you set in **{ctx.guild.name}** has been removed.",
+                f"The keyword notification for `{keyword}` that you set in "
+                f"**{ctx.guild.name}** has been removed.",
             )
         except discord.errors.Forbidden:
             raise exceptions.CommandWarning(
@@ -257,14 +277,18 @@ class Notifications(commands.Cog):
 
         # remake notification cache
         await self.create_cache()
-        await util.send_success(ctx, f"Removed a notification! Check your DM {emojis.VIVISMIRK}")
+        await util.send_success(
+            ctx, f"Removed a notification! Check your DM {emojis.VIVISMIRK}"
+        )
 
     @notification.command(name="list")
     async def notification_list(self, ctx: commands.Context):
         """List your current notifications"""
         words = await self.bot.db.fetch(
             """
-            SELECT guild_id, keyword, times_triggered FROM notification WHERE user_id = %s ORDER BY keyword
+            SELECT guild_id, keyword, times_triggered
+            FROM notification WHERE user_id = %s
+            ORDER BY keyword
             """,
             ctx.author.id,
         )
@@ -283,17 +307,23 @@ class Notifications(commands.Cog):
             if guild is None:
                 guild = f"[Unknown server `{guild_id}`]"
 
-            rows.append(f"**{guild}** : `{keyword}` - Triggered **{times_triggered}** times")
+            rows.append(
+                f"**{guild}** : `{keyword}` - Triggered **{times_triggered}** times"
+            )
 
         try:
-            await util.send_as_pages(ctx, content, rows, maxpages=1, maxrows=50, send_to=ctx.author)
+            await util.send_as_pages(
+                ctx, content, rows, maxpages=1, maxrows=50, send_to=ctx.author
+            )
         except discord.errors.Forbidden:
             raise exceptions.CommandWarning(
                 "I was unable to send you a DM! Please change your settings."
             )
 
         if ctx.guild is not None:
-            await util.send_success(ctx, f"Notification list sent to your DM {emojis.VIVISMIRK}")
+            await util.send_success(
+                ctx, f"Notification list sent to your DM {emojis.VIVISMIRK}"
+            )
 
     @notification.command(name="clear")
     async def notification_clear(self, ctx: commands.Context):
@@ -308,7 +338,9 @@ class Notifications(commands.Cog):
                 """,
                 ctx.author.id,
             )
-            await util.send_success(ctx, "Cleared all of your notifications in all servers!")
+            await util.send_success(
+                ctx, "Cleared all of your notifications in all servers!"
+            )
         else:
             await self.bot.db.execute(
                 """
@@ -317,7 +349,9 @@ class Notifications(commands.Cog):
                 ctx.author.id,
                 ctx.guild.id,
             )
-            await util.send_success(ctx, "Cleared all of your notifications in this server!")
+            await util.send_success(
+                ctx, "Cleared all of your notifications in this server!"
+            )
 
         # remake notification cache
         await self.create_cache()
@@ -352,7 +386,9 @@ class Notifications(commands.Cog):
                 ctx.author.id,
             )
 
-            pattern = regex.compile(self.keyword_regex, words=keywords, flags=regex.IGNORECASE)
+            pattern = regex.compile(
+                self.keyword_regex, words=keywords, flags=regex.IGNORECASE
+            )
 
             if finds := pattern.findall(message.content):
                 keywords = list(set(finds))

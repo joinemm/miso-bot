@@ -12,19 +12,19 @@ class EmbedHelpCommand(commands.HelpCommand):
     # Set the embed colour here
     COLOUR = int("ee84ca", 16)
 
-    def get_command_signature(self, command):
-        return f"{self.context.clean_prefix}{command.qualified_name} {command.signature}"
+    def get_command_signature(self, command: commands.Command):
+        sig = " ".join(
+            reversed(
+                [f"{p.name} {p.signature}".strip() for p in [command] + command.parents]
+            )
+        )
+        return self.context.clean_prefix + sig
 
-    def get_subcommands(self, c, depth=1):
+    def get_subcommands(self, c, depth=0):
         this_cmd = ""
         if hasattr(c, "commands"):
             for subc in c.commands:
-                this_cmd += "\n"
-                this_cmd += f"{' '*depth}└ **{subc.name}**"
-                # + (
-                #     f"\n{' '*(depth+1)}{subc.short_doc}" if subc.short_doc is not None else "-"
-                # )
-                this_cmd += self.get_subcommands(subc, depth + 1)
+                this_cmd += f"\n{' '*depth}└ **{subc.name}**{self.get_subcommands(subc, depth + 1)}"
 
         return this_cmd
 
@@ -47,64 +47,66 @@ class EmbedHelpCommand(commands.HelpCommand):
         embed.set_footer(
             text=f"{self.context.clean_prefix}help [category] for more details. (case sensitive)"
         )
-        embed.description = "For more information on all the commands, visit https://misobot.xyz"
+        embed.description = (
+            "For more information on all the commands, visit https://misobot.xyz"
+        )
         await self.get_destination().send(embed=embed)
 
     async def send_cog_help(self, cog):
         embed = discord.Embed(
-            title=(f"{cog.icon} " if hasattr(cog, "icon") else "") + cog.qualified_name,
+            title=f"{cog.icon} {cog.qualified_name}",
             colour=self.COLOUR,
+            description=cog.description or "",
         )
-        if cog.description:
-            embed.description = cog.description
 
-        filtered = await self.filter_commands(cog.get_commands(), sort=True)
-        for command in filtered:
+        filtered_commands = await self.filter_commands(cog.get_commands(), sort=True)
+        for command in filtered_commands:
             embed.add_field(
                 name=f"{self.get_command_signature(command)}",
-                value=(command.short_doc or "no description") + self.get_subcommands(command),
+                value=(command.short_doc or "") + self.get_subcommands(command),
                 inline=False,
             )
 
-        embed.set_footer(text=f"{self.context.clean_prefix}help [command] for more details.")
+        embed.set_footer(
+            text=f"{self.context.clean_prefix}help [command] for more details."
+        )
         await self.get_destination().send(embed=embed)
 
-    async def send_group_help(self, group):
-        embed = discord.Embed(title=group.qualified_name, colour=self.COLOUR)
-        if group.help:
-            embed.description = group.help
-        elif group.short_doc:
-            embed.description = group.short_doc
+    async def send_group_help(self, group: commands.Group):
+        embed = discord.Embed(
+            title=f"{group.cog.icon} {self.get_command_signature(group)} [subcommand]",
+            colour=self.COLOUR,
+            description=group.help or group.short_doc or "",
+        )
 
-        if isinstance(group, commands.Group):
-            filtered = await self.filter_commands(group.commands, sort=True)
-            for command in filtered:
-                embed.add_field(
-                    name=f"{self.get_command_signature(command)}",
-                    value="<:blank:749966895293268048>"
-                    + (command.short_doc or "...")
-                    + self.get_subcommands(command),
-                    inline=False,
-                )
+        embed.description += (
+            "\n\n:small_orange_diamond: __**subcommands**__ :small_orange_diamond:"
+        )
+        filtered_commands = await self.filter_commands(group.commands, sort=True)
+        for command in filtered_commands:
+            embed.add_field(
+                name=f"{command.name} {command.signature}",
+                value=f"{command.short_doc} {self.get_subcommands(command)}",
+                inline=False,
+            )
 
-        embed.set_footer(text=f"{self.context.clean_prefix}help [command] for more details.")
+        embed.set_footer(
+            text=(
+                f"{self.context.clean_prefix}help {group.qualified_name} "
+                "[subcommand] for more details."
+            )
+        )
         await self.get_destination().send(embed=embed)
 
     async def send_command_help(self, command):
         embed = discord.Embed(
-            title=f"{self.get_command_signature(command)}",
+            title=f"{command.cog.icon} {self.get_command_signature(command)}",
             colour=self.COLOUR,
+            description=command.help or command.brief or "",
         )
 
         if command.aliases:
             embed.set_footer(text="Aliases: " + ", ".join(command.aliases))
-
-        if command.help:
-            embed.description = command.help
-        elif command.brief:
-            embed.description = command.brief
-        else:
-            embed.description = "..."
 
         await self.get_destination().send(embed=embed)
 
@@ -112,5 +114,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         embed = discord.Embed(colour=self.COLOUR)
         embed.description = "`" + (ctx.prefix or ">") + group.qualified_name
         embed.description += f" [{' | '.join(c.name for c in group.commands)}]`"
-        embed.set_footer(text=f"{ctx.prefix}help {group.qualified_name} for more detailed help")
+        embed.set_footer(
+            text=f"{ctx.prefix}help {group.qualified_name} for more detailed help"
+        )
         await ctx.send(embed=embed)

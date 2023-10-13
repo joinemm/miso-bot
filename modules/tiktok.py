@@ -38,8 +38,12 @@ class TikTok:
 
     HEADERS: Dict[str, str] = {
         "Host": "musicaldown.com",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0"
+        ),
+        "Accept": (
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+        ),
         "Accept-Language": "en-US,en;q=0.5",
         "DNT": "1",
         "Upgrade-Insecure-Requests": "1",
@@ -64,7 +68,9 @@ class TikTok:
             raise Exception("TikTok downloader was not warmed up!")
 
         return {
-            index.get("name"): url if index.get("id") == "link_url" else index.get("value")
+            index.get("name"): url
+            if index.get("id") == "link_url"
+            else index.get("value")
             for index in self.input_element
         }
 
@@ -87,7 +93,9 @@ class TikTok:
 
         soup = BeautifulSoup(text, "lxml")
 
-        error_message = re.search(r"html: 'Error: (.*)'", soup.findAll("script")[-1].text)
+        error_message = re.search(
+            r"html: 'Error: (.*)'", soup.findAll("script")[-1].text
+        )
         if error_message:
             raise TiktokError(error_message)
 
@@ -106,7 +114,9 @@ class TikTok:
                 raise TiktokError("Internal Error: Unable to scrape POST data")
 
             async with session.post(
-                "https://muscdn.xyz/slider", data={"data": data.group(1)}, headers=self.HEADERS
+                "https://muscdn.xyz/slider",
+                data={"data": data.group(1)},
+                headers=self.HEADERS,
             ) as response:
                 converted_data = await response.json()
                 username = soup.select_one("h2.white-text")

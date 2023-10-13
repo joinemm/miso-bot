@@ -13,9 +13,9 @@ import discord
 import orjson
 import psutil
 from discord.ext import commands
+from modules.misobot import MisoBot
 
 from modules import emojis, exceptions, util
-from modules.misobot import MisoBot
 
 
 class Information(commands.Cog):
@@ -70,7 +70,9 @@ class Information(commands.Cog):
             value="`ltc1qsxmy8q8ptdlhdcamypa2uspj8zf8m0ukua9vn5`",
             inline=False,
         )
-        content.set_footer(text="Donations will be used to pay for server and upkeep costs")
+        content.set_footer(
+            text="Donations will be used to pay for server and upkeep costs"
+        )
         await ctx.send(embed=content)
 
     @commands.command(aliases=["patrons", "supporters", "sponsors"])
@@ -94,7 +96,9 @@ class Information(commands.Cog):
                 donators.append(f"**{user}**")
 
         n = 20
-        chunks = [donators[i * n : (i + 1) * n] for i in range((len(donators) + n - 1) // n)]
+        chunks = [
+            donators[i * n : (i + 1) * n] for i in range((len(donators) + n - 1) // n)
+        ]
 
         if not donators:
             raise exceptions.CommandInfo(
@@ -140,8 +144,12 @@ class Information(commands.Cog):
         )
         content.set_thumbnail(url=self.bot.user.display_avatar.url)
         content.add_field(name="Website", value="https://misobot.xyz", inline=False)
-        content.add_field(name="Github", value="https://github.com/joinemm/miso-bot", inline=False)
-        content.add_field(name="Discord", value="https://discord.gg/RzDW3Ne", inline=False)
+        content.add_field(
+            name="Github", value="https://github.com/joinemm/miso-bot", inline=False
+        )
+        content.add_field(
+            name="Discord", value="https://discord.gg/RzDW3Ne", inline=False
+        )
 
         data = await self.get_commits("joinemm", "miso-bot")
         last_update = data[0]["commit"]["author"].get("date")
@@ -153,7 +161,9 @@ class Information(commands.Cog):
     async def ping(self, ctx: commands.Context):
         """Get the bot's ping"""
         test_message = await ctx.send(":ping_pong:")
-        cmd_lat = (test_message.created_at - ctx.message.created_at).total_seconds() * 1000
+        cmd_lat = (
+            test_message.created_at - ctx.message.created_at
+        ).total_seconds() * 1000
         discord_lat = self.bot.latency * 1000
         content = discord.Embed(
             colour=discord.Color.red(),
@@ -193,10 +203,18 @@ class Information(commands.Cog):
         content = discord.Embed(title=f"Running {len(self.bot.shards)} shards")
         shards = []
         for shard in self.bot.shards.values():
-            emoji = emojis.Status["offline"] if shard.is_closed() else emojis.Status["online"]
+            emoji = (
+                emojis.Status["offline"]
+                if shard.is_closed()
+                else emojis.Status["online"]
+            )
             shards.append(
                 f"{emoji.value} **Shard `{shard.id}`** - `{shard.latency * 1000:.2f}` ms"
-                + (" :point_left:" if ctx.guild and ctx.guild.shard_id == shard.id else "")
+                + (
+                    " :point_left:"
+                    if ctx.guild and ctx.guild.shard_id == shard.id
+                    else ""
+                )
             )
 
         content.description = "\n".join(shards)
@@ -204,6 +222,7 @@ class Information(commands.Cog):
 
     @commands.command()
     async def shardof(self, ctx: commands.Context, guild_id: int):
+        """Find the shard ID of given guild ID"""
         guild = self.bot.get_guild(guild_id)
         if guild is None:
             raise exceptions.CommandWarning(f"Guild `{guild_id}` not found")
@@ -257,7 +276,9 @@ class Information(commands.Cog):
         content.colour = role.color
         member_count = len(role.members)
         percentage = (
-            int(member_count / ctx.guild.member_count * 100) if ctx.guild.member_count else None
+            int(member_count / ctx.guild.member_count * 100)
+            if ctx.guild.member_count
+            else None
         )
 
         if isinstance(role.icon, discord.Asset):
@@ -272,7 +293,9 @@ class Information(commands.Cog):
             if ctx.guild.member_count
             else member_count,
         )
-        content.add_field(name="Created at", value=role.created_at.strftime("%d/%m/%Y %H:%M"))
+        content.add_field(
+            name="Created at", value=role.created_at.strftime("%d/%m/%Y %H:%M")
+        )
         content.add_field(name="Hoisted", value=str(role.hoist))
         content.add_field(name="Mentionable", value=role.mentionable)
         content.add_field(name="Mention", value=role.mention)
@@ -287,8 +310,12 @@ class Information(commands.Cog):
                 manager = "UNKNOWN"
             content.add_field(name="Managed by", value=manager)
 
-        if perms := [f"`{perm.upper()}`" for perm, allow in iter(role.permissions) if allow]:
-            content.add_field(name="Allowed permissions", value=" ".join(perms), inline=False)
+        if perms := [
+            f"`{perm.upper()}`" for perm, allow in iter(role.permissions) if allow
+        ]:
+            content.add_field(
+                name="Allowed permissions", value=" ".join(perms), inline=False
+            )
 
         await ctx.send(embed=content)
 
@@ -337,7 +364,8 @@ class Information(commands.Cog):
         for i, (command_name, count) in enumerate(data, start=1):
             total += count
             rows.append(
-                f"`#{i:2}` **{count}** use{'' if count == 1 else 's'} : `{ctx.prefix}{command_name}`"
+                f"`#{i:2}` **{count}** use{'' if count == 1 else 's'} : "
+                f"`{ctx.prefix}{command_name}`"
             )
 
         if rows:
@@ -355,7 +383,8 @@ class Information(commands.Cog):
     ):
         """Most used commands globally"""
         content = discord.Embed(
-            title=":bar_chart: Most used commands" + ("" if user is None else f" by {user}")
+            title=":bar_chart: Most used commands"
+            + ("" if user is None else f" by {user}")
         )
         opt = [user.id] if user is not None else []
         data = await self.bot.db.fetch(
@@ -379,7 +408,8 @@ class Information(commands.Cog):
         for i, (command_name, count) in enumerate(data, start=1):
             total += count
             rows.append(
-                f"`#{i:2}` **{count}** use{'' if count == 1 else 's'} : `{ctx.prefix}{command_name}`"
+                f"`#{i:2}` **{count}** use{'' if count == 1 else 's'} : "
+                f"`{ctx.prefix}{command_name}`"
             )
 
         if rows:
@@ -393,15 +423,19 @@ class Information(commands.Cog):
         """Stats of a single command"""
         command = self.bot.get_command(command_name)
         if command is None:
-            raise exceptions.CommandInfo(f"Command `{ctx.prefix}{command_name}` does not exist!")
+            raise exceptions.CommandInfo(
+                f"Command `{ctx.prefix}{command_name}` does not exist!"
+            )
 
-        content = discord.Embed(title=f":bar_chart: `{ctx.prefix}{command.qualified_name}`")
+        content = discord.Embed(
+            title=f":bar_chart: `{ctx.prefix}{command.qualified_name}`"
+        )
 
         # set command name to be tuple of subcommands if this is a command group
         group = hasattr(command, "commands")
         if group:
             command_name = tuple(
-                [f"{command.name} {x.name}" for x in command.commands] + [command_name]  # type: ignore
+                [f"{command.name} {x.name}" for x in command.commands] + [command_name]
             )
         else:
             command_name = command.qualified_name
@@ -476,7 +510,9 @@ class Information(commands.Cog):
         # additional data for command groups
         if group:
             content.description = "Command Group"
-            subcommands_tuple = tuple(f"{command.name} {x.name}" for x in command.commands)  # type: ignore
+            subcommands_tuple = tuple(
+                f"{command.name} {x.name}" for x in command.commands
+            )
             subcommand_usage = await self.bot.db.fetch(
                 """
                 SELECT command_name, SUM(uses) FROM command_usage

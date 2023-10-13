@@ -1,11 +1,16 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 [tool.black]
-line-length = 100
+line-length = 88
 exclude = '''
 /(
     \.git
   | \.mypy_cache
   | \.pytest_cache
-  | \.venv
+  | \.vscode
+  | venv
   | __pycache__
 )/
 '''

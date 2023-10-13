@@ -40,7 +40,9 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
         self.per_page: int = per_page
         self.clamp_pages: bool = clamp_pages
         self._current_page = 0
-        self.pages = [entries[i : i + per_page] for i in range(0, len(entries), per_page)]
+        self.pages = [
+            entries[i : i + per_page] for i in range(0, len(entries), per_page)
+        ]
         self.page_number.label = f"Page {self._current_page + 1} of {self.max_page}"
 
     @property
@@ -146,15 +148,23 @@ class Compliance(discord.ui.View):
         self.cancel.disabled = False
         await message.edit(view=self)
 
-    @discord.ui.button(style=discord.ButtonStyle.primary, label="I Understand", disabled=True)
-    async def confirm(self, interaction: discord.Interaction, _button: discord.ui.Button):
+    @discord.ui.button(
+        style=discord.ButtonStyle.primary, label="I Understand", disabled=True
+    )
+    async def confirm(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
         if interaction.user == self.author:
             await interaction.response.defer()
             self.agreed = True
             self.stop()
 
-    @discord.ui.button(style=discord.ButtonStyle.secondary, label="Cancel", disabled=True)
-    async def cancel(self, interaction: discord.Interaction, _button: discord.ui.Button):
+    @discord.ui.button(
+        style=discord.ButtonStyle.secondary, label="Cancel", disabled=True
+    )
+    async def cancel(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
         if interaction.user == self.author:
             await interaction.response.defer()
             self.agreed = False

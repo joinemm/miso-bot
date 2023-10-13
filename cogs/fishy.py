@@ -8,9 +8,9 @@ from typing import Optional
 import discord
 import humanize
 from discord.ext import commands
+from modules.misobot import MisoBot
 
 from modules import exceptions, util
-from modules.misobot import MisoBot
 
 
 class Fishy(commands.Cog):
@@ -105,7 +105,9 @@ class Fishy(commands.Cog):
     # idk why this doesnt work but it gets stuck all the time
     # @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.cooldown(1, 5, type=commands.BucketType.user)
-    @commands.command(aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin", "fush"])
+    @commands.command(
+        aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin", "fush"]
+    )
     async def fishy(self, ctx: commands.Context, user: Optional[discord.Member] = None):
         """Go fishing"""
         receiver = user or ctx.author
@@ -126,7 +128,9 @@ class Fishy(commands.Cog):
         else:
             last_fishy = cached_last_fishy
         if last_fishy:
-            time_since_fishy = ctx.message.created_at.timestamp() - last_fishy.timestamp()
+            time_since_fishy = (
+                ctx.message.created_at.timestamp() - last_fishy.timestamp()
+            )
         else:
             time_since_fishy = self.COOLDOWN
 
@@ -180,12 +184,18 @@ class Fishy(commands.Cog):
             ctx.author.id,
         )
         if last_fishy:
-            time_since_fishy = ctx.message.created_at.timestamp() - last_fishy.timestamp()
+            time_since_fishy = (
+                ctx.message.created_at.timestamp() - last_fishy.timestamp()
+            )
             if time_since_fishy < self.COOLDOWN:
                 remaining = self.COOLDOWN - time_since_fishy
                 wait_time = humanize.precisedelta(remaining)
-                clock_face = f":clock{int(util.map_to_range(remaining, 7200, 0, 1, 12))}:"
-                await ctx.send(f"{clock_face} You need to wait **{wait_time}** to fish again.")
+                clock_face = (
+                    f":clock{int(util.map_to_range(remaining, 7200, 0, 1, 12))}:"
+                )
+                await ctx.send(
+                    f"{clock_face} You need to wait **{wait_time}** to fish again."
+                )
             else:
                 await ctx.send(":sparkles: Good news! You can fish right now!")
         else:

@@ -13,9 +13,9 @@ import discord
 import humanize
 from bs4 import BeautifulSoup
 from discord.ext import commands
+from modules.misobot import MisoBot
 
 from modules import exceptions, util
-from modules.misobot import MisoBot
 
 
 class Kpop(commands.Cog):
@@ -38,7 +38,9 @@ class Kpop(commands.Cog):
 
     async def google_image_search(self, keyword):
         try:
-            results = await self.google_client.search(keyword, safesearch=False, image_search=True)
+            results = await self.google_client.search(
+                keyword, safesearch=False, image_search=True
+            )
         except async_cse.search.APIError:
             return ""
         return results[0].image_url if results else ""
@@ -67,7 +69,8 @@ class Kpop(commands.Cog):
             )
 
         rows = [
-            f"{self.gender_icon.get(gender, '')} **{f'{group} ' if group is not None else ''} {name}** ({dob.year})"
+            f"{self.gender_icon.get(gender, '')} "
+            f"**{f'{group} ' if group is not None else ''} {name}** ({dob.year})"
             for gender, group, name, dob in idol_data
         ]
         content = discord.Embed(title=f"Kpop idols born on {humanize.naturalday(dt)}")
@@ -157,7 +160,9 @@ class Kpop(commands.Cog):
         )
         content.set_image(url=image_url)
         content.add_field(name="Full name", value=full_name)
-        content.add_field(name="Korean name", value=f"{korean_stage_name} ({korean_name})")
+        content.add_field(
+            name="Korean name", value=f"{korean_stage_name} ({korean_name})"
+        )
         content.add_field(
             name="Birthday",
             value=arrow.get(date_of_birth).format("YYYY-MM-DD") + f" (age {age})",
@@ -207,11 +212,17 @@ class Kpop(commands.Cog):
             artists = []
             async with self.bot.session.get(url) as response:
                 soup = BeautifulSoup(await response.text(), "lxml")
-                content = soup.find("div", {"class": "entry-content herald-entry-content"})
+                content = soup.find(
+                    "div", {"class": "entry-content herald-entry-content"}
+                )
                 outer = content.find_all("p")  # type: ignore
                 for p in outer:
                     for artist in p.find_all("a"):
-                        artist = artist.text.replace("Profile", "").replace("profile", "").strip()
+                        artist = (
+                            artist.text.replace("Profile", "")
+                            .replace("profile", "")
+                            .strip()
+                        )
                         if artist != "":
                             artists.append([artist, category])
             return artists
@@ -231,7 +242,8 @@ class Kpop(commands.Cog):
 
         await util.send_success(
             ctx,
-            f"**Artist list updated**\n" f"Stannable artist count: **{len(new_artist_list)}**",
+            f"**Artist list updated**\n"
+            f"Stannable artist count: **{len(new_artist_list)}**",
         )
 
     @commands.is_owner()

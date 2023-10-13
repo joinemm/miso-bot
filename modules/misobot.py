@@ -14,12 +14,12 @@ from discord import Activity, ActivityType, AllowedMentions, Intents, Status
 from discord.errors import Forbidden
 from discord.ext import commands
 from loguru import logger
-
-from modules import cache, maria, util
 from modules.help import EmbedHelpCommand
 from modules.instagram import Datalama
 from modules.keychain import Keychain
 from modules.redis import Redis
+
+from modules import cache, maria, util
 
 
 @dataclass
@@ -49,7 +49,9 @@ class MisoContext(commands.Context):
 
 
 class MisoBot(commands.AutoShardedBot):
-    def __init__(self, extensions: list[str], default_prefix: str, **kwargs: dict[str, Any]):
+    def __init__(
+        self, extensions: list[str], default_prefix: str, **kwargs: dict[str, Any]
+    ):
         super().__init__(
             help_command=EmbedHelpCommand(),
             activity=Activity(type=ActivityType.playing, name="Booting up..."),
@@ -87,7 +89,9 @@ class MisoBot(commands.AutoShardedBot):
         self.default_prefix = default_prefix
         self.extensions_to_load = extensions
         self.start_time = time()
-        self.global_cd = commands.CooldownMapping.from_cooldown(15, 60, commands.BucketType.member)
+        self.global_cd = commands.CooldownMapping.from_cooldown(
+            15, 60, commands.BucketType.member
+        )
         self.db = maria.MariaDB()
         self.cache = cache.Cache(self)
         self.keychain = Keychain()
@@ -113,7 +117,11 @@ class MisoBot(commands.AutoShardedBot):
         )
         await self.redis.start()
         await self.db.initialize_pool()
-        await self.cache.initialize_settings_cache()
+        try:
+            await self.cache.initialize_settings_cache()
+        except Exception as e:
+            logger.error(e)
+
         await self.load_all_extensions()
         self.boot_up_time = time() - self.start_time
 
@@ -149,7 +157,9 @@ class MisoBot(commands.AutoShardedBot):
 
     async def on_ready(self):
         """Overrides built-in on_ready()"""
-        logger.info(f"Boot up process completed in {util.stringfromtime(self.boot_up_time)}")
+        logger.info(
+            f"Boot up process completed in {util.stringfromtime(self.boot_up_time)}"
+        )
         latencies = self.latencies
         logger.info(f"Loading complete | running {len(latencies)} shards")
         for shard_id, latency in latencies:

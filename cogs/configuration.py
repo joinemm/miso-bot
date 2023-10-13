@@ -6,9 +6,9 @@ from typing import Annotated
 
 import discord
 from discord.ext import commands
+from modules.misobot import MisoBot
 
 from modules import emoji_literals, exceptions, queries, util
-from modules.misobot import MisoBot
 
 
 class ChannelSetting(commands.TextChannelConverter):
@@ -85,7 +85,9 @@ class Configuration(commands.Cog):
             await util.send_success(ctx, "Greeter is now **disabled**")
 
     @greeter.command(name="channel")
-    async def greeter_channel(self, ctx: commands.Context, *, channel: discord.TextChannel):
+    async def greeter_channel(
+        self, ctx: commands.Context, *, channel: discord.TextChannel
+    ):
         """Set the greeter channel"""
         await queries.update_setting(ctx, "greeter_settings", "channel_id", channel.id)
         await util.send_success(ctx, f"Greeter channel is now {channel.mention}")
@@ -96,6 +98,13 @@ class Configuration(commands.Cog):
         Change the greeter welcome message format
 
         Use with "default" to reset to the default format.
+
+        Use placeholders within {curly braces}:
+
+        available placeholders: `mention`, `user`, `id`, `server`, `guild`, `username`
+
+        Example:
+            >greeter message "{user} just joined {server}!"
         """
         if message.lower() == "default":
             message = None
@@ -125,10 +134,14 @@ class Configuration(commands.Cog):
             await util.send_success(ctx, "Goodbye messages are now **disabled**")
 
     @goodbyemessage.command(name="channel")
-    async def goodbye_channel(self, ctx: commands.Context, *, channel: discord.TextChannel):
+    async def goodbye_channel(
+        self, ctx: commands.Context, *, channel: discord.TextChannel
+    ):
         """Set the goodbye message channel"""
         await queries.update_setting(ctx, "goodbye_settings", "channel_id", channel.id)
-        await util.send_success(ctx, f"Goodbye messages channel is now {channel.mention}")
+        await util.send_success(
+            ctx, f"Goodbye messages channel is now {channel.mention}"
+        )
 
     @goodbyemessage.command(name="message", usage="<message | default>")
     async def goodbye_message(self, ctx: commands.Context, *, message):
@@ -136,6 +149,13 @@ class Configuration(commands.Cog):
         Change the goodbye message format
 
         Use with "default" to reset to the default format.
+
+        Use placeholders within {curly braces}:
+
+        available placeholders: `mention`, `user`, `id`, `server`, `guild`, `username`
+
+        Example:
+            >goodbyemessage message "{user} just left {server}!"
         """
         if message.lower() == "default":
             message = None
@@ -157,7 +177,10 @@ class Configuration(commands.Cog):
 
     @logger.command(name="members", usage="<channel | none>")
     async def logger_members(
-        self, ctx: commands.Context, *, channel: Annotated[discord.TextChannel, ChannelSetting]
+        self,
+        ctx: commands.Context,
+        *,
+        channel: Annotated[discord.TextChannel, ChannelSetting],
     ):
         """
         Set channel for the membership log
@@ -174,11 +197,16 @@ class Configuration(commands.Cog):
         if channel is None:
             await util.send_success(ctx, "Members logging **disabled**")
         else:
-            await util.send_success(ctx, f"Member changes will now be logged to {channel.mention}")
+            await util.send_success(
+                ctx, f"Member changes will now be logged to {channel.mention}"
+            )
 
     @logger.command(name="bans", usage="<channel | none>")
     async def logger_bans(
-        self, ctx: commands.Context, *, channel: Annotated[discord.TextChannel, ChannelSetting]
+        self,
+        ctx: commands.Context,
+        *,
+        channel: Annotated[discord.TextChannel, ChannelSetting],
     ):
         """
         Set channel where bans are logged
@@ -195,7 +223,9 @@ class Configuration(commands.Cog):
         if channel is None:
             await util.send_success(ctx, "Bans logging **disabled**")
         else:
-            await util.send_success(ctx, f"Bans will now be logged to {channel.mention}")
+            await util.send_success(
+                ctx, f"Bans will now be logged to {channel.mention}"
+            )
 
     @logger.group(name="deleted")
     async def logger_deleted(self, ctx: commands.Context):
@@ -204,7 +234,10 @@ class Configuration(commands.Cog):
 
     @logger_deleted.command(name="channel", usage="<channel | none>")
     async def deleted_channel(
-        self, ctx: commands.Context, *, channel: Annotated[discord.TextChannel, ChannelSetting]
+        self,
+        ctx: commands.Context,
+        *,
+        channel: Annotated[discord.TextChannel, ChannelSetting],
     ):
         """
         Set channel for message log
@@ -226,7 +259,9 @@ class Configuration(commands.Cog):
             )
 
     @logger_deleted.command(name="ignore")
-    async def deleted_ignore(self, ctx: commands.Context, *, channel: discord.TextChannel):
+    async def deleted_ignore(
+        self, ctx: commands.Context, *, channel: discord.TextChannel
+    ):
         """Ignore a channel from being logged in message log"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
@@ -236,10 +271,14 @@ class Configuration(commands.Cog):
             ctx.guild.id,
             channel.id,
         )
-        await util.send_success(ctx, f"No longer logging any messages deleted in {channel.mention}")
+        await util.send_success(
+            ctx, f"No longer logging any messages deleted in {channel.mention}"
+        )
 
     @logger_deleted.command(name="unignore")
-    async def deleted_unignore(self, ctx: commands.Context, *, channel: discord.TextChannel):
+    async def deleted_unignore(
+        self, ctx: commands.Context, *, channel: discord.TextChannel
+    ):
         """Unignore a channel from being logged in message log"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
@@ -262,9 +301,13 @@ class Configuration(commands.Cog):
         await util.command_group_help(ctx)
 
     @starboard.command(name="channel")
-    async def starboard_channel(self, ctx: commands.Context, channel: discord.TextChannel):
+    async def starboard_channel(
+        self, ctx: commands.Context, channel: discord.TextChannel
+    ):
         """Set the starboard channel"""
-        await queries.update_setting(ctx, "starboard_settings", "channel_id", channel.id)
+        await queries.update_setting(
+            ctx, "starboard_settings", "channel_id", channel.id
+        )
         await util.send_success(ctx, f"Starboard channel is now {channel.mention}")
         await self.bot.cache.cache_starboard_settings()
 
@@ -274,7 +317,9 @@ class Configuration(commands.Cog):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        await queries.update_setting(ctx, "starboard_settings", "reaction_count", amount)
+        await queries.update_setting(
+            ctx, "starboard_settings", "reaction_count", amount
+        )
         emoji_name, emoji_id, emoji_type = await self.bot.db.fetch_row(
             """
             SELECT emoji_name, emoji_id, emoji_type
@@ -309,7 +354,8 @@ class Configuration(commands.Cog):
             # is custom emoji
             if not await queries.is_donator(ctx, ctx.author, 2):
                 raise exceptions.CommandInfo(
-                    "You have to be a [donator](https://misobot.xyz/donate) to use custom emojis with the starboard!"
+                    "You have to be a [donator](https://misobot.xyz/donate) "
+                    "to use custom emojis with the starboard!"
                 )
             emoji_obj = await util.get_emoji(ctx, emoji)
             if emoji_obj is None:
@@ -357,19 +403,29 @@ class Configuration(commands.Cog):
 
     @starboard.command(name="log", usage="<channel | none>")
     async def starboard_log(
-        self, ctx: commands.Context, channel: Annotated[discord.TextChannel, ChannelSetting]
+        self,
+        ctx: commands.Context,
+        channel: Annotated[discord.TextChannel, ChannelSetting],
     ):
         """Set starboard logging channel to log starring events"""
         if channel is None:
-            await queries.update_setting(ctx, "starboard_settings", "log_channel_id", None)
+            await queries.update_setting(
+                ctx, "starboard_settings", "log_channel_id", None
+            )
             await util.send_success(ctx, "Starboard log is now disabled")
         else:
-            await queries.update_setting(ctx, "starboard_settings", "log_channel_id", channel.id)
-            await util.send_success(ctx, f"Starboard log channel is now {channel.mention}")
+            await queries.update_setting(
+                ctx, "starboard_settings", "log_channel_id", channel.id
+            )
+            await util.send_success(
+                ctx, f"Starboard log channel is now {channel.mention}"
+            )
         await self.bot.cache.cache_starboard_settings()
 
     @starboard.command(name="blacklist")
-    async def starboard_blacklist(self, ctx: commands.Context, channel: discord.TextChannel):
+    async def starboard_blacklist(
+        self, ctx: commands.Context, channel: discord.TextChannel
+    ):
         """Blacklist a channel from being counted for starboard"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
@@ -384,11 +440,15 @@ class Configuration(commands.Cog):
             ctx.guild.id,
             channel.id,
         )
-        await util.send_success(ctx, f"Stars are no longer counted in {channel.mention}")
+        await util.send_success(
+            ctx, f"Stars are no longer counted in {channel.mention}"
+        )
         await self.bot.cache.cache_starboard_settings()
 
     @starboard.command(name="unblacklist")
-    async def starboard_unblacklist(self, ctx: commands.Context, channel: discord.TextChannel):
+    async def starboard_unblacklist(
+        self, ctx: commands.Context, channel: discord.TextChannel
+    ):
         """Unblacklist a channel from being counted for starboard"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
@@ -400,7 +460,9 @@ class Configuration(commands.Cog):
             ctx.guild.id,
             channel.id,
         )
-        await util.send_success(ctx, f"Stars are now again counted in {channel.mention}")
+        await util.send_success(
+            ctx, f"Stars are now again counted in {channel.mention}"
+        )
         await self.bot.cache.cache_starboard_settings()
 
     @starboard.command(name="current")
@@ -411,7 +473,9 @@ class Configuration(commands.Cog):
 
         starboard_settings = self.bot.cache.starboard_settings.get(str(ctx.guild.id))
         if not starboard_settings:
-            raise exceptions.CommandWarning("Nothing has been configured on this server yet!")
+            raise exceptions.CommandWarning(
+                "Nothing has been configured on this server yet!"
+            )
 
         (
             is_enabled,
@@ -431,7 +495,9 @@ class Configuration(commands.Cog):
             ctx.guild.id,
         )
 
-        content = discord.Embed(title=":star: Current starboard settings", color=int("ffac33", 16))
+        content = discord.Embed(
+            title=":star: Current starboard settings", color=int("ffac33", 16)
+        )
         content.add_field(
             name="State",
             value=":white_check_mark: Enabled" if is_enabled else ":x: Disabled",
@@ -461,7 +527,9 @@ class Configuration(commands.Cog):
     async def muterole(self, ctx: commands.Context, *, role: discord.Role):
         """Set the role given when muting people using the mute command"""
         await queries.update_setting(ctx, "guild_settings", "mute_role_id", role.id)
-        await util.send_success(ctx, f"Muting someone now gives them the role {role.mention}")
+        await util.send_success(
+            ctx, f"Muting someone now gives them the role {role.mention}"
+        )
 
     @commands.group()
     @commands.guild_only()
@@ -481,7 +549,9 @@ class Configuration(commands.Cog):
             ctx.guild.id,
             role.id,
         )
-        await util.send_success(ctx, f"New members will now automatically get {role.mention}")
+        await util.send_success(
+            ctx, f"New members will now automatically get {role.mention}"
+        )
 
     @autorole.command(name="remove")
     async def autorole_remove(self, ctx: commands.Context, *, role):
@@ -542,11 +612,17 @@ class Configuration(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def blacklist_delete(self, ctx: commands.Context, value: bool):
         """Toggle whether to delete the message on blacklist trigger"""
-        await queries.update_setting(ctx, "guild_settings", "delete_blacklisted_usage", value)
+        await queries.update_setting(
+            ctx, "guild_settings", "delete_blacklisted_usage", value
+        )
         if value:
-            await util.send_success(ctx, "Now deleting messages that trigger any blacklists.")
+            await util.send_success(
+                ctx, "Now deleting messages that trigger any blacklists."
+            )
         else:
-            await util.send_success(ctx, "No longer deleting messages that trigger blacklists.")
+            await util.send_success(
+                ctx, "No longer deleting messages that trigger blacklists."
+            )
 
     @blacklist.command(name="show")
     @commands.has_permissions(manage_guild=True)
@@ -624,7 +700,9 @@ class Configuration(commands.Cog):
         fails = []
         for channel_arg in channels:
             try:
-                channel = await commands.TextChannelConverter().convert(ctx, channel_arg)
+                channel = await commands.TextChannelConverter().convert(
+                    ctx, channel_arg
+                )
             except commands.errors.BadArgument:
                 fails.append(f"Cannot find channel {channel_arg}")
             else:
@@ -692,7 +770,9 @@ class Configuration(commands.Cog):
 
         cmd = self.bot.get_command(command)
         if cmd is None:
-            raise exceptions.CommandWarning(f"Command `{ctx.prefix}{command}` not found.")
+            raise exceptions.CommandWarning(
+                f"Command `{ctx.prefix}{command}` not found."
+            )
 
         await self.bot.db.execute(
             "INSERT IGNORE blacklisted_command VALUES (%s, %s)",
@@ -700,7 +780,9 @@ class Configuration(commands.Cog):
             ctx.guild.id,
         )
         try:
-            self.bot.cache.blacklist[str(ctx.guild.id)]["command"].add(cmd.qualified_name.lower())
+            self.bot.cache.blacklist[str(ctx.guild.id)]["command"].add(
+                cmd.qualified_name.lower()
+            )
         except KeyError:
             self.bot.cache.blacklist[str(ctx.guild.id)] = {
                 "member": set(),
@@ -712,9 +794,13 @@ class Configuration(commands.Cog):
 
     @blacklist.command(name="global", hidden=True)
     @commands.is_owner()
-    async def blacklist_global(self, ctx: commands.Context, user: discord.User, *, reason):
+    async def blacklist_global(
+        self, ctx: commands.Context, user: discord.User, *, reason
+    ):
         """Blacklist someone globally from Miso Bot"""
-        await self.bot.db.execute("INSERT IGNORE blacklisted_user VALUES (%s, %s)", user.id, reason)
+        await self.bot.db.execute(
+            "INSERT IGNORE blacklisted_user VALUES (%s, %s)", user.id, reason
+        )
         self.bot.cache.blacklist["global"]["user"].add(user.id)
         await util.send_success(ctx, f"**{user}** can no longer use Miso Bot!")
 
@@ -749,7 +835,9 @@ class Configuration(commands.Cog):
         fails = []
         for channel_arg in channels:
             try:
-                channel = await commands.TextChannelConverter().convert(ctx, channel_arg)
+                channel = await commands.TextChannelConverter().convert(
+                    ctx, channel_arg
+                )
             except commands.errors.BadArgument:
                 fails.append(f"Cannot find channel {channel_arg}")
             else:
@@ -797,7 +885,9 @@ class Configuration(commands.Cog):
 
         cmd = self.bot.get_command(command)
         if cmd is None:
-            raise exceptions.CommandWarning(f"Command `{ctx.prefix}{command}` not found.")
+            raise exceptions.CommandWarning(
+                f"Command `{ctx.prefix}{command}` not found."
+            )
 
         await self.bot.db.execute(
             """
@@ -806,7 +896,9 @@ class Configuration(commands.Cog):
             ctx.guild.id,
             cmd.qualified_name,
         )
-        self.bot.cache.blacklist[str(ctx.guild.id)]["command"].discard(cmd.qualified_name.lower())
+        self.bot.cache.blacklist[str(ctx.guild.id)]["command"].discard(
+            cmd.qualified_name.lower()
+        )
         await util.send_success(ctx, f"`{ctx.prefix}{cmd}` is no longer blacklisted.")
 
     @unblacklist.command(name="global", hidden=True)
@@ -833,7 +925,9 @@ class Configuration(commands.Cog):
             guild_id,
         )
         self.bot.cache.blacklist["global"]["guild"].discard(guild_id)
-        await util.send_success(ctx, f"Guild with id `{guild_id}` can use Miso Bot again!")
+        await util.send_success(
+            ctx, f"Guild with id `{guild_id}` can use Miso Bot again!"
+        )
 
 
 async def setup(bot):

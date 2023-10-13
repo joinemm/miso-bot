@@ -77,16 +77,12 @@ async def suppress(message: discord.Message):
 
 def displayname(member: Optional[discord.User | discord.Member], escape=True):
     if member is None:
-        return None
-
-    name = member.name
-    if isinstance(member, discord.Member) and member.nick is not None:
-        name = member.nick
+        return "[unknown user]"
 
     if escape:
-        name = discord.utils.escape_markdown(name)
+        return discord.utils.escape_markdown(member.display_name)
 
-    return name
+    return member.display_name
 
 
 def displaychannel(
@@ -324,7 +320,9 @@ def create_pages(content: discord.Embed, rows: list[str], maxrows=15, maxpages=1
     return pages
 
 
-async def paginate_list(ctx, items, use_locking=False, only_author=False, index_entries=True):
+async def paginate_list(
+    ctx, items, use_locking=False, only_author=False, index_entries=True
+):
     pages = TwoWayIterator(items)
     if index_entries:
         msg = await ctx.send(f"`{pages.index + 1}.` {pages.current()}")
@@ -335,7 +333,9 @@ async def paginate_list(ctx, items, use_locking=False, only_author=False, index_
         new_content = pages.next()
         if new_content:
             if index_entries:
-                await msg.edit(content=f"`{pages.index + 1}.` {new_content}", embed=None)
+                await msg.edit(
+                    content=f"`{pages.index + 1}.` {new_content}", embed=None
+                )
             else:
                 await msg.edit(content=new_content, embed=None)
         return False
@@ -354,7 +354,9 @@ async def paginate_list(ctx, items, use_locking=False, only_author=False, index_
     if use_locking:
         functions["🔒"] = done
 
-    asyncio.ensure_future(reaction_buttons(ctx, msg, functions, only_author=only_author))
+    asyncio.ensure_future(
+        reaction_buttons(ctx, msg, functions, only_author=only_author)
+    )
 
 
 async def reaction_buttons(
@@ -396,7 +398,9 @@ async def reaction_buttons(
 
     while True:
         try:
-            payload = await ctx.bot.wait_for("raw_reaction_add", timeout=timeout, check=check)
+            payload = await ctx.bot.wait_for(
+                "raw_reaction_add", timeout=timeout, check=check
+            )
 
         except asyncio.TimeoutError:
             break
@@ -431,7 +435,9 @@ def message_embed(message):
     :returns        : discord.Embed
     """
     content = discord.Embed()
-    content.set_author(name=f"{message.author}", icon_url=message.author.display_avatar.url)
+    content.set_author(
+        name=f"{message.author}", icon_url=message.author.display_avatar.url
+    )
     content.description = message.content
     content.set_footer(text=f"{message.guild.name} | #{message.channel.name}")
     content.timestamp = message.created_at
@@ -553,7 +559,9 @@ async def get_textchannel(ctx, argument, fallback=None, guildfilter=None):
         except commands.errors.BadArgument:
             return fallback
     else:
-        result = discord.utils.find(lambda m: argument in (m.name, m.id), guildfilter.text_channels)
+        result = discord.utils.find(
+            lambda m: argument in (m.name, m.id), guildfilter.text_channels
+        )
         return result or fallback
 
 
@@ -836,7 +844,9 @@ class UserActivity:
         return result
 
 
-async def send_tasks_result_list(ctx, successful_operations, failed_operations, title=None):
+async def send_tasks_result_list(
+    ctx, successful_operations, failed_operations, title=None
+):
     content = discord.Embed(
         color=(int("77b255", 16) if successful_operations else int("dd2e44", 16))
     )
@@ -869,7 +879,10 @@ async def send_donation_beg(channel: "discord.abc.MessageableChannel"):
     donate_link = "https://misobot.xyz/donate"
     content = discord.Embed(
         color=int("be1931", 16),
-        description=f":loudspeaker: Miso Bot is running solely on donations; Consider [donating]({donate_link}) if you like the bot!",
+        description=(
+            f":loudspeaker: Miso Bot is running solely on donations; "
+            f"Consider [donating]({donate_link}) if you like the bot!"
+        ),
     )
     await channel.send(embed=content, delete_after=15)
 
@@ -888,14 +901,18 @@ async def render_html(bot, payload, endpoint="html"):
         ) as response:
             if response.status == 200:
                 return io.BytesIO(await response.read())
-            raise exceptions.RendererError(f"{response.status} : {await response.text()}")
+            raise exceptions.RendererError(
+                f"{response.status} : {await response.text()}"
+            )
     except aiohttp.ClientConnectionError:
         raise exceptions.RendererError("Unable to connect to the HTML Rendering server")
 
 
 def ordinal(n):
     """Return number with ordinal suffix eg. 1st, 2nd, 3rd, 4th..."""
-    return str(n) + {1: "st", 2: "nd", 3: "rd"}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
+    return str(n) + {1: "st", 2: "nd", 3: "rd"}.get(
+        4 if 10 <= n % 100 < 20 else n % 10, "th"
+    )
 
 
 async def require_chunked(guild: discord.Guild):
@@ -903,7 +920,8 @@ async def require_chunked(guild: discord.Guild):
         start_time = time()
         await guild.chunk(cache=True)
         logger.info(
-            f"Chunked [{guild}] with {guild.member_count} members in {time() - start_time:.2f} seconds"
+            f"Chunked [{guild}] with {guild.member_count} members "
+            f"in {time() - start_time:.2f} seconds"
         )
 
 

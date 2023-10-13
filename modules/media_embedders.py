@@ -15,10 +15,10 @@ from attr import dataclass
 from discord.ext import commands
 from discord.ui import View
 from loguru import logger
-
-from modules import emojis, exceptions, instagram, util
 from modules.misobot import MisoBot
 from modules.tiktok import TikTok
+
+from modules import emojis, exceptions, instagram, util
 
 
 @dataclass
@@ -37,6 +37,7 @@ class Options:
     captions: bool = False
     delete_after: bool = False
     spoiler: bool = False
+    sanitized_string: str = ""
 
 
 def filesize_limit(guild: discord.Guild | None):
@@ -56,18 +57,24 @@ class BaseEmbedder:
         self.bot: MisoBot = bot
 
     @staticmethod
-    def get_options(text: str):
+    def get_options(text: str) -> Options:
         options = Options()
+        valid_options = []
         words = text.lower().split()
+
         if "-c" in words or "--caption" in words:
             options.captions = True
+            valid_options.append("-c")
 
         if "-d" in words or "--delete" in words:
             options.delete_after = True
+            valid_options.append("-d")
 
         if "-s" in words or "--spoiler" in words:
             options.spoiler = True
+            valid_options.append("-s")
 
+        options.sanitized_string = " ".join(valid_options)
         return options
 
     async def process(self, ctx: commands.Context, user_input: str):
@@ -86,7 +93,10 @@ class BaseEmbedder:
             await util.suppress(ctx.message)
 
     async def create_message(
-        self, channel: "discord.abc.MessageableChannel", media: Any, options: Options | None = None
+        self,
+        channel: "discord.abc.MessageableChannel",
+        media: Any,
+        options: Options | None = None,
     ):
         """Create the message parameters for later sending"""
         raise NotImplementedError
@@ -118,9 +128,9 @@ class BaseEmbedder:
                 logger.error(error_message)
                 return f"`[{error_message}]`"
 
-            content_length = response.headers.get("Content-Length") or response.headers.get(
-                "x-full-image-content-length"
-            )
+            content_length = response.headers.get(
+                "Content-Length"
+            ) or response.headers.get("x-full-image-content-length")
             if content_length and int(content_length) < max_filesize:
                 buffer = io.BytesIO(await response.read())
                 return discord.File(fp=buffer, filename=filename, spoiler=spoiler)
@@ -131,36 +141,52 @@ class BaseEmbedder:
                     buffer += chunk
                     if len(buffer) > max_filesize:
                         raise ValueError
-                return discord.File(fp=io.BytesIO(buffer), filename=filename, spoiler=spoiler)
+                return discord.File(
+                    fp=io.BytesIO(buffer), filename=filename, spoiler=spoiler
+                )
             except ValueError:
                 pass
 
         try:
             if spoiler:
-                return f"||{await util.shorten_url(self.bot, media_url, tags=url_tags)}||"
+                return (
+                    f"||{await util.shorten_url(self.bot, media_url, tags=url_tags)}||"
+                )
             return await util.shorten_url(self.bot, media_url, tags=url_tags)
         except ClientConnectorError:
             return media_url
 
-    async def send(self, ctx: commands.Context, media: Any, options: Options | None = None):
+    async def send(
+        self, ctx: commands.Context, media: Any, options: Options | None = None
+    ):
         """Send the media to given context"""
-        message_contents = await self.create_message(ctx.channel, media, options=options)
+        message_contents = await self.create_message(
+            ctx.channel, media, options=options
+        )
         msg = await ctx.send(**message_contents)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(ctx.author)
 
     async def send_contextless(
-        self, channel: "discord.abc.MessageableChannel", author: discord.User, media: Any
+        self,
+        channel: "discord.abc.MessageableChannel",
+        author: discord.User,
+        media: Any,
+        options: Options | None = None,
     ):
         """Send the media without relying on command context, for example in a message event"""
-        message_contents = await self.create_message(channel, media)
+        message_contents = await self.create_message(channel, media, options=options)
         msg = await channel.send(**message_contents)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(author)
 
-    async def send_reply(self, message: discord.Message, media: Any):
+    async def send_reply(
+        self, message: discord.Message, media: Any, options: Options | None = None
+    ):
         """Send the media as a reply to another message"""
-        message_contents = await self.create_message(message.channel, media)
+        message_contents = await self.create_message(
+            message.channel, media, options=options
+        )
         msg = await message.reply(**message_contents, mention_author=False)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(message.author)
@@ -171,9 +197,15 @@ class InstagramEmbedder(BaseEmbedder):
     NO_RESULTS_ERROR = "Found no Instagram links to embed!"
 
     @staticmethod
-    def extract_links(text: str, include_shortcodes=True) -> list[InstagramPost | InstagramStory]:
+    def extract_links(
+        text: str, include_shortcodes=True
+    ) -> list[InstagramPost | InstagramStory]:
         text = "\n".join(text.split())
-        instagram_regex = r"(?:https?:\/\/)?(?:www.)?instagram.com\/?([a-zA-Z0-9\.\_\-]+)?\/([p]+)?([reel]+)?([tv]+)?([stories]+)?\/([a-zA-Z0-9\-\_\.]+)\/?([0-9]+)?"
+        instagram_regex = (
+            r"(?:https?:\/\/)?(?:www.)?instagram.com\/"
+            r"?([a-zA-Z0-9\.\_\-]+)?\/([p]+)?([reel]+)?([tv]+)?([stories]+)?\/"
+            r"([a-zA-Z0-9\-\_\.]+)\/?([0-9]+)?"
+        )
         results = []
         for match in regex.finditer(instagram_regex, text):
             # group 1 for username
@@ -193,7 +225,7 @@ class InstagramEmbedder(BaseEmbedder):
                 results.append(InstagramPost(match.group(6)))
 
         if include_shortcodes:
-            shortcode_regex = r"^([a-zA-Z0-9\-\_\.]+)$"
+            shortcode_regex = r"(?:\s|^)([^-][a-zA-Z0-9\-\_\.]{9,})(?=\s|$)"
             for match in regex.finditer(shortcode_regex, text):
                 results.append(InstagramPost(match.group(1)))
 
@@ -259,14 +291,20 @@ class TikTokEmbedder(BaseEmbedder):
     @staticmethod
     def extract_links(text: str):
         text = "\n".join(text.split())
-        pattern = r"\bhttps?:\/\/(?:m|www|vm)\.tiktok\.com\/.*\b(?:(?:usr|v|embed|user|video|t)\/|\?shareId=|\&item_id=)(\d+)\b"
-        vm_pattern = r"\bhttps?:\/\/(?:vm|vt)\.tiktok\.com\/.*\b(\S+)\b"
+        video_id_pattern = (
+            r"\bhttps?:\/\/(?:m\.|www\.|vm\.|)tiktok\.com\/.*\b(?:(?:usr|v|embed|user|video|t)\/"
+            r"|\?shareId=|\&item_id=)(\d+)(\b|\S+\b)"
+        )
+
+        shortcode_pattern = r"\bhttps?:\/\/(?:vm|vt|www)\.tiktok\.com\/(t/|)(\w+)/?"
 
         validated_urls = [
-            f"https://m.tiktok.com/v/{match.group(1)}" for match in regex.finditer(pattern, text)
+            f"https://m.tiktok.com/v/{match.group(1)}"
+            for match in regex.finditer(video_id_pattern, text)
         ]
         validated_urls.extend(
-            f"https://vm.tiktok.com/{match.group(1)}" for match in regex.finditer(vm_pattern, text)
+            f"https://vm.tiktok.com/{match.group(2)}"
+            for match in regex.finditer(shortcode_pattern, text)
         )
 
         return validated_urls
@@ -306,8 +344,24 @@ class TikTokEmbedder(BaseEmbedder):
 
 
 class TwitterEmbedder(BaseEmbedder):
-    EMOJI = "<:twitter:937425165241946162>"
-    NO_RESULTS_ERROR = "Found no Twitter links to embed!"
+    EMOJI = "<:x_:1135484782642466897>"
+    NO_RESULTS_ERROR = "Found no Twitter/X links to embed!"
+
+    @staticmethod
+    def remove_tco(text: str) -> str:
+        """Get rid of the t.co link to the same tweet"""
+        if text.startswith("https://t.co"):
+            # the caption is only the link
+            return ""
+
+        try:
+            pre_text, tco = text.rsplit(maxsplit=1)
+            if tco.startswith("https://t.co"):
+                return pre_text
+        except ValueError:
+            pass
+
+        return text
 
     @staticmethod
     def extract_links(text: str, include_id_only=True):
@@ -315,7 +369,7 @@ class TwitterEmbedder(BaseEmbedder):
         results = [
             int(match.group(2))
             for match in regex.finditer(
-                r"(?:https?:\/\/)?(?:www.)?twitter.com/(\w+)/status/(\d+)", text
+                r"(?:https?:\/\/)?(?:www.)?(?:twitter|x).com/(\w+)/status/(\d+)", text
             )
         ]
 
@@ -336,19 +390,18 @@ class TwitterEmbedder(BaseEmbedder):
     ):
         media_urls = []
         async with self.bot.session.get(
-            f"https://api.fxtwitter.com/i/status/{tweet_id}"
+            f"https://api.vxtwitter.com/u/status/{tweet_id}"
         ) as response:
-            data = await response.json()
-            if data["code"] != 200:
-                raise exceptions.CommandError(
-                    f"Error from API: {data['message']}",
-                )
+            response.raise_for_status()
+            tweet = await response.json()
 
-        tweet = data["tweet"]
-        screen_name = tweet["author"]["screen_name"]
+        if not tweet["media_extended"]:
+            raise exceptions.CommandWarning(
+                f"Tweet `{tweet['url']}` does not include any media.",
+            )
 
-        for media in data["tweet"]["media"]["all"]:
-            if media["type"] == "photo":
+        for media in tweet["media_extended"]:
+            if media["type"] == "image":
                 base, extension = media["url"].rsplit(".", 1)
                 media_urls.append(
                     ("jpg", f"{base}?format={extension}&name=orig"),
@@ -356,17 +409,16 @@ class TwitterEmbedder(BaseEmbedder):
             else:
                 media_urls.append(("mp4", media["url"]))
 
-        if not media_urls:
-            raise exceptions.CommandWarning(
-                f"Tweet `{tweet['url']}` does not include any media.",
-            )
+        screen_name = tweet["user_screen_name"]
+        caption = f"{self.EMOJI} **@{discord.utils.escape_markdown(screen_name)}**"
 
-        timestamp = arrow.get(tweet["created_timestamp"])
+        timestamp = arrow.get(tweet["date_epoch"])
+        ts_format = timestamp.format("YYMMDD") + "-"
+        caption += f" <t:{int(timestamp.timestamp())}:d>"
 
         tasks = []
         for n, (extension, media_url) in enumerate(media_urls, start=1):
-            ts_format = timestamp.format("YYMMDD")
-            filename = f"{ts_format}-@{screen_name}-{tweet_id}-{n}.{extension}"
+            filename = f"{ts_format}@{screen_name}-{tweet_id}-{n}.{extension}"
             tasks.append(
                 self.download_media(
                     media_url,
@@ -377,11 +429,6 @@ class TwitterEmbedder(BaseEmbedder):
                 )
             )
 
-        username = discord.utils.escape_markdown(screen_name)
-        caption = f"{self.EMOJI} **@{username}** <t:{int(timestamp.timestamp())}:d>"
-        if options and options.captions:
-            caption += f"\n>>> {tweet['text']}"
-
         files = []
         too_big_files = []
         results = await asyncio.gather(*tasks)
@@ -391,11 +438,18 @@ class TwitterEmbedder(BaseEmbedder):
             else:
                 too_big_files.append(result)
 
+        if options and options.captions:
+            tweet_text = self.remove_tco(tweet["text"])
+            if tweet_text:
+                caption += f"\n>>> {tweet_text}"
+
         caption = "\n".join([caption] + too_big_files)
         return {
             "content": caption,
             "files": files,
-            "view": MediaUI("View on Twitter", tweet["url"]),
+            "view": MediaUI(
+                "View on X", f"https://twitter.com/{screen_name}/status/{tweet_id}"
+            ),
         }
 
 
@@ -409,7 +463,9 @@ class MediaUI(View):
         self._children.reverse()
 
     @discord.ui.button(emoji=emojis.REMOVE, style=discord.ButtonStyle.danger)
-    async def delete_button(self, interaction: discord.Interaction, _button: discord.ui.Button):
+    async def delete_button(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
         if self.message_ref and interaction.user in self.approved_deletors:
             await self.message_ref.delete()
         else:

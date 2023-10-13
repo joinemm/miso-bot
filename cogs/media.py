@@ -4,16 +4,21 @@
 
 import asyncio
 import random
-from typing import Literal, Optional
+from typing import Literal
 
 import discord
 import orjson
 from bs4 import BeautifulSoup
 from discord.ext import commands
+from modules.media_embedders import (
+    BaseEmbedder,
+    InstagramEmbedder,
+    TikTokEmbedder,
+    TwitterEmbedder,
+)
+from modules.misobot import MisoBot
 
 from modules import emojis, exceptions, util
-from modules.media_embedders import InstagramEmbedder, TikTokEmbedder, TwitterEmbedder
-from modules.misobot import MisoBot
 
 
 class Media(commands.Cog):
@@ -21,7 +26,7 @@ class Media(commands.Cog):
 
     def __init__(self, bot):
         self.bot: MisoBot = bot
-        self.icon = "🌐"
+        self.icon = "🖼️"
 
     @commands.command(aliases=["yt"])
     async def youtube(self, ctx: commands.Context, *, query):
@@ -45,85 +50,182 @@ class Media(commands.Cog):
 
         await util.paginate_list(
             ctx,
-            [f"https://youtube.com/watch?v={item['id']['videoId']}" for item in data.get("items")],
+            [
+                f"https://youtube.com/watch?v={item['id']['videoId']}"
+                for item in data.get("items")
+            ],
             use_locking=True,
             only_author=True,
             index_entries=True,
         )
 
-    @commands.command()
+    @util.patrons_only()
+    @commands.group()
     async def autoembedder(
-        self,
-        ctx: commands.Context,
-        provider: Literal["instagram", "tiktok"],
-        state: Optional[bool] = None,
+        self, ctx: commands.Context, provider: Literal["instagram", "tiktok"]
     ):
         """Set up automatic embeds for various media sources
 
         The links will be expanded automatically when detected in chat,
-        without requiring the use use the corresponding command
+        without requiring the use of the corresponding command
         """
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        if state is None:
-            # show current state
-            data = await self.bot.db.fetch_value(
+        if ctx.invoked_subcommand is None:
+            enabled = await self.bot.db.fetch_value(
                 f"""
-                SELECT {provider} FROM media_auto_embed_settings WHERE guild_id = %s
+                SELECT {provider} FROM media_auto_embed_enabled WHERE guild_id = %s
                 """,
                 ctx.guild.id,
             )
-            if data is None:
-                current_state = "Not configured"
-            elif data:
-                current_state = "ON"
+            options_data = await self.bot.db.fetch_row(
+                """
+                SELECT options, reply FROM media_auto_embed_options
+                    WHERE guild_id = %s AND provider = %s
+                """,
+                ctx.guild.id,
+                provider,
+            )
+            if options_data:
+                options, reply = options_data
             else:
-                current_state = "OFF"
+                options, reply = None, None
 
-            return await ctx.send(
+            await ctx.send(
                 embed=discord.Embed(
-                    description=f"{provider.capitalize()} automatic embeds are currently **{current_state}** for this server"
+                    title=f"{provider.capitalize()} autoembedder",
+                    description=(
+                        f"ENABLED: {':white_check_mark:' if enabled else ':x:'}\n"
+                        f"OPTIONS: `{options}`\n"
+                        f"REPLIES: {':white_check_mark:' if reply else ':x:'}"
+                    ),
                 )
             )
+        else:
+            ctx.provider = provider
 
-        # set new state
-        if state:
-            # check for donation status if trying to turn on
-            await util.patron_check(ctx)
-
-        await self.bot.db.execute(
+    @autoembedder.command(name="toggle")
+    async def autoembedder_toggle(self, ctx: commands.Context):
+        """Toggle the autoembedder on or off for given media provider"""
+        data = await self.bot.db.fetch_value(
             f"""
-            INSERT INTO media_auto_embed_settings (guild_id, {provider})
-                VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE
-                {provider} = %s
+            SELECT {ctx.provider} FROM media_auto_embed_enabled WHERE guild_id = %s
             """,
             ctx.guild.id,
-            state,
-            state,
+        )
+        await self.bot.db.execute(
+            f"""
+            INSERT INTO media_auto_embed_enabled (guild_id, {ctx.provider})
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                {ctx.provider} = %s
+            """,
+            ctx.guild.id,
+            not data,
+            not data,
         )
 
         await self.bot.cache.cache_auto_embedders()
 
         await util.send_success(
             ctx,
-            f"{provider.capitalize()} automatic embeds are now **{'ON' if state else 'OFF'}** for this server",
+            f"{ctx.provider.capitalize()} automatic embeds are now "
+            f"**{'OFF' if data else 'ON'}** for this server",
         )
 
-    @commands.command(aliases=["ig", "insta"])
+    @autoembedder.command(name="options")
+    async def autoembedder_options(self, ctx: commands.Context, *, options: str):
+        """Set options to be applied to an automatic embed
+
+        Refer to the help of the embedder commands for list of options.
+        """
+        parsed_options = BaseEmbedder.get_options(options)
+        options = parsed_options.sanitized_string
+
+        await self.bot.db.execute(
+            """
+            INSERT INTO media_auto_embed_options (guild_id, provider, options)
+                VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                options = %s
+            """,
+            ctx.guild.id,
+            ctx.provider,
+            options,
+            options,
+        )
+
+        await util.send_success(
+            ctx,
+            f"{ctx.provider.capitalize()} automatic embed OPTIONS are now:\n"
+            f"```yml\nCAPTIONS: {parsed_options.captions}\n"
+            f"DELETE_AFTER: {parsed_options.delete_after}\n"
+            f"SPOILER: {parsed_options.spoiler}```\n",
+        )
+
+    @autoembedder.command(name="reply", usage="<on | off>")
+    async def autoembedder_reply(self, ctx: commands.Context, on_or_off: bool):
+        """Should the automatic embed be a reply to the invoking message"""
+        await self.bot.db.execute(
+            """
+            INSERT INTO media_auto_embed_options (guild_id, provider, reply)
+                VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                reply = %s
+            """,
+            ctx.guild.id,
+            ctx.provider,
+            on_or_off,
+            on_or_off,
+        )
+
+        await util.send_success(
+            ctx,
+            f"{ctx.provider.capitalize()} automatic embed is now "
+            f"{'' if on_or_off else 'NOT '}a reply",
+        )
+
+    @commands.command(
+        aliases=["ig", "insta"],
+        usage="[OPTIONS] <links...>",
+    )
     async def instagram(self, ctx: commands.Context, *, links: str):
-        """Retrieve media from Instagram post, reel or story"""
+        """Retrieve media from Instagram post, reel or story
+
+        OPTIONS
+            `-c`, `--caption` : also include the caption/text of the media
+            `-s`, `--spoiler` : spoiler the uploaded images and text
+            `-d`, `--delete`  : delete your message when the media is done embedding
+        """
         await InstagramEmbedder(self.bot).process(ctx, links)
 
-    @commands.command(aliases=["twt"])
+    @commands.command(
+        aliases=["twt", "x"],
+        usage="[OPTIONS] <links...>",
+    )
     async def twitter(self, ctx: commands.Context, *, links: str):
-        """Retrieve media from a tweet"""
+        """Retrieve media from a tweet
+
+        OPTIONS
+            `-c`, `--caption` : also include the caption/text of the media
+            `-s`, `--spoiler` : spoiler the uploaded images and text
+            `-d`, `--delete`  : delete your message when the media is done embedding
+        """
         await TwitterEmbedder(self.bot).process(ctx, links)
 
-    @commands.command(aliases=["tik", "tok", "tt"])
+    @commands.command(
+        aliases=["tik", "tok", "tt"],
+        usage="[OPTIONS] <links...>",
+    )
     async def tiktok(self, ctx: commands.Context, *, links: str):
-        """Retrieve video without watermark from a TikTok"""
+        """Retrieve video without watermark from a TikTok
+
+        OPTIONS
+            `-c`, `--caption` : also include the caption/text of the media
+            `-s`, `--spoiler` : spoiler the uploaded images and text
+            `-d`, `--delete`  : delete your message when the media is done embedding
+        """
         await TikTokEmbedder(self.bot).process(ctx, links)
 
     @commands.command(aliases=["gif", "gfy"])
@@ -139,9 +241,15 @@ class Media(commands.Cog):
         scripts = []
         tasks = []
         if len(query.split(" ")) == 1:
-            tasks.append(extract_scripts(self.bot.session, f"https://gfycat.com/gifs/tag/{query}"))
+            tasks.append(
+                extract_scripts(
+                    self.bot.session, f"https://gfycat.com/gifs/tag/{query}"
+                )
+            )
 
-        tasks.append(extract_scripts(self.bot.session, f"https://gfycat.com/gifs/search/{query}"))
+        tasks.append(
+            extract_scripts(self.bot.session, f"https://gfycat.com/gifs/search/{query}")
+        )
         scripts = sum(await asyncio.gather(*tasks), [])
 
         urls = []
@@ -190,7 +298,9 @@ class Media(commands.Cog):
         url = f"https://www.melon.com/chart/{timeframe}/index.htm"
         headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0",
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0"
+            ),
         }
         async with self.bot.session.get(url, headers=headers) as response:
             text = await response.text()
@@ -206,7 +316,9 @@ class Media(commands.Cog):
             if not title or not artist:
                 raise exceptions.CommandError("Failure parsing Melon page")
 
-            rows.append(f"`#{i:2}` **{artist.attrs['title']}** — ***{title.attrs['title']}***")
+            rows.append(
+                f"`#{i:2}` **{artist.attrs['title']}** — ***{title.attrs['title']}***"
+            )
 
         content = discord.Embed(color=discord.Color.from_rgb(0, 205, 60))
         content.set_author(
@@ -229,7 +341,9 @@ class Media(commands.Cog):
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Connection": "keep-alive",
                 "Referer": "https://xkcd.com/",
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0",
+                "User-Agent": (
+                    "Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0"
+                ),
             }
             async with self.bot.session.get(url, headers=headers) as response:
                 location = str(response.url)
@@ -252,25 +366,25 @@ class GiphyUI(discord.ui.View):
         self.message = await ctx.send(random.choice(self.gifs)["url"], view=self)
 
     @discord.ui.button(emoji=emojis.REMOVE, style=discord.ButtonStyle.danger)
-    async def toggle(self, interaction: discord.Interaction, _button: discord.ui.Button):
+    async def toggle(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
         await interaction.response.defer()
         await self.message.delete()
 
     @discord.ui.button(emoji=emojis.REPEAT, style=discord.ButtonStyle.primary)
-    async def randomize(self, interaction: discord.Interaction, _button: discord.ui.Button):
+    async def randomize(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
         await interaction.response.defer()
         await self.message.edit(content=random.choice(self.gifs)["url"])
 
     @discord.ui.button(emoji=emojis.CONFIRM, style=discord.ButtonStyle.secondary)
-    async def confirm(self, interaction: discord.Interaction, _button: discord.ui.Button):
+    async def confirm(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
         await interaction.response.defer()
         await self.remove_ui()
-
-    # @discord.ui.button(
-    #     label="Powered by GIPHY", style=discord.ButtonStyle.secondary, disabled=True
-    # )
-    # async def giphy_label(self, _, __):
-    #     pass
 
     async def remove_ui(self):
         for item in self.children:

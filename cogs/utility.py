@@ -15,11 +15,11 @@ import discord
 import orjson
 from discord.ext import commands, tasks
 from loguru import logger
-
-from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
 from modules.shazam import Shazam
-from modules.ui import BaseButtonPaginator, Compliance, RowPaginator
+from modules.ui import BaseButtonPaginator, Compliance
+
+from modules import emojis, exceptions, queries, util
 
 papago_pairs = [
     "ko/en",
@@ -136,8 +136,9 @@ class Utility(commands.Cog):
 
                 date = arrow.get(created_on)
                 if now_ts - reminder_ts > 21600:
+                    date_fmt = date.format("DD/MM/YYYY HH:mm:ss")
                     logger.info(
-                        f"Deleting reminder set for {date.format('DD/MM/YYYY HH:mm:ss')} for being over 6 hours late"
+                        f"Deleting reminder set for {date_fmt} for being over 6 hours late"
                     )
                 else:
                     embed = discord.Embed(
@@ -156,7 +157,9 @@ class Utility(commands.Cog):
                         await user.send(embed=embed)
                         logger.info(f'Reminded {user} to "{content}"')
                     except discord.errors.Forbidden:
-                        logger.warning(f"Unable to remind {user}, missing DM permissions!")
+                        logger.warning(
+                            f"Unable to remind {user}, missing DM permissions!"
+                        )
             else:
                 logger.info(f"Deleted expired reminder by unknown user {user_id}")
 
@@ -175,9 +178,9 @@ class Utility(commands.Cog):
     async def on_command_error(self, ctx: commands.Context, error):
         """only for CommandNotFound"""
         error = getattr(error, "original", error)
-        if isinstance(error, commands.CommandNotFound) and ctx.message.content.startswith(
-            f"{ctx.prefix}!"
-        ):
+        if isinstance(
+            error, commands.CommandNotFound
+        ) and ctx.message.content.startswith(f"{ctx.prefix}!"):
             # type ignores everywhere because this is so hacky
             ctx.timer = time()  # type: ignore
             ctx.iscallback = True  # type: ignore
@@ -245,7 +248,9 @@ class Utility(commands.Cog):
             and ctx.message.reference.message_id
             and isinstance(ctx.channel, (discord.Thread, discord.TextChannel))
         ):
-            reply_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+            reply_message = await ctx.channel.fetch_message(
+                ctx.message.reference.message_id
+            )
             if not reply_message.attachments:
                 raise exceptions.CommandWarning("Referenced message has no attachments")
             attachment = await reply_message.attachments[0].to_file()
@@ -254,7 +259,9 @@ class Utility(commands.Cog):
             return await util.send_command_help(ctx)
 
         if result is None:
-            raise exceptions.CommandWarning("I was unable to recognize any music from this")
+            raise exceptions.CommandWarning(
+                "I was unable to recognize any music from this"
+            )
 
         metadata = "\n".join([f'`{m["title"]}:` {m["text"]}' for m in result.metadata])
         content = discord.Embed(
@@ -264,12 +271,17 @@ class Utility(commands.Cog):
         content.set_author(
             name="Shazam result",
             url=result.url,
-            icon_url="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Shazam_icon.svg/84px-Shazam_icon.svg.png",
+            icon_url=(
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/"
+                "Shazam_icon.svg/84px-Shazam_icon.svg.png"
+            ),
         )
         content.set_thumbnail(url=result.cover_art)
         await ctx.send(embed=content)
 
-    @commands.command(usage="<'in' | 'on'> <time | YYYY/MM/DD [HH:mm:ss]> to <something>")
+    @commands.command(
+        usage="<'in' | 'on'> <time | YYYY/MM/DD [HH:mm:ss]> to <something>"
+    )
     async def remindme(self, ctx: commands.Context, pre, *, arguments):
         """
         Set a reminder
@@ -310,7 +322,8 @@ class Utility(commands.Cog):
 
         await self.bot.db.execute(
             """
-            INSERT INTO reminder (user_id, guild_id, created_on, reminder_date, content, original_message_url)
+            INSERT INTO reminder (user_id, guild_id, created_on, reminder_date,
+                                  content, original_message_url)
                 VALUES(%s, %s, %s, %s, %s, %s)
             """,
             ctx.author.id,
@@ -350,8 +363,12 @@ class Utility(commands.Cog):
             await util.command_group_help(ctx)
 
     @weather.command(name="now")
-    async def weather_now(self, ctx: commands.Context, *, location: Optional[str] = None):
-        location = await self.get_user_location(ctx)
+    async def weather_now(
+        self, ctx: commands.Context, *, location: Optional[str] = None
+    ):
+        if location is None:
+            location = await self.get_user_location(ctx)
+
         lat, lon, address = await self.geolocate(location)
         local_time, country_code = await self.get_country_information(lat, lon)
 
@@ -384,7 +401,9 @@ class Utility(commands.Cog):
         if isinstance(local_time.tzinfo, ZoneInfo):
             params["timezone"] = str(local_time.tzinfo)
         else:
-            logger.warning("Arrow object must be constructed with ZoneInfo timezone object")
+            logger.warning(
+                "Arrow object must be constructed with ZoneInfo timezone object"
+            )
 
         async with self.bot.session.get(
             "https://api.tomorrow.io/v4/timelines", params=params
@@ -393,30 +412,47 @@ class Utility(commands.Cog):
                 logger.error(response.status)
                 logger.error(response.headers)
                 logger.error(await response.text())
-                raise exceptions.CommandError(f"Weather api returned HTTP ERROR {response.status}")
+                raise exceptions.CommandError(
+                    f"Weather api returned HTTP ERROR {response.status}"
+                )
 
             data = await response.json(loads=orjson.loads)
 
-        current_data = next(filter(lambda t: t["timestep"] == "current", data["data"]["timelines"]))
-        daily_data = next(filter(lambda t: t["timestep"] == "1d", data["data"]["timelines"]))
+        current_data = next(
+            filter(lambda t: t["timestep"] == "current", data["data"]["timelines"])
+        )
+        daily_data = next(
+            filter(lambda t: t["timestep"] == "1d", data["data"]["timelines"])
+        )
         values_current = current_data["intervals"][0]["values"]
         values_today = daily_data["intervals"][0]["values"]
-        #  values_tomorrow = daily_data["intervals"][1]["values"]
         temperature = values_current["temperature"]
         temperature_apparent = values_current["temperatureApparent"]
-        sunrise = arrow.get(values_current["sunriseTime"]).to(local_time.tzinfo).format("HH:mm")
-        sunset = arrow.get(values_current["sunsetTime"]).to(local_time.tzinfo).format("HH:mm")
+        sunrise = (
+            arrow.get(values_current["sunriseTime"])
+            .to(local_time.tzinfo)
+            .format("HH:mm")
+        )
+        sunset = (
+            arrow.get(values_current["sunsetTime"])
+            .to(local_time.tzinfo)
+            .format("HH:mm")
+        )
 
         icon = self.weather_constants["id_to_icon"][str(values_current["weatherCode"])]
-        summary = self.weather_constants["id_to_description"][str(values_current["weatherCode"])]
+        summary = self.weather_constants["id_to_description"][
+            str(values_current["weatherCode"])
+        ]
 
-        if values_today["precipitationType"] != 0 and values_today["precipitationProbability"] != 0:
+        if (
+            values_today["precipitationType"] != 0
+            and values_today["precipitationProbability"] != 0
+        ):
             precipitation_type = self.weather_constants["precipitation"][
                 str(values_today["precipitationType"])
             ]
-            summary += (
-                f", with {values_today['precipitationProbability']}% chance of {precipitation_type}"
-            )
+            precipitation_chance = values_today["precipitationProbability"]
+            summary += f", with {precipitation_chance}% chance of {precipitation_type}"
 
         content = discord.Embed(color=int("e1e8ed", 16))
         content.title = f":flag_{country_code.lower()}: {address}"
@@ -424,9 +460,18 @@ class Utility(commands.Cog):
 
         def render(F: bool):
             information_rows = [
-                f":thermometer: Currently **{temp(temperature, F)}**, feels like **{temp(temperature_apparent, F)}**",
-                f":calendar: Daily low **{temp(values_today['temperatureMin'], F)}**, high **{temp(values_today['temperatureMax'], F)}**",
-                f":dash: Wind speed **{values_current['windSpeed']} m/s** with gusts of **{values_current['windGust']} m/s**",
+                (
+                    f":thermometer: Currently **{temp(temperature, F)}**, "
+                    f"feels like **{temp(temperature_apparent, F)}**"
+                ),
+                (
+                    f":calendar: Daily low **{temp(values_today['temperatureMin'], F)}**, "
+                    f"high **{temp(values_today['temperatureMax'], F)}**"
+                ),
+                (
+                    f":dash: Wind speed **{values_current['windSpeed']} m/s** "
+                    f"with gusts of **{values_current['windGust']} m/s**"
+                ),
                 f":sunrise: Sunrise at **{sunrise}**, sunset at **{sunset}**",
                 f":sweat_drops: Air humidity **{values_current['humidity']}%**",
                 f":map: [See on map](https://www.google.com/maps/search/?api=1&query={lat},{lon})",
@@ -442,8 +487,12 @@ class Utility(commands.Cog):
         await WeatherUnitToggler(render, False).run(ctx)
 
     @weather.command(name="forecast")
-    async def weather_forecast(self, ctx: commands.Context, *, location: Optional[str] = None):
-        location = await self.get_user_location(ctx)
+    async def weather_forecast(
+        self, ctx: commands.Context, *, location: Optional[str] = None
+    ):
+        if location is None:
+            location = await self.get_user_location(ctx)
+
         lat, lon, address = await self.geolocate(location)
         local_time, country_code = await self.get_country_information(lat, lon)
         body = {
@@ -471,7 +520,9 @@ class Utility(commands.Cog):
         if isinstance(local_time.tzinfo, ZoneInfo):
             body["timezone"] = str(local_time.tzinfo)
         else:
-            logger.warning("Arrow object must be constructed with ZoneInfo timezone object")
+            logger.warning(
+                "Arrow object must be constructed with ZoneInfo timezone object"
+            )
 
         async with self.bot.session.post(
             "https://api.tomorrow.io/v4/timelines",
@@ -484,7 +535,9 @@ class Utility(commands.Cog):
                 logger.error(response.status)
                 logger.error(response.headers)
                 logger.error(await response.text())
-                raise exceptions.CommandError(f"Weather api returned HTTP ERROR {response.status}")
+                raise exceptions.CommandError(
+                    f"Weather api returned HTTP ERROR {response.status}"
+                )
             data = await response.json(loads=orjson.loads)
 
         content = discord.Embed(
@@ -529,7 +582,9 @@ class Utility(commands.Cog):
     async def geolocate(self, location):
         GOOGLE_GEOCODING_API_URL = "https://maps.googleapis.com/maps/api/geocode/json"
         params = {"address": location, "key": self.bot.keychain.GCS_DEVELOPER_KEY}
-        async with self.bot.session.get(GOOGLE_GEOCODING_API_URL, params=params) as response:
+        async with self.bot.session.get(
+            GOOGLE_GEOCODING_API_URL, params=params
+        ) as response:
             geocode_data = await response.json(loads=orjson.loads)
         try:
             geocode_data = geocode_data["results"][0]
@@ -629,7 +684,9 @@ class Utility(commands.Cog):
     async def urban(self, ctx: commands.Context, *, word):
         """Get Urban Dictionary entries for a given word"""
         API_BASE_URL = "https://api.urbandictionary.com/v0/define"
-        async with self.bot.session.get(API_BASE_URL, params={"term": word}) as response:
+        async with self.bot.session.get(
+            API_BASE_URL, params={"term": word}
+        ) as response:
             data = await response.json(loads=orjson.loads)
 
         if data["list"]:
@@ -661,7 +718,9 @@ class Utility(commands.Cog):
         else:
             await ctx.send(f"No definitions found for `{word}`")
 
-    @commands.command(aliases=["tr", "trans"], usage="[source_lang]/[target_lang] <text>")
+    @commands.command(
+        aliases=["tr", "trans"], usage="[source_lang]/[target_lang] <text>"
+    )
     async def translate(self, ctx: commands.Context, *, text):
         """
         Papago and Google translator
@@ -684,7 +743,9 @@ class Utility(commands.Cog):
         target = ""
         languages = text.partition(" ")[0]
         if "/" in languages or "->" in languages:
-            source, target = languages.split("/") if "/" in languages else languages.split("->")
+            source, target = (
+                languages.split("/") if "/" in languages else languages.split("->")
+            )
             text = text.partition(" ")[2]
             if source == "":
                 source = await detect_language(self.bot, text)
@@ -706,10 +767,12 @@ class Utility(commands.Cog):
                 "X-Naver-Client-Secret": self.bot.keychain.NAVER_TOKEN,
             }
 
-            async with self.bot.session.post(url, headers=headers, data=params) as response:
-                translation = (await response.json(loads=orjson.loads))["message"]["result"][
-                    "translatedText"
-                ]
+            async with self.bot.session.post(
+                url, headers=headers, data=params
+            ) as response:
+                translation = (await response.json(loads=orjson.loads))["message"][
+                    "result"
+                ]["translatedText"]
 
         else:
             # use google
@@ -726,7 +789,9 @@ class Utility(commands.Cog):
                 data = await response.json(loads=orjson.loads)
 
             try:
-                translation = html.unescape(data["data"]["translations"][0]["translatedText"])
+                translation = html.unescape(
+                    data["data"]["translations"][0]["translatedText"]
+                )
             except KeyError:
                 return await ctx.send("Sorry, I could not translate this :(")
 
@@ -750,48 +815,8 @@ class Utility(commands.Cog):
             else:
                 await ctx.send(":shrug:")
 
-    @commands.command(enabled=False)
-    async def mygifs(self, ctx: commands.Context):
-        """See the gifs you have uploaded"""
-        data = await self.bot.db.fetch(
-            """
-            SELECT gif_id, source_url, ts FROM user_uploaded_gif WHERE user_id = %s
-            """,
-            ctx.author.id,
-        )
-        if not data:
-            raise exceptions.CommandWarning("You have not uploaded any gifs yet!")
-
-        async with self.bot.session.get(
-            "https://api.giphy.com/v1/gifs",
-            params={
-                "api_key": self.bot.keychain.GIPHY_API_KEY,
-                "ids": ",".join(gif[0] for gif in data),
-            },
-        ) as response:
-            response_data = await response.json()
-
-        if not response_data["data"]:
-            raise exceptions.CommandWarning("You don't have any gifs :(")
-
-        gif_sources = {gif[0]: gif[1] for gif in data}
-
-        rows = []
-        for gif in response_data["data"]:
-            source = gif_sources[gif["id"]]
-            ts = arrow.get(gif["import_datetime"])
-            rows.append(
-                f"`{gif['id']}` [Source]({source}) | [Gif]({gif['url']}) <t:{int(ts.timestamp())}:R>"
-            )
-
-        await RowPaginator(
-            discord.Embed(color=int("8b3cff", 16)).set_author(
-                name="Your gifs", icon_url=ctx.author.display_avatar.url
-            ),
-            rows,
-        ).run(ctx)
-
-    @commands.command(enabled=False)
+    @commands.is_owner()
+    @commands.command()
     async def creategif(self, ctx: commands.Context, media_url: str, *tags: str):
         """Create a gif and upload it to GIPHY"""
         has_seen_warning = await self.bot.db.fetch_value(
@@ -811,7 +836,9 @@ class Utility(commands.Cog):
                         "Failure to comply will get you banned from using Miso Bot. "
                         "Please also keep in mind everything you upload is public."
                     ),
-                ).set_footer(text="ⓘ This notice is shown to everyone, not based on your content"),
+                ).set_footer(
+                    text="ⓘ This notice is shown to everyone, not based on your content"
+                ),
                 view=view,
             )
             await view.read_timer(3, compliance_msg)
@@ -865,7 +892,8 @@ class Utility(commands.Cog):
                     await msg.delete()
                     if response.status == 500:
                         raise exceptions.CommandWarning(
-                            "Gif creation failed! Most likely the url provided is not a valid video source."
+                            "Gif creation failed! "
+                            "Most likely the url provided is not a valid video source."
                         )
                     response.raise_for_status()
                     return
@@ -914,7 +942,9 @@ class Utility(commands.Cog):
 
         symbol = symbol.upper()
         params = {"symbol": symbol.strip("$"), "token": self.bot.keychain.FINNHUB_TOKEN}
-        async with self.bot.session.get(FINNHUB_API_QUOTE_URL, params=params) as response:
+        async with self.bot.session.get(
+            FINNHUB_API_QUOTE_URL, params=params
+        ) as response:
             quote_data = await response.json(loads=orjson.loads)
 
         error = quote_data.get("error")
@@ -924,7 +954,9 @@ class Utility(commands.Cog):
         if quote_data["c"] == 0:
             raise exceptions.CommandWarning("Company not found")
 
-        async with self.bot.session.get(FINNHUB_API_PROFILE_URL, params=params) as response:
+        async with self.bot.session.get(
+            FINNHUB_API_PROFILE_URL, params=params
+        ) as response:
             company_profile = await response.json(loads=orjson.loads)
 
         change = float(quote_data["c"]) - float(quote_data["pc"])
@@ -955,7 +987,9 @@ class Utility(commands.Cog):
         content.add_field(name="Current price", value=get_money("c"))
         content.add_field(name="Today's high", value=get_money("h"))
         content.add_field(name="Today's low", value=get_money("l"))
-        content.add_field(name="Market capitalization", value=f"${market_cap:,}", inline=False)
+        content.add_field(
+            name="Market capitalization", value=f"${market_cap:,}", inline=False
+        )
 
         content.colour = discord.Color.green() if GAINS else discord.Color.red()
         content.timestamp = arrow.get(quote_data["t"]).datetime
@@ -968,7 +1002,9 @@ class Utility(commands.Cog):
         await util.command_group_help(ctx)
 
     @timezone.command(name="now")
-    async def tz_now(self, ctx: commands.Context, member: Optional[discord.Member] = None):
+    async def tz_now(
+        self, ctx: commands.Context, member: Optional[discord.Member] = None
+    ):
         """Get current time for a member"""
         if member is None:
             if isinstance(ctx.author, discord.Member):
@@ -1041,13 +1077,21 @@ class Utility(commands.Cog):
         rows = []
         user_ids = [user.id for user in ctx.guild.members]
         data = await self.bot.db.fetch(
-            "SELECT user_id, timezone FROM user_settings WHERE user_id IN %s AND timezone IS NOT NULL",
+            """
+            SELECT user_id, timezone FROM user_settings
+            WHERE user_id IN %s AND timezone IS NOT NULL
+            """,
             user_ids,
         )
         if not data:
-            raise exceptions.CommandWarning("No one on this server has set their timezone yet!")
+            raise exceptions.CommandWarning(
+                "No one on this server has set their timezone yet!"
+            )
 
-        dt_data = [(arrow.now(tz_str), ctx.guild.get_member(user_id)) for user_id, tz_str in data]
+        dt_data = [
+            (arrow.now(tz_str), ctx.guild.get_member(user_id))
+            for user_id, tz_str in data
+        ]
         rows.extend(
             f"{dt.format('MMM Do HH:mm')} - **{util.displayname(member)}**"
             for dt, member in sorted(dt_data, key=lambda x: int(x[0].format("Z")))
@@ -1074,7 +1118,9 @@ class Utility(commands.Cog):
             data = await response.json()
 
         if not data["results"]:
-            raise exceptions.CommandInfo(f"No steam market listings found for `{search_term}`")
+            raise exceptions.CommandInfo(
+                f"No steam market listings found for `{search_term}`"
+            )
 
         await MarketPaginator(data["results"]).run(ctx)
 
@@ -1147,7 +1193,9 @@ class WeatherUnitToggler(discord.ui.View):
         self.toggle.label = "°C" if self.F else "°F"
 
     @discord.ui.button(emoji="🌡️", style=discord.ButtonStyle.secondary)
-    async def toggle(self, interaction: discord.Interaction, _button: discord.ui.Button):
+    async def toggle(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
         self.F = not self.F
         self.update_label()
 

@@ -19,11 +19,11 @@ import orjson
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from loguru import logger
+from modules.genius import Genius
+from modules.misobot import MisoBot
 from PIL import Image
 
 from modules import emojis, exceptions, util
-from modules.genius import Genius
-from modules.misobot import MisoBot
 
 MISSING_IMAGE_HASH = "2a96cbd8b46e442fc41c2b86b821562f"
 
@@ -136,7 +136,9 @@ class LastFm(commands.Cog):
         )
 
     @fm_blacklist.command(name="remove")
-    async def fm_blacklist_remove(self, ctx: commands.Context, *, member: discord.Member):
+    async def fm_blacklist_remove(
+        self, ctx: commands.Context, *, member: discord.Member
+    ):
         """Remove a member from the blacklist"""
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
@@ -154,11 +156,15 @@ class LastFm(commands.Cog):
     async def set(self, ctx: commands.Context, username):
         """Save your Last.fm username"""
         if ctx.foreign_target:  # type: ignore
-            raise exceptions.CommandWarning("You cannot set Last.fm username for someone else!")
+            raise exceptions.CommandWarning(
+                "You cannot set Last.fm username for someone else!"
+            )
 
         content = await self.get_userinfo_embed(username)
         if content is None:
-            raise exceptions.CommandWarning(f"Last.fm profile `{username}` was not found")
+            raise exceptions.CommandWarning(
+                f"Last.fm profile `{username}` was not found"
+            )
 
         await self.bot.db.execute(
             """
@@ -179,7 +185,9 @@ class LastFm(commands.Cog):
     async def unset(self, ctx: commands.Context):
         """Unlink your Last.fm"""
         if ctx.foreign_target:  # type: ignore
-            raise exceptions.CommandWarning("You cannot unset someone else's Last.fm username!")
+            raise exceptions.CommandWarning(
+                "You cannot unset someone else's Last.fm username!"
+            )
 
         await self.bot.db.execute(
             """
@@ -198,7 +206,9 @@ class LastFm(commands.Cog):
         """See your Last.fm profile"""
         content = await self.get_userinfo_embed(ctx.username)
         if content is None:
-            raise exceptions.CommandError(f"Could not get your lastfm profile (`{ctx.username}`)")
+            raise exceptions.CommandError(
+                f"Could not get your lastfm profile (`{ctx.username}`)"
+            )
         await ctx.send(embed=content)  # type: ignore
 
     @fm.command()
@@ -211,7 +221,11 @@ class LastFm(commands.Cog):
             )
         per_page = 100
         pre_data = await self.api_request(
-            {"user": ctx.username, "method": "user.getrecenttracks", "limit": per_page}  # type: ignore
+            {
+                "user": ctx.username,
+                "method": "user.getrecenttracks",
+                "limit": per_page,
+            }  # type: ignore
         )
 
         total = int(pre_data["recenttracks"]["@attr"]["total"])
@@ -573,7 +587,9 @@ class LastFm(commands.Cog):
         await util.send_as_pages(ctx, content, rows, 15)
 
     @fm.command(usage="[timeframe] <toptracks | topartists | topalbums> <artist>")
-    async def artist(self, ctx: commands.Context, timeframe, datatype, *, artistname=""):
+    async def artist(
+        self, ctx: commands.Context, timeframe, datatype, *, artistname=""
+    ):
         """
         Artist specific data.
 
@@ -592,7 +608,9 @@ class LastFm(commands.Cog):
         if artistname.lower() == "np":
             artistname = (await self.getnowplaying(ctx))["artist"]
             if artistname is None:
-                raise exceptions.CommandWarning("Could not get currently playing artist!")
+                raise exceptions.CommandWarning(
+                    "Could not get currently playing artist!"
+                )
 
         if artistname == "":
             return await ctx.send("Missing artist name!")
@@ -676,14 +694,18 @@ class LastFm(commands.Cog):
             albumname = npd["album"]
             artistname = npd["artist"]
             if None in [albumname, artistname]:
-                raise exceptions.CommandWarning("Could not get currently playing album!")
+                raise exceptions.CommandWarning(
+                    "Could not get currently playing album!"
+                )
         else:
             try:
                 albumname, artistname = [x.strip() for x in album.split("|")]
                 if "" in (albumname, artistname):
                     raise ValueError
             except ValueError:
-                raise exceptions.CommandWarning("Incorrect format! use `album | artist`")
+                raise exceptions.CommandWarning(
+                    "Incorrect format! use `album | artist`"
+                )
 
         album, data = await self.album_top_tracks(ctx, period, artistname, albumname)
         if album is None or not data:
@@ -724,7 +746,9 @@ class LastFm(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    async def album_top_tracks(self, ctx: commands.Context, period, artistname, albumname):
+    async def album_top_tracks(
+        self, ctx: commands.Context, period, artistname, albumname
+    ):
         """Scrape the top tracks of given album from lastfm library page"""
         artistname = urllib.parse.quote_plus(artistname)
         albumname = urllib.parse.quote_plus(albumname)
@@ -743,7 +767,9 @@ class LastFm(commands.Cog):
             .find("img")
             .get("src")
             .replace("64s", "300s"),
-            "formatted_name": soup.find("h2", {"class": "library-header-title"}).text.strip(),
+            "formatted_name": soup.find(
+                "h2", {"class": "library-header-title"}
+            ).text.strip(),
             "artist": soup.find("header", {"class": "library-header"})
             .find("a", {"class": "text-colour-link"})
             .text.strip(),
@@ -772,7 +798,9 @@ class LastFm(commands.Cog):
             .find("img")
             .get("src")
             .replace("avatar70s", "avatar300s"),
-            "formatted_name": soup.find("a", {"class": "library-header-crumb"}).text.strip(),
+            "formatted_name": soup.find(
+                "a", {"class": "library-header-crumb"}
+            ).text.strip(),
         }
 
         all_results = get_list_contents(soup)
@@ -785,7 +813,9 @@ class LastFm(commands.Cog):
         albums = []
         tracks = []
         metadata = [None, None, None]
-        artistinfo = await self.api_request({"method": "artist.getInfo", "artist": artistname})
+        artistinfo = await self.api_request(
+            {"method": "artist.getInfo", "artist": artistname}
+        )
         url = (
             f"https://last.fm/user/{ctx.username}/library/music/"
             f"{urllib.parse.quote_plus(artistname)}"
@@ -797,9 +827,11 @@ class LastFm(commands.Cog):
 
         soup = BeautifulSoup(data, "lxml")
         try:
-            albumsdiv, tracksdiv, _ = soup.findAll("tbody", {"data-playlisting-add-entries": ""})
+            tbodies = soup.findAll("tbody", {"data-playlisting-add-entries": ""})
 
-        except ValueError:
+            albumsdiv = tbodies[1]
+            tracksdiv = tbodies[3]
+        except IndexError:
             artistname = discord.utils.escape_markdown(artistname)
             if period == "overall":
                 return await ctx.send(f"You have never listened to **{artistname}**!")
@@ -810,7 +842,9 @@ class LastFm(commands.Cog):
         for container, destination in zip([albumsdiv, tracksdiv], [albums, tracks]):
             items = container.findAll("tr", {"class": "chartlist-row"})
             for item in items:
-                name = item.find("td", {"class": "chartlist-name"}).find("a").get("title")
+                name = (
+                    item.find("td", {"class": "chartlist-name"}).find("a").get("title")
+                )
                 playcount = (
                     item.find("span", {"class": "chartlist-count-bar-value"})
                     .text.replace("scrobbles", "")
@@ -830,7 +864,9 @@ class LastFm(commands.Cog):
             .find("img")
             .get("src")
             .replace("avatar70s", "avatar300s"),
-            "formatted_name": soup.find("h2", {"class": "library-header-title"}).text.strip(),
+            "formatted_name": soup.find(
+                "h2", {"class": "library-header-title"}
+            ).text.strip(),
         }
 
         artistname = urllib.parse.quote_plus(artistname)
@@ -885,7 +921,9 @@ class LastFm(commands.Cog):
         )
 
         if similar:
-            content.add_field(name="Similar artists", value=", ".join(similar), inline=False)
+            content.add_field(
+                name="Similar artists", value=", ".join(similar), inline=False
+            )
 
         await ctx.send(embed=content)
 
@@ -906,7 +944,9 @@ class LastFm(commands.Cog):
         if image is None:
             return None
 
-        colors = await self.bot.loop.run_in_executor(None, lambda: colorgram.extract(image, 1))
+        colors = await self.bot.loop.run_in_executor(
+            None, lambda: colorgram.extract(image, 1)
+        )
         dominant_color = colors[0].rgb
 
         return (
@@ -978,7 +1018,9 @@ class LastFm(commands.Cog):
             albums.add(album_art_id)
 
         if not albums:
-            raise exceptions.CommandError("There was an unknown error while getting your albums!")
+            raise exceptions.CommandError(
+                "There was an unknown error while getting your albums!"
+            )
 
         to_fetch = []
         albumcolors = await self.bot.db.fetch(
@@ -1002,7 +1044,9 @@ class LastFm(commands.Cog):
 
         if to_fetch:
             to_cache = []
-            tasks = [self.fetch_color(self.bot.session, image_id) for image_id in to_fetch]
+            tasks = [
+                self.fetch_color(self.bot.session, image_id) for image_id in to_fetch
+            ]
             if len(tasks) > 500:
                 warn = await ctx.send(
                     ":exclamation:Your library includes over 500 uncached album colours, "
@@ -1050,7 +1094,9 @@ class LastFm(commands.Cog):
                     (148, 0, 211),  # violet
                 ]
             )
-            chunks = [list(tree.search_knn(rgb, width + height)) for rgb in rainbow_colors]
+            chunks = [
+                list(tree.search_knn(rgb, width + height)) for rgb in rainbow_colors
+            ]
             random_offset = random.randint(0, 6)
             final_albums = []
             for album_index in range(width * height):
@@ -1081,7 +1127,9 @@ class LastFm(commands.Cog):
                 for alb in nearest
             ]
 
-        buffer = await self.chart_factory(final_albums, width, height, show_labels=False)
+        buffer = await self.chart_factory(
+            final_albums, width, height, show_labels=False
+        )
 
         if rainbow:
             colour = f"{'diagonal ' if diagonal else ''}rainbow"
@@ -1122,7 +1170,11 @@ class LastFm(commands.Cog):
             )
 
         if arguments["period"] == "today":
-            data = await self.custom_period(ctx.username, arguments["method"])
+            data = await self.custom_period(
+                ctx.username,
+                arguments["method"],
+                limit=arguments["amount"],
+            )
         else:
             data = await self.api_request(
                 {
@@ -1157,7 +1209,9 @@ class LastFm(commands.Cog):
             for i, artist in enumerate(artists):
                 name = artist["name"]
                 plays = artist["playcount"]
-                chart.append((scraped_images[i], f"{plays} {format_plays(plays)}<br>{name}"))
+                chart.append(
+                    (scraped_images[i], f"{plays} {format_plays(plays)}<br>{name}")
+                )
 
         elif arguments["method"] == "user.getrecenttracks":
             chart_type = "recent tracks"
@@ -1184,11 +1238,15 @@ class LastFm(commands.Cog):
 
     async def chart_factory(self, chart_items, width, height, show_labels=True):
         if show_labels:
-            img_div_template = '<div class="art"><img src="{0}"><p class="label">{1}</p></div>'
+            img_div_template = (
+                '<div class="art"><img src="{0}"><p class="label">{1}</p></div>'
+            )
         else:
             img_div_template = '<div class="art"><img src="{0}"></div>'
 
-        img_divs = "\n".join(img_div_template.format(*chart_item) for chart_item in chart_items)
+        img_divs = "\n".join(
+            img_div_template.format(*chart_item) for chart_item in chart_items
+        )
 
         replacements = {
             "WIDTH": 300 * width,
@@ -1205,7 +1263,9 @@ class LastFm(commands.Cog):
 
         return await util.render_html(self.bot, payload)
 
-    async def server_lastfm_usernames(self, ctx: commands.Context, filter_blacklisted=False):
+    async def server_lastfm_usernames(
+        self, ctx: commands.Context, filter_blacklisted=False
+    ):
         guild_user_ids = [user.id for user in ctx.guild.members]
         args = [guild_user_ids]
         if filter_blacklisted:
@@ -1233,7 +1293,9 @@ class LastFm(commands.Cog):
         await util.command_group_help(ctx)
 
     @server.command(
-        name="chart", aliases=["collage"], usage="[album | artist] [timeframe] [size] 'notitle'"
+        name="chart",
+        aliases=["collage"],
+        usage="[album | artist] [timeframe] [size] 'notitle'",
     )
     async def server_chart(self, ctx: commands.Context, *args):
         """
@@ -1269,7 +1331,9 @@ class LastFm(commands.Cog):
         chart_type = "ERROR"
         content_map = {}
         if not tasks:
-            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+            return await ctx.send(
+                "Nobody on this server has connected their last.fm account yet!"
+            )
 
         data = await asyncio.gather(*tasks)
         chart = []
@@ -1287,7 +1351,10 @@ class LastFm(commands.Cog):
                     if name in content_map:
                         content_map[name]["plays"] += plays
                     else:
-                        content_map[name] = {"plays": plays, "image": album["image"][3]["#text"]}
+                        content_map[name] = {
+                            "plays": plays,
+                            "image": album["image"][3]["#text"],
+                        }
 
         elif arguments["method"] == "user.gettopartists":
             chart_type = "top artist"
@@ -1345,12 +1412,18 @@ class LastFm(commands.Cog):
 
         total_linked = len(tasks)
         if not tasks:
-            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+            return await ctx.send(
+                "Nobody on this server has connected their last.fm account yet!"
+            )
 
         data = await asyncio.gather(*tasks)
-        listeners = [(song, member_ref) for song, member_ref in data if song is not None]
+        listeners = [
+            (song, member_ref) for song, member_ref in data if song is not None
+        ]
         if not listeners:
-            return await ctx.send("Nobody on this server is listening to anything at the moment!")
+            return await ctx.send(
+                "Nobody on this server is listening to anything at the moment!"
+            )
 
         total_listening = len(listeners)
         maxlen = 0
@@ -1400,12 +1473,18 @@ class LastFm(commands.Cog):
                         total_listening += 1
                     listeners.append((song, member_ref))
         else:
-            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+            return await ctx.send(
+                "Nobody on this server has connected their last.fm account yet!"
+            )
 
         if not listeners:
-            return await ctx.send("Nobody on this server is listening to anything at the moment!")
+            return await ctx.send(
+                "Nobody on this server is listening to anything at the moment!"
+            )
 
-        listeners = sorted(listeners, key=lambda listener: listener[0].get("date"), reverse=True)
+        listeners = sorted(
+            listeners, key=lambda listener: listener[0].get("date"), reverse=True
+        )
         rows = []
         for song, member in listeners:
             suffix = ""
@@ -1448,7 +1527,11 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(self.get_server_top(lastfm_username, "artist", period=arguments["period"]))
+            tasks.append(
+                self.get_server_top(
+                    lastfm_username, "artist", period=arguments["period"]
+                )
+            )
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1465,7 +1548,9 @@ class LastFm(commands.Cog):
                     else:
                         artist_map[name] = plays
         else:
-            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+            return await ctx.send(
+                "Nobody on this server has connected their last.fm account yet!"
+            )
 
         rows = []
         formatted_timeframe = humanized_period(arguments["period"]).capitalize()
@@ -1474,7 +1559,9 @@ class LastFm(commands.Cog):
             name=f"{ctx.guild} — {formatted_timeframe} top artists",
             icon_url=ctx.guild.icon,
         )
-        content.set_footer(text=f"Taking into account top 100 artists of {total_users} members")
+        content.set_footer(
+            text=f"Taking into account top 100 artists of {total_users} members"
+        )
         for i, (artistname, playcount) in enumerate(
             sorted(artist_map.items(), key=lambda x: x[1], reverse=True), start=1
         ):
@@ -1504,7 +1591,11 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(self.get_server_top(lastfm_username, "album", period=arguments["period"]))
+            tasks.append(
+                self.get_server_top(
+                    lastfm_username, "album", period=arguments["period"]
+                )
+            )
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1522,7 +1613,9 @@ class LastFm(commands.Cog):
                     else:
                         album_map[name] = {"plays": plays, "image": image_url}
         else:
-            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+            return await ctx.send(
+                "Nobody on this server has connected their last.fm account yet!"
+            )
 
         rows = []
         formatted_timeframe = humanized_period(arguments["period"]).capitalize()
@@ -1531,7 +1624,9 @@ class LastFm(commands.Cog):
             name=f"{ctx.guild} — {formatted_timeframe} top albums",
             icon_url=ctx.guild.icon,
         )
-        content.set_footer(text=f"Taking into account top 100 albums of {total_users} members")
+        content.set_footer(
+            text=f"Taking into account top 100 albums of {total_users} members"
+        )
         for i, (albumname, albumdata) in enumerate(
             sorted(album_map.items(), key=lambda x: x[1]["plays"], reverse=True),
             start=1,
@@ -1542,7 +1637,9 @@ class LastFm(commands.Cog):
                 content.set_thumbnail(url=image_url)
 
             playcount = albumdata["plays"]
-            rows.append(f"`#{i:2}` **{playcount}** {format_plays(playcount)} : **{albumname}**")
+            rows.append(
+                f"`#{i:2}` **{playcount}** {format_plays(playcount)} : **{albumname}**"
+            )
 
         await util.send_as_pages(ctx, content, rows, 15)
 
@@ -1561,7 +1658,11 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(self.get_server_top(lastfm_username, "track", period=arguments["period"]))
+            tasks.append(
+                self.get_server_top(
+                    lastfm_username, "track", period=arguments["period"]
+                )
+            )
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1579,7 +1680,9 @@ class LastFm(commands.Cog):
                     else:
                         track_map[name] = {"plays": plays, "artist": artistname}
         else:
-            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+            return await ctx.send(
+                "Nobody on this server has connected their last.fm account yet!"
+            )
 
         rows = []
         formatted_timeframe = humanized_period(arguments["period"]).capitalize()
@@ -1588,7 +1691,9 @@ class LastFm(commands.Cog):
             name=f"{ctx.guild} — {formatted_timeframe} top tracks",
             icon_url=ctx.guild.icon,
         )
-        content.set_footer(text=f"Taking into account top 100 tracks of {total_users} members")
+        content.set_footer(
+            text=f"Taking into account top 100 tracks of {total_users} members"
+        )
         for i, (trackname, trackdata) in enumerate(
             sorted(track_map.items(), key=lambda x: x[1]["plays"], reverse=True),
             start=1,
@@ -1599,7 +1704,9 @@ class LastFm(commands.Cog):
                 content.set_thumbnail(url=image_url)
 
             playcount = trackdata["plays"]
-            rows.append(f"`#{i:2}` **{playcount}** {format_plays(playcount)} : **{trackname}**")
+            rows.append(
+                f"`#{i:2}` **{playcount}** {format_plays(playcount)} : **{trackname}**"
+            )
 
         await util.send_as_pages(ctx, content, rows, 15)
 
@@ -1655,7 +1762,9 @@ class LastFm(commands.Cog):
         if artistname.lower() == "np":
             artistname = (await self.getnowplaying(ctx))["artist"]
             if artistname is None:
-                raise exceptions.CommandWarning("Could not get currently playing artist!")
+                raise exceptions.CommandWarning(
+                    "Could not get currently playing artist!"
+                )
 
         listeners = []
         tasks = []
@@ -1675,7 +1784,9 @@ class LastFm(commands.Cog):
                 if playcount > 0:
                     listeners.append((playcount, member))
         else:
-            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+            return await ctx.send(
+                "Nobody on this server has connected their last.fm account yet!"
+            )
 
         artistname = discord.utils.escape_markdown(artistname)
 
@@ -1717,7 +1828,9 @@ class LastFm(commands.Cog):
             total += playcount
 
         if not rows:
-            return await ctx.send(f"Nobody on this server has listened to **{artistname}**")
+            return await ctx.send(
+                f"Nobody on this server has listened to **{artistname}**"
+            )
 
         content = discord.Embed(title=f"Who knows **{artistname}**?")
         image_url = await self.get_artist_image(artistname)
@@ -1734,7 +1847,9 @@ class LastFm(commands.Cog):
             f"> **{util.displayname(new_king)}** just stole the **{artistname}** crown from **{util.displayname(old_king)}**"
         )
 
-    @commands.command(aliases=["wkt", "whomstknowstrack"], usage="<track> | <artist> 'np'")
+    @commands.command(
+        aliases=["wkt", "whomstknowstrack"], usage="<track> | <artist> 'np'"
+    )
     @commands.guild_only()
     @is_small_server()
     @commands.cooldown(2, 60, type=commands.BucketType.user)
@@ -1752,14 +1867,18 @@ class LastFm(commands.Cog):
             trackname = npd["track"]
             artistname = npd["artist"]
             if None in [trackname, artistname]:
-                raise exceptions.CommandWarning("Could not get currently playing track!")
+                raise exceptions.CommandWarning(
+                    "Could not get currently playing track!"
+                )
         else:
             try:
                 trackname, artistname = [x.strip() for x in track.split("|")]
                 if "" in (trackname, artistname):
                     raise ValueError
             except ValueError:
-                raise exceptions.CommandWarning("Incorrect format! use `track | artist`")
+                raise exceptions.CommandWarning(
+                    "Incorrect format! use `track | artist`"
+                )
 
         listeners = []
         tasks = []
@@ -1770,7 +1889,9 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(self.get_playcount_track(artistname, trackname, lastfm_username, member))
+            tasks.append(
+                self.get_playcount_track(artistname, trackname, lastfm_username, member)
+            )
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1779,7 +1900,9 @@ class LastFm(commands.Cog):
                 if playcount > 0:
                     listeners.append((playcount, user))
         else:
-            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+            return await ctx.send(
+                "Nobody on this server has connected their last.fm account yet!"
+            )
 
         artistname = discord.utils.escape_markdown(artistname)
         trackname = discord.utils.escape_markdown(trackname)
@@ -1810,7 +1933,9 @@ class LastFm(commands.Cog):
 
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.command(aliases=["wka", "whomstknowsalbum"], usage="<album> | <artist> 'np'")
+    @commands.command(
+        aliases=["wka", "whomstknowsalbum"], usage="<album> | <artist> 'np'"
+    )
     @commands.guild_only()
     @is_small_server()
     @commands.cooldown(2, 60, type=commands.BucketType.user)
@@ -1828,14 +1953,18 @@ class LastFm(commands.Cog):
             albumname = npd["album"]
             artistname = npd["artist"]
             if None in [albumname, artistname]:
-                raise exceptions.CommandWarning("Could not get currently playing album!")
+                raise exceptions.CommandWarning(
+                    "Could not get currently playing album!"
+                )
         else:
             try:
                 albumname, artistname = [x.strip() for x in album.split("|")]
                 if "" in (albumname, artistname):
                     raise ValueError
             except ValueError:
-                raise exceptions.CommandWarning("Incorrect format! use `album | artist`")
+                raise exceptions.CommandWarning(
+                    "Incorrect format! use `album | artist`"
+                )
 
         listeners = []
         tasks = []
@@ -1846,7 +1975,9 @@ class LastFm(commands.Cog):
             if member is None:
                 continue
 
-            tasks.append(self.get_playcount_album(artistname, albumname, lastfm_username, member))
+            tasks.append(
+                self.get_playcount_album(artistname, albumname, lastfm_username, member)
+            )
 
         if tasks:
             data = await asyncio.gather(*tasks)
@@ -1855,7 +1986,9 @@ class LastFm(commands.Cog):
                 if playcount > 0:
                     listeners.append((playcount, user))
         else:
-            return await ctx.send("Nobody on this server has connected their last.fm account yet!")
+            return await ctx.send(
+                "Nobody on this server has connected their last.fm account yet!"
+            )
 
         artistname = discord.utils.escape_markdown(artistname)
         albumname = discord.utils.escape_markdown(albumname)
@@ -1931,7 +2064,9 @@ class LastFm(commands.Cog):
             trackname = npd["track"]
             artistname = npd["artist"]
             if None in [trackname, artistname]:
-                return await ctx.send(":warning: Could not get currently playing track!")
+                return await ctx.send(
+                    ":warning: Could not get currently playing track!"
+                )
             query = artistname + " " + trackname
 
         genius = Genius(self.bot)
@@ -1956,7 +2091,7 @@ class LastFm(commands.Cog):
                     except ValueError:
                         return False
                     else:
-                        return num <= len(results) and num > 0
+                        return len(results) <= num > 0
                 else:
                     return False
 
@@ -2051,7 +2186,6 @@ class LastFm(commands.Cog):
     async def listening_report(self, ctx: commands.Context, timeframe):
         current_day_floor = arrow.utcnow().floor("day")
         week = []
-        # for i in range(7, 0, -1):
         for i in range(1, 8):
             dt = current_day_floor.shift(days=-i)
             week.append(
@@ -2108,7 +2242,6 @@ class LastFm(commands.Cog):
             value=f"{scrobbles_average} Scrobbles",
             inline=False,
         )
-        # content.add_field(name="Listening time", value=listening_time)
         await ctx.send(embed=content)
 
     async def get_artist_image(self, artist):
@@ -2160,7 +2293,9 @@ class LastFm(commands.Cog):
                     if ignore_errors:
                         return None
                     text = await response.text()
-                    raise exceptions.LastFMError(error_code=response.status, message=text)
+                    raise exceptions.LastFMError(
+                        error_code=response.status, message=text
+                    )
 
                 if content is None:
                     raise exceptions.LastFMError(
@@ -2181,7 +2316,7 @@ class LastFm(commands.Cog):
                     message=content.get("message"),
                 )
 
-    async def custom_period(self, user, group_by, shift_hours=24):
+    async def custom_period(self, user, group_by, shift_hours=24, limit=None):
         """Parse recent tracks to get custom duration data (24 hour)"""
         limit_timestamp = arrow.utcnow().shift(hours=-shift_hours)
         data = await self.api_request(
@@ -2189,7 +2324,7 @@ class LastFm(commands.Cog):
                 "user": user,
                 "method": "user.getrecenttracks",
                 "from": limit_timestamp.int_timestamp,
-                "limit": 200,
+                "limit": 300,
             }
         )
         loops = int(data["recenttracks"]["@attr"]["totalPages"])
@@ -2200,7 +2335,7 @@ class LastFm(commands.Cog):
                         "user": user,
                         "method": "user.getrecenttracks",
                         "from": limit_timestamp.int_timestamp,
-                        "limit": 200,
+                        "limit": 300,
                         "page": i,
                     }
                 )
@@ -2221,7 +2356,11 @@ class LastFm(commands.Cog):
                         "image": track["image"],
                     }
 
-            albumsdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
+            albumsdata = sorted(
+                formatted_data.values(), key=lambda x: x["playcount"], reverse=True
+            )
+            if limit:
+                albumsdata = albumsdata[:limit]
             return {
                 "topalbums": {
                     "album": albumsdata,
@@ -2246,7 +2385,11 @@ class LastFm(commands.Cog):
                         "image": track["image"],
                     }
 
-            tracksdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
+            tracksdata = sorted(
+                formatted_data.values(), key=lambda x: x["playcount"], reverse=True
+            )
+            if limit:
+                tracksdata = tracksdata[:limit]
             return {
                 "toptracks": {
                     "track": tracksdata,
@@ -2269,7 +2412,11 @@ class LastFm(commands.Cog):
                         "image": track["image"],
                     }
 
-            artistdata = sorted(formatted_data.values(), key=lambda x: x["playcount"], reverse=True)
+            artistdata = sorted(
+                formatted_data.values(), key=lambda x: x["playcount"], reverse=True
+            )
+            if limit:
+                artistdata = artistdata[:limit]
             return {
                 "topartists": {
                     "artist": artistdata,
@@ -2289,7 +2436,11 @@ class LastFm(commands.Cog):
         if data is not None:
             try:
                 tracks = data["recenttracks"]["track"]
-                if tracks and "@attr" in tracks[0] and "nowplaying" in tracks[0]["@attr"]:
+                if (
+                    tracks
+                    and "@attr" in tracks[0]
+                    and "nowplaying" in tracks[0]["@attr"]
+                ):
                     song = {
                         "artist": tracks[0]["artist"]["#text"],
                         "name": tracks[0]["name"],
@@ -2423,7 +2574,9 @@ class LastFm(commands.Cog):
         return count, reference, name
 
     async def scrape_artist_image(self, artist):
-        url = f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
+        url = (
+            f"https://www.last.fm/music/{urllib.parse.quote_plus(str(artist))}/+images"
+        )
         data, error = await fetch_html(self.bot, url)
         if error:
             return None
@@ -2457,9 +2610,11 @@ class LastFm(commands.Cog):
                 raise exceptions.LastFMError(0, error)
 
             soup = BeautifulSoup(data, "lxml")
-            imagedivs = soup.findAll("td", {"class": "chartlist-image"})
+            tbody = soup.findAll("tbody", {"data-playlisting-add-entries": ""})[-2]
+            imagedivs = tbody.findAll("td", {"class": "chartlist-image"})
             images += [
-                div.find("img")["src"].replace("/avatar70s/", "/300x300/") for div in imagedivs
+                div.find("img")["src"].replace("/avatar70s/", "/300x300/")
+                for div in imagedivs
             ]
 
         return images
@@ -2597,7 +2752,7 @@ async def fetch_html(bot: MisoBot, url: str, params: Optional[dict] = None):
     """Returns tuple of (data, error)"""
     headers = headers = {
         "Host": "www.last.fm",
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0",
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/114.0",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "fi,en;q=0.7,en-US;q=0.3",
         "Accept-Encoding": "gzip, deflate, br",
@@ -2646,7 +2801,8 @@ async def username_to_ctx(ctx: commands.Context):
         ctx.usertarget.id,
     )
     if not ctx.username and (
-        not ctx.invoked_subcommand or ctx.invoked_subcommand.name not in ["set", "blacklist"]
+        not ctx.invoked_subcommand
+        or ctx.invoked_subcommand.name not in ["set", "blacklist"]
     ):
         if not ctx.foreign_target:
             msg = f"No last.fm username saved! Please use `{ctx.prefix}fm set` to save your username (last.fm account required)"
@@ -2664,7 +2820,7 @@ def remove_mentions(text):
 def get_list_contents(soup):
     """Scrape lastfm for listing pages"""
     try:
-        chartlist = soup.find("tbody", {"data-playlisting-add-entries": ""})
+        chartlist = soup.findAll("tbody", {"data-playlisting-add-entries": ""})[-2]
     except ValueError:
         return []
 
