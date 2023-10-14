@@ -82,6 +82,9 @@ def main():
         extensions=extensions + ([] if developer_mode else infrastructure_extensions),
         default_prefix=prefix,
     )
+    if developer_mode:
+        bot.debug = True
+
     bot.run(TOKEN, log_handler=None)
 
 

@@ -136,7 +136,8 @@ class LastFmApi:
             "format": "json",
         } | {k: v for k, v in params.items() if v is not None}
 
-        print(request_params)
+        if self.bot.debug:
+            logger.info(request_params)
 
         async with self.bot.session.get(
             self.API_BASE_URL, params=request_params

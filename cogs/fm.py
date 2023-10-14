@@ -10,7 +10,7 @@ import re
 import urllib.parse
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Annotated, Callable, Literal, Optional, Union
+from typing import TYPE_CHECKING, Annotated, Any, Callable, Literal, Optional, Union
 
 import arrow
 import discord
@@ -179,11 +179,11 @@ class AlbumArgument(StrOrNp):
 class LastFm(commands.Cog):
     """LastFM commands"""
 
-    ICON = "🎵"
     LASTFM_RED = "e31c23"
     LASTFM_ICON_URL = "https://i.imgur.com/dMeDkPH.jpg"
 
     def __init__(self, bot):
+        self.icon = "🎵"
         self.bot: MisoBot = bot
         self.api = LastFmApi(bot)
 
@@ -654,7 +654,10 @@ class LastFm(commands.Cog):
         soup = await self.api.scrape_page(url, authenticated=True)
 
         try:
-            albumsdiv, tracksdiv = soup.select(".chartlist", limit=2)
+            chartlists = soup.select(".chartlist")
+            # there are "ghost" chartlists that mess up web scraping
+            albumsdiv = chartlists[1]
+            tracksdiv = chartlists[3]
         except ValueError:
             return raise_no_artist_plays(artist, timeframe)
 
@@ -674,7 +677,7 @@ class LastFm(commands.Cog):
 
         username = util.displayname(ctx.lfm.target_user, escape=False)
         content.set_author(
-            name=f"{username} — {formatted_name} — "
+            name=f"{username} | {formatted_name} — "
             + (
                 f"{timeframe.display().capitalize()} overview"
                 if timeframe != timeframe.OVERALL
@@ -750,13 +753,12 @@ class LastFm(commands.Cog):
             inline=render_inline,
         )
 
-        content.description = (
-            artistinfo["bio"]["summary"]
-            .split("<a href")[0]
-            .strip()
-            .replace("\n\n\n", "\n\n")
-            + f" [read more]({artistinfo['url']})"
-        )
+        artist_bio = artistinfo["bio"]["summary"].split("<a href")[0].strip()
+        if artist_bio:
+            content.description = (
+                artist_bio.replace("\n\n\n", "\n\n")
+                + f" [read more]({artistinfo['url']})"
+            )
 
         content.set_footer(
             text=", ".join([x["name"] for x in artistinfo["tags"]["tag"]])
@@ -1015,7 +1017,7 @@ class LastFm(commands.Cog):
         )
 
         username = util.displayname(ctx.lfm.target_user)
-        caption = f"**{username} — {timeframe.display()} {size} {chart_title} collage**"
+        caption = f"**{username} | {timeframe.display()} {size} {chart_title} collage**"
         filename = (
             f"miso_collage_{ctx.lfm.username}_"
             f"{timeframe}_{arrow.now().int_timestamp}.jpg"
@@ -1121,6 +1123,80 @@ class LastFm(commands.Cog):
             return []
 
         return data
+
+    async def task_for_each_server_member(
+        self, guild: discord.Guild, task: asyncio.Future, *args, **kwargs
+    ):
+        tasks = []
+        for user_id, lastfm_username in await self.server_lastfm_usernames(guild):
+            member = guild.get_member(user_id)
+            if member is None:
+                continue
+
+            tasks.append(
+                task_wrapper(
+                    task(lastfm_username, *args, **kwargs),
+                    member,
+                )
+            )
+
+        if not tasks:
+            return None
+
+        return await asyncio.gather(*tasks)
+
+    @fm.group(aliases=["s"])
+    @commands.guild_only()
+    @is_small_server()
+    @commands.cooldown(2, 60, type=commands.BucketType.user)
+    async def server(
+        self,
+        ctx: MisoContext,
+    ):
+        await util.command_group_help(ctx)
+
+    @server.command(name="nowplaying", aliases=["np"])
+    async def server_nowplaying(self, ctx: MisoContext):
+        """What this server is currently listening to"""
+        data = await self.task_for_each_server_member(
+            ctx.guild, self.api.user_get_now_playing
+        )
+
+        if data is None:
+            return await ctx.send(
+                "Nobody on this server has connected their Last.fm account yet!"
+            )
+
+        rows = []
+        for member_data, member in data:
+            if not member_data["nowplaying"]:
+                continue
+
+            artist_name = member_data["artist"]["#text"]
+            track_name = member_data["name"]
+
+            rows.append(
+                f"{util.displayname(member)} | **{escape_markdown(artist_name)}** "
+                f"— ***{escape_markdown(track_name)}***"
+            )
+
+        if not rows:
+            return await ctx.send(
+                "Nobody on this server is listening to anything at the moment!"
+            )
+
+        content = (
+            discord.Embed(color=int(self.LASTFM_RED, 16))
+            .set_author(
+                name=f"What is {ctx.guild.name} listening to?",
+                icon_url=ctx.guild.icon,
+            )
+            .set_footer(
+                text=f"{len(rows)} / {len(data)} Members are listening to music"
+            )
+        )
+
+        await RowPaginator(content, rows).run(ctx)
 
     async def user_ranking(
         self, ctx: MisoContext, playcount_fn: Callable, ranking_of: str
@@ -1524,3 +1600,8 @@ def raise_no_artist_plays(artist: str, timeframe: Period):
         if timeframe == Period.OVERALL
         else f"You have not listened to **{artist_escaped}** in the past {timeframe}!"
     )
+
+
+async def task_wrapper(task: asyncio.Future, ref: Any):
+    result = await task
+    return result, ref

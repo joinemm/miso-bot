@@ -95,6 +95,7 @@ class MisoBot(commands.AutoShardedBot):
         self.db = maria.MariaDB()
         self.cache = cache.Cache(self)
         self.keychain = Keychain()
+        self.debug = False
         self.version = "5.1"
         self.extensions_loaded = False
         self.redis: Redis = Redis()
@@ -191,7 +192,9 @@ class MisoBot(commands.AutoShardedBot):
         bucket = ctx.bot.global_cd.get_bucket(ctx.message)
         if bucket:
             if retry_after := bucket.update_rate_limit():
-                raise commands.CommandOnCooldown(bucket, retry_after, commands.BucketType.member)
+                raise commands.CommandOnCooldown(
+                    bucket, retry_after, commands.BucketType.member
+                )
         return True
 
     @property
