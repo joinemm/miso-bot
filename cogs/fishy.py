@@ -325,6 +325,104 @@ class Fishy(commands.Cog):
         )
         return 0
 
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def fishytransfer(
+        self,
+        ctx: commands.Context,
+        user_from: int,
+        user_to: int,
+    ):
+        """Transfer fishing data from one account to another"""
+        data = await self.bot.db.fetch_row(
+            """
+            SELECT fishy_count, fishy_gifted_count, biggest_fish,
+                trash, common, uncommon, rare, legendary
+                FROM fishy JOIN fish_type
+                    ON fishy.user_id = fish_type.user_id
+                WHERE fishy.user_id = %s
+            """,
+            user_from,
+        )
+
+        olddata = await self.bot.db.fetch_row(
+            """
+            SELECT fishy_count, fishy_gifted_count, biggest_fish,
+                trash, common, uncommon, rare, legendary
+                FROM fishy JOIN fish_type
+                    ON fishy.user_id = fish_type.user_id
+                WHERE fishy.user_id = %s
+            """,
+            user_to,
+        )
+
+        if not data:
+            return await ctx.send(f"User {user_from} has no data!")
+
+        await self.bot.db.execute(
+            """
+            INSERT INTO fishy (user_id, fishy_count, fishy_gifted_count, biggest_fish)
+                VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                fishy_count = fishy_count + VALUES(fishy_count),
+                fishy_gifted_count = fishy_gifted_count + VALUES(fishy_gifted_count),
+                biggest_fish = GREATEST(biggest_fish, VALUES(biggest_fish))
+            """,
+            user_to,
+            data[0],
+            data[1],
+            data[2],
+        )
+        for catch, amount in [
+            ("trash", data[3]),
+            ("common", data[4]),
+            ("uncommon", data[5]),
+            ("rare", data[6]),
+            ("legendary", data[7]),
+        ]:
+            await self.bot.db.execute(
+                f"""
+                INSERT INTO fish_type (user_id, {catch})
+                    VALUES (%s, %s)
+                ON DUPLICATE KEY UPDATE
+                    {catch} = {catch} + VALUES({catch})
+                """,
+                user_to,
+                amount,
+            )
+
+        newdata = await self.bot.db.fetch_row(
+            """
+            SELECT fishy_count, fishy_gifted_count, biggest_fish,
+                trash, common, uncommon, rare, legendary
+                FROM fishy JOIN fish_type
+                    ON fishy.user_id = fish_type.user_id
+                WHERE fishy.user_id = %s
+            """,
+            user_to,
+        )
+
+        await self.bot.db.execute(
+            """
+            DELETE FROM fishy WHERE user_id = %s
+            """,
+            user_from,
+        )
+
+        await self.bot.db.execute(
+            """
+            DELETE FROM fish_type WHERE user_id = %s
+            """,
+            user_from,
+        )
+
+        await ctx.send(
+            f"{user_from} = `{data}`\n"
+            f"{user_to} = `{olddata}`\n"
+            "- moving data...\n- data is now:\n"
+            f"{user_to} = `{newdata}`\n"
+        )
+
 
 async def setup(bot):
     await bot.add_cog(Fishy(bot))
