@@ -689,12 +689,13 @@ async def color_from_image_url(
 async def rgb_from_image_url(session: aiohttp.ClientSession, url: str) -> Rgb | None:
     try:
         async with session.get(url) as response:
+            response.raise_for_status()
             image = Image.open(io.BytesIO(await response.read()))
             colors = await asyncio.get_running_loop().run_in_executor(
                 None, lambda: colorgram.extract(image, 1)
             )
             return colors[0].rgb
-    except aiohttp.InvalidURL:
+    except (aiohttp.InvalidURL, aiohttp.ClientError):
         return None
 
 

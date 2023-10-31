@@ -4,6 +4,7 @@
 
 import logging  # noqa: F401
 import os
+import signal
 import sys
 
 import uvloop
@@ -88,5 +89,15 @@ def main():
     bot.run(TOKEN, log_handler=None)
 
 
+# Docker by default sends a SIGTERM to a container
+# and waits 10 seconds for it to stop before killing it with a SIGKILL.
+# This makes ctrl-c work as normal even in a docker container.
+
+
+def handle_sigterm(*args):
+    raise KeyboardInterrupt(*args)
+
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, handle_sigterm)
     main()

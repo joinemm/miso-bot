@@ -64,7 +64,7 @@ class PeriodArgument(commands.Converter):
                 return Period.OVERALL
             case _:
                 raise commands.BadArgument(
-                    f"Cannot convert `{argument}` into a timeframe"
+                    f"Cannot convert `{argument}` into a timeframe."
                 )
 
 
@@ -83,10 +83,7 @@ class ArtistSubcommand(Enum):
             case "overview" | "ov" | "profile":
                 return cls.OVERVIEW
             case _:
-                raise commands.BadArgument(f"No such command `{argument}`")
-
-
-# maybe possible to combine these classes so convert fn in real dataclass
+                raise commands.BadArgument(f"No such command `{argument}`.")
 
 
 @dataclass
@@ -110,9 +107,33 @@ class ChartSizeArgument:
             try:
                 size = ChartSize(*map(lambda n: int(n), argument.split("x")))
             except ValueError:
-                raise commands.BadArgument(f"Cannot convert `{argument}` to size")
+                raise commands.BadArgument(
+                    f"Cannot convert `{argument}` into a chart size."
+                )
 
         return size
+
+
+class ChartOption:
+    options = [
+        "album",
+        "artist",
+        "recent",
+        "notitle",
+        "recents",
+        "padded",
+        "topster",
+    ]
+
+    async def convert(self, ctx: MisoContext, argument: str):
+        argument = argument.lower()
+        if argument not in self.options:
+            raise commands.BadArgument(
+                f"Unrecognized option `{argument}`. "
+                f"Valid options are: {', '.join(f'`{x}`' for x in self.options)}."
+            )
+
+        return argument
 
 
 class StrOrNp:
@@ -153,7 +174,7 @@ class TrackArgument(StrOrNp):
             splits = argument.split(" by ")
         if len(splits) < 2:
             raise commands.BadArgument(
-                "Invalid format! Please use `<track> | <artist>`. Example: `one | `metallica"
+                "Invalid format! Please use `<track> | <artist>`. Example: `one | metallica`."
             )
 
         return [s.strip() for s in splits]
@@ -170,7 +191,7 @@ class AlbumArgument(StrOrNp):
         if len(splits) < 2:
             raise commands.BadArgument(
                 "Invalid format! Please use `<album> | <artist>`. "
-                "Example: `Master of Puppets | Metallica`"
+                "Example: `Master of Puppets | Metallica`."
             )
 
         return [s.strip() for s in splits]
@@ -213,7 +234,7 @@ class LastFm(commands.Cog):
         )
         await util.send_success(
             ctx,
-            f"Nowplaying reactions for your messages turned **{'on' if status else 'off'}**",
+            f"Nowplaying reactions for your messages turned **{'on' if status else 'off'}**.",
         )
 
     @voting.command(name="upvote")
@@ -231,7 +252,7 @@ class LastFm(commands.Cog):
             ctx.author.id,
             emoji,
         )
-        await util.send_success(ctx, f"Your upvote reaction emoji is now {emoji}")
+        await util.send_success(ctx, f"Your upvote reaction emoji is now {emoji}.")
 
     @voting.command(name="downvote")
     @util.patrons_only()
@@ -248,7 +269,7 @@ class LastFm(commands.Cog):
             ctx.author.id,
             emoji,
         )
-        await util.send_success(ctx, f"Your downvote reaction emoji is now {emoji}")
+        await util.send_success(ctx, f"Your downvote reaction emoji is now {emoji}.")
 
     @fm.group(name="blacklist")
     @commands.has_permissions(manage_guild=True)
@@ -318,7 +339,7 @@ class LastFm(commands.Cog):
         if content is None:
             raise exceptions.CommandWarning(
                 f"Last.fm profile `{username}` was not found. "
-                "Make sure you gave the username **without brackets**"
+                "Make sure you gave the username **without brackets**."
             )
 
         await self.bot.db.execute(
@@ -350,7 +371,9 @@ class LastFm(commands.Cog):
             ctx.author.id,
             None,
         )
-        await ctx.send(":broken_heart: Removed your Last.fm username from the database")
+        await ctx.send(
+            ":broken_heart: Removed your Last.fm username from the database."
+        )
 
     @fm.command()
     async def profile(self, ctx: MisoContext):
@@ -896,35 +919,31 @@ class LastFm(commands.Cog):
 
     @fm.command(
         aliases=["collage"],
-        usage="['album' | 'artist' | 'recent'] [timeframe] "
-        "[[width]x[height]] ['notitle' | 'topster'] ['padded']",
+        usage=(
+            "[timeframe] [[width]x[height]] "
+            "['album' | 'artist' | 'recent' | 'notitle' | 'topster' | 'padded']"
+        ),
     )
     async def chart(
         self,
         ctx: MisoContext,
         *args: Union[
-            Literal[
-                "album",
-                "artist",
-                "recent",
-                "notitle",
-                "recents",
-                "padded",
-                "topster",
-            ],
             Annotated[Period, PeriodArgument],
             Annotated[ChartSize, ChartSizeArgument],
+            ChartOption,
         ],
     ):
         """
         Collage of your top albums or artists
 
         Usage:
-            >fm chart ['album' | 'artist' | 'recent'] [timeframe]
-                      [[width]x[height]] ['notitle' | 'topster'] ['padded']
+            >fm chart [timeframe] [[width]x[height]]
+                      ['album' | 'artist' | 'recent' | 'notitle' | 'topster' | 'padded']"
+
+        Defaults to 3x3 weekly albums chart.
 
         Examples:
-            >fm chart (defaults to 3x3 weekly albums)
+            >fm chart
             >fm chart 5x5 month
             >fm chart artist
             >fm chart 4x5 year notitle
@@ -1192,11 +1211,232 @@ class LastFm(commands.Cog):
                 icon_url=ctx.guild.icon,
             )
             .set_footer(
-                text=f"{len(rows)} / {len(data)} Members are listening to music"
+                text=f"{len(rows)} / {len(data)} Members are listening to music right now"
             )
         )
 
         await RowPaginator(content, rows).run(ctx)
+
+    @server.command(name="recent", aliases=["re", "recents"])
+    async def server_recent(self, ctx: MisoContext):
+        """What this server has recently listened to"""
+        data = await self.task_for_each_server_member(
+            ctx.guild, self.api.user_get_recent_tracks
+        )
+
+        if data is None:
+            return await ctx.send(
+                "Nobody on this server has connected their Last.fm account yet!"
+            )
+
+        rows = []
+        for member_data, member in data:
+            suffix = ""
+            if member_data["nowplaying"]:
+                suffix = " :musical_note:"
+
+            artist_name = member_data["artist"]["#text"]
+            track_name = member_data["name"]
+
+            rows.append(
+                f"{util.displayname(member)} | **{escape_markdown(artist_name)}** "
+                f"— ***{escape_markdown(track_name)}***{suffix}"
+            )
+
+        if not rows:
+            return await ctx.send("Nobody on this server has listened to anything!")
+
+        content = (
+            discord.Embed(color=int(self.LASTFM_RED, 16))
+            .set_author(
+                name=f"What has {ctx.guild.name} been listening to?",
+                icon_url=ctx.guild.icon,
+            )
+            .set_footer(
+                text=f"{len(rows)} / {len(data)} Members are listening to music right now"
+            )
+        )
+
+        await RowPaginator(content, rows).run(ctx)
+
+    @server.command(name="topartists", aliases=["ta"], usage="[timeframe]")
+    async def server_topartists(
+        self,
+        ctx: MisoContext,
+        timeframe: Annotated[Period, PeriodArgument] = Period.OVERALL,
+    ):
+        """Combined top artists of server members"""
+        data = await self.task_for_each_server_member(
+            ctx.guild, self.api.user_get_top_artists, limit=100, period=timeframe
+        )
+
+        if data is None:
+            return await ctx.send(
+                "Nobody on this server has connected their Last.fm account yet!"
+            )
+
+        artist_map = {}
+        for member_data, member in data:
+            artists = member_data["artist"]
+            lowest_playcount = int(artists[-1]["playcount"])
+            highest_playcount = int(artists[0]["playcount"])
+            for artist in artists:
+                playcount = int(artist["playcount"])
+                score = playcount_mapped(
+                    playcount,
+                    input_start=lowest_playcount,
+                    input_end=highest_playcount,
+                )
+
+                name = artist["name"]
+
+                try:
+                    artist_map[name]["score"] += score
+                    artist_map[name]["playcount"] += playcount
+                except KeyError:
+                    artist_map[name] = {"score": score, "playcount": playcount}
+
+        top_artists = sorted(
+            artist_map.items(), key=lambda x: x[1]["score"], reverse=True
+        )[:100]
+
+        rows = []
+        for i, (artist, artist_data) in enumerate(top_artists, start=1):
+            rows.append(
+                f"`#{i:2}` **{artist_data['score'] / len(data):.2f}%** /"
+                f" **{artist_data['playcount']}** plays • **{artist}**"
+            )
+
+        await self.paginated_user_stat_embed(
+            ctx,
+            rows,
+            f"Top 100 Artists ({timeframe.display()})",
+            image=await self.api.get_artist_image(top_artists[0][0]),
+            footer=f"Score calculated from top 100 artists of {len(data)} members",
+            server_target=True,
+        )
+
+    @server.command(name="toptracks", aliases=["tt"], usage="[timeframe]")
+    async def server_toptracks(
+        self,
+        ctx: MisoContext,
+        timeframe: Annotated[Period, PeriodArgument] = Period.OVERALL,
+    ):
+        """Combined top tracks of server members"""
+        data = await self.task_for_each_server_member(
+            ctx.guild, self.api.user_get_top_tracks, limit=100, period=timeframe
+        )
+
+        if data is None:
+            return await ctx.send(
+                "Nobody on this server has connected their Last.fm account yet!"
+            )
+
+        track_map = {}
+        for member_data, member in data:
+            tracks = member_data["track"]
+            lowest_playcount = int(tracks[-1]["playcount"])
+            highest_playcount = int(tracks[0]["playcount"])
+            for track in tracks:
+                playcount = int(track["playcount"])
+                score = playcount_mapped(
+                    playcount,
+                    input_start=lowest_playcount,
+                    input_end=highest_playcount,
+                )
+
+                name = (
+                    f"**{escape_markdown(track['artist']['name'])}** — "
+                    f"***{escape_markdown(track['name'])}***"
+                )
+                try:
+                    track_map[name]["score"] += score
+                    track_map[name]["playcount"] += playcount
+                except KeyError:
+                    track_map[name] = {"score": score, "playcount": playcount}
+
+        top_tracks = sorted(
+            track_map.items(), key=lambda x: x[1]["score"], reverse=True
+        )[:100]
+
+        rows = []
+        for i, (track, track_data) in enumerate(top_tracks, start=1):
+            rows.append(
+                f"`#{i:2}` **{track_data['score'] / len(data):.2f}%** /"
+                f" **{track_data['playcount']}** plays • {track}"
+            )
+
+        await self.paginated_user_stat_embed(
+            ctx,
+            rows,
+            f"Top 100 Tracks ({timeframe.display()})",
+            image=await self.api.get_artist_image(
+                top_tracks[0][0].split(" — ")[0].strip("*")
+            ),
+            footer=f"Score calculated from top 100 tracks of {len(data)} members",
+            server_target=True,
+        )
+
+    @server.command(name="topalbums", aliases=["talb"], usage="[timeframe]")
+    async def server_topalbums(
+        self,
+        ctx: MisoContext,
+        timeframe: Annotated[Period, PeriodArgument] = Period.OVERALL,
+    ):
+        """Combined top albums of server members"""
+        data = await self.task_for_each_server_member(
+            ctx.guild, self.api.user_get_top_albums, limit=100, period=timeframe
+        )
+
+        if data is None:
+            return await ctx.send(
+                "Nobody on this server has connected their Last.fm account yet!"
+            )
+
+        album_map = {}
+        for member_data, member in data:
+            albums = member_data["album"]
+            lowest_playcount = int(albums[-1]["playcount"])
+            highest_playcount = int(albums[0]["playcount"])
+            for album in albums:
+                playcount = int(album["playcount"])
+                score = playcount_mapped(
+                    playcount,
+                    input_start=lowest_playcount,
+                    input_end=highest_playcount,
+                )
+
+                name = (
+                    f"**{escape_markdown(album['artist']['name'])}** — "
+                    f"***{escape_markdown(album['name'])}***"
+                )
+                try:
+                    album_map[name]["score"] += score
+                    album_map[name]["playcount"] += playcount
+                except KeyError:
+                    album_map[name] = {"score": score, "playcount": playcount}
+
+        top_albums = sorted(
+            album_map.items(), key=lambda x: x[1]["score"], reverse=True
+        )[:100]
+
+        rows = []
+        for i, (album, album_data) in enumerate(top_albums, start=1):
+            rows.append(
+                f"`#{i:2}` **{album_data['score'] / len(data):.2f}%** /"
+                f" **{album_data['playcount']}** plays • {album}"
+            )
+
+        await self.paginated_user_stat_embed(
+            ctx,
+            rows,
+            f"Top 100 Tracks ({timeframe.display()})",
+            image=await self.api.get_artist_image(
+                top_albums[0][0].split(" — ")[0].strip("*")
+            ),
+            footer=f"Score calculated from top 100 albums of {len(data)} members",
+            server_target=True,
+        )
 
     async def user_ranking(
         self, ctx: MisoContext, playcount_fn: Callable, ranking_of: str
@@ -1447,6 +1687,7 @@ class LastFm(commands.Cog):
         footer: Optional[str] = None,
         title_url: Optional[str] = None,
         content: Optional[discord.Embed] = None,
+        server_target: Optional[bool] = False,
         **kwargs,
     ):
         if content is None:
@@ -1456,11 +1697,18 @@ class LastFm(commands.Cog):
             content.color = await self.image_color(image)
             content.set_thumbnail(url=image.as_full())
 
-        content.set_author(
-            name=f"{util.displayname(ctx.lfm.target_user, escape=False)} | {title}",
-            icon_url=ctx.lfm.target_user.display_avatar.url,
-            url=title_url,
-        )
+        if server_target:
+            content.set_author(
+                name=f"{ctx.guild.name} | {title}",
+                icon_url=ctx.guild.icon.url if ctx.guild.icon is not None else None,
+                url=title_url,
+            )
+        else:
+            content.set_author(
+                name=f"{util.displayname(ctx.lfm.target_user, escape=False)} | {title}",
+                icon_url=ctx.lfm.target_user.display_avatar.url,
+                url=title_url,
+            )
 
         if footer:
             content.set_footer(text=footer)
@@ -1605,3 +1853,17 @@ def raise_no_artist_plays(artist: str, timeframe: Period):
 async def task_wrapper(task: asyncio.Future, ref: Any):
     result = await task
     return result, ref
+
+
+def playcount_mapped(
+    x: int,
+    input_start: int,
+    input_end: int,
+    output_start: int = 1,
+    output_end: int = 100,
+):
+    score = (x - input_start) / (input_end - input_start) * (
+        output_end - output_start
+    ) + output_start
+
+    return score
