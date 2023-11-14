@@ -8,7 +8,7 @@ aiodns==3.0.0
     # via discord-py
 aiofiles==22.1.0
     # via shazamio
-aiohttp==3.8.5
+aiohttp==3.8.6
     # via
     #   -r requirements.in
     #   aiohttp-cors
