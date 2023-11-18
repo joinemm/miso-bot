@@ -4,13 +4,13 @@
 #
 #    pip-compile --resolver=backtracking dev-requirements.in
 #
-astroid==2.15.6
+astroid==3.0.1
     # via pylint
-black==23.7.0
+black==23.11.0
     # via -r dev-requirements.in
-cfgv==3.3.1
+cfgv==3.4.0
     # via pre-commit
-click==8.1.6
+click==8.1.7
     # via
     #   -c requirements.txt
     #   black
@@ -18,16 +18,14 @@ dill==0.3.7
     # via pylint
 distlib==0.3.7
     # via virtualenv
-filelock==3.12.2
+filelock==3.13.1
     # via virtualenv
-identify==2.5.26
+identify==2.5.31
     # via pre-commit
 isort==5.12.0
     # via
     #   -r dev-requirements.in
     #   pylint
-lazy-object-proxy==1.9.0
-    # via astroid
 mccabe==0.7.0
     # via pylint
 mypy-extensions==1.0.0
@@ -36,35 +34,31 @@ nodeenv==1.8.0
     # via
     #   pre-commit
     #   pyright
-packaging==23.1
+packaging==23.2
     # via
     #   -c requirements.txt
     #   black
-pathspec==0.11.1
+pathspec==0.11.2
     # via black
-platformdirs==3.9.1
+platformdirs==3.11.0
     # via
     #   black
     #   pylint
     #   virtualenv
-pre-commit==3.3.3
+pre-commit==3.5.0
     # via -r dev-requirements.in
-pylint==2.17.4
+pylint==3.0.2
     # via -r dev-requirements.in
-pyright==1.1.318
+pyright==1.1.336
     # via -r dev-requirements.in
 pyyaml==6.0.1
     # via pre-commit
-ruff==0.0.280
+ruff==0.1.6
     # via -r dev-requirements.in
-tomlkit==0.11.8
+tomlkit==0.12.3
     # via pylint
-virtualenv==20.24.1
+virtualenv==20.24.6
     # via pre-commit
-wrapt==1.15.0
-    # via
-    #   -c requirements.txt
-    #   astroid
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
