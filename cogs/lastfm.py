@@ -675,6 +675,10 @@ class LastFm(commands.Cog):
         album_name = data["recenttracks"]["track"][0]["album"]["#text"]
 
         async with self.bot.session.get(big_image_url) as response:
+            if not response.ok:
+                raise exceptions.CommandError(
+                    f"Unable to download image (HTTP {response.status})"
+                )
             buffer = io.BytesIO(await response.read())
             await ctx.send(
                 f"**{artist_name} — {album_name}**",
