@@ -163,7 +163,7 @@ class BaseEmbedder:
         message_contents = await self.create_message(
             ctx.channel, media, options=options
         )
-        msg = await ctx.send(**message_contents)
+        msg = await ctx.send(**message_contents, suppress_embeds=True)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(ctx.author)
 
@@ -176,7 +176,7 @@ class BaseEmbedder:
     ):
         """Send the media without relying on command context, for example in a message event"""
         message_contents = await self.create_message(channel, media, options=options)
-        msg = await channel.send(**message_contents)
+        msg = await channel.send(**message_contents, suppress_embeds=True)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(author)
 
@@ -187,7 +187,9 @@ class BaseEmbedder:
         message_contents = await self.create_message(
             message.channel, media, options=options
         )
-        msg = await message.reply(**message_contents, mention_author=False)
+        msg = await message.reply(
+            **message_contents, mention_author=False, suppress_embeds=True
+        )
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(message.author)
 
