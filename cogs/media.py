@@ -190,6 +190,7 @@ class Media(commands.Cog):
         aliases=["ig", "insta"],
         usage="[OPTIONS] <links...>",
     )
+    @util.patrons_only()
     async def instagram(self, ctx: commands.Context, *, links: str):
         """Retrieve media from Instagram post, reel or story
 
