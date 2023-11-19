@@ -52,6 +52,8 @@ def filesize_limit(guild: discord.Guild | None):
 
 class BaseEmbedder:
     NO_RESULTS_ERROR = "..."
+    NAME = "..."
+    EMOJI = "..."
 
     def __init__(self, bot) -> None:
         self.bot: MisoBot = bot
@@ -157,7 +159,10 @@ class BaseEmbedder:
             return media_url
 
     async def send(
-        self, ctx: commands.Context, media: Any, options: Options | None = None
+        self,
+        ctx: commands.Context,
+        media: Any,
+        options: Options | None = None,
     ):
         """Send the media to given context"""
         message_contents = await self.create_message(
@@ -181,7 +186,10 @@ class BaseEmbedder:
         message_contents["view"].approved_deletors.append(author)
 
     async def send_reply(
-        self, message: discord.Message, media: Any, options: Options | None = None
+        self,
+        message: discord.Message,
+        media: Any,
+        options: Options | None = None,
     ):
         """Send the media as a reply to another message"""
         message_contents = await self.create_message(
@@ -195,6 +203,7 @@ class BaseEmbedder:
 
 
 class InstagramEmbedder(BaseEmbedder):
+    NAME = "instagram"
     EMOJI = "<:ig:937425165162262528>"
     NO_RESULTS_ERROR = "Found no Instagram links to embed!"
 
@@ -283,6 +292,7 @@ class InstagramEmbedder(BaseEmbedder):
 
 
 class TikTokEmbedder(BaseEmbedder):
+    NAME = "tiktok"
     EMOJI = "<:tiktok:1050401570090647582>"
     NO_RESULTS_ERROR = "Found no TikTok links to embed!"
 
@@ -346,6 +356,7 @@ class TikTokEmbedder(BaseEmbedder):
 
 
 class TwitterEmbedder(BaseEmbedder):
+    NAME = "twitter"
     EMOJI = "<:x_:1135484782642466897>"
     NO_RESULTS_ERROR = "Found no Twitter/X links to embed!"
 
