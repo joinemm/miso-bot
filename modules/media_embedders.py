@@ -488,6 +488,6 @@ class MediaUI(View):
         self.remove_item(self.delete_button)
         if self.message_ref:
             try:
-                await self.message_ref.edit(view=self)
+                await self.message_ref.edit(view=self, suppress=True)
             except discord.NotFound:
                 pass
