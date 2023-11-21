@@ -123,9 +123,43 @@ class Period(Enum):
 class LastFmApi:
     LASTFM_RED = "b90000"
     API_BASE_URL = "http://ws.audioscrobbler.com/2.0/"
+    USER_AGENT = (
+        "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0"
+    )
 
     def __init__(self, bot: MisoBot):
         self.bot = bot
+
+    async def login(self, username: str, password: str) -> bool:
+        """Login to lastfm for authenticated web scraping requests"""
+        login_url = "https://www.last.fm/login"
+        async with self.bot.session.get(login_url) as response:
+            soup = BeautifulSoup(await response.text(), "lxml")
+            el = soup.find("input", {"type": "hidden", "name": "csrfmiddlewaretoken"})
+            csrf = el.attrs.get("value")
+
+        async with self.bot.session.post(
+            login_url,
+            headers={
+                "User-Agent": self.USER_AGENT,
+                "referer": login_url,
+            },
+            data={
+                "csrfmiddlewaretoken": csrf,
+                "next": "/user/_",
+                "username_or_email": username,
+                "password": password,
+                "submit": "",
+            },
+        ) as response:
+            success = (
+                username.lower()
+                == response.headers.get("X-PJAX-URL").split("/")[-1].lower()
+            )
+            if success:
+                logger.info("Logged into Last.fm successfully")
+            else:
+                logger.warning("Problem logging into Last.fm")
 
     async def api_request(self, method: str, params: dict) -> dict:
         """Make a request to the lastfm api, returns json."""
@@ -208,6 +242,10 @@ class LastFmApi:
             # get rid of nowplaying track if user is currently scrobbling.
             # for some reason it appears even if it's not in the requested timeframe.
             data["track"] = data["track"][1:]
+
+        # actually limit the data to the given limit...
+        if limit:
+            data["track"] = data["track"][:limit]
 
         return non_empty(data)
 
@@ -351,29 +389,14 @@ class LastFmApi:
     # WEB SCRAPING #
     ################
 
-    async def scrape_page(
-        self, page_url: str, params: dict | None = None, authenticated=False
-    ):
+    async def scrape_page(self, page_url: str, params: dict | None = None):
         """Scrapes the given url returning a Soup."""
-        headers = {
-            "Host": "www.last.fm",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "fi,en;q=0.7,en-US;q=0.3",
-            "Accept-Encoding": "gzip, deflate, br",
-            "DNT": "1",
-            "Connection": "keep-alive",
-            "Cookie": self.bot.keychain.LASTFM_LOGIN_COOKIE,
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-User": "?1",
-            "Pragma": "no-cache",
-            "Cache-Control": "no-cache",
-        }
         async with self.bot.session.get(
-            page_url, headers=headers if authenticated else None, params=params
+            page_url,
+            params=params,
+            headers={
+                "User-Agent": self.USER_AGENT,
+            },
         ) as response:
             response.raise_for_status()
             content = await response.text()
@@ -407,7 +430,7 @@ class LastFmApi:
 
         async def get_additional_page(n):
             new_url = url + f"&page={n}"
-            soup = await self.scrape_page(new_url, authenticated=True)
+            soup = await self.scrape_page(new_url)
             return self.get_library_playcounts(soup)
 
         tasks = []
@@ -493,7 +516,7 @@ class LastFmApi:
     async def library_artist_images(
         self,
         username: str,
-        amount,
+        amount: int,
         period: Period,
     ) -> list[LastFmImage]:
         """Get image hashes for user's top n artists"""
@@ -501,7 +524,7 @@ class LastFmApi:
         tasks = []
         for i in range(1, math.ceil(amount / 50) + 1):
             params = {"page": str(i)} if i > 1 else None
-            tasks.append(self.scrape_page(url, params, authenticated=True))
+            tasks.append(self.scrape_page(url, params))
 
         images = []
         soup: BeautifulSoup
@@ -512,5 +535,4 @@ class LastFmApi:
             imagedivs = soup.select(".chartlist-image .avatar img")
             images += [LastFmImage.from_url(div.attrs["src"]) for div in imagedivs]
 
-        return images
         return images
