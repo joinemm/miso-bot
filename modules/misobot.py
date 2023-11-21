@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
+import asyncio
 import traceback
 from dataclasses import dataclass
 from time import time
@@ -134,15 +135,22 @@ class MisoBot(commands.AutoShardedBot):
 
     async def load_all_extensions(self):
         logger.info("Loading extensions...")
-        for extension in self.extensions_to_load:
+        tasks = []
+
+        async def load(extension):
             try:
-                await self.load_extension(f"cogs.{extension}")
+                await self.load_extension(extension)
                 logger.info(f"Loaded [ {extension} ]")
             except Exception as error:
                 logger.error(f"Error loading [ {extension} ]")
                 traceback.print_exception(type(error), error, error.__traceback__)
 
-        await self.load_extension("jishaku")
+        for extension in self.extensions_to_load:
+            tasks.append(load(f"cogs.{extension}"))
+        tasks.append(load("jishaku"))
+
+        await asyncio.gather(*tasks)
+
         self.extensions_loaded = True
         logger.info("All extensions loaded successfully!")
 
