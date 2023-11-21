@@ -3,6 +3,7 @@
 # https://git.joinemm.dev/miso-bot
 
 import html
+import io
 import json
 import random
 from time import time
@@ -1123,6 +1124,33 @@ class Utility(commands.Cog):
             )
 
         await MarketPaginator(data["results"]).run(ctx)
+
+    @commands.command()
+    async def graph(self, ctx: commands.Context, *, code: str):
+        """Generate a graph from code using Mermaid language
+
+        Syntax reference: https://mermaid.js.org/intro/syntax-reference.html
+        """
+        async with self.bot.session.post(
+            "https://kroki.io/",
+            json={
+                "diagram_source": code.strip("`"),
+                "diagram_type": "mermaid",
+                "output_format": "png",
+                "diagram_options": {"theme": "dark"},
+            },
+        ) as response:
+            if not response.ok:
+                error = await response.text()
+                raise exceptions.CommandError(error.split("    at", 1)[0])
+
+            buffer = io.BytesIO(await response.read())
+            await ctx.send(
+                file=discord.File(
+                    fp=buffer,
+                    filename="miso_bot_mermaid_graph.png",
+                ),
+            )
 
 
 async def setup(bot):
