@@ -90,7 +90,10 @@ class BaseEmbedder:
             await self.send(ctx, result, options=options)
 
         if options.delete_after:
-            await ctx.message.delete()
+            try:
+                await ctx.message.delete()
+            except discord.errors.NotFound:
+                pass
         else:
             await util.suppress(ctx.message)
 
@@ -410,7 +413,7 @@ class TwitterEmbedder(BaseEmbedder):
 
         if not tweet["media_extended"]:
             raise exceptions.CommandWarning(
-                f"Tweet `{tweet['url']}` does not include any media.",
+                f"Tweet with id `{tweet_id}` does not contain any media!",
             )
 
         for media in tweet["media_extended"]:
