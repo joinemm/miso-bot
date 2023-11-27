@@ -65,7 +65,7 @@ extensions = [
     "notifications",
     "misc",
     "media",
-    "fm",
+    "lastfm",
     "user",
     "utility",
     "typings",
