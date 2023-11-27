@@ -6,6 +6,7 @@ import asyncio
 import io
 import math
 import os
+import random
 import re
 import sys
 import urllib.parse
@@ -15,6 +16,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Callable, Literal, Optional, U
 
 import arrow
 import discord
+import kdtree
 import orjson
 from discord.ext import commands
 from discord.utils import escape_markdown
@@ -22,9 +24,7 @@ from modules.lastfm import LastFmApi, LastFmImage, Period
 from modules.misobot import LastFmContext, MisoBot, MisoContext
 from modules.ui import RowPaginator
 
-from modules import exceptions, util
-
-# from loguru import logger
+from modules import emojis, exceptions, util
 
 
 def is_small_server():
@@ -48,6 +48,24 @@ def is_small_server():
     return commands.check(predicate)
 
 
+class AlbumColorNode:
+    def __init__(self, rgb, image_url):
+        self.rgb = rgb
+        self.data = image_url
+
+    def __len__(self):
+        return len(self.rgb)
+
+    def __getitem__(self, i):
+        return self.rgb[i]
+
+    def __str__(self):
+        return f"rgb{self.rgb}"
+
+    def __repr__(self):
+        return f"AlbumColorNode({self.rgb}, {self.data})"
+
+
 class PeriodArgument(commands.Converter):
     async def convert(self, ctx: MisoContext, argument: str):
         match argument.lower():
@@ -61,7 +79,7 @@ class PeriodArgument(commands.Converter):
                 return Period.HALFYEAR
             case "365day" | "365days" | "1year" | "year" | "12months" | "12month" | "1y":
                 return Period.YEAR
-            case "overall" | "alltime":
+            case "overall" | "alltime" | "at":
                 return Period.OVERALL
             case _:
                 raise commands.BadArgument(
@@ -406,8 +424,9 @@ class LastFm(commands.Cog):
                 "Unable to show {util.ordinal(n)} track"
             )
 
+        n_display = util.ordinal(n)
         remainder = total % PER_PAGE
-        total_pages = int(pre_data["recenttracks"]["@attr"]["totalPages"])
+        total_pages = int(pre_data["@attr"]["totalPages"])
         if n > remainder:
             n = n - remainder
             containing_page = total_pages - math.ceil(n / PER_PAGE)
@@ -420,12 +439,12 @@ class LastFm(commands.Cog):
             page=containing_page,
         )
 
-        tracks = list(reversed(final_data["recenttracks"]["track"]))
+        tracks = list(reversed(final_data["track"]))
         nth_track = tracks[(n % 100) - 1]
         track_name = nth_track["name"]
         artist_name = nth_track["artist"]["#text"]
         await ctx.send(
-            f"Your {util.ordinal(n)} scrobble was ***{track_name}*** by **{artist_name}**"
+            f"Your {n_display} scrobble was ***{track_name}*** by **{artist_name}**"
         )
 
     @fm.command(aliases=["np", "no"])
@@ -764,8 +783,8 @@ class LastFm(commands.Cog):
                 value=filter_artist(ta_data) or "None",
             )
 
-        album_ranking = [f"{name} [**{plays}**]" for (plays, name) in albums[:5]]
-        track_ranking = [f"{name} [**{plays}**]" for (plays, name) in tracks[:5]]
+        album_ranking = [f"{name} [**{plays}**]" for (plays, name) in albums[:10]]
+        track_ranking = [f"{name} [**{plays}**]" for (plays, name) in tracks[:10]]
         longest_line = len(max(album_ranking, key=len)) + len(
             max(track_ranking, key=len)
         )
@@ -782,8 +801,10 @@ class LastFm(commands.Cog):
             inline=render_inline,
         )
 
+        # I might make this an option or button later
+        render_bio = False
         artist_bio = artistinfo["bio"]["summary"].split("<a href")[0].strip()
-        if artist_bio:
+        if artist_bio and render_bio:
             content.description = (
                 artist_bio.replace("\n\n\n", "\n\n")
                 + f" [read more]({artistinfo['url']})"
@@ -873,8 +894,8 @@ class LastFm(commands.Cog):
         content.add_field(name="Total plays", value=albuminfo["userplaycount"])
 
         tags_list = None
-        if tags := albuminfo["tags"]["tag"]:
-            tags_list = ", ".join(t["name"] for t in tags)
+        if tags := albuminfo["tags"]:
+            tags_list = ", ".join(t["name"] for t in tags["tag"])
 
         tracklist = []
         for track in tracks:
@@ -1047,6 +1068,182 @@ class LastFm(commands.Cog):
             f"miso_collage_{ctx.lfm.username}_"
             f"{timeframe}_{arrow.now().int_timestamp}.jpg"
         )
+
+        await ctx.send(caption, file=discord.File(fp=buffer, filename=filename))
+
+    @fm.command(
+        aliases=["colorcollage"],
+        usage="#<hex_color> [[width]x[height]]",
+    )
+    async def colorchart(
+        self,
+        ctx: MisoContext,
+        *args: Union[
+            discord.Color,
+            Annotated[ChartSize, ChartSizeArgument],
+            Literal["rainbow", "rainbowdiagonal"],
+        ],
+    ):
+        """Collage based on album art colors"""
+        query_color = None
+        size = ChartSize(3, 3)
+        for arg in args:
+            if isinstance(arg, discord.Color):
+                query_color = arg
+            elif isinstance(arg, ChartSize):
+                if arg.width > 12 or arg.height > 12:
+                    raise exceptions.CommandWarning(
+                        f"Too large size `{arg.width}x{arg.height}` "
+                        "The maximum width/height of the collage is `12`"
+                    )
+                size = arg
+
+        diagonal = "rainbowdiagonal" in args
+        rainbow = diagonal or "rainbow" in args
+        if rainbow:
+            size = ChartSize(7, 7)
+        elif query_color is None:
+            raise exceptions.CommandWarning("No valid color supplied")
+
+        chart_nodes = []
+
+        data = await self.get_all_albums(ctx.lfm.username)
+        albums = [LastFmImage.from_url(a["image"][-1]["#text"]) for a in data]
+
+        to_fetch = []
+        albumcolors = await self.bot.db.fetch(
+            """
+            SELECT image_hash, r, g, b FROM image_color_cache WHERE image_hash IN %s
+            """,
+            tuple(a.hash for a in albums),
+        )
+
+        albumcolors_dict = {}
+        if albumcolors:
+            for image_hash, r, g, b in albumcolors:
+                albumcolors_dict[image_hash] = (r, g, b)
+
+        album_color_nodes = []
+        warn = None
+        for image in albums:
+            color = albumcolors_dict.get(image.hash)
+            if color is None:
+                to_fetch.append(image)
+            else:
+                album_color_nodes.append(AlbumColorNode(color, image.hash))
+
+        if to_fetch:
+            to_cache = []
+
+            async def get_color(image):
+                color, hex_color = await self.get_hex(image)
+                if color is None:
+                    return None
+
+                return image.hash, color.r, color.g, color.b, hex_color
+
+            tasks = [get_color(image) for image in to_fetch]
+            if len(tasks) > 500:
+                warn = await ctx.send(
+                    ":exclamation:Your library includes over 500 uncached album colours, "
+                    f"this might take a while {emojis.LOADING}"
+                )
+
+            colordata = await asyncio.gather(*tasks)
+            for colortuple in colordata:
+                if colortuple is None:
+                    continue
+                image_hash, r, g, b, hexcolor = colortuple
+                to_cache.append((image_hash, r, g, b, hexcolor))
+                album_color_nodes.append(AlbumColorNode((r, g, b), image_hash))
+
+            await self.bot.db.executemany(
+                """
+                INSERT IGNORE image_color_cache (image_hash, r, g, b, hex)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                to_cache,
+            )
+
+        tree = kdtree.create(album_color_nodes)
+        if rainbow:
+            rainbow_colors = (
+                [
+                    (255, 79, 0),
+                    (255, 33, 0),
+                    (217, 29, 82),
+                    (151, 27, 147),
+                    (81, 35, 205),
+                    (0, 48, 255),
+                    (0, 147, 147),
+                    (0, 249, 0),
+                    (203, 250, 0),
+                    (255, 251, 0),
+                    (255, 200, 0),
+                    (255, 148, 0),
+                ]
+                if diagonal
+                else [
+                    (255, 0, 0),  # red
+                    (255, 127, 0),  # orange
+                    (255, 255, 0),  # yellow
+                    (0, 255, 0),  # green
+                    (0, 0, 255),  # blue
+                    (75, 0, 130),  # purple
+                    (148, 0, 211),  # violet
+                ]
+            )
+            chunks = [
+                list(tree.search_knn(rgb, size.width + size.height))
+                for rgb in rainbow_colors
+            ]
+            random_offset = random.randint(0, 6)
+            for album_index in range(size.count):
+                if diagonal:
+                    choice_index = (
+                        album_index % size.width
+                        + (album_index // size.height)
+                        + random_offset
+                    ) % len(chunks)
+                else:
+                    choice_index = album_index % size.width
+
+                choose_from = chunks[choice_index]
+                choice = choose_from[album_index // size.height]
+
+                chart_nodes.append(
+                    (
+                        LastFmImage(choice[0].data.data),
+                        "",
+                    )
+                )
+
+        else:
+            nearest = tree.search_knn(query_color.to_rgb(), size.count)
+            chart_nodes = [
+                (
+                    LastFmImage(a[0].data.data),
+                    "",
+                )
+                for a in nearest
+            ]
+
+        buffer = await self.chart_factory(
+            chart_nodes,
+            size,
+        )
+
+        username = util.displayname(ctx.lfm.target_user)
+        caption = (
+            f"**{username} | {size} {'rainbow' if rainbow else query_color} collage**"
+        )
+        filename = (
+            f"miso_colorcollage_{ctx.lfm.username}_"
+            f"{query_color}_{arrow.now().int_timestamp}.jpg"
+        )
+
+        if warn is not None:
+            await warn.delete()
 
         await ctx.send(caption, file=discord.File(fp=buffer, filename=filename))
 
@@ -1975,7 +2172,16 @@ class LastFm(commands.Cog):
 
         return content
 
-    async def image_color(self, image: LastFmImage):
+    async def get_hex(self, image: LastFmImage):
+        """Get the dominan color of lastfm image."""
+        color = await util.rgb_from_image_url(
+            self.bot.session,
+            image.as_64s(),
+        )
+        hex_color = util.rgb_to_hex(color) if color is not None else None
+        return color, hex_color
+
+    async def image_color(self, image: LastFmImage) -> int | None:
         """Get the dominant color of lastfm image, cache if new."""
         cached_color = await self.bot.db.fetch_value(
             "SELECT hex FROM image_color_cache WHERE image_hash = %s",
@@ -1986,14 +2192,10 @@ class LastFm(commands.Cog):
 
         # color not cached yet, compute and store
 
-        color = await util.rgb_from_image_url(
-            self.bot.session,
-            image.as_64s(),
-        )
-        if color is None:
-            return int(self.LASTFM_RED, 16)
+        color, hex_color = await self.get_hex(image)
+        if color is None or hex_color is None:
+            return None
 
-        hex_color = util.rgb_to_hex(color)
         await self.bot.db.execute(
             """
             INSERT IGNORE image_color_cache (image_hash, r, g, b, hex)
@@ -2007,6 +2209,24 @@ class LastFm(commands.Cog):
         )
 
         return int(hex_color, 16)
+
+    async def get_all_albums(self, username: str):
+        data = await self.api.user_get_top_albums(
+            username,
+            Period.OVERALL,
+            limit=500,
+        )
+        topalbums = data["album"]
+        total_pages = int(data["@attr"]["totalPages"])
+
+        # get additional page if exists for a total of 1000
+        if total_pages > 1:
+            data = await self.api.user_get_top_albums(
+                username, Period.OVERALL, limit=500, page=2
+            )
+            topalbums += data["album"]
+
+        return topalbums
 
 
 async def setup(bot):
