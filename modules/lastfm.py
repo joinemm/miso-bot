@@ -189,7 +189,8 @@ class LastFmApi:
                     message=content.get("message"),
                 )
 
-            logger.info(json.dumps(content, indent=4))
+            if self.bot.debug:
+                logger.info(json.dumps(content, indent=4))
             return content
 
     ###############
