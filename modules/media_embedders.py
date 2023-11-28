@@ -198,9 +198,14 @@ class BaseEmbedder:
         message_contents = await self.create_message(
             message.channel, media, options=options
         )
-        msg = await message.reply(
-            **message_contents, mention_author=False, suppress_embeds=True
-        )
+        try:
+            msg = await message.reply(
+                **message_contents, mention_author=False, suppress_embeds=True
+            )
+        except discord.errors.HTTPException:
+            # the original message was deleted, so we can't reply
+            msg = await message.channel.send(**message_contents, suppress_embeds=True)
+
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(message.author)
 
