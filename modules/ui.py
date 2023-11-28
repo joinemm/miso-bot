@@ -82,7 +82,7 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
         """
         raise NotImplementedError("Subclass did not overwrite format_page coro.")
 
-    def _switch_page(self, count: int, /) -> list[T]:
+    def _switch_page(self, count: int) -> list[T]:
         self._current_page += count
 
         if count < 0:

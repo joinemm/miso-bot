@@ -2,14 +2,16 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
-import asyncio
 import random
+import re
+import urllib
 from typing import Literal
 
 import discord
 import orjson
 from bs4 import BeautifulSoup
 from discord.ext import commands
+from loguru import logger
 from modules.media_embedders import (
     BaseEmbedder,
     InstagramEmbedder,
@@ -229,57 +231,36 @@ class Media(commands.Cog):
         """
         await TikTokEmbedder(self.bot).process(ctx, links)
 
-    @commands.command(aliases=["gif", "gfy"])
-    async def gfycat(self, ctx: commands.Context, *, query):
-        """Search for a gfycat gif"""
-
-        async def extract_scripts(session, url):
-            async with session.get(url) as response:
-                data = await response.text()
-                soup = BeautifulSoup(data, "lxml")
-                return soup.find_all("script", {"type": "application/ld+json"})
-
-        scripts = []
-        tasks = []
-        if len(query.split(" ")) == 1:
-            tasks.append(
-                extract_scripts(
-                    self.bot.session, f"https://gfycat.com/gifs/tag/{query}"
-                )
-            )
-
-        tasks.append(
-            extract_scripts(self.bot.session, f"https://gfycat.com/gifs/search/{query}")
-        )
-        scripts = sum(await asyncio.gather(*tasks), [])
-
-        urls = []
-        for script in scripts:
-            try:
-                data = orjson.loads(str(script.contents[0]))
-                for x in data["itemListElement"]:
-                    if "url" in x:
-                        urls.append(x)
-            except orjson.JSONDecodeError:
-                continue
-
-        if not urls:
-            return await ctx.send("Found nothing!")
-
-        await GiphyUI(urls).run(ctx)
-
-    @commands.command(enabled=False)
-    async def giphy(self, ctx: commands.Context, *, query):
+    @commands.command(aliases=["giphy", "gfy"])
+    async def gif(self, ctx: commands.Context, *, query):
         """Search for gif from Giphy"""
+        gifs = []
+
         URL = "https://api.giphy.com/v1/gifs/search"
         params = {
             "q": query,
+            "sort": "relevant",
+            "rating": "r",
+            "type": "gifs",
+            "limit": 100,
             "api_key": self.bot.keychain.GIPHY_API_KEY,
-            "limit": 50,
         }
         async with self.bot.session.get(URL, params=params) as response:
-            data = await response.json()
-            gifs = data["data"]
+            if response.ok:
+                data = await response.json()
+                gifs = data["data"]
+
+        if not gifs:
+            # go for web scraping backup
+            logger.warning("Giphy API response was not 200, going for web scraping...")
+            URL = f"https://giphy.com/search/{urllib.parse.quote(query)}"
+            async with self.bot.session.get(URL, params={"rating": "r"}) as response:
+                soup = BeautifulSoup(await response.text(), "lxml")
+                raw_json = re.search(
+                    r"gifs: (.*),\n\s*nextUrl:",
+                    soup.findAll("script")[-2].text,
+                ).group(1)
+                gifs = orjson.loads('{"gifs": ' + raw_json + "}")["gifs"]
 
         await GiphyUI(gifs).run(ctx)
 
@@ -358,34 +339,52 @@ async def setup(bot):
 
 
 class GiphyUI(discord.ui.View):
-    def __init__(self, urls: list):
+    def __init__(self, gifs: list):
         super().__init__()
+        self.history = []
+        self._current_page = 0
         self.message: discord.Message
-        self.gifs = urls
+        self.gifs = gifs
 
-    async def run(self, ctx: commands.Context):
-        self.message = await ctx.send(random.choice(self.gifs)["url"], view=self)
-
-    @discord.ui.button(emoji=emojis.REMOVE, style=discord.ButtonStyle.danger)
-    async def toggle(
+    @discord.ui.button(
+        emoji="<:left:997949561911918643>",
+        style=discord.ButtonStyle.gray,
+        disabled=True,
+    )
+    async def on_arrow_backward(
         self, interaction: discord.Interaction, _button: discord.ui.Button
-    ):
-        await interaction.response.defer()
-        await self.message.delete()
+    ) -> None:
+        self._current_page = self.history.pop()
+        await self.update(interaction)
 
     @discord.ui.button(emoji=emojis.REPEAT, style=discord.ButtonStyle.primary)
     async def randomize(
         self, interaction: discord.Interaction, _button: discord.ui.Button
     ):
-        await interaction.response.defer()
-        await self.message.edit(content=random.choice(self.gifs)["url"])
+        self.history.append(self._current_page)
+        self._current_page = random.randint(1, len(self.gifs))
+        await self.update(interaction)
 
-    @discord.ui.button(emoji=emojis.CONFIRM, style=discord.ButtonStyle.secondary)
+    @discord.ui.button(emoji=emojis.CONFIRM, style=discord.ButtonStyle.success)
     async def confirm(
         self, interaction: discord.Interaction, _button: discord.ui.Button
     ):
         await interaction.response.defer()
         await self.remove_ui()
+
+    @discord.ui.button(emoji=emojis.REMOVE, style=discord.ButtonStyle.danger)
+    async def delete(
+        self, interaction: discord.Interaction, _button: discord.ui.Button
+    ):
+        await interaction.response.defer()
+        await self.message.delete()
+
+    async def update(self, interaction: discord.Interaction):
+        self.on_arrow_backward.disabled = len(self.history) < 1
+
+        await interaction.response.edit_message(
+            content=self.gifs[self._current_page]["url"], view=self
+        )
 
     async def remove_ui(self):
         for item in self.children:
@@ -396,6 +395,10 @@ class GiphyUI(discord.ui.View):
                 await self.message.edit(view=None)
             except discord.NotFound:
                 pass
+
+    async def run(self, ctx: commands.Context):
+        self._current_page = random.randint(1, len(self.gifs))
+        self.message = await ctx.send(self.gifs[self._current_page]["url"], view=self)
 
     async def on_timeout(self):
         await self.remove_ui()
