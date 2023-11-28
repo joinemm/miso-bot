@@ -101,7 +101,7 @@ class MisoBot(commands.AutoShardedBot):
         self.extensions_loaded = False
         self.redis: Redis = Redis()
         self.datalama = Datalama(self)
-        self.boot_up_time: float
+        self.boot_up_time: float | None = None
         self.session: aiohttp.ClientSession
         self.register_hooks()
 
@@ -125,7 +125,8 @@ class MisoBot(commands.AutoShardedBot):
             logger.error(e)
 
         await self.load_all_extensions()
-        self.boot_up_time = time() - self.start_time
+        boot_up_time = time() - self.start_time
+        logger.info(f"Setup hook done in {util.stringfromtime(boot_up_time)}")
 
     def register_hooks(self):
         """Register event hooks to the bot"""
@@ -166,10 +167,10 @@ class MisoBot(commands.AutoShardedBot):
 
     async def on_ready(self):
         """Overrides built-in on_ready()"""
-        logger.info(
-            f"Boot up process completed in {util.stringfromtime(self.boot_up_time)}"
-        )
         latencies = self.latencies
+        if self.boot_up_time is None:
+            self.boot_up_time = time() - self.start_time
+        logger.info(f"Connected in {util.stringfromtime(self.boot_up_time)}")
         logger.info(f"Loading complete | running {len(latencies)} shards")
         for shard_id, latency in latencies:
             logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
