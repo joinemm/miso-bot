@@ -840,7 +840,7 @@ class Misc(commands.Cog):
         """Make memes with given templates of empty signs
 
         Available templates:
-            olivia, yyxy, haseul, jihyo, dubu, chaeyoung, nayeon, trump
+            olivia, yyxy, haseul, jihyo, dubu, chaeyoung, nayeon, trump, yeji
         """
 
         options = {}
@@ -898,6 +898,13 @@ class Misc(commands.Cog):
                     "boxdimensions": (247, 457, 531, 353),
                     "wm_color": (255, 255, 255, 255),
                     "angle": 5,
+                }
+            case "yeji":
+                options = {
+                    "filename": "images/yeji.jpg",
+                    "boxdimensions": (139, 555, 529, 350),
+                    "wm_color": (255, 255, 255, 255),
+                    "angle": 0,
                 }
             case _:
                 raise exceptions.CommandWarning(f"No meme template called `{template}`")

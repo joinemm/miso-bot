@@ -9,7 +9,7 @@ import arrow
 import discord
 from discord.ext import commands, tasks
 from loguru import logger
-from modules.media_embedders import InstagramEmbedder, TikTokEmbedder
+from modules.media_embedders import BaseEmbedder, InstagramEmbedder, TikTokEmbedder
 from modules.misobot import MisoBot
 
 from modules import emoji_literals, queries, util
@@ -331,11 +331,27 @@ class Events(commands.Cog):
             guild_id,
             provider,
         )
-        print(options_data)
         if options_data:
             return options_data
 
-        return None, None
+        return None, True
+
+    async def embed_posts(
+        self, posts: list, message: discord.Message, embedder: BaseEmbedder
+    ):
+        options, should_reply = await self.get_autoembed_options(
+            message.guild.id, embedder.NAME
+        )
+        embed_options = embedder.get_options(options) if options else None
+        for post in posts:
+            async with message.channel.typing():
+                if should_reply:
+                    await embedder.send_reply(message, post, embed_options)
+                else:
+                    await embedder.send_contextless(
+                        message.channel, message.author, post, embed_options
+                    )
+        await util.suppress(message)
 
     async def parse_media_auto_embed(
         self, message: discord.Message, media_settings: dict
@@ -344,42 +360,13 @@ class Events(commands.Cog):
             embedder = InstagramEmbedder(self.bot)
             posts = embedder.extract_links(message.content, include_shortcodes=False)
             if posts:
-                options, should_reply = await self.get_autoembed_options(
-                    message.guild.id, "instagram"
-                )
-                for post in posts:
-                    async with message.channel.typing():
-                        if not should_reply:
-                            await embedder.send_contextless(
-                                message.channel,
-                                message.author,
-                                post,
-                                embedder.get_options(options) if options else None,
-                            )
-                        else:
-                            await embedder.send_reply(message, post)
-                await util.suppress(message)
+                await self.embed_posts(posts, message, embedder)
 
         if media_settings["tiktok"]:
             embedder = TikTokEmbedder(self.bot)
-            links = embedder.extract_links(message.content)
-            if links:
-                options, should_reply = await self.get_autoembed_options(
-                    message.guild.id,
-                    "tiktok",
-                )
-                for link in links:
-                    async with message.channel.typing():
-                        if not should_reply:
-                            await embedder.send_contextless(
-                                message.channel,
-                                message.author,
-                                link,
-                                embedder.get_options(options) if options else None,
-                            )
-                        else:
-                            await embedder.send_reply(message, link)
-                await util.suppress(message)
+            posts = embedder.extract_links(message.content)
+            if posts:
+                await self.embed_posts(posts, message, embedder)
 
     @staticmethod
     async def easter_eggs(message: discord.Message):

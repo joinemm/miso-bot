@@ -14,8 +14,6 @@ import orjson
 import redis
 from loguru import logger
 
-from modules import exceptions
-
 if TYPE_CHECKING:
     from modules.misobot import MisoBot
 
@@ -94,7 +92,7 @@ class InstagramIdCodec:
 
 
 class Datalama:
-    BASE_URL = "https://api.datalama.io"
+    BASE_URL = "https://api.datalikers.com"
 
     def __init__(self, bot: "MisoBot"):
         self.bot: "MisoBot" = bot
@@ -146,9 +144,6 @@ class Datalama:
             logger.warning("Could not save content into redis cache (ConnectionError)")
 
     async def api_request(self, endpoint: str, params: dict) -> dict:
-        raise exceptions.CommandWarning(
-            "The Instagram scraper was taken down by Meta Inc :("
-        )
         headers = {
             "accept": "application/json",
             "x-access-key": self.bot.keychain.DATALAMA_ACCESS_KEY,

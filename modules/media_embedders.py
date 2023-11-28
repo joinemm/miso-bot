@@ -52,6 +52,8 @@ def filesize_limit(guild: discord.Guild | None):
 
 class BaseEmbedder:
     NO_RESULTS_ERROR = "..."
+    NAME = "..."
+    EMOJI = "..."
 
     def __init__(self, bot) -> None:
         self.bot: MisoBot = bot
@@ -88,7 +90,10 @@ class BaseEmbedder:
             await self.send(ctx, result, options=options)
 
         if options.delete_after:
-            await ctx.message.delete()
+            try:
+                await ctx.message.delete()
+            except discord.errors.NotFound:
+                pass
         else:
             await util.suppress(ctx.message)
 
@@ -157,13 +162,16 @@ class BaseEmbedder:
             return media_url
 
     async def send(
-        self, ctx: commands.Context, media: Any, options: Options | None = None
+        self,
+        ctx: commands.Context,
+        media: Any,
+        options: Options | None = None,
     ):
         """Send the media to given context"""
         message_contents = await self.create_message(
             ctx.channel, media, options=options
         )
-        msg = await ctx.send(**message_contents)
+        msg = await ctx.send(**message_contents, suppress_embeds=True)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(ctx.author)
 
@@ -176,23 +184,29 @@ class BaseEmbedder:
     ):
         """Send the media without relying on command context, for example in a message event"""
         message_contents = await self.create_message(channel, media, options=options)
-        msg = await channel.send(**message_contents)
+        msg = await channel.send(**message_contents, suppress_embeds=True)
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(author)
 
     async def send_reply(
-        self, message: discord.Message, media: Any, options: Options | None = None
+        self,
+        message: discord.Message,
+        media: Any,
+        options: Options | None = None,
     ):
         """Send the media as a reply to another message"""
         message_contents = await self.create_message(
             message.channel, media, options=options
         )
-        msg = await message.reply(**message_contents, mention_author=False)
+        msg = await message.reply(
+            **message_contents, mention_author=False, suppress_embeds=True
+        )
         message_contents["view"].message_ref = msg
         message_contents["view"].approved_deletors.append(message.author)
 
 
 class InstagramEmbedder(BaseEmbedder):
+    NAME = "instagram"
     EMOJI = "<:ig:937425165162262528>"
     NO_RESULTS_ERROR = "Found no Instagram links to embed!"
 
@@ -281,6 +295,7 @@ class InstagramEmbedder(BaseEmbedder):
 
 
 class TikTokEmbedder(BaseEmbedder):
+    NAME = "tiktok"
     EMOJI = "<:tiktok:1050401570090647582>"
     NO_RESULTS_ERROR = "Found no TikTok links to embed!"
 
@@ -344,6 +359,7 @@ class TikTokEmbedder(BaseEmbedder):
 
 
 class TwitterEmbedder(BaseEmbedder):
+    NAME = "twitter"
     EMOJI = "<:x_:1135484782642466897>"
     NO_RESULTS_ERROR = "Found no Twitter/X links to embed!"
 
@@ -397,7 +413,7 @@ class TwitterEmbedder(BaseEmbedder):
 
         if not tweet["media_extended"]:
             raise exceptions.CommandWarning(
-                f"Tweet `{tweet['url']}` does not include any media.",
+                f"Tweet with id `{tweet_id}` does not contain any media!",
             )
 
         for media in tweet["media_extended"]:
@@ -475,6 +491,6 @@ class MediaUI(View):
         self.remove_item(self.delete_button)
         if self.message_ref:
             try:
-                await self.message_ref.edit(view=self)
+                await self.message_ref.edit(view=self, suppress=True)
             except discord.NotFound:
                 pass
