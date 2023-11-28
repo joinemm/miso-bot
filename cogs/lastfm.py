@@ -463,7 +463,7 @@ class LastFm(commands.Cog):
         content = discord.Embed(
             color=await self.image_color(image),
             description=f":cd: **{escape_markdown(album_name)}**",
-            title=f"**{escape_markdown(artist_name)} — *{escape_markdown(track_name)}* **",
+            title=f"**{escape_markdown(artist_name)} — *{escape_markdown(track_name)}***",
         )
         content.set_thumbnail(url=image.as_full())
 
@@ -485,6 +485,12 @@ class LastFm(commands.Cog):
             content.set_footer(
                 text=", ".join(tag["name"] for tag in track_info["toptags"]["tag"])
             )
+
+            if (duration := int(track_info["duration"])) > 0:
+                m, s = divmod(duration / 1000, 60)
+                h, m = divmod(m, 60)
+                duration_fmt = (f"{int(h)}:" if h > 1 else "") + f"{int(m)}:{int(s):02}"
+                content.title = content.title + f" `[{duration_fmt}]`"
 
         # play state
         if track["nowplaying"]:
@@ -868,9 +874,12 @@ class LastFm(commands.Cog):
         album_name = albuminfo["name"]
         artist_name = albuminfo["artist"]
 
-        tracks = albuminfo["tracks"]["track"]
-        if isinstance(tracks, dict):
-            tracks = [tracks]
+        try:
+            tracks = albuminfo["tracks"]["track"]
+            if isinstance(tracks, dict):
+                tracks = [tracks]
+        except KeyError:
+            tracks = []
 
         library = {
             name: playcount
@@ -886,10 +895,16 @@ class LastFm(commands.Cog):
 
         metadata = await self.api.scrape_album_metadata(artist_name, album_name)
         if metadata:
-            content.add_field(
-                name="Release Date",
-                value=f"{metadata['release_date'].format('MMM D YYYY')}",
-            )
+            if metadata["length"]:
+                content.add_field(
+                    name="Length",
+                    value=f"{metadata['length']}",
+                )
+            if metadata["release_date"]:
+                content.add_field(
+                    name="Release Date",
+                    value=f"{metadata['release_date'].format('MMM D YYYY')}",
+                )
 
         content.add_field(name="Total plays", value=albuminfo["userplaycount"])
 
@@ -905,8 +920,8 @@ class LastFm(commands.Cog):
             else:
                 row = f"`{track['@attr']['rank']:02}` {track['name']}"
 
-            if track["duration"]:
-                m, s = divmod(track["duration"], 60)
+            if (duration := int(track["duration"])) > 0:
+                m, s = divmod(duration, 60)
                 h, m = divmod(m, 60)
                 duration_fmt = (f"{h}:" if h > 1 else "") + f"{m}:{s:02}"
                 row += f" `{duration_fmt}`"
@@ -914,6 +929,9 @@ class LastFm(commands.Cog):
             if playcount:
                 row += f" [**{playcount}**]"
             tracklist.append(row)
+
+        if not tracklist:
+            tracklist.append("> This album has no tracks!")
 
         await self.paginated_user_stat_embed(
             ctx,

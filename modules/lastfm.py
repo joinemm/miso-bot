@@ -493,25 +493,27 @@ class LastFmApi:
         """Get more info about an album."""
         url = f"https://www.last.fm/music/{urllib.parse.quote_plus(artist)}/{urllib.parse.quote_plus(album)}"
         soup = await self.scrape_page(url)
-        metadata = soup.select(".catalogue-metadata-description")
+        metadata_headings = soup.select(".catalogue-metadata-heading")
+        metadata_values = soup.select(".catalogue-metadata-description")
+        metadata = dict(
+            zip(
+                [h.text.strip() for h in metadata_headings],
+                [v.text.strip() for v in metadata_values],
+            )
+        )
         if metadata:
-            length_str, release_date_str = metadata[:2]
-            release_date = arrow.get(release_date_str.text, "D MMMM YYYY")
-            lengthdata = length_str.text.split(",")
-            length = None
-            tracks = None
-            if len(lengthdata) > 1:
-                tracks, length = lengthdata
-                tracks = int(tracks.split()[0])
-                length = length.strip()
+            release_date = None
+            if metadata.get("Release Date"):
+                try:
+                    release_date = arrow.get(metadata["Release Date"], "D MMMM YYYY")
+                except arrow.parser.ParserMatchError:
+                    release_date = arrow.get(metadata["Release Date"], "YYYY")
 
             return {
-                "track_count": tracks,
-                "length": length,
+                "length": metadata.get("Length"),
                 "release_date": release_date,
             }
 
-        logger.warning(f"{artist} | {album} : metadata={metadata}")
         return None
 
     async def library_artist_images(
