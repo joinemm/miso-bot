@@ -1958,6 +1958,35 @@ class LastFm(commands.Cog):
 
         return content, rows, crown_holder, crown_playcount
 
+    @commands.command()
+    @is_small_server()
+    @commands.guild_only()
+    async def crowns(self, ctx: MisoContext, *, user: discord.Member = None):
+        """See your current artist crowns on this server"""
+        if user is None:
+            user = ctx.author
+
+        crownartists = await self.bot.db.fetch(
+            """
+            SELECT artist_name, cached_playcount FROM artist_crown
+            WHERE guild_id = %s AND user_id = %s ORDER BY cached_playcount DESC
+            """,
+            ctx.guild.id,
+            user.id,
+        )
+        if not crownartists:
+            return await ctx.send("You don't have any crowns yet!")
+
+        rows = [
+            f"**{escape_markdown(artist)}** with **{playcount}** {play_s(playcount)}"
+            for artist, playcount in crownartists
+        ]
+        content = discord.Embed(color=discord.Color.gold())
+        content.title = f"👑 {util.displayname(user, escape=False)} | Artist crowns"
+        content.set_footer(text=f"Total {len(crownartists)} crowns")
+
+        await RowPaginator(content, rows).run(ctx)
+
     @commands.command(aliases=["wk", "whomstknows"], usage="<artist> 'np'")
     @commands.guild_only()
     @is_small_server()
@@ -2329,7 +2358,7 @@ def parse_playcount(text: str):
 
 
 def raise_no_artist_plays(artist: str, timeframe: Period):
-    artist_escaped = discord.utils.escape_markdown(artist)
+    artist_escaped = escape_markdown(artist)
     raise exceptions.CommandInfo(
         f"You have never listened to **{artist_escaped}**!"
         if timeframe == Period.OVERALL
