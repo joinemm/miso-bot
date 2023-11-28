@@ -751,7 +751,6 @@ class LastFm(commands.Cog):
                 """,
                 ctx.guild.id,
                 formatted_name,
-
             )
             if crown_holder_id == ctx.lfm.target_user.id:
                 crownstate = ":crown: "
