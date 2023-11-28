@@ -1,0 +1,71 @@
+/*
+ * SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+ * SPDX-License-Identifier: MPL-2.0
+ * https://git.joinemm.dev/miso-bot
+ */
+
+body {
+  margin: 0;
+  background-color: #000;
+  font-family: monospace;
+  color: #fff;
+}
+
+.label {
+  position: absolute;
+  bottom: 0;
+  margin: 1px;
+  padding-left: 5px;
+  padding-bottom: 5px;
+  text-shadow: 1px 1px 0px #000;
+}
+
+.box {
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  aspect-ratio: 1 / 1;
+}
+
+.box img {
+  width: 100%;
+  height: 100%;
+}
+
+.wrapper {
+  max-height: 1080px;
+  display: grid;
+  grid-auto-flow: row;
+  flex-shrink: 0;
+  flex-grow: 1;
+}
+
+.wrapper.with-gaps {
+  grid-gap: 10px;
+  padding: 35px;
+}
+
+.topster-wrapper {
+  flex-grow: 1;
+  padding-left: 25px;
+}
+
+.topster-wrapper.with-gaps {
+  padding: 35px;
+  padding-left: 0;
+}
+
+.topster {
+  position: relative;
+  margin-top: 0;
+  padding-left: 0;
+  white-space: nowrap;
+  list-style-type: none;
+  display: table-cell;
+  vertical-align: top;
+}
+
+.layout {
+  display: flex;
+  flex-direction: row;
+}

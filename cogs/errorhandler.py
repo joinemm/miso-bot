@@ -245,6 +245,11 @@ class ErrorHandler(commands.Cog):
             case commands.NotOwner() | commands.CheckFailure():
                 await self.send_warning(ctx, ErrorMessages.not_allowed, error)
 
+            case commands.BadUnionArgument():
+                await self.send_warning(
+                    ctx, "\n".join(str(e) for e in error.errors), error
+                )
+
             case discord.Forbidden():
                 try:
                     await self.send_error(ctx, str(error), error)

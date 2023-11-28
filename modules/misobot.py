@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
+import asyncio
 import traceback
+from dataclasses import dataclass
 from time import time
 from typing import Any
 
@@ -19,6 +21,32 @@ from modules.keychain import Keychain
 from modules.redis import Redis
 
 from modules import cache, maria, util
+
+
+@dataclass
+class LastFmContext:
+    target_user: discord.User | discord.Member
+    targets_author: bool
+    username: str
+
+
+class MisoContext(commands.Context):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lfm: LastFmContext
+        self.bot: MisoBot
+        self.timer: float
+
+    async def success(self, message: str):
+        await self.send(
+            embed=discord.Embed(
+                description=":white_check_mark: " + message,
+                color=int("77b255", 16),
+            )
+        )
+
+    async def paginate(self, embed: discord.Embed, rows: list[str]):
+        await util.send_as_pages(self, embed, rows)
 
 
 class MisoBot(commands.AutoShardedBot):
@@ -68,6 +96,7 @@ class MisoBot(commands.AutoShardedBot):
         self.db = maria.MariaDB()
         self.cache = cache.Cache(self)
         self.keychain = Keychain()
+        self.debug = False
         self.version = "5.1"
         self.extensions_loaded = False
         self.redis: Redis = Redis()
@@ -75,6 +104,12 @@ class MisoBot(commands.AutoShardedBot):
         self.boot_up_time: float
         self.session: aiohttp.ClientSession
         self.register_hooks()
+
+    async def get_context(self, message: discord.Message):
+        """when you override this method, you pass your new Context
+        subclass to the super() method, which tells the bot to
+        use the new MyContext class"""
+        return await super().get_context(message, cls=MisoContext)
 
     async def setup_hook(self):
         self.session = aiohttp.ClientSession(
@@ -100,15 +135,22 @@ class MisoBot(commands.AutoShardedBot):
 
     async def load_all_extensions(self):
         logger.info("Loading extensions...")
-        for extension in self.extensions_to_load:
+        tasks = []
+
+        async def load(extension):
             try:
-                await self.load_extension(f"cogs.{extension}")
+                await self.load_extension(extension)
                 logger.info(f"Loaded [ {extension} ]")
             except Exception as error:
                 logger.error(f"Error loading [ {extension} ]")
                 traceback.print_exception(type(error), error, error.__traceback__)
 
-        await self.load_extension("jishaku")
+        for extension in self.extensions_to_load:
+            tasks.append(load(f"cogs.{extension}"))
+        tasks.append(load("jishaku"))
+
+        await asyncio.gather(*tasks)
+
         self.extensions_loaded = True
         logger.info("All extensions loaded successfully!")
 
@@ -133,33 +175,34 @@ class MisoBot(commands.AutoShardedBot):
             logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
 
     @staticmethod
-    async def before_any_command(ctx: commands.Context):
+    async def before_any_command(ctx: MisoContext):
         """Runs before any command"""
         if ctx.guild:
             await util.require_chunked(ctx.guild)
-        ctx.timer = time()  # type: ignore
+        ctx.timer = time()
         try:
             await ctx.typing()
         except Forbidden:
             pass
 
     @staticmethod
-    async def check_for_blacklist(ctx: commands.Context):
+    async def check_for_blacklist(ctx: MisoContext):
         """Check command invocation context for blacklist triggers"""
         return await util.is_blacklisted(ctx)
 
     @staticmethod
-    async def cooldown_check(ctx: commands.Context):
+    async def cooldown_check(ctx: MisoContext):
         """Global bot cooldown to prevent spam"""
         # prevent users getting rate limited when help command does filter_commands()
         if str(ctx.invoked_with).lower() == "help":
             return True
 
         bucket = ctx.bot.global_cd.get_bucket(ctx.message)
-        if retry_after := bucket.update_rate_limit():
-            raise commands.CommandOnCooldown(
-                bucket, retry_after, commands.BucketType.member
-            )
+        if bucket:
+            if retry_after := bucket.update_rate_limit():
+                raise commands.CommandOnCooldown(
+                    bucket, retry_after, commands.BucketType.member
+                )
         return True
 
     @property
