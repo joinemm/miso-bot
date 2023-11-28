@@ -704,9 +704,7 @@ class LastFm(commands.Cog):
     # helpers
 
     async def artist_overview(self, ctx: MisoContext, timeframe: Period, artist: str):
-        artistinfo = await self.api.artist_get_info(
-            artist, ctx.lfm.username, autocorrect=True
-        )
+        artistinfo = await self.api.artist_get_info(artist, ctx.lfm.username)
 
         artist_url_format = artistinfo["url"].split("/")[-1]
         url = (
@@ -727,8 +725,6 @@ class LastFm(commands.Cog):
         tracks = self.api.get_library_playcounts(tracksdiv)
 
         img = soup.select_one("span.library-header-image img")
-        header = soup.select_one("h2.library-header-title")
-        formatted_name = header.text.strip() if header else artist
 
         content = discord.Embed()
 
@@ -739,7 +735,7 @@ class LastFm(commands.Cog):
 
         username = util.displayname(ctx.lfm.target_user, escape=False)
         content.set_author(
-            name=f"{username} | {formatted_name} — "
+            name=f"{username} | {artistinfo['name']} — "
             + (
                 f"{timeframe.display().capitalize()} overview"
                 if timeframe != timeframe.OVERALL
@@ -764,21 +760,24 @@ class LastFm(commands.Cog):
                     AND artist_name = %s
                 """,
                 ctx.guild.id,
-                formatted_name,
+                artistinfo["name"],
             )
             if crown_holder_id == ctx.lfm.target_user.id:
                 crownstate = ":crown: "
 
         api_data = await asyncio.gather(
-            self.api.user_get_top_artists(ctx.lfm.username, Period.OVERALL, limit=1000),
-            self.api.user_get_top_artists(ctx.lfm.username, Period.MONTH, limit=1000),
-            self.api.user_get_top_artists(ctx.lfm.username, Period.WEEK, limit=1000),
+            self.api.user_get_top_artists(ctx.lfm.username, Period.OVERALL, limit=500),
+            self.api.user_get_top_artists(ctx.lfm.username, Period.MONTH, limit=500),
+            self.api.user_get_top_artists(ctx.lfm.username, Period.WEEK, limit=500),
         )
 
         def filter_artist(ta_data: dict):
             try:
                 match = next(
-                    filter(lambda a: a["name"] == artistinfo["name"], ta_data["artist"])
+                    filter(
+                        lambda a: a["name"].lower() == artistinfo["name"].lower(),
+                        ta_data["artist"],
+                    )
                 )
                 field_value = f"**{match['playcount']}** (#{match['@attr']['rank']})"
                 return field_value
@@ -797,8 +796,12 @@ class LastFm(commands.Cog):
                 value=filter_artist(ta_data) or "None",
             )
 
-        album_ranking = [f"{name} [**{plays}**]" for (plays, name) in albums[:10]]
-        track_ranking = [f"{name} [**{plays}**]" for (plays, name) in tracks[:10]]
+        album_ranking = [
+            f"{escape_markdown(name)} [**{plays}**]" for (plays, name) in albums[:10]
+        ]
+        track_ranking = [
+            f"{escape_markdown(name)} [**{plays}**]" for (plays, name) in tracks[:10]
+        ]
         longest_line = len(max(album_ranking, key=len)) + len(
             max(track_ranking, key=len)
         )
