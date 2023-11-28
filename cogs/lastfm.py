@@ -2035,7 +2035,7 @@ class LastFm(commands.Cog):
         )
 
         # get album image
-        image = LastFmImage.from_url(trackinfo["album"]["image"][0]["#text"])
+        image = LastFmImage.from_url(trackinfo["image"][0]["#text"])
         if image:
             content.set_thumbnail(url=image.as_full())
             content.colour = await self.image_color(image)
