@@ -473,7 +473,7 @@ class LastFm(commands.Cog):
         )
         content.set_thumbnail(url=image.as_full())
 
-        if metadata:
+        if metadata and metadata["release_date"]:
             content.description = (
                 f'{content.description} [{metadata["release_date"].format("YYYY")}]'
             )
