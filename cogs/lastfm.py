@@ -173,6 +173,9 @@ class StrOrNp:
                 username = ctxdata[2]
 
             data = await ctx.cog.api.user_get_now_playing(username)
+            if data is None:
+                raise exceptions.CommandWarning("You have not listened to anything!")
+
             return self.extract(data)
         else:
             return self.parse(stripped_argument)
@@ -451,6 +454,9 @@ class LastFm(commands.Cog):
     async def nowplaying(self, ctx: MisoContext):
         """See your currently playing song"""
         track = await self.api.user_get_now_playing(ctx.lfm.username)
+        if track is None:
+            raise exceptions.CommandWarning("You have not listened to anything!")
+
         artist_name = track["artist"]["#text"]
         album_name = track["album"]["#text"]
         track_name = track["name"]
@@ -630,6 +636,8 @@ class LastFm(commands.Cog):
     async def youtube(self, ctx: MisoContext):
         """Find your currently playing track on youtube"""
         track = await self.api.user_get_now_playing(ctx.lfm.username)
+        if track is None:
+            raise exceptions.CommandWarning("You have not listened to anything!")
 
         artist_name = track["artist"]["#text"]
         track_name = track["name"]
@@ -712,7 +720,7 @@ class LastFm(commands.Cog):
             # there are "ghost" chartlists that mess up web scraping
             albumsdiv = chartlists[1]
             tracksdiv = chartlists[3]
-        except ValueError:
+        except IndexError:
             return raise_no_artist_plays(artist, timeframe)
 
         albums = self.api.get_library_playcounts(albumsdiv)
@@ -951,6 +959,9 @@ class LastFm(commands.Cog):
     async def album_cover(self, ctx: MisoContext):
         """See the full album cover of your current song"""
         track = await self.api.user_get_now_playing(ctx.lfm.username)
+        if track is None:
+            raise exceptions.CommandWarning("You have not listened to anything!")
+
         image = LastFmImage.from_url(track["image"][-1]["#text"])
         artist_name = track["artist"]["#text"]
         album_name = track["album"]["#text"]
@@ -1409,6 +1420,9 @@ class LastFm(commands.Cog):
 
         rows = []
         for member_data, member in data:
+            if member_data is None:
+                continue
+
             if not member_data["nowplaying"]:
                 continue
 
@@ -1505,6 +1519,8 @@ class LastFm(commands.Cog):
         artist_map = {}
         for member_data, member in data:
             artists = member_data["artist"]
+            if len(artists) == 0:
+                continue
             lowest_playcount = int(artists[-1]["playcount"])
             highest_playcount = int(artists[0]["playcount"])
             for artist in artists:
@@ -1562,6 +1578,8 @@ class LastFm(commands.Cog):
         track_map = {}
         for member_data, member in data:
             tracks = member_data["track"]
+            if len(tracks) == 0:
+                continue
             lowest_playcount = int(tracks[-1]["playcount"])
             highest_playcount = int(tracks[0]["playcount"])
             for track in tracks:
@@ -1625,6 +1643,8 @@ class LastFm(commands.Cog):
         album_map = {}
         for member_data, member in data:
             albums = member_data["album"]
+            if len(albums) == 0:
+                continue
             lowest_playcount = int(albums[-1]["playcount"])
             highest_playcount = int(albums[0]["playcount"])
             for album in albums:
@@ -1727,6 +1747,8 @@ class LastFm(commands.Cog):
             artist_map = {}
             for member_data, member in data:
                 artists = member_data["artist"]
+                if len(artists) == 0:
+                    continue
                 lowest_playcount = int(artists[-1]["playcount"])
                 highest_playcount = int(artists[0]["playcount"])
                 for artist in artists:
@@ -1776,6 +1798,9 @@ class LastFm(commands.Cog):
             track_list = []
             for member_data, member in data:
                 tracks = member_data["track"]
+                if len(tracks) == 0:
+                    continue
+
                 for track in tracks:
                     artist_name = track["artist"]["#text"]
                     track_name = track["name"]
@@ -1817,6 +1842,9 @@ class LastFm(commands.Cog):
             album_map = {}
             for member_data, member in data:
                 albums = member_data["album"]
+                if len(albums) == 0:
+                    continue
+
                 lowest_playcount = int(albums[-1]["playcount"])
                 highest_playcount = int(albums[0]["playcount"])
                 for album in albums:

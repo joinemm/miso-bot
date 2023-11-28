@@ -369,15 +369,13 @@ class LastFmApi:
     # HELPERS #
     ###########
 
-    async def user_get_now_playing(self, username: str) -> dict:
+    async def user_get_now_playing(self, username: str) -> dict | None:
         """Get the user's currently playing or most recent track with added nowplaying key."""
         data = await self.user_get_recent_tracks(username, limit=1)
         try:
             track: dict = data["track"][0]
-        except KeyError:
-            raise exceptions.LastFMError(
-                error_code=0, message="Last.fm returned no data"
-            )
+        except (KeyError, IndexError):
+            return None
 
         now_playing = bool(
             track.get("@attr") and track["@attr"].get("nowplaying") == "true"
@@ -399,6 +397,8 @@ class LastFmApi:
                 "User-Agent": self.USER_AGENT,
             },
         ) as response:
+            if self.bot.debug:
+                logger.info(f"Scraping page {response.url}")
             response.raise_for_status()
             content = await response.text()
             soup = BeautifulSoup(content, "lxml")
