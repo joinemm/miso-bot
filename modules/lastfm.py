@@ -182,6 +182,11 @@ class LastFmApi:
                 text = await response.text()
                 raise exceptions.LastFMError(error_code=response.status, message=text)
 
+            if content is None:
+                raise exceptions.LastFMError(
+                    error_code=response.status, message="Unknown error"
+                )
+
             error_code = content.get("error")
             if error_code:
                 raise exceptions.LastFMError(

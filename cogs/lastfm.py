@@ -2381,6 +2381,11 @@ def playcount_mapped(
     output_start: int = 1,
     output_end: int = 100,
 ):
+    # if everything has the same playcount, give max points
+    # or else we will run into ZeroDivisionError
+    if input_start == input_end:
+        return output_end
+
     score = (x - input_start) / (input_end - input_start) * (
         output_end - output_start
     ) + output_start
