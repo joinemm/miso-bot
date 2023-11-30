@@ -137,8 +137,11 @@ class BaseEmbedder:
                 "Content-Length"
             ) or response.headers.get("x-full-image-content-length")
             if content_length and int(content_length) < max_filesize:
-                buffer = io.BytesIO(await response.read())
-                return discord.File(fp=buffer, filename=filename, spoiler=spoiler)
+                try:
+                    buffer = io.BytesIO(await response.read())
+                    return discord.File(fp=buffer, filename=filename, spoiler=spoiler)
+                except asyncio.TimeoutError:
+                    pass
             try:
                 # try to stream until we hit our limit
                 buffer = b""
