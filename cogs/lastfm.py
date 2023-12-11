@@ -931,8 +931,9 @@ class LastFm(commands.Cog):
             else:
                 row = f"`{track['@attr']['rank']:02}` {track['name']}"
 
-            if (duration := int(track["duration"])) > 0:
-                m, s = divmod(duration, 60)
+            duration = track["duration"]
+            if duration is not None and int(duration) > 0:
+                m, s = divmod(int(duration), 60)
                 h, m = divmod(m, 60)
                 duration_fmt = (f"{h}:" if h > 1 else "") + f"{m}:{s:02}"
                 row += f" `{duration_fmt}`"
