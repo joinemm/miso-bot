@@ -11,7 +11,7 @@ import arrow
 import discord
 import regex
 import yarl
-from aiohttp import ClientConnectorError
+from aiohttp import BasicAuth, ClientConnectorError
 from attr import dataclass
 from discord.ext import commands
 from discord.ui import View
@@ -235,8 +235,30 @@ class RedditEmbedder(BaseEmbedder):
         reddit_post_id: str,
         options: Options | None = None,
     ):
-        api_url = f"https://api.reddit.com/api/info/?id=t3_{reddit_post_id}"
-        async with self.bot.session.get(api_url) as response:
+        user_agent = "Miso Bot (by Joinemm)"
+        token = self.bot.reddit_access_token
+        now = arrow.utcnow().timestamp()
+        if token["expiry"] < now:
+            async with self.bot.session.post(
+                "https://www.reddit.com/api/v1/access_token",
+                headers={"User-Agent": user_agent},
+                data={"grant_type": "client_credentials"},
+                auth=BasicAuth(
+                    self.bot.keychain.REDDIT_CLIENT_ID,
+                    self.bot.keychain.REDDIT_CLIENT_SECRET,
+                ),
+            ) as response:
+                data = await response.json()
+                self.bot.reddit_access_token = {
+                    "expiry": now + data["expires_in"],
+                    "token": data["access_token"],
+                }
+        api_url = f"https://oauth.reddit.com/api/info/?id=t3_{reddit_post_id}"
+        headers = {
+            "User-Agent": user_agent,
+            "Authorization": f"Bearer {self.bot.reddit_access_token['token']}",
+        }
+        async with self.bot.session.get(api_url, headers=headers) as response:
             data = await response.json()
             post = data["data"]["children"][0]["data"]
 

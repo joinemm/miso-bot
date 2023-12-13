@@ -103,6 +103,7 @@ class MisoBot(commands.AutoShardedBot):
         self.datalama = Datalama(self)
         self.boot_up_time: float | None = None
         self.session: aiohttp.ClientSession
+        self.reddit_access_token = {"expiry": 0, "token": None}
         self.register_hooks()
 
     async def get_context(self, message: discord.Message):
