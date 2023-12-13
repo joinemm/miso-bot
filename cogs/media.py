@@ -15,6 +15,7 @@ from loguru import logger
 from modules.media_embedders import (
     BaseEmbedder,
     InstagramEmbedder,
+    RedditEmbedder,
     TikTokEmbedder,
     TwitterEmbedder,
 )
@@ -216,6 +217,19 @@ class Media(commands.Cog):
             `-d`, `--delete`  : delete your message when the media is done embedding
         """
         await TwitterEmbedder(self.bot).process(ctx, links)
+
+    @commands.command(
+        usage="[OPTIONS] <links...>",
+    )
+    async def reddit(self, ctx: commands.Context, *, links: str):
+        """Retrieve media from a reddit post
+
+        OPTIONS
+            `-c`, `--caption` : also include the caption/text of the media
+            `-s`, `--spoiler` : spoiler the uploaded images and text
+            `-d`, `--delete`  : delete your message when the media is done embedding
+        """
+        await RedditEmbedder(self.bot).process(ctx, links)
 
     @commands.command(
         aliases=["tik", "tok", "tt"],
