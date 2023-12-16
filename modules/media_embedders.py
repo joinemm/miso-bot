@@ -546,31 +546,39 @@ class TwitterEmbedder(BaseEmbedder):
         tweet_id: int,
         options: Options | None = None,
     ):
+        api_route = "https://api.fxtwitter.com/u/status/{0}"
         media_urls = []
-        async with self.bot.session.get(
-            f"https://api.vxtwitter.com/u/status/{tweet_id}"
-        ) as response:
+        async with self.bot.session.get(api_route.format(tweet_id)) as response:
             response.raise_for_status()
             tweet = await response.json()
 
-        if not tweet["media_extended"]:
+        if tweet.get("tweet"):
+            tweet = tweet["tweet"]
+
+        if tweet.get("media_extended"):
+            # it's vxtwitter
+            medias = tweet["media_extended"]
+        elif tweet.get("media"):
+            # fxtwitter
+            medias = tweet["media"]["all"]
+        else:
             raise exceptions.CommandWarning(
                 f"Tweet with id `{tweet_id}` does not contain any media!",
             )
 
-        for media in tweet["media_extended"]:
-            if media["type"] == "image":
+        for media in medias:
+            if media["type"] == "video":
+                media_urls.append(("mp4", media["url"]))
+            else:
                 base, extension = media["url"].rsplit(".", 1)
                 media_urls.append(
                     ("jpg", f"{base}?format={extension}&name=orig"),
                 )
-            else:
-                media_urls.append(("mp4", media["url"]))
 
-        screen_name = tweet["user_screen_name"]
+        screen_name = tweet.get("user_screen_name") or tweet["author"]["screen_name"]
         caption = f"{self.EMOJI} **@{discord.utils.escape_markdown(screen_name)}**"
 
-        timestamp = arrow.get(tweet["date_epoch"])
+        timestamp = arrow.get(tweet.get("date_epoch") or tweet.get("created_timestamp"))
         ts_format = timestamp.format("YYMMDD") + "-"
         caption += f" <t:{int(timestamp.timestamp())}:d>"
 
