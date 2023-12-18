@@ -182,7 +182,8 @@ class Notifications(commands.Cog):
             if amount and amount >= 25:
                 raise exceptions.CommandWarning(
                     f"You can only have a maximum of **25** notifications. You have **{amount}** "
-                    "(Become a [donator](https://misobot.xyz/donate) for unlimited notifications)"
+                    "(Become a tier 2 [donator](https://misobot.xyz/donate) "
+                    "for unlimited notifications)"
                 )
 
         try:
