@@ -484,7 +484,10 @@ class LastFmApi:
     async def scrape_artist_image(self, artist: str) -> LastFmImage | None:
         """Get artist's top image."""
         url = f"https://www.last.fm/music/{urllib.parse.quote_plus(artist)}/+images"
-        soup = await self.scrape_page(url)
+        try:
+            soup = await self.scrape_page(url)
+        except aiohttp.ClientResponseError:
+            return None
         image = soup.select_one(".image-list-item-wrapper a img")
         return LastFmImage.from_url(image.attrs["src"]) if image else None
 
