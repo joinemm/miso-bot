@@ -272,13 +272,14 @@ class RedditEmbedder(BaseEmbedder):
         media = []
         files = []
         if post.get("is_gallery"):
-            media = post["media_metadata"].values()
+            media = [
+                f"https://i.redd.it/{m['id']}.jpg"
+                for m in post["media_metadata"].values()
+            ]
         elif post["is_reddit_media_domain"]:
             hint = post["post_hint"]
             if hint == "image":
-                media = [
-                    {"id": post["url_overridden_by_dest"].split("/")[-1].split(".")[0]}
-                ]
+                media = [{"url": post["url_overridden_by_dest"]}]
             elif hint == "hosted:video":
                 video_url = post["media"]["reddit_video"]["dash_url"]
                 video_path = f"downloads/{reddit_post_id}.mp4"
@@ -323,7 +324,7 @@ class RedditEmbedder(BaseEmbedder):
             filename = f"{dateformat}-{post['subreddit']}-{reddit_post_id}-{n}.jpg"
             tasks.append(
                 self.download_media(
-                    f"https://i.redd.it/{media['id']}.jpg",
+                    media["url"],
                     filename,
                     filesize_limit(channel.guild),
                     url_tags=["reddit"],
