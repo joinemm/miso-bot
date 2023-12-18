@@ -568,7 +568,7 @@ class TwitterEmbedder(BaseEmbedder):
             )
 
         for media in medias:
-            if media["type"] == "video":
+            if media["type"] in ["video", "gif"]:
                 media_urls.append(("mp4", media["url"]))
             else:
                 base, extension = media["url"].rsplit(".", 1)
