@@ -273,7 +273,9 @@ class RedditEmbedder(BaseEmbedder):
         files = []
         if post.get("is_gallery"):
             media = [
-                f"https://i.redd.it/{m['id']}.jpg"
+                {
+                    "url": f"https://i.redd.it/{m['id']}.{m['m'].split('/')[-1]}",
+                }
                 for m in post["media_metadata"].values()
             ]
         elif post["is_reddit_media_domain"]:
