@@ -33,6 +33,7 @@ class WebServer(commands.Cog):
         self.app.router.add_get("/documentation", self.command_list)
         self.app.router.add_get("/donators", self.donator_list)
         self.app.router.add_get("/metrics", aio.web.server_stats)
+        self.app.router.add_post("/webhook", self.webhook)
 
     async def cog_load(self):
         self.cache_stats.start()
@@ -111,6 +112,63 @@ class WebServer(commands.Cog):
 
     async def website_statistics(self, request):
         return web.json_response(self.cached)
+
+    async def webhook(self, request):
+        x_github_event: str | None = request.headers.get("x-github-event")
+        if not x_github_event:
+            return web.HTTPBadRequest()
+        if x_github_event == "ping":
+            return web.json_response({"status": "pong"})
+        if x_github_event != "sponsorship":
+            return web.HTTPMethodNotAllowed(x_github_event, ["sponsorship", "ping"])
+
+        data = await request.json()
+        action = data["action"]
+        data = data["sponsorship"]
+        tier = data["tier"]
+
+        if data["privacy_level"] == "private":
+            sponsor = {
+                "login": "Anonymous",
+                "html_url": "",
+                "avatar_url": "https://gutegymnasiet.se/wp-content/uploads/2023/12/anonymous-icon-0.png",
+            }
+        else:
+            sponsor = data["sponsor"]
+
+        color = "333333"
+
+        if action == "created":
+            description = (
+                f"Just sponsored with **${tier['monthly_price_in_dollars']}**"
+                f" {'one time' if tier['is_one_time'] else 'per month'}! :heart:"
+            )
+            color = "6cc644"
+        elif action == "cancelled":
+            description = "Just cancelled their sponsorship :("
+            color = "bd2c00"
+        else:
+            description = action
+            print("unknown webhook data:", data)
+
+        embed_data = {
+            "embeds": [
+                {
+                    "color": int(color, 16),
+                    "author": {
+                        "name": sponsor["login"],
+                        "url": sponsor["html_url"],
+                        "icon_url": sponsor["avatar_url"],
+                    },
+                    "description": description,
+                }
+            ]
+        }
+        async with self.bot.session.post(
+            self.bot.keychain.SPONSORS_WEBHOOK_URL,
+            json=embed_data,
+        ) as response:
+            return web.json_response({"status": response.status})
 
     async def command_list(self, request):
         return web.json_response(self.cached_command_list)

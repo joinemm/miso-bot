@@ -39,6 +39,7 @@ class Keychain:
         self.GIPHY_API_KEY: str = ""
         self.LASTFM_USERNAME: str = ""
         self.LASTFM_PASSWORD: str = ""
+        self.SPONSORS_WEBHOOK_URL: str = ""
 
         for name in self.__dict__:
             value = os.environ.get(name)
