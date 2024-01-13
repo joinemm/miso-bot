@@ -24,18 +24,18 @@ def int_bool(value: bool | None) -> int | None:
 
 
 def non_empty(data: dict):
-    if data:
-        return data
-    else:
+    if not data:
         raise exceptions.LastFMError(error_code=0, message="Last.fm returned no data")
+
+    return data
 
 
 class LastFmImage:
     MISSING_IMAGE_HASH = "2a96cbd8b46e442fc41c2b86b821562f"
     CDN_BASE_URL = "https://lastfm.freetls.fastly.net/i/u/"
 
-    def __init__(self, hash: str):
-        self.hash = hash
+    def __init__(self, image_hash: str):
+        self.hash = image_hash
 
     @classmethod
     def from_url(cls, url: str):

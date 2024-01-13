@@ -119,12 +119,13 @@ class ChartSize:
 
 
 class ChartSizeArgument:
-    async def convert(self, ctx: MisoContext, argument: str):
+    @staticmethod
+    async def convert(ctx: MisoContext, argument: str):
         try:
             size = ChartSize(int(argument), int(argument))
         except ValueError:
             try:
-                size = ChartSize(*map(lambda n: int(n), argument.split("x")))
+                size = ChartSize(*map(int, argument.split("x")))
             except ValueError:
                 raise commands.BadArgument(
                     f"Cannot convert `{argument}` into a chart size."
@@ -159,26 +160,27 @@ class StrOrNp:
     def extract(self, data: dict):
         raise NotImplementedError
 
-    def parse(self, argument: str):
+    @staticmethod
+    def parse(argument: str):
         return argument
 
     async def convert(self, ctx: MisoContext, argument: str):
         stripped_argument = remove_mentions(argument)
-        if stripped_argument.lower() == "np":
-            assert isinstance(ctx.cog, LastFm)
-            if hasattr(ctx, "lastfmcontext"):
-                username = ctx.lfm.username
-            else:
-                ctxdata = await get_lastfm_username(ctx)
-                username = ctxdata[2]
-
-            data = await ctx.cog.api.user_get_now_playing(username)
-            if data is None:
-                raise exceptions.CommandWarning("You have not listened to anything!")
-
-            return self.extract(data)
-        else:
+        if stripped_argument.lower() != "np":
             return self.parse(stripped_argument)
+
+        assert isinstance(ctx.cog, LastFm)
+        if hasattr(ctx, "lastfmcontext"):
+            username = ctx.lfm.username
+        else:
+            ctxdata = await get_lastfm_username(ctx)
+            username = ctxdata[2]
+
+        data = await ctx.cog.api.user_get_now_playing(username)
+        if data is None:
+            raise exceptions.CommandWarning("You have not listened to anything!")
+
+        return self.extract(data)
 
 
 class ArtistArgument(StrOrNp):
@@ -1286,7 +1288,7 @@ class LastFm(commands.Cog):
         size: ChartSize,
         hide_labels=True,
         use_padding=False,
-        topster_labels: list[str] = list(),
+        topster_labels: list[str] | None = None,
     ):
         resolution = 1080
         font_size = 2.5
@@ -1321,7 +1323,7 @@ class LastFm(commands.Cog):
             "COLUMNS": size.width,
             "ALBUMS": albums,
             "USE_TOPSTER": bool(topster_labels),
-            "TOPSTER_LABELS": topster_labels,
+            "TOPSTER_LABELS": topster_labels or [],
             "TOPSTER_FONT_SIZE": f"{font_size}em",
             "LABEL_FONT_SIZE": f"{font_size/2}em",
             "RESOLUTION_WIDTH": f"{image_width}px",
@@ -2212,7 +2214,8 @@ class LastFm(commands.Cog):
 
         await RowPaginator(content, rows, **kwargs).run(ctx)
 
-    def ranked_list(self, data: list[tuple[int, str]]):
+    @staticmethod
+    def ranked_list(data: list[tuple[int, str]]):
         rows = []
         for i, (playcount, name) in enumerate(data, start=1):
             rows.append(
