@@ -32,30 +32,44 @@ The dependencies are managed using [Poetry](https://python-poetry.org/)
 poetry install
 ```
 
+Copy/rename `.env.example` to `.env` and fill the api keys you need, most importantly the discord bot token.
 The bot can then be run with
 
 ```sh
 poetry run python main.py
+# or in dev mode
+poetry run python main.py dev
+
+# if using the nix shell:
+
+run
+# or in dev mode
+run dev
 ```
 
 but it will not function without a MariaDB database.
-This makes using docker compose the easiest way to run the bot.
+The database can be bootstrapped with
+
+```sh
+docker-compose up db -d
+```
+
+After which the bot can be ran and easily developed.
+When you're done, remember to shut down the database container:
+
+```sh
+docker compose down
+```
 
 ## Contributing
 
-Your pull requests are welcome, as long as they meet the code standards enforced by the [pre-commit](https://pre-commit.com/) hooks.
+Your pull requests are welcome, as long as they meet the enforced code standards:
 
 - [Black](https://github.com/psf/black) and [isort](https://pycqa.github.io/isort/) for formatting.
 - [Ruff](https://github.com/astral-sh/ruff), for linting.
 - [Reuse](https://reuse.software/), for licensing.
 
-To install the hooks, run this command:
-
-```sh
-pre-commit install
-```
-
-Now your code should be automatically checked for issues when you commit.
+The nix shell installs these as pre-commit hook automatically.
 
 ## Deployment
 

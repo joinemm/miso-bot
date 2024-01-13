@@ -27,6 +27,8 @@ services:
       - database:/var/lib/mysql
       - ./sql/init:/docker-entrypoint-initdb.d:ro
       - ./sql/scheduled:/scripts:ro
+    ports:
+      - 3306:3306
     environment:
       - MARIADB_USER=bot
       - MARIADB_PASSWORD=botpw

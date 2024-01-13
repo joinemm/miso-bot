@@ -40,6 +40,7 @@ redis = "^5.0.1"
 shazamio = "^0.4.0.1"
 random-user-agent = "^1.0.1"
 minestat = "^2.6.2"
+async-cse = "^0.3.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.6.0"

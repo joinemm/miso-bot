@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2024 Joonas Rautiola <joinemm@pm.me>
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
-
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
@@ -24,21 +23,30 @@
       inherit inputs pkgs;
       modules = [
         ({pkgs, ...}: {
+          dotenv.disableHint = true;
+
           packages = with pkgs; [
             ffmpeg
-            pre-commit
-            reuse
-            black
             isort
+            black
             ruff
+            reuse
           ];
 
-          dotenv.enable = true;
+          pre-commit.hooks = {
+            isort.enable = true;
+            black.enable = true;
+            ruff.enable = true;
+          };
 
           languages.python = {
             enable = true;
             poetry.enable = true;
           };
+
+          scripts."run".exec = ''
+            poetry run python main.py $1
+          '';
         })
       ];
     };

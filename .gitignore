@@ -9,6 +9,7 @@ data/data.json
 .vscode/
 polls.yaml
 .env
-poetry.lock
 */__pycache__
 .devenv
+# because it is managed with nix
+.pre-commit-config.yaml
