@@ -1,15 +1,9 @@
 downloads/*
 !downloads/temp
-*.pyc
 venv/
-stash/
-tests/
-data/database.db
-data/data.json
 .vscode/
-polls.yaml
 .env
-*/__pycache__
+__pycache__
 .devenv
 # because it is managed with nix
 .pre-commit-config.yaml
