@@ -7,6 +7,6 @@ Files: downloads/* images/* data/*
 Copyright: 2023 Joonas Rautiola <joinemm@pm.me>
 License: CC0-1.0
 
-Files: *.md .* requirements.* dev-requirements.*
+Files: *.md .* *.lock
 Copyright: 2023 Joonas Rautiola <joinemm@pm.me>
 License: MPL-2.0

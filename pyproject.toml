@@ -2,8 +2,53 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
+[tool.poetry]
+name = "miso-bot"
+version = "6.0"
+description = "Multipurpose Discord bot"
+authors = ["Joinemm <joonas@rautiola.co>"]
+license = "MPL-2.0"
+readme = "README.md"
+packages = [{include = "miso_bot"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+aiohttp = "^3.9.1"
+discord-py = {extras = ["speed"], version = "^2.3.2"}
+aiomysql = "^0.2.0"
+arrow = "^1.3.0"
+beautifulsoup4 = "^4.12.2"
+bleach = "^6.1.0"
+colorgram-py = "^1.2.0"
+durations-nlp = "^1.0.1"
+humanize = "^4.9.0"
+jishaku = "^2.5.2"
+kdtree = "^0.16"
+matplotlib = "^3.8.2"
+numpy = "^1.26.3"
+pillow = "^10.2.0"
+psutil = "^5.9.7"
+python-dotenv = "^1.0.0"
+regex = "^2023.12.25"
+scipy = "^1.11.4"
+uvloop = "^0.19.0"
+prometheus-async = "^22.2.0"
+markdownify = "^0.11.6"
+lxml = "^5.1.0"
+loguru = "^0.7.2"
+redis = "^5.0.1"
+shazamio = "^0.4.0.1"
+random-user-agent = "^1.0.1"
+minestat = "^2.6.2"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.black]
-line-length = 88
 exclude = '''
 /(
     \.git
@@ -16,28 +61,14 @@ exclude = '''
 '''
 
 [tool.ruff]
-line-length = 100
 target-version = "py311"
 
 exclude = [
-  ".bzr",
   ".direnv",
-  ".eggs",
   ".git",
-  ".hg",
   ".mypy_cache",
-  ".nox",
-  ".pants.d",
   ".ruff_cache",
-  ".svn",
-  ".tox",
   ".venv",
-  "__pypackages__",
-  "_build",
-  "buck-out",
-  "build",
-  "dist",
-  "node_modules",
   "venv",
   ".venv",
 ]

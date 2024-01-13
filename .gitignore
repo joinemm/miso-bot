@@ -11,3 +11,4 @@ polls.yaml
 .env
 poetry.lock
 */__pycache__
+.devenv

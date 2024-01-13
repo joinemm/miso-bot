@@ -81,9 +81,7 @@ services:
     expose:
       - 3000
     volumes:
-      # Static files
       - ./static:/app/static:ro
-      # Handlebar template files
       - ./templates:/app/templates:ro
 
   shlink:

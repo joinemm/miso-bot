@@ -3,14 +3,13 @@ repos:
     rev: 23.7.0
     hooks:
       - id: black
-        args: [--line-length=88]
         language_version: python3
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.0.280
     hooks:
       - id: ruff
-        args: [--line-length=100, --ignore=E501]
+        args: [--ignore=E501]
 
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
