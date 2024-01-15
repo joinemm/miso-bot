@@ -22,7 +22,11 @@
     devShell.x86_64-linux = devenv.lib.mkShell {
       inherit inputs pkgs;
       modules = [
-        ({pkgs, ...}: {
+        ({
+          pkgs,
+          lib,
+          ...
+        }: {
           dotenv.disableHint = true;
 
           packages = with pkgs; [
@@ -36,7 +40,10 @@
           pre-commit.hooks = {
             isort.enable = true;
             black.enable = true;
-            ruff.enable = true;
+            ruff = {
+              enable = true;
+              entry = lib.mkForce "${pkgs.ruff}/bin/ruff --fix --ignore=E501";
+            };
           };
 
           languages.python = {
