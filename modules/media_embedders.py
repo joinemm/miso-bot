@@ -16,10 +16,10 @@ from attr import dataclass
 from discord.ext import commands
 from discord.ui import View
 from loguru import logger
-from modules.misobot import MisoBot
-from modules.tiktok import TikTok
 
 from modules import emojis, exceptions, instagram, util
+from modules.misobot import MisoBot
+from modules.tiktok import TikTok
 
 
 @dataclass
@@ -287,7 +287,7 @@ class RedditEmbedder(BaseEmbedder):
                 video_path = f"downloads/{reddit_post_id}.mp4"
                 ffmpeg = subprocess.call(
                     [
-                        "ffmpeg",
+                        "/usr/bin/ffmpeg",
                         "-y",
                         "-hide_banner",
                         "-loglevel",
