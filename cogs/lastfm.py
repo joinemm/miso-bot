@@ -14,17 +14,19 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Annotated, Any, Callable, Literal, Optional, Union
 
+import aiohttp
 import arrow
 import discord
 import kdtree
 import orjson
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.utils import escape_markdown
+from loguru import logger
+
+from modules import emojis, exceptions, util
 from modules.lastfm import LastFmApi, LastFmImage, Period
 from modules.misobot import LastFmContext, MisoBot, MisoContext
 from modules.ui import RowPaginator
-
-from modules import emojis, exceptions, util
 
 
 def is_small_server():
@@ -232,10 +234,24 @@ class LastFm(commands.Cog):
         self.bot: MisoBot = bot
         self.api = LastFmApi(bot)
 
+    @tasks.loop(minutes=1)
+    async def lastfm_login_task(self):
+        logger.info("Running lastfm login task...")
+        try:
+            await self.api.login(
+                self.bot.keychain.LASTFM_USERNAME, self.bot.keychain.LASTFM_PASSWORD
+            )
+        except aiohttp.ClientError:
+            pass
+        else:
+            self.lastfm_login_task.cancel()
+            logger.info("Lastfm login successfull, canceling task")
+
     async def cog_load(self):
-        await self.api.login(
-            self.bot.keychain.LASTFM_USERNAME, self.bot.keychain.LASTFM_PASSWORD
-        )
+        self.lastfm_login_task.start()
+
+    async def cog_unload(self):
+        self.lastfm_login_task.cancel()
 
     @commands.group(aliases=["lastfm", "lfm", "lf"])
     async def fm(self, ctx: MisoContext):
@@ -923,7 +939,11 @@ class LastFm(commands.Cog):
 
         tags_list = None
         if tags := albuminfo["tags"]:
-            tags_list = ", ".join(t["name"] for t in tags["tag"])
+            # sometimes it's a dict, maybe when there's only one tag(?)
+            if isinstance(tags["tag"], dict):
+                tags_list = ", ".join(tags["tag"]["name"])
+            else:
+                tags_list = ", ".join(t["name"] for t in tags["tag"])
 
         tracklist = []
         for track in tracks:
