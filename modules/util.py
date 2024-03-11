@@ -860,8 +860,8 @@ async def send_tasks_result_list(
 
 
 async def user_is_donator(user: discord.User, bot: "MisoBot") -> bool:
-    # if user.id == bot.owner_id:
-    #     return True
+    if user.id == bot.owner_id:
+        return True
     if await queries.is_donator(bot, user):
         return True
     if await queries.is_vip(bot, user):
