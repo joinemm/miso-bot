@@ -11,7 +11,12 @@ from discord.ext import commands, tasks
 from loguru import logger
 
 from modules import emoji_literals, exceptions, queries, util
-from modules.media_embedders import BaseEmbedder, InstagramEmbedder, TikTokEmbedder
+from modules.media_embedders import (
+    BaseEmbedder,
+    InstagramEmbedder,
+    RedditEmbedder,
+    TikTokEmbedder,
+)
 from modules.misobot import MisoBot
 
 
@@ -375,6 +380,12 @@ class Events(commands.Cog):
 
         if media_settings["tiktok"]:
             embedder = TikTokEmbedder(self.bot)
+            posts = embedder.extract_links(message.content)
+            if posts:
+                await self.embed_posts(posts, message, embedder)
+
+        if media_settings["reddit"]:
+            embedder = RedditEmbedder(self.bot)
             posts = embedder.extract_links(message.content)
             if posts:
                 await self.embed_posts(posts, message, embedder)

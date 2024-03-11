@@ -12,6 +12,8 @@ import orjson
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from loguru import logger
+
+from modules import emojis, exceptions, util
 from modules.media_embedders import (
     BaseEmbedder,
     InstagramEmbedder,
@@ -20,8 +22,6 @@ from modules.media_embedders import (
     TwitterEmbedder,
 )
 from modules.misobot import MisoBot
-
-from modules import emojis, exceptions, util
 
 
 class Media(commands.Cog):
@@ -63,14 +63,18 @@ class Media(commands.Cog):
         )
 
     @util.patrons_only()
-    @commands.group()
+    @commands.group(usage="<instagram | tiktok | reddit>")
     async def autoembedder(
-        self, ctx: commands.Context, provider: Literal["instagram", "tiktok"]
+        self, ctx: commands.Context, provider: Literal["instagram", "tiktok", "reddit"]
     ):
         """Set up automatic embeds for various media sources
 
         The links will be expanded automatically when detected in chat,
-        without requiring the use of the corresponding command
+        without requiring the use of the corresponding command.
+
+        Supported providers: `instagram`, `tiktok`, `reddit`
+
+        Example: >autoembedder tiktok toggle
         """
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
