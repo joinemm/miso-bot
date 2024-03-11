@@ -15,12 +15,13 @@ from discord import Activity, ActivityType, AllowedMentions, Intents, Status
 from discord.errors import Forbidden
 from discord.ext import commands
 from loguru import logger
+
+from modules import cache, maria, util
 from modules.help import EmbedHelpCommand
 from modules.instagram import Datalama
 from modules.keychain import Keychain
+from modules.reddit import Reddit
 from modules.redis import Redis
-
-from modules import cache, maria, util
 
 
 @dataclass
@@ -103,7 +104,7 @@ class MisoBot(commands.AutoShardedBot):
         self.datalama = Datalama(self)
         self.boot_up_time: float | None = None
         self.session: aiohttp.ClientSession
-        self.reddit_access_token = {"expiry": 0, "token": None}
+        self.reddit_client = Reddit(self)
         self.register_hooks()
 
     async def get_context(self, message: discord.Message):

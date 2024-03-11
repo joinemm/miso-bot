@@ -44,6 +44,7 @@ async-cse = "^0.3.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.6.0"
+mypy = "^1.8.0"
 
 [build-system]
 requires = ["poetry-core"]
