@@ -859,8 +859,22 @@ async def send_tasks_result_list(
     await send_as_pages(ctx, content, rows, maxrows=20)
 
 
+async def server_is_premium(guild: discord.Guild, bot: "MisoBot") -> bool:
+    manager = await bot.db.fetch_value(
+        """
+        SELECT activated_by_user_id FROM premium_server
+        WHERE guild_id = %s
+        """,
+        guild.id,
+    )
+    if manager:
+        if await user_is_donator(bot.get_user(manager), bot):
+            return True
+    return False
+
+
 async def user_is_donator(user: discord.User, bot: "MisoBot") -> bool:
-    if user.id == bot.owner_id:
+    if (not bot.debug) and user.id == bot.owner_id:
         return True
     if await queries.is_donator(bot, user):
         return True

@@ -360,11 +360,17 @@ class Events(commands.Cog):
             embedder = InstagramEmbedder(self.bot)
             posts = embedder.extract_links(message.content, include_shortcodes=False)
             if posts:
-                if await util.user_is_donator(message.author, self.bot):
+                if await util.server_is_premium(
+                    message.guild,
+                    self.bot,
+                ) or await util.user_is_donator(
+                    message.author,
+                    self.bot,
+                ):
                     await self.embed_posts(posts, message, embedder)
                 else:
                     raise exceptions.CommandInfo(
-                        "Only [donators](https://misobot.xyz/donate) can embed instagram posts!"
+                        "Only [donators](https://misobot.xyz/donate) can use autoembeds! (unless premium server)"
                     )
 
         if media_settings["tiktok"]:

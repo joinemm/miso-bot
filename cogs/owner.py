@@ -8,9 +8,9 @@ import arrow
 import discord
 from discord.ext import commands
 from loguru import logger
-from modules.misobot import MisoBot
 
 from modules import util
+from modules.misobot import MisoBot
 
 
 class Owner(commands.Cog):
@@ -215,6 +215,74 @@ class Owner(commands.Cog):
         )
         await util.send_success(
             ctx, f"**{user}** donation changed to **Tier {new_tier}**"
+        )
+
+    @commands.group(name="premium", case_insensitive=True)
+    @commands.is_owner()
+    async def premium(self, ctx: commands.Context):
+        await util.command_group_help(ctx)
+
+    @premium.command(name="add")
+    async def add_premium(
+        self, ctx: commands.Context, server: discord.Guild, managing_user: discord.User
+    ):
+        """Designate a server as premium"""
+        await self.bot.db.execute(
+            """
+            INSERT INTO premium_server (guild_id, activated_by_user_id)
+            VALUES (%s, %s)
+            """,
+            server.id,
+            managing_user.id,
+        )
+        managing_count = await self.bot.db.fetch_value(
+            """
+            SELECT COUNT(guild_id) FROM premium_server
+            WHERE activated_by_user_id = %s
+            """,
+            managing_user.id,
+        )
+
+        await util.send_success(
+            ctx,
+            f"{server} is now a premium server managed by {managing_user}. (managing **{managing_count}** servers)",
+        )
+
+    @premium.command(name="remove")
+    async def remove_premium(self, ctx: commands.Context, server: discord.Guild):
+        """Remove premium from a server"""
+        await self.bot.db.execute(
+            """
+            DELETE FROM premium_server WHERE guild_id = %s
+            """,
+            server.id,
+        )
+        await util.send_success(ctx, f"{server} is no longer premium server")
+
+    @premium.command(name="remanage")
+    async def remanage_premium(
+        self, ctx: commands.Context, server: discord.Guild, managing_user: discord.User
+    ):
+        """Change who manages the premium for a server"""
+        await self.bot.db.execute(
+            """
+            UPDATE premium_server 
+                SET activated_by_user_id = %s
+            WHERE guild_id = %s 
+            """,
+            managing_user.id,
+            server.id,
+        )
+        managing_count = await self.bot.db.fetch_value(
+            """
+            SELECT COUNT(guild_id) FROM premium_server
+            WHERE activated_by_user_id = %s
+            """,
+            managing_user.id,
+        )
+        await util.send_success(
+            ctx,
+            f"Premium for {server} is now managed by {managing_user}. (managing **{managing_count}** servers)",
         )
 
     @commands.command(name="db", aliases=["dbe", "dbq"])
