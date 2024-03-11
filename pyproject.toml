@@ -57,6 +57,7 @@ exclude = '''
   | \.mypy_cache
   | \.pytest_cache
   | \.vscode
+  | \.venv
   | venv
   | __pycache__
 )/
