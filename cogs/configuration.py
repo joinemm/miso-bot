@@ -6,9 +6,9 @@ from typing import Annotated
 
 import discord
 from discord.ext import commands
-from modules.misobot import MisoBot
 
 from modules import emoji_literals, exceptions, queries, util
+from modules.misobot import MisoBot
 
 
 class ChannelSetting(commands.TextChannelConverter):
@@ -352,7 +352,7 @@ class Configuration(commands.Cog):
 
         if emoji[0] == "<":
             # is custom emoji
-            if not await queries.is_donator(ctx, ctx.author, 2):
+            if not await queries.is_donator(ctx.bot, ctx.author, 2):
                 raise exceptions.CommandInfo(
                     "You have to be a [donator](https://misobot.xyz/donate) "
                     "to use custom emojis with the starboard!"

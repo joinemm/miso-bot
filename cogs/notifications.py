@@ -9,9 +9,9 @@ import discord
 import regex
 from discord.ext import commands
 from loguru import logger
-from modules.misobot import MisoBot
 
 from modules import emojis, exceptions, queries, util
+from modules.misobot import MisoBot
 
 
 class Notifications(commands.Cog):
@@ -174,7 +174,7 @@ class Notifications(commands.Cog):
                 "Global notifications have been removed for performance reasons."
             )
 
-        if not await queries.is_donator(ctx, ctx.author, 2):
+        if not await queries.is_donator(ctx.bot, ctx.author, 2):
             amount = await self.bot.db.fetch_value(
                 "SELECT COUNT(*) FROM notification WHERE user_id = %s",
                 ctx.author.id,

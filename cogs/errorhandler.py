@@ -8,11 +8,11 @@ from dataclasses import dataclass
 import discord
 from discord.ext import commands
 from loguru import logger
+
+from modules import emojis, exceptions, queries, util
 from modules.instagram import InstagramError
 from modules.misobot import MisoBot
 from modules.tiktok import TiktokError
-
-from modules import emojis, exceptions, queries, util
 
 
 @dataclass
@@ -174,7 +174,7 @@ class ErrorHandler(commands.Cog):
     ):
         if (
             ctx.author.id == ctx.bot.owner_id
-            or await queries.is_donator(ctx, ctx.author, 2)
+            or await queries.is_donator(self.bot, ctx.author, 2)
             or await queries.is_vip(self.bot, ctx.author)
         ):
             await self.reinvoke_command(ctx)

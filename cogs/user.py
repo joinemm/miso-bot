@@ -10,9 +10,9 @@ import bleach
 import discord
 import humanize
 from discord.ext import commands
-from modules.misobot import MisoBot
 
 from modules import emojis, exceptions, queries, util
+from modules.misobot import MisoBot
 
 
 class User(commands.Cog):
@@ -558,7 +558,7 @@ class User(commands.Cog):
         if user.bot:
             badges.append(make_badge(badge_classes["bot"]))
 
-        if await queries.is_donator(ctx, user):
+        if await queries.is_donator(ctx.bot, user):
             badges.append(make_badge(badge_classes["patreon"]))
 
         user_settings = await self.bot.db.fetch_row(

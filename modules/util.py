@@ -859,12 +859,18 @@ async def send_tasks_result_list(
     await send_as_pages(ctx, content, rows, maxrows=20)
 
 
+async def user_is_donator(user: discord.User, bot: "MisoBot") -> bool:
+    # if user.id == bot.owner_id:
+    #     return True
+    if await queries.is_donator(bot, user):
+        return True
+    if await queries.is_vip(bot, user):
+        return True
+    return False
+
+
 async def patron_check(ctx):
-    if ctx.author.id == ctx.bot.owner_id:
-        return True
-    if await queries.is_donator(ctx, ctx.author):
-        return True
-    if await queries.is_vip(ctx.bot, ctx.author):
+    if user_is_donator(ctx.author, ctx.bot):
         return True
     raise PatronCheckFailure
 

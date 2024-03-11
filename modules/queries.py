@@ -7,7 +7,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import discord
-from discord.ext import commands
 
 from modules import exceptions
 
@@ -45,14 +44,11 @@ async def update_setting(ctx, table, setting, new_value):
 
 
 async def is_donator(
-    ctx: commands.Context,
+    bot: "MisoBot",
     user: discord.User | discord.Member,
     unlock_tier: int | None = None,
 ):
-    if user.id == ctx.bot.owner_id:
-        return True
-
-    data = await ctx.bot.db.fetch_row(
+    data = await bot.db.fetch_row(
         """
         SELECT donation_tier, currently_active FROM donator
         WHERE user_id = %s

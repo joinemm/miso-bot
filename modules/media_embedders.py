@@ -6,6 +6,7 @@ import asyncio
 import io
 from typing import TYPE_CHECKING, Any
 
+import aiohttp
 import arrow
 import discord
 import regex
@@ -17,6 +18,7 @@ from discord.ui import View
 from loguru import logger
 
 from modules import emojis, exceptions, instagram, util
+from modules.instagram import InstaFix
 from modules.tiktok import TikTok
 
 if TYPE_CHECKING:
@@ -343,24 +345,28 @@ class InstagramEmbedder(BaseEmbedder):
         instagram_asset: InstagramPost | InstagramStory,
         options: Options | None = None,
     ):
-        if isinstance(instagram_asset, InstagramPost):
-            post = await self.bot.datalama.get_post_v1(instagram_asset.shortcode)
-            identifier = instagram_asset.shortcode
-        elif isinstance(instagram_asset, InstagramStory):
-            post = await self.bot.datalama.get_story_v1(
-                instagram_asset.username, instagram_asset.story_pk
-            )
-            identifier = instagram_asset.story_pk
+        async with aiohttp.ClientSession(read_timeout=3) as session:
+            instafix = InstaFix(session)
+            if isinstance(instagram_asset, InstagramPost):
+                post = await instafix.get_post(instagram_asset.shortcode)
+                identifier = instagram_asset.shortcode
+            elif isinstance(instagram_asset, InstagramStory):
+                post = await instafix.get_story(
+                    instagram_asset.username, instagram_asset.story_pk
+                )
+                identifier = instagram_asset.story_pk
 
         username = discord.utils.escape_markdown(post.user.username)
-        caption = f"{self.EMOJI} **@{username}** <t:{post.timestamp}:d>"
+        caption = f"{self.EMOJI} **@{username}**"
+        if post.timestamp:
+            caption += f" <t:{post.timestamp}:d>"
         if options and options.captions:
             caption += f"\n>>> {post.caption}"
         tasks = []
         for n, media in enumerate(post.media, start=1):
             ext = "mp4" if media.media_type == instagram.MediaType.VIDEO else "jpg"
-            dateformat = arrow.get(post.timestamp).format("YYMMDD")
-            filename = f"{dateformat}-@{post.user.username}-{identifier}-{n}.{ext}"
+            # dateformat = arrow.get(post.timestamp).format("YYMMDD")
+            filename = f"@{post.user.username}-{identifier}-{n}.{ext}"
             tasks.append(
                 self.download_media(
                     media.url,

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
+import asyncio
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
@@ -12,6 +13,7 @@ import aiohttp
 import arrow
 import orjson
 import redis
+from bs4 import BeautifulSoup
 from loguru import logger
 
 if TYPE_CHECKING:
@@ -48,9 +50,9 @@ class IgMedia:
 
 @dataclass
 class IgUser:
-    id: int
     username: str
-    avatar_url: str
+    id: int | None = None
+    avatar_url: str | None = None
 
 
 @dataclass
@@ -58,7 +60,7 @@ class IgPost:
     url: str
     user: IgUser
     media: list[IgMedia]
-    timestamp: int
+    timestamp: int | None = None
     caption: str = ""
 
 
@@ -91,6 +93,79 @@ class InstagramIdCodec:
         )
 
 
+class InstaFix:
+    BASE_URL = "https://www.ddinstagram.com"
+
+    def __init__(self, session: aiohttp.ClientSession):
+        self.session = session
+
+    async def request(self, url: str):
+        tries = 0
+        while tries < 3:
+            try:
+                async with self.session.get(
+                    url, allow_redirects=False, headers={"User-Agent": "bot"}
+                ) as response:
+                    text = await response.text()
+                return text
+
+            except aiohttp.ClientConnectorError as e:
+                logger.warning(e)
+                tries += 1
+                await asyncio.sleep(tries)
+
+    async def try_media(self, shortcode: str) -> list:
+        media = []
+        for i in range(1, 11):
+            text = await self.request(f"{self.BASE_URL}/p/{shortcode}/{i}")
+            soup = BeautifulSoup(text, "lxml")
+            imagetag = soup.find("meta", {"property": "og:image"})
+            videotag = soup.find("meta", {"property": "og:video"})
+
+            if imagetag:
+                media.append(
+                    IgMedia(
+                        url=self.BASE_URL + imagetag.attrs["content"],
+                        media_type=MediaType.PHOTO,
+                    )
+                )
+            elif videotag:
+                media.append(
+                    IgMedia(
+                        url=self.BASE_URL + videotag.attrs["content"],
+                        media_type=MediaType.VIDEO,
+                    )
+                )
+            else:
+                break
+
+        return media
+
+    async def get_post(self, shortcode: str):
+        text = await self.request(f"{self.BASE_URL}/p/{shortcode}")
+        soup = BeautifulSoup(text, "lxml")
+        metadata = {
+            "url": soup.find("a").attrs["href"],
+            "description": soup.find("meta", {"property": "og:description"}).attrs[
+                "content"
+            ],
+            "username": soup.find("meta", {"name": "twitter:title"}).attrs["content"],
+        }
+
+        media = await self.try_media(shortcode)
+
+        return IgPost(
+            url=metadata["url"],
+            user=IgUser(username=metadata["username"].strip("@")),
+            caption=metadata["description"],
+            media=media,
+            timestamp=None,
+        )
+
+    async def get_story(self, username: str, story_pk: str):
+        raise InstagramError("Instagram stories are not supported at the moment.")
+
+
 class Datalama:
     BASE_URL = "https://api.datalikers.com"
 
@@ -113,10 +188,12 @@ class Datalama:
     ) -> tuple[dict, bool, str]:
         cache_key = self.make_cache_key(endpoint, params)
 
+        was_cached = False
         data = await self.try_cache(cache_key)
-        was_cached = data is not None
-        if not was_cached:
+        if data is None:
             data = await self.api_request(endpoint, params)
+        else:
+            was_cached = True
 
         return data, was_cached, cache_key
 
@@ -132,6 +209,7 @@ class Datalama:
             if prom := self.bot.get_cog("Prometheus"):
                 await prom.increment_instagram_cache_hits()  # type: ignore
             return orjson.loads(cached_response)
+
         return None
 
     async def save_cache(self, cache_key: str, data: dict, lifetime: int):
@@ -333,10 +411,10 @@ class Instagram:
 
         if use_proxy:
             proxy_url: str = bot.keychain.PROXY_URL
-            self.proxy = proxy_url
             proxy_user: str = bot.keychain.PROXY_USER
             proxy_pass: str = bot.keychain.PROXY_PASS
 
+            self.proxy: str | None = proxy_url
             self.proxy_auth = aiohttp.BasicAuth(proxy_user, proxy_pass)
         else:
             self.proxy = None

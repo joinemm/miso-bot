@@ -9,10 +9,10 @@ import arrow
 import discord
 from discord.ext import commands, tasks
 from loguru import logger
+
+from modules import emoji_literals, exceptions, queries, util
 from modules.media_embedders import BaseEmbedder, InstagramEmbedder, TikTokEmbedder
 from modules.misobot import MisoBot
-
-from modules import emoji_literals, queries, util
 
 
 class Events(commands.Cog):
@@ -65,7 +65,7 @@ class Events(commands.Cog):
                 await queries.save_command_usage(ctx)
 
             if random.randint(1, 69) == 1 and not await queries.is_donator(
-                ctx, ctx.author
+                ctx.bot, ctx.author
             ):
                 logger.info("Sending donation beg message")
                 await util.send_donation_beg(ctx.channel)
@@ -360,7 +360,12 @@ class Events(commands.Cog):
             embedder = InstagramEmbedder(self.bot)
             posts = embedder.extract_links(message.content, include_shortcodes=False)
             if posts:
-                await self.embed_posts(posts, message, embedder)
+                if await util.user_is_donator(message.author, self.bot):
+                    await self.embed_posts(posts, message, embedder)
+                else:
+                    raise exceptions.CommandInfo(
+                        "Only [donators](https://misobot.xyz/donate) can embed instagram posts!"
+                    )
 
         if media_settings["tiktok"]:
             embedder = TikTokEmbedder(self.bot)
