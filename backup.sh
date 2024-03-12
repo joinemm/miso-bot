@@ -10,7 +10,7 @@ USERLOGIN="--user=bot --password=botpw"
 DUMP_OPTIONS="--quick --add-drop-table --add-locks --extended-insert --lock-tables"
 
 # Get the current timestamp
-TS=$(date +%Y%m%d%H%M%S)
+TS=$(date +"%F-%s")
 
 # Create our backup directory if not already there
 mkdir -p "$BACKUP_DIR"
