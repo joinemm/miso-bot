@@ -106,7 +106,10 @@ class InstaFix:
                 async with self.session.get(
                     url, allow_redirects=False, headers={"User-Agent": "bot"}
                 ) as response:
-                    text = await response.text()
+                    data = await response.read()
+                    # because the world is not perfect, and a server that
+                    # promises utf-8 will not actually return utf-8
+                    text = data.decode("utf-8", "ignore")
                 return text
 
             except aiohttp.ClientConnectorError as e:
