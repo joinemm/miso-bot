@@ -48,7 +48,10 @@
 
           languages.python = {
             enable = true;
-            poetry.enable = true;
+            poetry = {
+              enable = true;
+              activate.enable = true;
+            };
           };
 
           scripts."run".exec = ''

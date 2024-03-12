@@ -15,9 +15,7 @@ services:
     ports:
       - 80:80
       - 443:443
-    depends_on:
-      - bot
-      - shlink
+    profiles: [prod]
 
   db:
     container_name: miso-db
@@ -34,6 +32,7 @@ services:
       - MARIADB_PASSWORD=botpw
       - MARIADB_DATABASE=misobot
       - MARIADB_ROOT_PASSWORD=secure-af
+    profiles: [prod, dev]
 
   shlink-db:
     container_name: miso-shlink-db
@@ -46,6 +45,7 @@ services:
       - MARIADB_PASSWORD=botpw
       - MARIADB_DATABASE=shlink
       - MARIADB_ROOT_PASSWORD=secure-af
+    profiles: [prod, dev-extra]
 
   prometheus:
     container_name: miso-prometheus
@@ -63,6 +63,7 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=1y'
       - '--web.enable-lifecycle'
+    profiles: [prod]
 
   grafana:
     container_name: miso-grafana
@@ -72,6 +73,7 @@ services:
       - "9080:3000"
     volumes:
       - grafana-storage:/var/lib/grafana
+    profiles: [prod]
 
   image-server:
     container_name: miso-image-server
@@ -85,6 +87,7 @@ services:
     volumes:
       - ./static:/app/static:ro
       - ./templates:/app/templates:ro
+    profiles: [prod, dev-extra]
 
   shlink:
     container_name: miso-shlink
@@ -102,6 +105,7 @@ services:
       - DB_HOST=shlink-db
     depends_on:
       - shlink-db
+    profiles: [prod, dev-extra]
 
   emojifier:
     container_name: miso-emojifier
@@ -109,8 +113,9 @@ services:
     restart: unless-stopped
     expose:
       - 3000
+    profiles: [prod, dev-extra]
 
-  bot:
+  bot-prod:
     container_name: miso-bot
     build: .
     command: python -O main.py
@@ -129,6 +134,28 @@ services:
       - WEBSERVER_HOSTNAME=0.0.0.0
       - USE_REDIS_CACHE=1
     tty: true
+    profiles: [prod]
+
+  bot-dev:
+    container_name: miso-bot-dev
+    build: .
+    command: python -O main.py dev
+    restart: unless-stopped
+    expose:
+      - 8080
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=miso-db
+      - IMAGE_SERVER_HOST=image-server
+      - EMOJIFIER_HOST=emojifier
+      - WEBSERVER_PORT=8080
+      - WEBSERVER_HOSTNAME=0.0.0.0
+      - USE_REDIS_CACHE=1
+    tty: true
+    profiles: [dev]
 
   redis:
     container_name: miso-redis
@@ -139,6 +166,7 @@ services:
       - 6379
     volumes:
       - redis-data:/data
+    profiles: [prod, dev-extra]
 
 networks:
   default:
