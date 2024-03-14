@@ -1,0 +1,29 @@
+## help i have no idea whta im doing i just wanted to fix miso-bot/cogs/lastfm.py line 625
+@fm.command(aliases=["talb"], usage="[timeframe]")
+    async def topalbums(
+        self,
+        ctx: MisoContext,
+        timeframe: Annotated[Period, PeriodArgument] = Period.OVERALL,
+    ):
+        """See your top 100 albums for given timeframe"""
+        data = await self.api.user_get_top_albums(
+            ctx.lfm.username,
+            timeframe,
+            100,
+        )
+
+        await self.paginated_user_stat_embed(
+            ctx,
+            self.ranked_list(
+                [
+                    (
+                        int(album["playcount"]),
+                        f'{album["artist"]["name"]} — {album["name"]}',
+                    )
+                    for album in data["album"]
+                ]
+            ),
+            f"Top 100 Albums ({timeframe.display()})",
+            image=LastFmImage.from_url(data["album"][0]["image"][0]["#text"]),
+            footer=f'Total unique albums: {data["@attr"]["total"]}',
+        
