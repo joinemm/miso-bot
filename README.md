@@ -1,9 +1,12 @@
+[![noai](https://notbyai.fyi/img/written-by-human-not-by-ai-white.svg)](https://notbyai.fyi/)
+
 [![License](https://img.shields.io/github/license/joinemm/miso-bot)](https://img.shields.io/github/license/joinemm/miso-bot)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/84479f7c0f4c44a6aa2ba435e0215436)](https://app.codacy.com/manual/joinemm/miso-bot?utm_source=github.com&utm_medium=referral&utm_content=joinemm/miso-bot&utm_campaign=Badge_Grade_Dashboard)
 [![DeepSource](https://deepsource.io/gh/joinemm/miso-bot.svg/?label=active+issues&show_trend=true&token=0E1BBh1I4k_HkqRvfRy86yMc)](https://deepsource.io/gh/joinemm/miso-bot/?ref=repository-badge)
 [![Discord](https://img.shields.io/discord/652904322706833409.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/RzDW3Ne)
 [![Sponsor](https://img.shields.io/github/sponsors/joinemm?color=%23db61a2)](https://github.com/sponsors/joinemm)
+
 
 * * *
 
