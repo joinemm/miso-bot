@@ -51,7 +51,7 @@ but it will not function without a MariaDB database.
 The database can be bootstrapped with
 
 ```sh
-docker-compose up db -d
+docker compose up db -d
 ```
 
 After which the bot can be ran and easily developed.
@@ -77,7 +77,7 @@ First copy/rename `.env.example` to `.env` and fill it with your own keys.
 Everything else should be handled by the dockerfile.
 
 ```sh
-docker-compose up
+docker compose --profile prod up
 ```
 
 The docker compose file bootstraps the entire miso infrastructure,
@@ -85,10 +85,14 @@ including prometheus metrics, grafana dashboards and nginx reverse proxy.
 
 You likely don't want these if you're just running the bot.
 
-To run only the containers needed for the functionality of the bot, you can specify the service names:
+The compose file is using different profiles that start only a handful of containers: `dev`, `dev-extra` and `prod`.
+`prod` starts everything, as you might have guessed. 
+`dev` starts only the db and the bot in debug mode, for fast testing. 
+`dev-extra` starts extra services used by some commands, but not the infra containers.
 
 ```sh
-docker-compose up db image-server emojifier bot
+docker compose --profile dev up
+docker compose --profile dev-extra up
 ```
 
 ## Star History
