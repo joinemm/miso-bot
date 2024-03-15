@@ -32,7 +32,7 @@ services:
       - MARIADB_PASSWORD=botpw
       - MARIADB_DATABASE=misobot
       - MARIADB_ROOT_PASSWORD=secure-af
-    profiles: [prod, dev]
+    profiles: [prod, dev, dev-extra]
 
   shlink-db:
     container_name: miso-shlink-db
@@ -155,7 +155,7 @@ services:
       - WEBSERVER_HOSTNAME=0.0.0.0
       - USE_REDIS_CACHE=1
     tty: true
-    profiles: [dev]
+    profiles: [dev, dev-extra]
 
   redis:
     container_name: miso-redis
