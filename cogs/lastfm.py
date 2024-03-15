@@ -622,7 +622,7 @@ class LastFm(commands.Cog):
                     for album in data["album"]
                 ]
             ),
-            f"Top 100 Tracks ({timeframe.display()})",
+            f"Top 100 Albums ({timeframe.display()})",
             image=LastFmImage.from_url(data["album"][0]["image"][0]["#text"]),
             footer=f'Total unique albums: {data["@attr"]["total"]}',
         )
