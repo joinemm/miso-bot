@@ -10,7 +10,7 @@ BACKUP_DIR="$HOME/backups"
 CONTAINER_NAME="miso-db"
 DATABASES="misobot shlink"
 USERLOGIN="--user=bot --password=botpw"
-DUMP_OPTIONS="--force --quick --single-transaction --compact --extended-insert --order-by-primary"
+DUMP_OPTIONS="--force --quick --single-transaction --extended-insert --order-by-primary"
 BUCKET="s3:s3.us-west-004.backblazeb2.com/misobot-database"
 
 # Create our backup directory if not already there
