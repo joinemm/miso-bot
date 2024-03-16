@@ -34,19 +34,6 @@ services:
       - MARIADB_ROOT_PASSWORD=secure-af
     profiles: [prod, dev, dev-extra]
 
-  shlink-db:
-    container_name: miso-shlink-db
-    image: mariadb
-    restart: unless-stopped
-    volumes:
-      - shlink-database:/var/lib/mysql
-    environment:
-      - MARIADB_USER=bot
-      - MARIADB_PASSWORD=botpw
-      - MARIADB_DATABASE=shlink
-      - MARIADB_ROOT_PASSWORD=secure-af
-    profiles: [prod, dev-extra]
-
   prometheus:
     container_name: miso-prometheus
     image: prom/prometheus
@@ -102,9 +89,9 @@ services:
       - DB_NAME=shlink
       - DB_USER=bot
       - DB_PASSWORD=botpw
-      - DB_HOST=shlink-db
+      - DB_HOST=db
     depends_on:
-      - shlink-db
+      - db
     profiles: [prod, dev-extra]
 
   emojifier:

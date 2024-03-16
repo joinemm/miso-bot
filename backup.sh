@@ -4,14 +4,13 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
-set -x
 set -e
 
 BACKUP_DIR="$HOME/backups"
 CONTAINER_NAME="miso-db"
-DATABASES="misobot"
+DATABASES="misobot shlink"
 USERLOGIN="--user=bot --password=botpw"
-DUMP_OPTIONS="--force --quick --single-transaction --compact --extended-insert --order-by-primary --ignore-table="${DATABASE_NAME}.sessions""
+DUMP_OPTIONS="--force --quick --single-transaction --compact --extended-insert --order-by-primary"
 BUCKET="s3:s3.us-west-004.backblazeb2.com/misobot-database"
 
 # Create our backup directory if not already there
@@ -28,10 +27,13 @@ cp -r "$BACKUP_DIR" "$BACKUP_DIR"-yesterday
 for DATABASE_NAME in $DATABASES; do
     echo "Dumping MySQL Database $DATABASE_NAME"
     # shellcheck disable=SC2086
-    docker exec "$CONTAINER_NAME" /usr/bin/mysqldump $USERLOGIN $DUMP_OPTIONS "$DATABASE_NAME" >"$BACKUP_DIR"/"$DATABASE_NAME".sql
+    docker exec "$CONTAINER_NAME" \
+        /usr/bin/mysqldump $USERLOGIN $DUMP_OPTIONS \
+        --ignore-table="$DATABASE_NAME".sessions \
+        "$DATABASE_NAME" >"$BACKUP_DIR"/"$DATABASE_NAME".sql
 done
 
 echo "Uploading dumps to B2"
 # shellcheck source=./.restic.env.example
-. .restic.env
+. "$HOME"/miso-bot/.restic.env
 restic -r "$BUCKET" backup "$BACKUP_DIR"
