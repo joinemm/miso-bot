@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
-set -eu
+set -e
 
 BACKUP_DIR="$HOME/backups"
 CONTAINER_NAME="miso-db"
