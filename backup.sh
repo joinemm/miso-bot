@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
-set -euo
+set -eu
 
 BACKUP_DIR="$HOME/backups"
 CONTAINER_NAME="miso-db"
@@ -15,6 +15,12 @@ BUCKET="s3:s3.us-west-004.backblazeb2.com/misobot"
 
 # shellcheck source=./.backup.env.example
 . "$HOME"/miso-bot/.backup.env
+
+if [ "$1" = init ]; then
+    echo "Initialising repository and exiting"
+    restic -r "$BUCKET" init
+    exit 0
+fi
 
 # Signal healthcheck.io that the backup run started
 curl -m 10 --retry 5 "https://hc-ping.com/$HC_PING_KEY/db-backup/start"
