@@ -2,8 +2,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
-version: '3.7'
-
 services:
   nginx:
     image: nginx:latest

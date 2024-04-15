@@ -70,11 +70,11 @@ extensions = [
     "utility",
     "typings",
     "kpop",
+    "prometheus",
 ]
 
 infrastructure_extensions = [
     "webserver",
-    "prometheus",
 ]
 
 

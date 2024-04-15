@@ -345,7 +345,10 @@ class InstagramEmbedder(BaseEmbedder):
         instagram_asset: InstagramPost | InstagramStory,
         options: Options | None = None,
     ):
-        async with aiohttp.ClientSession(read_timeout=3) as session:
+        async with aiohttp.ClientSession(
+            read_timeout=3,
+            trace_configs=[self.bot.trace_config],
+        ) as session:
             instafix = InstaFix(session)
             if isinstance(instagram_asset, InstagramPost):
                 post = await instafix.get_post(instagram_asset.shortcode)

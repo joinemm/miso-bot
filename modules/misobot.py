@@ -101,6 +101,7 @@ class MisoBot(commands.AutoShardedBot):
         self.extensions_loaded = False
         self.redis: Redis = Redis()
         self.boot_up_time: float | None = None
+        self.trace_config = aiohttp.TraceConfig
         self.session: aiohttp.ClientSession
         self.reddit_client = Reddit(self)
         self.register_hooks()
@@ -111,11 +112,23 @@ class MisoBot(commands.AutoShardedBot):
         use the new MyContext class"""
         return await super().get_context(message, cls=MisoContext)
 
+    async def request_tracing(self, session, context, params):
+        try:
+            if prom := self.get_cog("Prometheus"):
+                prom.outgoing_requests.labels(
+                    host=params.url.host, path=params.url.path
+                ).inc()  # type: ignore
+        except Exception as e:
+            logger.warning(f"Unhandled exception in tracing: {e}")
+
     async def setup_hook(self):
+        self.trace_config = aiohttp.TraceConfig()
+        self.trace_config.on_request_start.append(self.request_tracing)
         self.session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(limit=0),
             json_serialize=lambda x: orjson.dumps(x).decode(),
             timeout=aiohttp.ClientTimeout(total=30),
+            trace_configs=[self.trace_config],
         )
         await self.redis.start()
         await self.db.initialize_pool()

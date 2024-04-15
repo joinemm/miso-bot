@@ -133,7 +133,9 @@ class TikTok:
             return download_link[0].get("href"), username, description
 
     async def get_video(self, url: str) -> TikTokVideo:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(
+            trace_configs=[self.bot.trace_config]
+        ) as session:
             session.headers.update(self.HEADERS)
             await self.warmup(session)
             return TikTokVideo(*await self.download_video(url, session))

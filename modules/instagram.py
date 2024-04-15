@@ -210,8 +210,6 @@ class Datalama:
 
         if cached_response:
             logger.info(f"Instagram request was pulled from the cache {cache_key}")
-            if prom := self.bot.get_cog("Prometheus"):
-                await prom.increment_instagram_cache_hits()  # type: ignore
             return orjson.loads(cached_response)
 
         return None
@@ -411,7 +409,10 @@ class Instagram:
     ):
         self.bot: "MisoBot" = bot
         self.jar = aiohttp.CookieJar(unsafe=True)
-        self.session = aiohttp.ClientSession(cookie_jar=self.jar)
+        self.session = aiohttp.ClientSession(
+            cookie_jar=self.jar,
+            trace_configs=[self.bot.trace_config],
+        )
 
         if use_proxy:
             proxy_url: str = bot.keychain.PROXY_URL
