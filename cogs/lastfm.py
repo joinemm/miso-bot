@@ -70,7 +70,7 @@ class AlbumColorNode:
 
 class PeriodArgument(commands.Converter):
     @staticmethod
-    async def convert(self, _ctx: MisoContext, argument: str):
+    async def convert(_ctx: MisoContext, argument: str):
         match argument.lower():
             case "7day" | "7days" | "weekly" | "week" | "1week" | "7d":
                 return Period.WEEK
@@ -736,6 +736,7 @@ class LastFm(commands.Cog):
                 await self.artist_top(ctx, timeframe, artist, "tracks")
 
     async def artist_overview(self, ctx: MisoContext, timeframe: Period, artist: str):
+        """Send overview of the given artist"""
         artistinfo = await self.api.artist_get_info(artist, ctx.lfm.username)
 
         artist_url_format = artistinfo["url"].split("/")[-1]
@@ -872,6 +873,7 @@ class LastFm(commands.Cog):
         artist: str,
         data_type: Literal["tracks", "albums"],
     ):
+        """Send the top tracks by given artist sorted by playcount"""
         artistinfo = await self.api.artist_get_info(
             artist, ctx.lfm.username, autocorrect=True
         )
@@ -945,6 +947,7 @@ class LastFm(commands.Cog):
     async def album_toptracks(
         self, ctx: MisoContext, timeframe: Period, albuminfo: dict
     ):
+        """Send the top tracks of given album sorted by playcount"""
         album_name = albuminfo["name"]
         artist_name = albuminfo["artist"]
 
@@ -976,6 +979,7 @@ class LastFm(commands.Cog):
         )
 
     async def album_tracklist(self, ctx: MisoContext, albuminfo: dict):
+        """Send the tracklist of the album as found on lastfm website"""
         album_name = albuminfo["name"]
         artist_name = albuminfo["artist"]
 
@@ -1898,7 +1902,7 @@ class LastFm(commands.Cog):
                 )
 
             track_list = []
-            for member_data, member in data:
+            for member_data, _member in data:
                 tracks = member_data["track"]
                 if len(tracks) == 0:
                     continue

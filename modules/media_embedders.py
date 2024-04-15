@@ -224,7 +224,6 @@ class BaseEmbedder:
 
     @staticmethod
     async def msg_post_process(
-        self,
         msg: discord.Message,
         view: discord.ui,
         author: discord.User,

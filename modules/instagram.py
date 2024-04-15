@@ -166,7 +166,7 @@ class InstaFix:
         )
 
     @staticmethod
-    async def get_story(self, username: str, story_pk: str):
+    async def get_story(username: str, story_pk: str):
         raise InstagramError("Instagram stories are not supported at the moment.")
 
 
