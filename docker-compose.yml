@@ -34,34 +34,6 @@ services:
       - MARIADB_ROOT_PASSWORD=secure-af
     profiles: [prod, dev, dev-extra]
 
-  prometheus:
-    container_name: miso-prometheus
-    image: prom/prometheus
-    restart: unless-stopped
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-storage:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=1y'
-      - '--web.enable-lifecycle'
-    profiles: [prod]
-
-  grafana:
-    container_name: miso-grafana
-    image: grafana/grafana-oss
-    restart: unless-stopped
-    ports:
-      - "9080:3000"
-    volumes:
-      - grafana-storage:/var/lib/grafana
-    profiles: [prod]
-
   image-server:
     container_name: miso-image-server
     build: https://github.com/joinemm/sushii-image-server.git#main
@@ -162,6 +134,4 @@ networks:
 volumes:
   database:
   shlink-database:
-  grafana-storage:
-  prometheus-storage:
   redis-data:
