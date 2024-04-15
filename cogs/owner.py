@@ -266,9 +266,9 @@ class Owner(commands.Cog):
         """Change who manages the premium for a server"""
         await self.bot.db.execute(
             """
-            UPDATE premium_server 
+            UPDATE premium_server
                 SET activated_by_user_id = %s
-            WHERE guild_id = %s 
+            WHERE guild_id = %s
             """,
             managing_user.id,
             server.id,

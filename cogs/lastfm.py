@@ -69,7 +69,8 @@ class AlbumColorNode:
 
 
 class PeriodArgument(commands.Converter):
-    async def convert(self, ctx: MisoContext, argument: str):
+    @staticmethod
+    async def convert(self, _ctx: MisoContext, argument: str):
         match argument.lower():
             case "7day" | "7days" | "weekly" | "week" | "1week" | "7d":
                 return Period.WEEK
@@ -95,7 +96,7 @@ class ArtistSubcommand(Enum):
     OVERVIEW = auto()
 
     @classmethod
-    async def convert(cls, ctx: MisoContext, argument: str):
+    async def convert(cls, _ctx: MisoContext, argument: str):
         match argument.lower():
             case "toptracks" | "tt":
                 return cls.TOPTRACKS
@@ -112,7 +113,7 @@ class AlbumSubcommand(Enum):
     TRACKLIST = auto()
 
     @classmethod
-    async def convert(cls, ctx: MisoContext, argument: str):
+    async def convert(cls, _ctx: MisoContext, argument: str):
         match argument.lower():
             case "toptracks" | "tt":
                 return cls.TOPTRACKS
@@ -137,7 +138,7 @@ class ChartSize:
 
 class ChartSizeArgument:
     @staticmethod
-    async def convert(ctx: MisoContext, argument: str):
+    async def convert(_ctx: MisoContext, argument: str):
         try:
             size = ChartSize(int(argument), int(argument))
         except ValueError:
@@ -162,7 +163,7 @@ class ChartOption:
         "topster",
     ]
 
-    async def convert(self, ctx: MisoContext, argument: str):
+    async def convert(self, _ctx: MisoContext, argument: str):
         argument = argument.lower()
         if argument not in self.options:
             raise commands.BadArgument(
@@ -915,8 +916,6 @@ class LastFm(commands.Cog):
         *,
         album: Annotated[tuple, AlbumArgument],
     ):
-        """Get information about an album"""
-
         """
         See tracklist or top tracks for specific album
 
@@ -1274,14 +1273,14 @@ class LastFm(commands.Cog):
 
                 return image.hash, color.r, color.g, color.b, hex_color
 
-            tasks = [get_color(image) for image in to_fetch]
-            if len(tasks) > 500:
+            futures = [get_color(image) for image in to_fetch]
+            if len(futures) > 500:
                 warn = await ctx.send(
                     ":exclamation:Your library includes over 500 uncached album colours, "
                     f"this might take a while {emojis.LOADING}"
                 )
 
-            colordata = await asyncio.gather(*tasks)
+            colordata = await asyncio.gather(*futures)
             for colortuple in colordata:
                 if colortuple is None:
                     continue
@@ -1481,23 +1480,23 @@ class LastFm(commands.Cog):
     async def task_for_each_server_member(
         self, guild: discord.Guild, task: asyncio.Future, *args, **kwargs
     ):
-        tasks = []
+        futures = []
         for user_id, lastfm_username in await self.server_lastfm_usernames(guild):
             member = guild.get_member(user_id)
             if member is None:
                 continue
 
-            tasks.append(
+            futures.append(
                 task_wrapper(
                     task(lastfm_username, *args, **kwargs),
                     member,
                 )
             )
 
-        if not tasks:
+        if not futures:
             return None
 
-        return await asyncio.gather(*tasks)
+        return await asyncio.gather(*futures)
 
     @fm.group(aliases=["s"])
     @commands.guild_only()
@@ -1620,7 +1619,7 @@ class LastFm(commands.Cog):
             )
 
         artist_map = {}
-        for member_data, member in data:
+        for member_data, _member in data:
             artists = member_data["artist"]
             if len(artists) == 0:
                 continue
@@ -1679,7 +1678,7 @@ class LastFm(commands.Cog):
             )
 
         track_map = {}
-        for member_data, member in data:
+        for member_data, _member in data:
             tracks = member_data["track"]
             if len(tracks) == 0:
                 continue
@@ -1744,7 +1743,7 @@ class LastFm(commands.Cog):
             )
 
         album_map = {}
-        for member_data, member in data:
+        for member_data, _member in data:
             albums = member_data["album"]
             if len(albums) == 0:
                 continue
@@ -1848,7 +1847,7 @@ class LastFm(commands.Cog):
                 )
 
             artist_map = {}
-            for member_data, member in data:
+            for member_data, _member in data:
                 artists = member_data["artist"]
                 if len(artists) == 0:
                     continue
@@ -2019,12 +2018,12 @@ class LastFm(commands.Cog):
                 "Nobody on this server has connected their Last.fm account yet!"
             )
 
-        tasks = [
+        futures = [
             playcount_fn(lastfm_username, user_id)
             for user_id, lastfm_username in fm_members
         ]
 
-        data = await asyncio.gather(*tasks)
+        data = await asyncio.gather(*futures)
         crown_holder = None
         crown_playcount = 0
         total = 0
@@ -2434,8 +2433,10 @@ async def get_lastfm_username(ctx: MisoContext):
     )
     if lastfm_username is None:
         if targets_author:
-            msg = f"No last.fm username saved! Please use `{ctx.prefix}fm set <username>` "
-            "[without brackets] to save your username (last.fm account required)"
+            msg = (
+                f"No last.fm username saved! Please use `{ctx.prefix}fm set <username>` "
+                "(without the angle brackets) to save your username (last.fm account required)"
+            )
         else:
             msg = f"{target_user.mention} has not saved their lastfm username yet!"
 

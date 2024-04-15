@@ -222,6 +222,7 @@ class BaseEmbedder:
 
         await self.msg_post_process(msg, message_contents["view"], message.author)
 
+    @staticmethod
     async def msg_post_process(
         self,
         msg: discord.Message,
@@ -365,7 +366,6 @@ class InstagramEmbedder(BaseEmbedder):
         tasks = []
         for n, media in enumerate(post.media, start=1):
             ext = "mp4" if media.media_type == instagram.MediaType.VIDEO else "jpg"
-            # dateformat = arrow.get(post.timestamp).format("YYMMDD")
             filename = f"@{post.user.username}-{identifier}-{n}.{ext}"
             tasks.append(
                 self.download_media(

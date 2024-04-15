@@ -867,9 +867,8 @@ async def server_is_premium(guild: discord.Guild, bot: "MisoBot") -> bool:
         """,
         guild.id,
     )
-    if manager:
-        if await user_is_donator(bot.get_user(manager), bot):
-            return True
+    if manager and await user_is_donator(bot.get_user(manager), bot):
+        return True
     return False
 
 
