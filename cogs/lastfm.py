@@ -1946,7 +1946,7 @@ class LastFm(commands.Cog):
                 )
 
             album_map = {}
-            for member_data, member in data:
+            for member_data, _member in data:
                 albums = member_data["album"]
                 if len(albums) == 0:
                     continue
