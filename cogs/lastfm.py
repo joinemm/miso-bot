@@ -79,7 +79,7 @@ class PeriodArgument(commands.Converter):
                 return Period.QUARTER
             case "180day" | "180days" | "6months" | "6month" | "halfyear":
                 return Period.HALFYEAR
-            case "365day" | "365days" | "1year" | "year" | "12months" | "12month" | "1y":
+            case "365day" | "365days" | "year" | "12months" | "12month" | "1y":
                 return Period.YEAR
             case "overall" | "alltime" | "at":
                 return Period.OVERALL
@@ -102,6 +102,21 @@ class ArtistSubcommand(Enum):
             case "topalbums" | "talb":
                 return cls.TOPALBUMS
             case "overview" | "ov" | "profile":
+                return cls.OVERVIEW
+            case _:
+                raise commands.BadArgument(f"No such command `{argument}`.")
+
+
+class AlbumSubcommand(Enum):
+    TOPTRACKS = auto()
+    TRACKLIST = auto()
+
+    @classmethod
+    async def convert(cls, ctx: MisoContext, argument: str):
+        match argument.lower():
+            case "toptracks" | "tt":
+                return cls.TOPTRACKS
+            case "overview" | "ov" | "tracklist" | "tl":
                 return cls.OVERVIEW
             case _:
                 raise commands.BadArgument(f"No such command `{argument}`.")
@@ -719,8 +734,6 @@ class LastFm(commands.Cog):
             case ArtistSubcommand.TOPTRACKS:
                 await self.artist_top(ctx, timeframe, artist, "tracks")
 
-    # helpers
-
     async def artist_overview(self, ctx: MisoContext, timeframe: Period, artist: str):
         artistinfo = await self.api.artist_get_info(artist, ctx.lfm.username)
 
@@ -894,12 +907,76 @@ class LastFm(commands.Cog):
         )
 
     @fm.command(name="album")
-    async def album(self, ctx: MisoContext, *, album: Annotated[tuple, AlbumArgument]):
+    async def album(
+        self,
+        ctx: MisoContext,
+        timeframe: Optional[Annotated[Period, PeriodArgument]] = Period.OVERALL,
+        command: Optional[AlbumSubcommand] = AlbumSubcommand.TRACKLIST,
+        *,
+        album: Annotated[tuple, AlbumArgument],
+    ):
         """Get information about an album"""
+
+        """
+        See tracklist or top tracks for specific album
+
+        Usage:
+            >fm album [timeframe] [toptracks | tracklist] <artist name> | <album name>
+
+        Examples:
+            >fm album weekly toptracks master of puppets | metallica
+            >fm album tracklist DRAMA | 9MUSES
+            >fm album np
+        """
+        # dumb type checker doesnt get it
+        if TYPE_CHECKING:
+            assert timeframe is not None
+
         album_input, artist_input = album
         albuminfo = await self.api.album_get_info(
             artist_input, album_input, autocorrect=True, username=ctx.lfm.username
         )
+
+        match command:
+            case AlbumSubcommand.TRACKLIST:
+                await self.album_tracklist(ctx, albuminfo)
+            case AlbumSubcommand.TOPTRACKS:
+                await self.album_toptracks(ctx, timeframe, albuminfo)
+
+    async def album_toptracks(
+        self, ctx: MisoContext, timeframe: Period, albuminfo: dict
+    ):
+        album_name = albuminfo["name"]
+        artist_name = albuminfo["artist"]
+
+        row_items = self.api.get_library_playcounts(
+            await self.api.scrape_page(
+                f"https://www.last.fm/user/{ctx.lfm.username}/library/music/"
+                f"{urllib.parse.quote_plus(artist_name)}/"
+                f"{urllib.parse.quote_plus(album_name)}"
+                f"?date_preset={timeframe.web_format()}"
+            )
+        )
+
+        if not row_items:
+            return raise_no_album_plays(artist_name, album_name, timeframe)
+
+        total = albuminfo["userplaycount"]
+
+        await self.paginated_user_stat_embed(
+            ctx,
+            self.ranked_list(row_items),
+            f"{artist_name} — {album_name} — "
+            + (
+                f"{timeframe.display().capitalize()} top tracks"
+                if timeframe != timeframe.OVERALL
+                else "Top tracks"
+            ),
+            LastFmImage.from_url(albuminfo["image"][-1]["#text"]),
+            footer=f"Total {total} plays",
+        )
+
+    async def album_tracklist(self, ctx: MisoContext, albuminfo: dict):
         album_name = albuminfo["name"]
         artist_name = albuminfo["artist"]
 
@@ -961,7 +1038,7 @@ class LastFm(commands.Cog):
                 row += f" `{duration_fmt}`"
 
             if playcount:
-                row += f" [**{playcount}**]"
+                row += f" [**{playcount}** plays]"
             tracklist.append(row)
 
         if not tracklist:
@@ -2390,6 +2467,16 @@ def raise_no_artist_plays(artist: str, timeframe: Period):
         f"You have never listened to **{artist_escaped}**!"
         if timeframe == Period.OVERALL
         else f"You have not listened to **{artist_escaped}** in the past {timeframe}!"
+    )
+
+
+def raise_no_album_plays(artist: str, album: str, timeframe: Period):
+    artist_escaped = escape_markdown(artist)
+    album_escaped = escape_markdown(album)
+    raise exceptions.CommandInfo(
+        f"You have never listened to **{album_escaped}** by **{artist_escaped}**!"
+        if timeframe == Period.OVERALL
+        else f"You have not listened to **{album_escaped}** by **{artist_escaped}** in the past {timeframe}!"
     )
 
 
