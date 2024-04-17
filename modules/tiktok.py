@@ -55,7 +55,8 @@ class TikTok:
     }
     EMOJI = "<:tiktok:1050401570090647582>"
 
-    def __init__(self) -> None:
+    def __init__(self, bot) -> None:
+        self.bot = bot
         self.input_element = None
 
     async def warmup(self, session: aiohttp.ClientSession):

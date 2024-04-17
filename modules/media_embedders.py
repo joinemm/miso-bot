@@ -401,7 +401,7 @@ class TikTokEmbedder(BaseEmbedder):
     NO_RESULTS_ERROR = "Found no TikTok links to embed!"
 
     def __init__(self, bot: "MisoBot"):
-        self.downloader = TikTok()
+        self.downloader = TikTok(bot)
         super().__init__(bot)
 
     @staticmethod
