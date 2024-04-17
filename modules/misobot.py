@@ -115,9 +115,7 @@ class MisoBot(commands.AutoShardedBot):
     async def request_tracing(self, session, context, params):
         try:
             if prom := self.get_cog("Prometheus"):
-                prom.outgoing_requests.labels(
-                    host=params.url.host, path=params.url.path
-                ).inc()  # type: ignore
+                prom.outgoing_requests.labels(host=params.url.host).inc()  # type: ignore
         except Exception as e:
             logger.warning(f"Unhandled exception in tracing: {e}")
 
