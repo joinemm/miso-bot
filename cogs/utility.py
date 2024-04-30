@@ -22,40 +22,6 @@ from modules.ui import BaseButtonPaginator, Compliance
 
 from modules import emojis, exceptions, queries, util
 
-papago_pairs = [
-    "ko/en",
-    "ko/ja",
-    "ko/zh-cn",
-    "ko/zh-tw",
-    "ko/vi",
-    "ko/id",
-    "ko/de",
-    "ko/ru",
-    "ko/es",
-    "ko/it",
-    "ko/fr",
-    "en/ja",
-    "ja/zh-cn",
-    "ja/zh-tw",
-    "zh-cn/zh-tw",
-    "en/ko",
-    "ja/ko",
-    "zh-cn/ko",
-    "zh-tw/ko",
-    "vi/ko",
-    "id/ko",
-    "th/ko",
-    "de/ko",
-    "ru/ko",
-    "es/ko",
-    "it/ko",
-    "fr/ko",
-    "ja/en",
-    "zh-cn/ja",
-    "zh-tw/ja",
-    "zh-tw/zh-tw",
-]
-
 
 class GifOptions(util.KeywordArguments):
     def __init__(self, start: float | None = None, end: float | None = None):
@@ -724,7 +690,7 @@ class Utility(commands.Cog):
     )
     async def translate(self, ctx: commands.Context, *, text):
         """
-        Papago and Google translator
+        Google translator
 
         You can specify language pairs or let them be automatically detected.
         Default target language is english.
@@ -753,38 +719,19 @@ class Utility(commands.Cog):
             if target == "":
                 target = "en"
         else:
-            source = await detect_language(self.bot, text)
+            source = await detect_(self.bot, text)
             target = "ko" if source == "en" else "en"
         language_pair = f"{source}/{target}"
 
-        # we have language and query, now choose the appropriate translator
-
-        if language_pair in papago_pairs:
-            # use papago
-            url = "https://openapi.naver.com/v1/papago/n2mt"
-            params = {"source": source, "target": target, "text": text}
-            headers = {
-                "X-Naver-Client-Id": self.bot.keychain.NAVER_APPID,
-                "X-Naver-Client-Secret": self.bot.keychain.NAVER_TOKEN,
-            }
-
-            async with self.bot.session.post(
-                url, headers=headers, data=params
-            ) as response:
-                translation = (await response.json(loads=orjson.loads))["message"][
-                    "result"
-                ]["translatedText"]
-
-        else:
-            # use google
-            url = "https://translation.googleapis.com/language/translate/v2"
-            params = {
-                "key": self.bot.keychain.GCS_DEVELOPER_KEY,
-                "model": "nmt",
-                "target": target,
-                "source": source,
-                "q": text,
-            }
+         # use google
+        url = "https://translation.googleapis.com/language/translate/v2"
+        params = {
+            "key": self.bot.keychain.GCS_DEVELOPER_KEY,
+            "model": "nmt",
+            "target": target,
+            "source": source,
+            "q": text,
+        }
 
             async with self.bot.session.get(url, params=params) as response:
                 data = await response.json(loads=orjson.loads)
