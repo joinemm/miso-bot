@@ -719,7 +719,7 @@ class Utility(commands.Cog):
             if target == "":
                 target = "en"
         else:
-            source = await detect_(self.bot, text)
+            source = await detect_language(self.bot, text)
             target = "ko" if source == "en" else "en"
         language_pair = f"{source}/{target}"
 
@@ -733,15 +733,15 @@ class Utility(commands.Cog):
             "q": text,
         }
 
-            async with self.bot.session.get(url, params=params) as response:
-                data = await response.json(loads=orjson.loads)
+        async with self.bot.session.get(url, params=params) as response:
+            data = await response.json(loads=orjson.loads)
 
-            try:
-                translation = html.unescape(
-                    data["data"]["translations"][0]["translatedText"]
+        try:
+            translation = html.unescape(
+                data["data"]["translations"][0]["translatedText"]
                 )
-            except KeyError:
-                return await ctx.send("Sorry, I could not translate this :(")
+        except KeyError:
+            return await ctx.send("Sorry, I could not translate this :(")
 
         await ctx.send(f"`{source}->{target}` {translation}")
 
