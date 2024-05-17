@@ -317,6 +317,10 @@ class Events(commands.Cog):
 
         media_settings = self.bot.cache.media_auto_embed.get(str(message.guild.id), {})
         if True in media_settings.values():
+            # chunk the guild if it't not chunked yet, like commands do
+            # this ensures user information is available
+            await util.require_chunked(ctx.guild)
+
             try:
                 await self.parse_media_auto_embed(message, media_settings)
             except Exception as e:
