@@ -54,7 +54,7 @@ class Prometheus(commands.Cog):
         self.outgoing_requests = Counter(
             "miso_outgoing_requests",
             "Aiohttp clientsession total requests per domain.",
-            ["host"],
+            ["host", "status_code"],
         )
 
     async def cog_load(self):

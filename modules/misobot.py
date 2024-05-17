@@ -115,13 +115,16 @@ class MisoBot(commands.AutoShardedBot):
     async def request_tracing(self, session, context, params):
         try:
             if prom := self.get_cog("Prometheus"):
-                prom.outgoing_requests.labels(host=params.url.host).inc()  # type: ignore
+                prom.outgoing_requests.labels(
+                    host=params.url.host,
+                    status_code=params.response.status,
+                ).inc()  # type: ignore
         except Exception as e:
             logger.warning(f"Unhandled exception in tracing: {e}")
 
     async def setup_hook(self):
         self.trace_config = aiohttp.TraceConfig()
-        self.trace_config.on_request_start.append(self.request_tracing)
+        self.trace_config.on_request_end.append(self.request_tracing)
         self.session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(limit=0),
             json_serialize=lambda x: orjson.dumps(x).decode(),
