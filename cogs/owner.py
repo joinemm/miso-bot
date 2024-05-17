@@ -329,7 +329,7 @@ class Owner(commands.Cog):
             functions = {"⬅": previous_page, "➡": next_page}
             asyncio.ensure_future(util.reaction_buttons(ctx, msg, functions))
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     async def vip(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
             await util.command_group_help(ctx)

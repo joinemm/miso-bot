@@ -13,9 +13,9 @@ import discord
 import orjson
 import psutil
 from discord.ext import commands
-from modules.misobot import MisoBot
 
 from modules import emojis, exceptions, util
+from modules.misobot import MisoBot
 
 
 class Information(commands.Cog):
@@ -319,7 +319,7 @@ class Information(commands.Cog):
 
         await ctx.send(embed=content)
 
-    @commands.group(usage="[command]")
+    @commands.group(usage="[command]", case_insensitive=True)
     async def commandstats(self, ctx: commands.Context):
         """See command usage statistics"""
         if ctx.invoked_subcommand is None:

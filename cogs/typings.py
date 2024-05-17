@@ -10,9 +10,9 @@ from operator import itemgetter
 import arrow
 import discord
 from discord.ext import commands
-from modules.misobot import MisoBot
 
 from modules import exceptions, util
+from modules.misobot import MisoBot
 
 
 class Typings(commands.Cog):
@@ -38,7 +38,7 @@ class Typings(commands.Cog):
         )
         return remainder != ""
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     async def typing(self, ctx: commands.Context):
         """Test your typing speed"""
         await util.command_group_help(ctx)

@@ -13,9 +13,9 @@ import discord
 import humanize
 from bs4 import BeautifulSoup
 from discord.ext import commands
-from modules.misobot import MisoBot
 
 from modules import exceptions, util
+from modules.misobot import MisoBot
 
 
 class Kpop(commands.Cog):
@@ -173,7 +173,7 @@ class Kpop(commands.Cog):
 
         await ctx.send(embed=content)
 
-    @commands.group(invoke_without_command=True)
+    @commands.group(invoke_without_command=True, case_insensitive=True)
     async def stan(self, ctx: commands.Context):
         """Get a random kpop artist to stan"""
         # fast random row

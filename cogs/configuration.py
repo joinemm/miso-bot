@@ -68,7 +68,7 @@ class Configuration(commands.Cog):
             f"Example command usage: {prefix}ping",
         )
 
-    @commands.group(name="greeter")
+    @commands.group(name="greeter", case_insensitive=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def greeter(self, ctx: commands.Context):
@@ -117,7 +117,9 @@ class Configuration(commands.Cog):
             embed=preview,
         )
 
-    @commands.group(name="goodbyemessage", aliases=["goodbyemessages"])
+    @commands.group(
+        name="goodbyemessage", aliases=["goodbyemessages"], case_insensitive=True
+    )
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def goodbyemessage(self, ctx: commands.Context):
@@ -168,7 +170,7 @@ class Configuration(commands.Cog):
             \n```{message}```Preview:\n\n{preview}"
         )
 
-    @commands.group(name="logger")
+    @commands.group(name="logger", case_insensitive=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def logger(self, ctx: commands.Context):
@@ -293,7 +295,7 @@ class Configuration(commands.Cog):
             f"{channel.mention} is no longer being ignored from deleted message logging.",
         )
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def starboard(self, ctx: commands.Context):
@@ -531,7 +533,7 @@ class Configuration(commands.Cog):
             ctx, f"Muting someone now gives them the role {role.mention}"
         )
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def autorole(self, ctx: commands.Context):
@@ -603,7 +605,7 @@ class Configuration(commands.Cog):
         else:
             await util.send_success(ctx, "Automatic responses are now **disabled**")
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     async def blacklist(self, ctx: commands.Context):
         """Restrict command usage"""
         await util.command_group_help(ctx)
@@ -819,7 +821,7 @@ class Configuration(commands.Cog):
         await guild.leave()
         await util.send_success(ctx, f"**{guild}** can no longer use Miso Bot!")
 
-    @commands.group(aliases=["whitelist"])
+    @commands.group(aliases=["whitelist"], case_insensitive=True)
     async def unblacklist(self, ctx: commands.Context):
         """Reverse blacklisting"""
         await util.command_group_help(ctx)

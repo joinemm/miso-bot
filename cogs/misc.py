@@ -416,7 +416,7 @@ class Misc(commands.Cog):
         """Add a clap emoji between words"""
         await ctx.send(" 👏 ".join(sentence) + " 👏")
 
-    @commands.group(aliases=["hs"])
+    @commands.group(aliases=["hs"], case_insensitive=True)
     async def horoscope(self, ctx: commands.Context):
         """Get your daily horoscope"""
         if ctx.invoked_subcommand is None:

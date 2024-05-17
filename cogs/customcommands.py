@@ -10,9 +10,9 @@ import arrow
 import discord
 from discord.ext import commands
 from loguru import logger
-from modules.misobot import MisoBot
 
 from modules import emojis, exceptions, queries, util
+from modules.misobot import MisoBot
 
 
 class CustomCommands(commands.Cog, name="Commands"):
@@ -94,7 +94,7 @@ class CustomCommands(commands.Cog, name="Commands"):
                     "custom",
                 )
 
-    @commands.group(aliases=["cmd", "commands", "tag"])
+    @commands.group(aliases=["cmd", "commands", "tag"], case_insensitive=True)
     @commands.guild_only()
     async def command(self, ctx: commands.Context):
         """Manage server specific custom commmands"""

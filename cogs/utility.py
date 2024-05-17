@@ -16,11 +16,11 @@ import discord
 import orjson
 from discord.ext import commands, tasks
 from loguru import logger
+
+from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
 from modules.shazam import Shazam
 from modules.ui import BaseButtonPaginator, Compliance
-
-from modules import emojis, exceptions, queries, util
 
 papago_pairs = [
     "ko/en",
@@ -357,7 +357,7 @@ class Utility(commands.Cog):
             )
         return location
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     async def weather(self, ctx: commands.Context):
         """Show current weather in given location"""
         if ctx.invoked_subcommand is None:
@@ -997,7 +997,7 @@ class Utility(commands.Cog):
 
         await ctx.send(embed=content)
 
-    @commands.group(aliases=["tz", "timezones"])
+    @commands.group(aliases=["tz", "timezones"], case_insensitive=True)
     async def timezone(self, ctx: commands.Context):
         """See the current time for your friends across the globe"""
         await util.command_group_help(ctx)
@@ -1100,7 +1100,7 @@ class Utility(commands.Cog):
         )
         await util.send_as_pages(ctx, content, rows)
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     async def steam(self, ctx: commands.Context):
         """Steam commands"""
         await util.command_group_help(ctx)

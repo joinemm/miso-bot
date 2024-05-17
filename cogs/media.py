@@ -63,7 +63,7 @@ class Media(commands.Cog):
         )
 
     @util.patrons_only()
-    @commands.group(usage="<instagram | tiktok | reddit>")
+    @commands.group(usage="<instagram | tiktok | reddit>", case_insensitive=True)
     async def autoembedder(
         self, ctx: commands.Context, provider: Literal["instagram", "tiktok", "reddit"]
     ):
