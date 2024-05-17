@@ -16,10 +16,10 @@ import orjson
 from aiohttp import ClientResponseError
 from bs4 import BeautifulSoup
 from discord.ext import commands
-from modules.misobot import MisoBot
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
 from modules import emoji_literals, exceptions, util
+from modules.misobot import MisoBot
 
 EMOJIFIER_HOST = os.environ.get("EMOJIFIER_HOST")
 
@@ -730,9 +730,16 @@ class Misc(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_emojis=True)
     async def steal(self, ctx: commands.Context, *emojis: int | str):
-        """Steal an emoji to your own server"""
+        """Steal emojis to your own server
+
+        Use this command in the server where you want to add the emojis.
+        Also works with emoji ID if you don't have access to it.
+        """
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
+
+        if not emojis:
+            return await util.send_command_help(ctx)
 
         for emoji in emojis:
             my_emoji = self.parse_emoji(emoji)
