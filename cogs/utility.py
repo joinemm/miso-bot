@@ -22,40 +22,6 @@ from modules.misobot import MisoBot
 from modules.shazam import Shazam
 from modules.ui import BaseButtonPaginator, Compliance
 
-papago_pairs = [
-    "ko/en",
-    "ko/ja",
-    "ko/zh-cn",
-    "ko/zh-tw",
-    "ko/vi",
-    "ko/id",
-    "ko/de",
-    "ko/ru",
-    "ko/es",
-    "ko/it",
-    "ko/fr",
-    "en/ja",
-    "ja/zh-cn",
-    "ja/zh-tw",
-    "zh-cn/zh-tw",
-    "en/ko",
-    "ja/ko",
-    "zh-cn/ko",
-    "zh-tw/ko",
-    "vi/ko",
-    "id/ko",
-    "th/ko",
-    "de/ko",
-    "ru/ko",
-    "es/ko",
-    "it/ko",
-    "fr/ko",
-    "ja/en",
-    "zh-cn/ja",
-    "zh-tw/ja",
-    "zh-tw/zh-tw",
-]
-
 
 class GifOptions(util.KeywordArguments):
     def __init__(self, start: float | None = None, end: float | None = None):
@@ -729,6 +695,8 @@ class Utility(commands.Cog):
         You can specify language pairs or let them be automatically detected.
         Default target language is english.
 
+        You can also use '->' in place of '/' for language specification.
+
         Usage:
             >translate <sentence>
             >translate xx/yy <sentence>
@@ -737,66 +705,58 @@ class Utility(commands.Cog):
         """
         if len(text) > 1000:
             raise exceptions.CommandWarning(
-                "Sorry, the maximum length of text i can translate is 1000 characters!"
+                "The maximum length of text i can translate is 1000 characters!"
             )
 
         source = ""
         target = ""
-        languages = text.partition(" ")[0]
-        if "/" in languages or "->" in languages:
-            source, target = (
-                languages.split("/") if "/" in languages else languages.split("->")
+        languages, text = text.split(" ", 1)
+
+        for separator in ["/", "->"]:
+            if separator in languages:
+                source, target = languages.split(separator)
+                if source or target:
+                    break
+        else:
+            # nothing was found, reconstruct the full text
+            text = languages + " " + text
+
+        # default target to english
+        if not target:
+            target = "en"
+
+        if source == target:
+            raise exceptions.CommandInfo(
+                f"Nothing to translate! Source and target languages match ({source})"
             )
-            text = text.partition(" ")[2]
-            if source == "":
-                source = await detect_language(self.bot, text)
-            if target == "":
-                target = "en"
-        else:
-            source = await detect_language(self.bot, text)
-            target = "ko" if source == "en" else "en"
-        language_pair = f"{source}/{target}"
 
-        # we have language and query, now choose the appropriate translator
+        url = "https://translation.googleapis.com/language/translate/v2"
+        params = {
+            "key": self.bot.keychain.GCS_DEVELOPER_KEY,
+            "target": target,
+            "q": text,
+        }
+        if source:
+            params["source"] = source
 
-        if language_pair in papago_pairs:
-            # use papago
-            url = "https://openapi.naver.com/v1/papago/n2mt"
-            params = {"source": source, "target": target, "text": text}
-            headers = {
-                "X-Naver-Client-Id": self.bot.keychain.NAVER_APPID,
-                "X-Naver-Client-Secret": self.bot.keychain.NAVER_TOKEN,
-            }
+        async with self.bot.session.get(url, params=params) as response:
+            data = await response.json(loads=orjson.loads)
 
-            async with self.bot.session.post(
-                url, headers=headers, data=params
-            ) as response:
-                translation = (await response.json(loads=orjson.loads))["message"][
-                    "result"
-                ]["translatedText"]
+        # check for errors and raise if any are present
+        error = data.get("error")
+        if error:
+            logger.error(error)
+            raise exceptions.CommandError("Error: " + error["message"])
 
-        else:
-            # use google
-            url = "https://translation.googleapis.com/language/translate/v2"
-            params = {
-                "key": self.bot.keychain.GCS_DEVELOPER_KEY,
-                "model": "nmt",
-                "target": target,
-                "source": source,
-                "q": text,
-            }
+        result = data["data"]["translations"][0]
 
-            async with self.bot.session.get(url, params=params) as response:
-                data = await response.json(loads=orjson.loads)
+        # get the detected language if one was not supplied
+        if not source:
+            source = result["detectedSourceLanguage"]
 
-            try:
-                translation = html.unescape(
-                    data["data"]["translations"][0]["translatedText"]
-                )
-            except KeyError:
-                return await ctx.send("Sorry, I could not translate this :(")
+        translation = html.unescape(result["translatedText"])
 
-        await ctx.send(f"`{source}->{target}` {translation}")
+        await ctx.send(f"`{source}->{target}`\n>>> {translation}")
 
     @commands.command(aliases=["wolf", "w"])
     async def wolfram(self, ctx: commands.Context, *, query):
