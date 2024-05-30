@@ -3,15 +3,13 @@
 # https://git.joinemm.dev/miso-bot
 
 import copy
-import math
-import os
 import time
 from typing import Optional
 
 import arrow
 import discord
+import humanize
 import orjson
-import psutil
 from discord.ext import commands
 
 from modules import emojis, exceptions, util
@@ -24,6 +22,7 @@ class Information(commands.Cog):
     def __init__(self, bot):
         self.bot: MisoBot = bot
         self.icon = "ℹ️"
+        self.donator_cache = {}
 
     @commands.command()
     async def invite(self, ctx: commands.Context):
@@ -89,11 +88,16 @@ class Information(commands.Cog):
             for user_id in patrons:
                 user = self.bot.get_user(user_id)
                 if user is None:
-                    user = await self.bot.fetch_user(user_id)
-                    if user is None or user.name.startswith("Deleted User "):
-                        continue
+                    user = self.donator_cache.get(user_id, 0)
+                    if user == 0:
+                        user = await self.bot.fetch_user(user_id)
+                        if user is None or user.name.startswith("Deleted User "):
+                            self.donator_cache[user_id] = None
+                            continue
+                        self.donator_cache[user_id] = str(user)
 
-                donators.append(f"**{user}**")
+                if user:
+                    donators.append(f"**{user}**")
 
         n = 20
         chunks = [
@@ -172,31 +176,6 @@ class Information(commands.Cog):
         )
         await test_message.edit(content="", embed=content)
 
-    @commands.command(aliases=["status"])
-    async def system(self, ctx: commands.Context):
-        """Get status of the host system"""
-        process_uptime = time.time() - self.bot.start_time
-        system_uptime = time.time() - psutil.boot_time()
-        mem = psutil.virtual_memory()
-        pid = os.getpid()
-        memory_use = psutil.Process(pid).memory_info()[0]
-
-        data = [
-            ("Bot booted up in", util.stringfromtime(self.bot.boot_up_time)),
-            ("Process uptime", util.stringfromtime(process_uptime, 2)),
-            ("Process memory", f"{memory_use / math.pow(1024, 2):.2f}MB"),
-            ("System uptime", util.stringfromtime(system_uptime, 2)),
-            ("CPU Usage", f"{psutil.cpu_percent()}%"),
-            ("RAM Usage", f"{mem.percent}%"),
-        ]
-
-        content = discord.Embed(
-            title=":computer: System status",
-            colour=int("5dadec", 16),
-            description="\n".join(f"**{x[0]}** {x[1]}" for x in data),
-        )
-        await ctx.send(embed=content)
-
     @commands.command(aliases=["shards"])
     async def shardinfo(self, ctx: commands.Context):
         """Get information about the current shards"""
@@ -221,13 +200,30 @@ class Information(commands.Cog):
         await ctx.send(embed=content)
 
     @commands.command()
-    async def shardof(self, ctx: commands.Context, guild_id: int):
-        """Find the shard ID of given guild ID"""
-        guild = self.bot.get_guild(guild_id)
-        if guild is None:
-            raise exceptions.CommandWarning(f"Guild `{guild_id}` not found")
+    async def metrics(self, ctx: commands.Context):
+        """Show some internal bot metrics"""
+        content = discord.Embed(
+            title="Metrics",
+            colour=int("E46A92", 16),
+        )
+        content.timestamp = arrow.now().datetime
+        uptime = time.time() - self.bot.start_time
+        prom = self.bot.get_cog("Prometheus")
 
-        await ctx.send(f"**{guild}** is on shard `{guild.shard_id}`")
+        content.description = "\n".join(
+            [
+                f"**Ping**: `{int(prom.ping._value.get() * 1000)}ms`",
+                f"**Uptime**: {humanize.naturaldelta(uptime)}",
+                f"**Loading time**: {humanize.naturaldelta(self.bot.boot_up_time)}",
+                f"**Users total**: `{int(prom.users_total._value.get())}`",
+                f"**Users cached**: `{int(prom.users_cached._value.get())}`",
+                f"**Guilds total**: `{int(prom.guilds_total._value.get())}`",
+                f"**Guilds cached**: `{int(prom.guilds_cached._value.get())}`",
+                f"**Median member count**: `{int(prom.median_member_count._value.get())}`",
+            ]
+        )
+
+        await ctx.send(embed=content)
 
     @commands.command()
     async def changelog(self, ctx: commands.Context, author="joinemm", repo="miso-bot"):

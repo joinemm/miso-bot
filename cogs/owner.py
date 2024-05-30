@@ -9,7 +9,7 @@ import discord
 from discord.ext import commands
 from loguru import logger
 
-from modules import util
+from modules import exceptions, util
 from modules.misobot import MisoBot
 
 
@@ -23,6 +23,15 @@ class Owner(commands.Cog):
     async def cog_check(self, ctx: commands.Context):
         """Check if command author is Owner"""
         return await self.bot.is_owner(ctx.author)
+
+    @commands.command()
+    async def shardof(self, ctx: commands.Context, guild_id: int):
+        """Find the shard ID of given guild ID"""
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            raise exceptions.CommandWarning(f"Guild `{guild_id}` not found")
+
+        await ctx.send(f"**{guild}** is on shard `{guild.shard_id}`")
 
     @commands.command(rest_is_raw=True)
     async def say(
@@ -93,6 +102,9 @@ class Owner(commands.Cog):
                 rows.append(
                     f"[`{guild.id}`] **{guild.member_count}** members : **{guild.name}**"
                 )
+
+        if not rows:
+            exceptions.CommandWarning("User not found in any currently loaded guilds!")
 
         content = discord.Embed(
             title=f"User **{user}** found in **{len(rows)}** guilds"
