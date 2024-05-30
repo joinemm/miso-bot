@@ -39,6 +39,7 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
         self.entries: list[T] = entries
         self.per_page: int = per_page
         self.clamp_pages: bool = clamp_pages
+        self.message: discord.Message
         self._current_page = 0
         self.pages = [
             entries[i : i + per_page] for i in range(0, len(entries), per_page)
@@ -120,10 +121,17 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
     async def run(self, context):
         embed = await self.format_page(self.pages[0])
         if self.total_pages > 1:
-            await context.send(embed=embed, view=self)
+            self.message = await context.send(embed=embed, view=self)
         else:
             # no need to paginate at all
             await context.send(embed=embed)
+            self.stop()
+
+    async def on_timeout(self):
+        self.on_arrow_forward.disabled = True
+        self.on_arrow_backward.disabled = True
+        await self.message.edit(view=self)
+        self.stop()
 
 
 class RowPaginator(BaseButtonPaginator):
