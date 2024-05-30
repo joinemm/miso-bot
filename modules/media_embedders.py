@@ -260,7 +260,8 @@ class RedditEmbedder(BaseEmbedder):
 
         tasks = []
         for n, media in enumerate(post.media, start=1):
-            filename = f"{dateformat}-{post.subreddit}-{reddit_post_id}-{n}.jpg"
+            extension = media.rsplit(".")[-1]
+            filename = f"{dateformat}-{post.subreddit}-{reddit_post_id}-{n}.{extension}"
             tasks.append(
                 self.download_media(
                     media,
