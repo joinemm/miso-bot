@@ -703,27 +703,27 @@ class Utility(commands.Cog):
             >translate /yy <sentence>
             >translate xx/ <sentence>
         """
-        if len(text) > 1000:
-            raise exceptions.CommandWarning(
-                "The maximum length of text i can translate is 1000 characters!"
-            )
-
         source = ""
         target = ""
-        languages, text = text.split(" ", 1)
-
-        for separator in ["/", "->"]:
-            if separator in languages:
-                source, target = languages.split(separator)
-                if source or target:
-                    break
-        else:
-            # nothing was found, reconstruct the full text
-            text = languages + " " + text
+        parts = text.split(" ", 1)
+        if len(parts) > 1:
+            languages, text = parts
+            for separator in ["/", "->"]:
+                if separator in languages:
+                    source, target = languages.split(separator)
+                    if source or target:
+                        break
+            else:
+                # nothing was found, reconstruct the full text
+                text = languages + " " + text
 
         # default target to english
         if not target:
             target = "en"
+
+        # get the detected language if one was not supplied
+        if not source:
+            source = await self.detect_language(text)
 
         if source == target:
             raise exceptions.CommandInfo(
@@ -734,7 +734,8 @@ class Utility(commands.Cog):
         params = {
             "key": self.bot.keychain.GCS_DEVELOPER_KEY,
             "target": target,
-            "q": text,
+            "source": source,
+            "q": text.split("\n"),
         }
         if source:
             params["source"] = source
@@ -748,15 +749,22 @@ class Utility(commands.Cog):
             logger.error(error)
             raise exceptions.CommandError("Error: " + error["message"])
 
-        result = data["data"]["translations"][0]
+        translations = [
+            "> " + html.unescape(trans["translatedText"])
+            for trans in data["data"]["translations"]
+        ]
 
-        # get the detected language if one was not supplied
-        if not source:
-            source = result["detectedSourceLanguage"]
+        await ctx.send(f"`{source}->{target}`\n" + "\n".join(translations))
 
-        translation = html.unescape(result["translatedText"])
+    async def detect_language(self, string: str):
+        url = "https://translation.googleapis.com/language/translate/v2/detect"
+        params = {"key": self.bot.keychain.GCS_DEVELOPER_KEY, "q": string[:1000]}
 
-        await ctx.send(f"`{source}->{target}`\n>>> {translation}")
+        async with self.bot.session.get(url, params=params) as response:
+            data = await response.json(loads=orjson.loads)
+            language = data["data"]["detections"][0][0]["language"]
+
+        return language
 
     @commands.command(aliases=["wolf", "w"])
     async def wolfram(self, ctx: commands.Context, *, query):
@@ -891,7 +899,7 @@ class Utility(commands.Cog):
             await ctx.send(gif_url)
 
     @commands.command()
-    async def stock(self, ctx: commands.Context, *, symbol):
+    async def stock(self, ctx: commands.Context, *, symbol: str):
         """
         Get price data for the US stock market
 
@@ -983,10 +991,10 @@ class Utility(commands.Cog):
         await ctx.send(f":clock2: **{dt.format('MMM Do HH:mm')}**")
 
     @timezone.command(name="set")
-    async def tz_set(self, ctx: commands.Context, your_timezone):
+    async def tz_set(self, ctx: commands.Context, your_timezone: str):
         """
-        Set your timezone
-        Give timezone as a tz database name (case sensitive):
+        Set your timezone.
+        Give timezone as a TZ identifier in this table (case sensitive):
         https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
         Example:
@@ -1146,17 +1154,6 @@ class MarketPaginator(BaseButtonPaginator):
         )
 
 
-async def detect_language(bot, string):
-    url = "https://translation.googleapis.com/language/translate/v2/detect"
-    params = {"key": bot.keychain.GCS_DEVELOPER_KEY, "q": string[:1000]}
-
-    async with bot.session.get(url, params=params) as response:
-        data = await response.json(loads=orjson.loads)
-        language = data["data"]["detections"][0][0]["language"]
-
-    return language
-
-
 def temp(celsius: float, convert_to_f: bool = False) -> str:
     if convert_to_f:
         return f"{int((celsius * 9.0 / 5.0) + 32)} °F"
@@ -1164,7 +1161,7 @@ def temp(celsius: float, convert_to_f: bool = False) -> str:
 
 
 class WeatherUnitToggler(discord.ui.View):
-    def __init__(self, renderfunction, F):
+    def __init__(self, renderfunction, F: bool):
         super().__init__()
         # renderfunction should be a function that takes boolean F,
         # denoting whether to use fahrenheit or not, and return a discord embed
