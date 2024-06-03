@@ -784,8 +784,7 @@ class Utility(commands.Cog):
             else:
                 await ctx.send(":shrug:")
 
-    @commands.is_owner()
-    @commands.command()
+    @commands.command(enabled=False)
     async def creategif(self, ctx: commands.Context, media_url: str, *tags: str):
         """Create a gif and upload it to GIPHY"""
         has_seen_warning = await self.bot.db.fetch_value(
