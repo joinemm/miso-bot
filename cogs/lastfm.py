@@ -523,7 +523,9 @@ class LastFm(commands.Cog):
                     f"{content.description}\n> {format_playcount(play_count)}"
                 )
             content.set_footer(
-                text=", ".join(tag["name"] for tag in track_info["toptags"]["tag"])
+                text=", ".join(
+                    filter_tags(tag["name"] for tag in track_info["toptags"]["tag"])
+                )
             )
 
             if (duration := int(track_info["duration"])) > 0:
@@ -861,7 +863,7 @@ class LastFm(commands.Cog):
             )
 
         content.set_footer(
-            text=", ".join([x["name"] for x in artistinfo["tags"]["tag"]])
+            text=", ".join(filter_tags([x["name"] for x in artistinfo["tags"]["tag"]]))
         )
 
         await ctx.send(embed=content)
@@ -1021,9 +1023,9 @@ class LastFm(commands.Cog):
         if tags := albuminfo["tags"]:
             # sometimes it's a dict, maybe when there's only one tag(?)
             if isinstance(tags["tag"], dict):
-                tags_list = ", ".join(tags["tag"]["name"])
+                tags_list = ", ".join(filter_tags(tags["tag"]["name"]))
             else:
-                tags_list = ", ".join(t["name"] for t in tags["tag"])
+                tags_list = ", ".join(filter_tags(t["name"] for t in tags["tag"]))
 
         tracklist = []
         for track in tracks:
@@ -2488,6 +2490,19 @@ def raise_no_album_plays(artist: str, album: str, timeframe: Period):
 async def task_wrapper(task: asyncio.Future, ref: Any):
     result = await task
     return result, ref
+
+
+def filter_tags(tags: list[str]):
+    """get rid of useless tags"""
+    clean_tags = []
+    for tag in tags:
+        if tag == "MySpotigramBot":
+            continue
+        if tag.startswith("-") and len(tag) == 14 and tag.strip("-").isdigit():
+            continue
+        clean_tags.append(tag)
+
+    return clean_tags
 
 
 def playcount_mapped(
