@@ -513,9 +513,12 @@ class LastFm(commands.Cog):
             )
 
         # tags and playcount
-        track_info = await self.api.track_get_info(
-            artist_name, track_name, ctx.lfm.username
-        )
+        try:
+            track_info = await self.api.track_get_info(
+                artist_name, track_name, ctx.lfm.username
+            )
+        except exceptions.LastFMError:
+            track_info = None
         if track_info is not None:
             play_count = int(track_info["userplaycount"])
             if play_count > 0:
