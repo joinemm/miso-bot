@@ -6,7 +6,6 @@ import asyncio
 import io
 from typing import TYPE_CHECKING, Any
 
-import aiohttp
 import arrow
 import discord
 import regex
@@ -18,7 +17,7 @@ from discord.ui import View
 from loguru import logger
 
 from modules import emojis, exceptions, instagram, util
-from modules.instagram import InstaFix
+from modules.instagram import EmbedEz
 from modules.tiktok import TikTok
 
 if TYPE_CHECKING:
@@ -346,22 +345,21 @@ class InstagramEmbedder(BaseEmbedder):
         instagram_asset: InstagramPost | InstagramStory,
         options: Options | None = None,
     ):
-        async with aiohttp.ClientSession(
-            read_timeout=3,
-            trace_configs=[self.bot.trace_config],
-        ) as session:
-            instafix = InstaFix(session)
-            if isinstance(instagram_asset, InstagramPost):
-                post = await instafix.get_post(instagram_asset.shortcode)
-                identifier = instagram_asset.shortcode
-            elif isinstance(instagram_asset, InstagramStory):
-                post = await instafix.get_story(
-                    instagram_asset.username, instagram_asset.story_pk
-                )
-                identifier = instagram_asset.story_pk
+        instafix = EmbedEz(self.bot.session)
+        if isinstance(instagram_asset, InstagramPost):
+            post = await instafix.get_post(instagram_asset.shortcode)
+            identifier = instagram_asset.shortcode
+        elif isinstance(instagram_asset, InstagramStory):
+            post = await instafix.get_story(
+                instagram_asset.username, instagram_asset.story_pk
+            )
+            identifier = instagram_asset.story_pk
 
         username = discord.utils.escape_markdown(post.user.username)
-        caption = f"{self.EMOJI} **@{username}**"
+        if post.user.name:
+            caption = f"{self.EMOJI} **{post.user.name}** `@{username}`"
+        else:
+            caption = f"{self.EMOJI} **@{username}**"
         if post.timestamp:
             caption += f" <t:{post.timestamp}:d>"
         if options and options.captions:
@@ -381,18 +379,20 @@ class InstagramEmbedder(BaseEmbedder):
             )
 
         files = []
+        suppress = True
         results = await asyncio.gather(*tasks)
         for result in results:
             if isinstance(result, discord.File):
                 files.append(result)
             else:
+                suppress = False
                 caption += "\n" + result
 
         return {
             "content": caption,
             "files": files,
             "view": MediaUI("View on Instagram", post.url),
-            "suppress_embeds": True,
+            "suppress_embeds": suppress,
         }
 
 

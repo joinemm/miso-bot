@@ -51,6 +51,7 @@ class IgMedia:
 @dataclass
 class IgUser:
     username: str
+    name: str | None = None
     id: int | None = None
     avatar_url: str | None = None
 
@@ -91,6 +92,62 @@ class InstagramIdCodec:
             alphabet.index(char) * base ** (strlen - (idx + 1))
             for idx, char in enumerate(shortcode)
         )
+
+
+class EmbedEz:
+    BASE_URL = "https://www.instagramez.com"
+
+    def __init__(self, session: aiohttp.ClientSession):
+        self.session = session
+
+    async def request(self, url: str) -> BeautifulSoup:
+        async with self.session.get(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com",
+                "Content-Type": "text/x-component",
+            },
+        ) as response:
+            text = await response.text()
+            soup = BeautifulSoup(text, "lxml")
+            return soup
+
+    async def get_post(self, shortcode: str) -> IgPost:
+        soup = await self.request(f"{self.BASE_URL}/p/{shortcode}")
+
+        media = []
+        if links := soup.findAll("link", {"as": "image"}):
+            media += [
+                IgMedia(
+                    url=img.attrs["href"],
+                    media_type=MediaType.PHOTO,
+                )
+                for img in links[1:-1]
+            ]
+        if video := soup.find("video"):
+            media.append(IgMedia(url=video.attrs["src"], media_type=MediaType.VIDEO))
+
+        user = soup.find("meta", {"name": "twitter:title"}).attrs["content"]
+        metadata = {
+            "name": user.rsplit(1)[0],
+            "username": user.rsplit(1)[1].strip("(@)"),
+            "description": soup.find("meta", {"name": "twitter:description"}).attrs[
+                "content"
+            ],
+            "url": soup.find("meta", {"property": "og:url"}).attrs["content"],
+        }
+
+        return IgPost(
+            url=metadata["url"],
+            user=IgUser(username=metadata["username"], name=metadata["name"]),
+            caption=metadata["description"],
+            media=media,
+            timestamp=None,
+        )
+
+    @staticmethod
+    async def get_story(username: str, story_pk: str):
+        raise InstagramError("Instagram stories are not supported at the moment.")
 
 
 class InstaFix:
