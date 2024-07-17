@@ -127,10 +127,14 @@ class EmbedEz:
         if video := soup.find("video"):
             media.append(IgMedia(url=video.attrs["src"], media_type=MediaType.VIDEO))
 
-        user = soup.find("meta", {"name": "twitter:title"}).attrs["content"]
+        name, username = (
+            soup.find("meta", {"name": "twitter:title"})
+            .attrs["content"]
+            .rsplit(maxsplit=1)
+        )
         metadata = {
-            "name": user.rsplit(1)[0],
-            "username": user.rsplit(1)[1].strip("(@)"),
+            "name": name,
+            "username": username.strip("(@)"),
             "description": soup.find("meta", {"name": "twitter:description"}).attrs[
                 "content"
             ],
