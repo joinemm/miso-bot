@@ -18,7 +18,7 @@ from loguru import logger
 
 from modules import emojis, exceptions, instagram, util
 from modules.instagram import EmbedEz
-from modules.tiktok import TikTok
+from modules.tiktok import TikTokNew
 
 if TYPE_CHECKING:
     from modules.misobot import MisoBot
@@ -402,7 +402,7 @@ class TikTokEmbedder(BaseEmbedder):
     NO_RESULTS_ERROR = "Found no TikTok links to embed!"
 
     def __init__(self, bot: "MisoBot"):
-        self.downloader = TikTok(bot)
+        self.downloader = TikTokNew(bot.session)
         super().__init__(bot)
 
     @staticmethod

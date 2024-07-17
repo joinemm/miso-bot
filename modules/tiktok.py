@@ -33,27 +33,56 @@ def error_code_to_message(error_code):
             return error_code
 
 
-class TikTok:
-    BASE_URL: str = "https://musicaldown.com/"
-
+class TikTokNew:
+    BASE_URL: str = "https://ssstik.io"
+    EMOJI = "<:tiktok:1050401570090647582>"
     HEADERS: Dict[str, str] = {
-        "Host": "musicaldown.com",
+        "Host": "ssstik.io",
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0"
         ),
-        "Accept": (
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-        ),
+        "Accept": "*/*",
         "Accept-Language": "en-US,en;q=0.5",
         "DNT": "1",
-        "Upgrade-Insecure-Requests": "1",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
-        "TE": "trailers",
     }
-    EMOJI = "<:tiktok:1050401570090647582>"
+
+    def __init__(self, session) -> None:
+        self.session = session
+
+    async def get_video(self, url: str):
+        async with self.session.post(
+            self.BASE_URL + "/abc?url=dl",
+            headers=self.HEADERS,
+            data={
+                "id": url,
+                "locale": "en",
+                "tt": "eEF4Vlgy",
+            },
+        ) as response:
+            response.raise_for_status()
+            text = await response.text()
+
+        soup = BeautifulSoup(text, "lxml")
+        download = soup.find("a", {"class": "without_watermark"})
+        video_url = download.attrs["href"]
+
+        user = soup.find("h2").text
+        desc = soup.find("p", {"class": "maintext"}).text
+
+        return TikTokVideo(video_url=video_url, user=user, description=desc)
+
+
+class TikTok:
+    BASE_URL: str = "https://musicaldown.com"
+    HEADERS: Dict[str, str] = {
+        "Host": "ssstik.io",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0"
+        ),
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.5",
+        "DNT": "1",
+    }
 
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -75,11 +104,11 @@ class TikTok:
             for index in self.input_element
         }
 
-    async def download_video(
+    async def download_video_old(
         self, url: str, session: aiohttp.ClientSession
     ) -> Tuple[str, str, str]:
         async with session.post(
-            f"{self.BASE_URL}id/download",
+            f"{self.BASE_URL}/download",
             data=self.generate_post_data(url),
             allow_redirects=True,
         ) as response:
