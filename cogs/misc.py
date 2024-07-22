@@ -7,6 +7,7 @@ import os
 import random
 import re
 from dataclasses import dataclass
+from io import BytesIO
 from typing import Literal, Tuple, Union
 
 import arrow
@@ -383,30 +384,46 @@ class Misc(commands.Cog):
         server = await self.bot.loop.run_in_executor(
             None, lambda: minestat.MineStat(address, int(port) if port else 0)
         )
-        content = discord.Embed(color=int("70b237", 16))
+        content = discord.Embed()
         if server.online:
+            content.color = int("43b581", 16)
             content.add_field(name="Server Address", value=f"`{server.address}`")
-            content.add_field(name="Version", value=server.version)
+            content.add_field(name="Port", value=f"`{server.port}`")
             content.add_field(
                 name="Players", value=f"{server.current_players}/{server.max_players}"
             )
+            content.add_field(
+                name="Status", value="<:online:783745533457203212> Online"
+            )
             content.add_field(name="Latency", value=f"{server.latency}ms")
-            content.set_footer(text=f"Message of the day: {server.stripped_motd}")
+            content.add_field(name="Version", value=server.version)
+            content.set_footer(text=f"{server.stripped_motd}")
         else:
-            content.title = f"{address}:{port}"
-            content.description = ":warning: **Server is offline**"
+            content.color = int("ff0000", 16)
+            content.add_field(name="Server Address", value=f"`{server.address}`")
+            content.add_field(name="Port", value=f"`{server.port}`")
+            content.add_field(
+                name="Status", value="<:offline:749966834031394886> Offline"
+            )
+            content.description = f"**`{server.connection_status}`**"
 
-        if server.favicon_b64:
+        favicon = server.favicon_b64
+        if favicon:
+            missing_padding = len(favicon) % 4
+            if missing_padding:
+                favicon += "=" * (4 - missing_padding)
+
+            favicon_data = base64.b64decode(favicon.split(",")[1])
             file = discord.File(
                 filename="servericon.png",
-                fp=base64.urlsafe_b64decode(
-                    server.favicon_b64.replace("data:image/png;base64,", "")
-                ),
+                fp=BytesIO(favicon_data),
             )
             content.set_thumbnail(url="attachment://servericon.png")
             await ctx.send(embed=content, file=file)
         else:
-            content.set_thumbnail(url="https://i.imgur.com/P1IxD0Q.png")
+            content.set_thumbnail(
+                url="https://media.minecraftforum.net/attachments/300/619/636977108000120237.png"
+            )
             await ctx.send(embed=content)
 
     @commands.command()
