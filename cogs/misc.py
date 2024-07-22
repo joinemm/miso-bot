@@ -164,12 +164,10 @@ class Misc(commands.Cog):
     @commands.command(aliases=["imbored"])
     async def iambored(self, ctx: commands.Context):
         """Get something to do"""
-        async with self.bot.session.get(
-            "http://www.boredapi.com/api/activity/"
-        ) as response:
+        url = "https://bored-api.appbrewery.com/random"
+        async with self.bot.session.get(url) as response:
             data = await response.json(loads=orjson.loads)
 
-        # https://www.boredapi.com/documentation
         activity_emoji = {
             "education": ":books:",
             "recreational": ":carousel_horse:",
@@ -656,36 +654,32 @@ class Misc(commands.Cog):
             raise exceptions.CommandInfo("There is nothing to show")
 
         colors = [x.strip("#") for x in colors]
-        content = discord.Embed(colour=int(colors[0], 16))
 
+        discord_color = await util.get_color(ctx, colors[0])
+        if discord_color is None:
+            raise exceptions.CommandError(f"Invalid color `#{colors[0]}`")
+
+        content = discord.Embed(colour=int(colors[0], 16))
         url = "https://api.color.pizza/v1/" + ",".join(colors)
         async with self.bot.session.get(url) as response:
-            colordata = (await response.json(loads=orjson.loads)).get("colors")
+            colordata = await response.json(loads=orjson.loads)
+            content.title = colordata["paletteTitle"]
 
         if len(colors) == 1:
-            discord_color = await util.get_color(ctx, colors[0])
-            if discord_color is None:
-                raise exceptions.CommandError(f"Cound not get color `{colors[0]}`")
-            hexvalue = colordata[0]["requestedHex"]
+            hexvalue = "#" + colors[0]
             rgbvalue = discord_color.to_rgb()
-            name = colordata[0]["name"]
-            luminance = colordata[0]["luminance"]
-            image_url = f"http://www.colourlovers.com/img/{colors[0]}/200/200/color.png"
-            content.title = name
-            content.description = "\n".join(
-                [
-                    f"**HEX:** `{hexvalue}`",
-                    f"**RGB:** {rgbvalue}",
-                    f"**Luminance:** {luminance:.4f}",
-                ]
-            )
+            content.add_field(name="Hex", value=f"`{hexvalue}`")
+            content.add_field(name="RGB", value=f"`{rgbvalue}`")
+            image_url = f"https://singlecolorimage.com/get/{colors[0]}/200x100"
+            content.set_image(url=image_url)
         else:
             content.description = "\n".join(
-                [f'`{c["requestedHex"]}` **| {c["name"]}**' for c in colordata]
+                [
+                    f'`{c["requestedHex"]}` **| {c["name"]}**'
+                    for c in colordata["colors"]
+                ]
             )
-            image_url = f"https://www.colourlovers.com/paletteImg/{'/'.join(colors)}/palette.png"
 
-        content.set_image(url=image_url)
         await ctx.send(embed=content)
 
     @commands.command(name="emoji", aliases=["emote"])
