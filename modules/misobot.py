@@ -113,6 +113,11 @@ class MisoBot(commands.AutoShardedBot):
         return await super().get_context(message, cls=MisoContext)
 
     async def request_tracing(self, session, context, params):
+        message = f"HTTP {params.response.status} --> {params.url}"
+        if params.response.status == 200:
+            logger.debug(message)
+        else:
+            logger.warning(message)
         try:
             if prom := self.get_cog("Prometheus"):
                 prom.outgoing_requests.labels(
@@ -128,7 +133,7 @@ class MisoBot(commands.AutoShardedBot):
         self.session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(limit=0),
             json_serialize=lambda x: orjson.dumps(x).decode(),
-            timeout=aiohttp.ClientTimeout(total=30),
+            timeout=aiohttp.ClientTimeout(total=10),
             trace_configs=[self.trace_config],
         )
         await self.redis.start()

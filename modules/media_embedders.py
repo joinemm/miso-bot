@@ -17,7 +17,7 @@ from discord.ui import View
 from loguru import logger
 
 from modules import emojis, exceptions, instagram, util
-from modules.instagram import EmbedEz
+from modules.instagram import InstaFix
 from modules.tiktok import TikTokNew
 
 if TYPE_CHECKING:
@@ -345,7 +345,7 @@ class InstagramEmbedder(BaseEmbedder):
         instagram_asset: InstagramPost | InstagramStory,
         options: Options | None = None,
     ):
-        instafix = EmbedEz(self.bot.session)
+        instafix = InstaFix(self.bot.session)
         if isinstance(instagram_asset, InstagramPost):
             post = await instafix.get_post(instagram_asset.shortcode)
             identifier = instagram_asset.shortcode

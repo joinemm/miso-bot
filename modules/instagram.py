@@ -108,6 +108,7 @@ class EmbedEz:
                 "Content-Type": "text/x-component",
             },
         ) as response:
+            response.raise_for_status()
             text = await response.text()
             soup = BeautifulSoup(text, "lxml")
             return soup
@@ -176,7 +177,7 @@ class InstaFix:
             except aiohttp.ClientConnectorError as e:
                 logger.warning(e)
                 tries += 1
-                await asyncio.sleep(tries)
+                await asyncio.sleep(1)
 
     async def try_media(self, shortcode: str) -> list:
         media = []
@@ -217,6 +218,9 @@ class InstaFix:
         }
 
         media = await self.try_media(shortcode)
+
+        if not media:
+            raise InstagramError("There was a problem fetching media for this post")
 
         return IgPost(
             url=metadata["url"],
