@@ -22,7 +22,6 @@ class Information(commands.Cog):
     def __init__(self, bot):
         self.bot: MisoBot = bot
         self.icon = "ℹ️"
-        self.donator_cache = {}
 
     @commands.command()
     async def invite(self, ctx: commands.Context):
@@ -88,13 +87,13 @@ class Information(commands.Cog):
             for user_id in patrons:
                 user = self.bot.get_user(user_id)
                 if user is None:
-                    user = self.donator_cache.get(user_id, 0)
+                    user = self.bot.donator_cache.get(user_id, 0)
                     if user == 0:
                         user = await self.bot.fetch_user(user_id)
                         if user is None or user.name.startswith("Deleted User "):
-                            self.donator_cache[user_id] = None
+                            self.bot.donator_cache[user_id] = None
                             continue
-                        self.donator_cache[user_id] = str(user)
+                        self.bot.donator_cache[user_id] = user
 
                 if user:
                     donators.append(f"**{user}**")

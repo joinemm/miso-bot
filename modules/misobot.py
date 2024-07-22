@@ -104,6 +104,7 @@ class MisoBot(commands.AutoShardedBot):
         self.trace_config = aiohttp.TraceConfig
         self.session: aiohttp.ClientSession
         self.reddit_client = Reddit(self)
+        self.donator_cache = {}
         self.register_hooks()
 
     async def get_context(self, message: discord.Message):

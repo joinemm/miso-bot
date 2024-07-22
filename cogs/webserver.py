@@ -2,13 +2,15 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
+import asyncio
 import os
 
 from aiohttp import web
 from discord.ext import commands, tasks
 from loguru import logger
-from modules.misobot import MisoBot
 from prometheus_async import aio
+
+from modules.misobot import MisoBot
 
 HOST = os.environ.get("WEBSERVER_HOSTNAME")
 PORT = int(os.environ.get("WEBSERVER_PORT", 8080))
@@ -38,14 +40,14 @@ class WebServer(commands.Cog):
     async def cog_load(self):
         self.cache_stats.start()
         self.cached_command_list = self.generate_command_list()
-        self.cached["donators"] = await self.update_donator_list()
+        self.cached["donators"] = []
         self.bot.loop.create_task(self.run())
 
     async def cog_unload(self):
         self.cache_stats.cancel()
         await self.shutdown()
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=5)
     async def cache_stats(self):
         command_count = (
             await self.bot.db.fetch_value("SELECT SUM(uses) FROM command_usage") or 0
@@ -94,14 +96,25 @@ class WebServer(commands.Cog):
         )
         if data:
             for user_id, amount in sorted(data, key=lambda x: x[1], reverse=True):
-                user = await self.bot.fetch_user(user_id)
-                donators.append(
-                    {
-                        "name": user.name,
-                        "avatar": user.display_avatar.url,
-                        "amount": amount,
-                    }
-                )
+                user = self.bot.get_user(user_id)
+                if user is None:
+                    user = self.bot.donator_cache.get(user_id, 0)
+                    if user == 0:
+                        user = await self.bot.fetch_user(user_id)
+                        if user is None or user.name.startswith("Deleted User "):
+                            self.bot.donator_cache[user_id] = None
+                            continue
+                        self.bot.donator_cache[user_id] = user
+                        await asyncio.sleep(1)
+
+                if user:
+                    donators.append(
+                        {
+                            "name": user.name,
+                            "avatar": user.display_avatar.url,
+                            "amount": amount,
+                        }
+                    )
         return donators
 
     async def donator_list(self, request):
