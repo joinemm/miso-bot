@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
+import asyncio
 import re
 from dataclasses import dataclass
 from typing import Dict, Tuple
@@ -50,22 +51,36 @@ class TikTokNew:
         self.session = session
 
     async def get_video(self, url: str):
-        async with self.session.post(
-            self.BASE_URL + "/abc?url=dl",
-            headers=self.HEADERS,
-            data={
-                "id": url,
-                "locale": "en",
-                "tt": "eEF4Vlgy",
-            },
-        ) as response:
-            response.raise_for_status()
-            text = await response.text()
+        download = None
+        retries = 0
+        while retries < 3:
+            async with self.session.post(
+                self.BASE_URL + "/abc?url=dl",
+                headers=self.HEADERS,
+                data={
+                    "id": url,
+                    "locale": "en",
+                    "tt": "eEF4Vlgy",
+                },
+            ) as response:
+                response.raise_for_status()
+                text = await response.text()
 
-        soup = BeautifulSoup(text, "lxml")
-        download = soup.find("a", {"class": "without_watermark"})
+            soup = BeautifulSoup(text, "lxml")
+            download = soup.find("a", {"class": "without_watermark"})
+            if download is None:
+                await asyncio.sleep(1)
+                retries += 1
+                continue
+            else:
+                break
+
+        if download is None:
+            raise TiktokError(
+                "There was a problem downloading this video, try again later"
+            )
+
         video_url = download.attrs["href"]
-
         user = soup.find("h2").text
         desc = soup.find("p", {"class": "maintext"}).text
 
