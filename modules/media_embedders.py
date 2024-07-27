@@ -180,7 +180,7 @@ class BaseEmbedder:
 
     def msg_split(self, contents: dict) -> (dict, dict):
         extra_contents = {}
-        if len(contents["files"]) > 10:
+        if len(contents.get("files", [])) > 10:
             extra_contents["files"] = contents["files"][10:]
             contents["files"] = contents["files"][:10]
             extra_contents["view"] = contents["view"]
