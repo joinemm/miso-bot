@@ -2491,7 +2491,10 @@ def raise_no_album_plays(artist: str, album: str, timeframe: Period):
 
 
 async def task_wrapper(task: asyncio.Future, ref: Any):
-    result = await task
+    try:
+        result = await task
+    except exceptions.LastFMError:
+        result = None
     return result, ref
 
 
