@@ -178,6 +178,15 @@ class BaseEmbedder:
         except ClientConnectorError:
             return media_url
 
+    def msg_split(self, contents: dict) -> (dict, dict):
+        extra_contents = {}
+        if len(contents["files"]) > 10:
+            extra_contents["files"] = contents["files"][10:]
+            contents["files"] = contents["files"][:10]
+            extra_contents["view"] = contents["view"]
+            contents["view"] = None
+        return contents, extra_contents
+
     async def send(
         self,
         ctx: commands.Context,
@@ -188,8 +197,14 @@ class BaseEmbedder:
         message_contents = await self.create_message(
             ctx.channel, media, options=options
         )
+        message_contents, extra_contents = self.msg_split(message_contents)
         msg = await ctx.send(**message_contents)
-        await self.msg_post_process(msg, message_contents["view"], ctx.author)
+        msg_extra = None
+        if extra_contents:
+            msg_extra = await ctx.send(**extra_contents)
+        await self.msg_post_process(
+            msg, msg_extra, message_contents, extra_contents, ctx.author
+        )
 
     async def send_contextless(
         self,
@@ -200,8 +215,15 @@ class BaseEmbedder:
     ):
         """Send the media without relying on command context, for example in a message event"""
         message_contents = await self.create_message(channel, media, options=options)
+        message_contents, extra_contents = self.msg_split(message_contents)
         msg = await channel.send(**message_contents)
-        await self.msg_post_process(msg, message_contents["view"], author)
+        msg_extra = None
+        if extra_contents:
+            msg_extra = await channel.send(**extra_contents)
+
+        await self.msg_post_process(
+            msg, msg_extra, message_contents, extra_contents, author
+        )
 
     async def send_reply(
         self,
@@ -213,21 +235,38 @@ class BaseEmbedder:
         message_contents = await self.create_message(
             message.channel, media, options=options
         )
+        message_contents, extra_contents = self.msg_split(message_contents)
         try:
             msg = await message.reply(**message_contents, mention_author=False)
         except discord.errors.HTTPException:
             # the original message was deleted, so we can't reply
             msg = await message.channel.send(**message_contents)
 
-        await self.msg_post_process(msg, message_contents["view"], message.author)
+        msg_extra = None
+        if extra_contents:
+            msg_extra = await message.channel.send(**extra_contents)
+
+        await self.msg_post_process(
+            msg, msg_extra, message_contents, extra_contents, message.author
+        )
 
     @staticmethod
     async def msg_post_process(
         msg: discord.Message,
-        view: discord.ui,
+        msg_extra: discord.Message | None,
+        msg_content: dict,
+        msg_extra_content: dict,
         author: discord.User,
     ):
-        view.message_ref = msg
+        if msg_extra:
+            view = msg_extra_content["view"]
+            view.message_ref = msg_extra
+            view.delete_with.append(msg_extra)
+        else:
+            view = msg_content["view"]
+            view.message_ref = msg
+
+        view.delete_with.append(msg)
         view.approved_deletors.append(author)
 
 
@@ -272,11 +311,13 @@ class RedditEmbedder(BaseEmbedder):
             )
 
         files = []
+        suppress = True
         results = await asyncio.gather(*tasks)
         for result in results:
             if isinstance(result, discord.File):
                 files.append(result)
             else:
+                suppress = False
                 caption += "\n" + result
 
         for video in videos:
@@ -293,9 +334,9 @@ class RedditEmbedder(BaseEmbedder):
             "view": MediaUI(
                 "View on Reddit",
                 "https://reddit.com" + post.url,
-                should_suppress=False,
+                should_suppress=suppress,
             ),
-            "suppress_embeds": False,
+            "suppress_embeds": suppress,
         }
 
 
@@ -391,7 +432,7 @@ class InstagramEmbedder(BaseEmbedder):
         return {
             "content": caption,
             "files": files,
-            "view": MediaUI("View on Instagram", post.url),
+            "view": MediaUI("View on Instagram", post.url, should_suppress=suppress),
             "suppress_embeds": suppress,
         }
 
@@ -444,16 +485,19 @@ class TikTokEmbedder(BaseEmbedder):
         if options and options.captions:
             caption += f"\n>>> {video.description}"
 
-        ui = MediaUI("View on TikTok", tiktok_url)
-
         # file was too big to send, just use the url
         if isinstance(file, str):
             return {
                 "content": f"{caption}\n{file}",
-                "view": ui,
+                "view": MediaUI("View on TikTok", tiktok_url, should_suppress=False),
             }
 
-        return {"content": caption, "file": file, "view": ui, "suppress_embeds": True}
+        return {
+            "content": caption,
+            "file": file,
+            "view": MediaUI("View on TikTok", tiktok_url),
+            "suppress_embeds": True,
+        }
 
 
 class TwitterEmbedder(BaseEmbedder):
@@ -569,13 +613,16 @@ class TwitterEmbedder(BaseEmbedder):
                 caption += f"\n>>> {tweet_text}"
 
         caption = "\n".join([caption] + too_big_files)
+        suppress = len(too_big_files) == 0
         return {
             "content": caption,
             "files": files,
             "view": MediaUI(
-                "View on X", f"https://twitter.com/{screen_name}/status/{tweet_id}"
+                "View on X",
+                f"https://twitter.com/{screen_name}/status/{tweet_id}",
+                should_suppress=suppress,
             ),
-            "suppress_embeds": True,
+            "suppress_embeds": suppress,
         }
 
 
@@ -585,6 +632,7 @@ class MediaUI(View):
         linkbutton = discord.ui.Button(label=label, url=url)
         self.add_item(linkbutton)
         self.message_ref: discord.Message | None = None
+        self.delete_with: list[discord.Message] = []
         self.approved_deletors: list[discord.User] = []
         self.should_suppress = should_suppress
         self._children.reverse()
@@ -593,8 +641,9 @@ class MediaUI(View):
     async def delete_button(
         self, interaction: discord.Interaction, _button: discord.ui.Button
     ):
-        if self.message_ref and interaction.user in self.approved_deletors:
-            await self.message_ref.delete()
+        if self.delete_with and interaction.user in self.approved_deletors:
+            for msg in self.delete_with:
+                await msg.delete()
         else:
             await interaction.response.defer()
 
