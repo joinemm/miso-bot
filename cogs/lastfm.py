@@ -577,6 +577,11 @@ class LastFm(commands.Cog):
             100,
         )
 
+        if not data["artist"]:
+            raise exceptions.CommandWarning(
+                f"You have not listened to anything this {str(timeframe).lower()}!"
+            )
+
         await self.paginated_user_stat_embed(
             ctx,
             self.ranked_list(
@@ -602,6 +607,11 @@ class LastFm(commands.Cog):
             timeframe,
             100,
         )
+
+        if not data["track"]:
+            raise exceptions.CommandWarning(
+                f"You have not listened to anything this {str(timeframe).lower()}!"
+            )
 
         await self.paginated_user_stat_embed(
             ctx,
@@ -632,6 +642,11 @@ class LastFm(commands.Cog):
             100,
         )
 
+        if not data["album"]:
+            raise exceptions.CommandWarning(
+                f"You have not listened to anything this {str(timeframe).lower()}!"
+            )
+
         await self.paginated_user_stat_embed(
             ctx,
             self.ranked_list(
@@ -655,6 +670,10 @@ class LastFm(commands.Cog):
             ctx.lfm.username,
             100,
         )
+
+        if not data["track"]:
+            raise exceptions.CommandWarning("You have not listened to anything!")
+
         rows = []
         for track in data["track"]:
             try:
