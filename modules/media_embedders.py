@@ -555,6 +555,7 @@ class TwitterEmbedder(BaseEmbedder):
                 )
             tweet = await response.json()
 
+        too_big_files = []
         if tweet.get("tweet"):
             tweet = tweet["tweet"]
 
@@ -563,7 +564,9 @@ class TwitterEmbedder(BaseEmbedder):
             medias = tweet["media_extended"]
         elif tweet.get("media"):
             # fxtwitter
-            medias = tweet["media"]["all"]
+            medias = tweet["media"].get("all", [])
+            if tweet["media"].get("external"):
+                too_big_files.append(tweet["media"]["external"]["url"])
         else:
             raise exceptions.CommandWarning(
                 f"Tweet with id `{tweet_id}` does not contain any media!",
@@ -599,7 +602,6 @@ class TwitterEmbedder(BaseEmbedder):
             )
 
         files = []
-        too_big_files = []
         results = await asyncio.gather(*tasks)
         for result in results:
             if isinstance(result, discord.File):
