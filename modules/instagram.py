@@ -181,7 +181,7 @@ class InstaFix:
 
     async def try_media(self, shortcode: str) -> list:
         media = []
-        for i in range(1, 11):
+        for i in range(1, 21):
             text = await self.request(f"{self.BASE_URL}/p/{shortcode}/{i}")
             soup = BeautifulSoup(text, "lxml")
             imagetag = soup.find("meta", {"property": "og:image"})
