@@ -431,13 +431,16 @@ class InstagramEmbedder(BaseEmbedder):
             else:
                 break
 
-        username = discord.utils.escape_markdown(post.user.username)
         if post.user.name:
-            caption = f"{self.EMOJI} **{post.user.name}** `@{username}`"
+            caption = f"{self.EMOJI} **{post.user.name}** `@{post.user.username}`"
         else:
-            caption = f"{self.EMOJI} **@{username}**"
+            caption = (
+                f"{self.EMOJI} **@{discord.utils.escape_markdown(post.user.username)}**"
+            )
+
         if post.timestamp:
             caption += f" <t:{post.timestamp}:d>"
+
         if options and options.captions:
             caption += f"\n>>> {post.caption}"
 
