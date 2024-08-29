@@ -17,7 +17,7 @@ from discord.ui import View
 from loguru import logger
 
 from modules import emojis, exceptions, instagram, util
-from modules.instagram import InstaFix
+from modules.instagram import EmbedEz, InstaFix, InstagramError
 from modules.tiktok import TikTokNew
 
 if TYPE_CHECKING:
@@ -51,6 +51,12 @@ def filesize_limit(guild: discord.Guild | None):
         return 8388608
 
     return guild.filesize_limit
+
+
+class DownloadError(Exception):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(message)
 
 
 class BaseEmbedder:
@@ -138,7 +144,7 @@ class BaseEmbedder:
                 else:
                     error_message = f"{response.status} {response.reason}"
 
-                logger.error(error_message)
+                raise DownloadError(error_message)
                 return f"`[{error_message}]`"
 
             content_length = response.headers.get(
@@ -170,13 +176,14 @@ class BaseEmbedder:
                 pass
 
         try:
-            if spoiler:
-                return (
-                    f"||{await util.shorten_url(self.bot, media_url, tags=url_tags)}||"
-                )
-            return await util.shorten_url(self.bot, media_url, tags=url_tags)
+            media_url = await util.shorten_url(self.bot, media_url, tags=url_tags)
         except ClientConnectorError:
-            return media_url
+            pass
+
+        if spoiler:
+            return f"||{media_url}||"
+
+        return media_url
 
     def msg_split(self, contents: dict) -> (dict, dict):
         extra_contents = {}
@@ -387,14 +394,42 @@ class InstagramEmbedder(BaseEmbedder):
         options: Options | None = None,
     ):
         instafix = InstaFix(self.bot.session)
-        if isinstance(instagram_asset, InstagramPost):
-            post = await instafix.get_post(instagram_asset.shortcode)
-            identifier = instagram_asset.shortcode
-        elif isinstance(instagram_asset, InstagramStory):
-            post = await instafix.get_story(
-                instagram_asset.username, instagram_asset.story_pk
-            )
-            identifier = instagram_asset.story_pk
+        embedez = EmbedEz(self.bot.session)
+
+        for provider in [instafix, embedez]:
+            try:
+                if isinstance(instagram_asset, InstagramPost):
+                    post = await provider.get_post(instagram_asset.shortcode)
+                    identifier = instagram_asset.shortcode
+                elif isinstance(instagram_asset, InstagramStory):
+                    post = await provider.get_story(
+                        instagram_asset.username, instagram_asset.story_pk
+                    )
+                    identifier = instagram_asset.story_pk
+
+                tasks = []
+                for n, media in enumerate(post.media, start=1):
+                    ext = (
+                        "mp4"
+                        if media.media_type == instagram.MediaType.VIDEO
+                        else "jpg"
+                    )
+                    filename = f"@{post.user.username}-{identifier}-{n}.{ext}"
+                    tasks.append(
+                        self.download_media(
+                            media.url,
+                            filename,
+                            filesize_limit(channel.guild),
+                            url_tags=["instagram"],
+                            spoiler=options.spoiler if options else False,
+                        )
+                    )
+                results = await asyncio.gather(*tasks)
+            except (InstagramError, DownloadError) as e:
+                logger.warning(f"{provider} failed with {e}")
+                continue
+            else:
+                break
 
         username = discord.utils.escape_markdown(post.user.username)
         if post.user.name:
@@ -405,23 +440,9 @@ class InstagramEmbedder(BaseEmbedder):
             caption += f" <t:{post.timestamp}:d>"
         if options and options.captions:
             caption += f"\n>>> {post.caption}"
-        tasks = []
-        for n, media in enumerate(post.media, start=1):
-            ext = "mp4" if media.media_type == instagram.MediaType.VIDEO else "jpg"
-            filename = f"@{post.user.username}-{identifier}-{n}.{ext}"
-            tasks.append(
-                self.download_media(
-                    media.url,
-                    filename,
-                    filesize_limit(channel.guild),
-                    url_tags=["instagram"],
-                    spoiler=options.spoiler if options else False,
-                )
-            )
 
         files = []
         suppress = True
-        results = await asyncio.gather(*tasks)
         for result in results:
             if isinstance(result, discord.File):
                 files.append(result)
