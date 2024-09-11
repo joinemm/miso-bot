@@ -13,6 +13,7 @@ from discord.ext import commands
 
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
+from modules.ui import RowPaginator
 
 
 class User(commands.Cog):
@@ -137,9 +138,11 @@ class User(commands.Cog):
 
             content.add_field(
                 name="Joined server",
-                value=user.joined_at.strftime("%d/%m/%Y %H:%M")
-                if user.joined_at
-                else "Unknown",
+                value=(
+                    user.joined_at.strftime("%d/%m/%Y %H:%M")
+                    if user.joined_at
+                    else "Unknown"
+                ),
             )
 
             if self.bot.intents.presences:
@@ -202,7 +205,7 @@ class User(commands.Cog):
                 jointime = member.joined_at.strftime("%y%m%d %H:%M")
                 rows.append(f"[`{jointime}`] **#{membercount-i}** : **{member}**")
 
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @commands.command()
     async def banner(
@@ -350,7 +353,7 @@ class User(commands.Cog):
             f"{':warning:' if len(role.members) == 0 else ''}: {role.mention}"
             for role in reversed(ctx.guild.roles)
         ]
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @commands.group(case_insensitive=True, aliases=["lb"])
     async def leaderboard(self, ctx: commands.Context):
@@ -396,7 +399,7 @@ class User(commands.Cog):
             ),
             color=int("55acee", 16),
         )
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @leaderboard.command(name="fishy")
     async def leaderboard_fishy(self, ctx: commands.Context, scope=""):
@@ -434,7 +437,7 @@ class User(commands.Cog):
             title=f":fish: {'Global' if global_data else ctx.guild.name} fishy leaderboard",
             color=int("55acee", 16),
         )
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @leaderboard.command(name="wpm", aliases=["typing"])
     async def leaderboard_wpm(self, ctx: commands.Context, scope=""):
@@ -481,7 +484,7 @@ class User(commands.Cog):
             title=f":keyboard: {ctx.guild.name} WPM leaderboard",
             color=int("99aab5", 16),
         )
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @leaderboard.command(name="crowns")
     async def leaderboard_crowns(self, ctx: commands.Context):
@@ -519,7 +522,7 @@ class User(commands.Cog):
             title=f":crown: {ctx.guild.name} artist crowns leaderboard",
         )
 
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @commands.command(enabled=False)
     async def profile(

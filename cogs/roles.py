@@ -5,11 +5,11 @@
 import asyncio
 
 import discord
-from cogs.errorhandler import ErrorHandler
 from discord.ext import commands
-from modules.misobot import MisoBot
 
+from cogs.errorhandler import ErrorHandler
 from modules import emojis, exceptions, queries, util
+from modules.misobot import MisoBot
 
 
 class Roles(commands.Cog):

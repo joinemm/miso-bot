@@ -356,7 +356,7 @@ class LastFm(commands.Cog):
             title=":no_entry_sign: Current LastFM blacklist",
             color=int(self.LASTFM_RED, 16),
         )
-        await ctx.paginate(content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @fm_blacklist.command(name="add")
     async def fm_blacklist_add(self, ctx: MisoContext, *, member: discord.Member):
@@ -1451,9 +1451,9 @@ class LastFm(commands.Cog):
             "TOPSTER_FONT_SIZE": f"{font_size}em",
             "LABEL_FONT_SIZE": f"{font_size/2}em",
             "RESOLUTION_WIDTH": f"{image_width}px",
-            "RESOLUTION_HEIGHT": f"{resolution}px"
-            if size.height > size.width
-            else "auto",
+            "RESOLUTION_HEIGHT": (
+                f"{resolution}px" if size.height > size.width else "auto"
+            ),
             "WRAP_CLASSES": "with-gaps" if use_padding else "",
             "BASE_URL": "http://" + os.environ["IMAGE_SERVER_HOST"] + ":3000",
         }

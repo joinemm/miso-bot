@@ -13,9 +13,9 @@ import arrow
 import orjson
 from bs4 import BeautifulSoup, Tag
 from loguru import logger
-from modules.misobot import MisoBot
 
 from modules import exceptions
+from modules.misobot import MisoBot
 
 
 def int_bool(value: bool | None) -> int | None:
@@ -531,7 +531,9 @@ class LastFmApi:
         period: Period,
     ) -> list[LastFmImage]:
         """Get image hashes for user's top n artists"""
-        url: str = f"https://www.last.fm/user/{username}/library/artists?date_preset={period.web_format()}"
+        url: str = (
+            f"https://www.last.fm/user/{username}/library/artists?date_preset={period.web_format()}"
+        )
         tasks = []
         for i in range(1, math.ceil(amount / 50) + 1):
             params = {"page": str(i)} if i > 1 else None

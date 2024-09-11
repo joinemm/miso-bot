@@ -25,6 +25,7 @@ from random_user_agent.params import HardwareType
 from random_user_agent.user_agent import UserAgent
 
 from modules import emoji_literals, emojis, exceptions, queries
+from modules.ui import RowPaginator
 
 if TYPE_CHECKING:
     from modules.misobot import MisoBot
@@ -856,7 +857,7 @@ async def send_tasks_result_list(
     content.description = "\n".join(rows)
     if title:
         content.title = title
-    await send_as_pages(ctx, content, rows, maxrows=20)
+    await RowPaginator(content, rows).run(ctx)
 
 
 async def server_is_premium(guild: discord.Guild, bot: "MisoBot") -> bool:

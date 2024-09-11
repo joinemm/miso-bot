@@ -16,6 +16,7 @@ from discord.ext import commands
 
 from modules import exceptions, util
 from modules.misobot import MisoBot
+from modules.ui import RowPaginator
 
 
 class Kpop(commands.Cog):
@@ -78,7 +79,7 @@ class Kpop(commands.Cog):
             content.description = "No idols found with this birthday :("
             await ctx.send(embed=content)
         else:
-            await util.send_as_pages(ctx, content, rows)
+            await RowPaginator(content, rows).run(ctx)
 
     @idol.command()
     async def random(self, ctx: commands.Context, gender=None):

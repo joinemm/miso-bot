@@ -12,6 +12,7 @@ from loguru import logger
 
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
+from modules.ui import RowPaginator
 
 
 class Notifications(commands.Cog):
@@ -313,9 +314,8 @@ class Notifications(commands.Cog):
             )
 
         try:
-            await util.send_as_pages(
-                ctx, content, rows, maxpages=1, maxrows=50, send_to=ctx.author
-            )
+            await RowPaginator(content, rows).run(ctx.author)
+
         except discord.errors.Forbidden:
             raise exceptions.CommandWarning(
                 "I was unable to send you a DM! Please change your settings."

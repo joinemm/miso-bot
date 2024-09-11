@@ -14,6 +14,7 @@ from discord.ext import commands
 
 from modules import emojis, exceptions, util
 from modules.misobot import MisoBot
+from modules.ui import RowPaginator
 
 
 class Information(commands.Cog):
@@ -284,9 +285,11 @@ class Information(commands.Cog):
         content.add_field(name="Color", value=str(role.color).upper())
         content.add_field(
             name="Member count",
-            value=f"{member_count} / {ctx.guild.member_count} ({percentage}%)"
-            if ctx.guild.member_count
-            else member_count,
+            value=(
+                f"{member_count} / {ctx.guild.member_count} ({percentage}%)"
+                if ctx.guild.member_count
+                else member_count
+            ),
         )
         content.add_field(
             name="Created at", value=role.created_at.strftime("%d/%m/%Y %H:%M")
@@ -365,7 +368,7 @@ class Information(commands.Cog):
 
         if rows:
             content.set_footer(text=f"Total {total} commands")
-            await util.send_as_pages(ctx, content, rows)
+            await RowPaginator(content, rows).run(ctx)
         else:
             content.description = "No data :("
             await ctx.send(embed=content)
@@ -409,7 +412,7 @@ class Information(commands.Cog):
 
         if rows:
             content.set_footer(text=f"Total {total} commands")
-            await util.send_as_pages(ctx, content, rows)
+            await RowPaginator(content, rows).run(ctx)
         else:
             content.description = "No data :("
             await ctx.send(embed=content)

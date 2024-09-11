@@ -8,9 +8,9 @@ from typing import Optional
 import discord
 import humanize
 from discord.ext import commands
-from modules.misobot import MisoBot
 
 from modules import exceptions, util
+from modules.misobot import MisoBot
 
 
 class Fishy(commands.Cog):

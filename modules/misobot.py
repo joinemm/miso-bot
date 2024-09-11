@@ -45,9 +45,6 @@ class MisoContext(commands.Context):
             )
         )
 
-    async def paginate(self, embed: discord.Embed, rows: list[str]):
-        await util.send_as_pages(self, embed, rows)
-
 
 class MisoBot(commands.AutoShardedBot):
     def __init__(

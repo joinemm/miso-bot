@@ -9,6 +9,7 @@ from discord.ext import commands
 
 from modules import emoji_literals, exceptions, queries, util
 from modules.misobot import MisoBot
+from modules.ui import RowPaginator
 
 
 class ChannelSetting(commands.TextChannelConverter):
@@ -516,9 +517,11 @@ class Configuration(commands.Cog):
         )
         content.add_field(
             name="Blacklisted channels",
-            value=" ".join(f"<#{cid}>" for cid in blacklisted_channels)
-            if blacklisted_channels
-            else None,
+            value=(
+                " ".join(f"<#{cid}>" for cid in blacklisted_channels)
+                if blacklisted_channels
+                else None
+            ),
         )
 
         await ctx.send(embed=content)
@@ -588,7 +591,7 @@ class Configuration(commands.Cog):
         if not rows:
             rows = ["No roles have been set up yet!"]
 
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @commands.command()
     @commands.guild_only()

@@ -113,9 +113,9 @@ class TikTok:
             raise Exception("TikTok downloader was not warmed up!")
 
         return {
-            index.get("name"): url
-            if index.get("id") == "link_url"
-            else index.get("value")
+            index.get("name"): (
+                url if index.get("id") == "link_url" else index.get("value")
+            )
             for index in self.input_element
         }
 

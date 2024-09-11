@@ -13,6 +13,7 @@ from discord.ext import commands
 
 from modules import exceptions, util
 from modules.misobot import MisoBot
+from modules.ui import RowPaginator
 
 
 class Typings(commands.Cog):
@@ -254,7 +255,7 @@ class Typings(commands.Cog):
             values,
         )
 
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     async def race_user_results_waiter(
         self, ctx, player, words_message, wordlist, wordcount, language
@@ -325,7 +326,7 @@ class Typings(commands.Cog):
             f"*{test_language}* ({arrow.get(test_date).to('utc').humanize()})"
             for test_date, wpm, accuracy, word_count, test_language in data
         ]
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @typing.command(name="cleardata")
     async def typing_clear(self, ctx: commands.Context):

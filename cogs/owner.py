@@ -11,6 +11,7 @@ from loguru import logger
 
 from modules import exceptions, util
 from modules.misobot import MisoBot
+from modules.ui import RowPaginator
 
 
 class Owner(commands.Cog):
@@ -73,7 +74,7 @@ class Owner(commands.Cog):
                 self.bot.guilds, key=lambda x: x.member_count or 0, reverse=True
             )
         ]
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @commands.command()
     async def findguild(self, ctx: commands.Context, *, search_term):
@@ -88,7 +89,7 @@ class Owner(commands.Cog):
         content = discord.Embed(
             title=f"Found **{len(rows)}** guilds matching search term"
         )
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @commands.command()
     async def userguilds(self, ctx: commands.Context, user: discord.User):
@@ -109,7 +110,7 @@ class Owner(commands.Cog):
         content = discord.Embed(
             title=f"User **{user}** found in **{len(rows)}** guilds"
         )
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @commands.command()
     async def logout(self, ctx: commands.Context):

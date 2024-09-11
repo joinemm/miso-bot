@@ -3,7 +3,7 @@
 # https://git.joinemm.dev/miso-bot
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
     devenv.url = "github:cachix/devenv";
   };
 
@@ -12,53 +12,56 @@
     extra-substituters = "https://devenv.cachix.org";
   };
 
-  outputs = {
-    nixpkgs,
-    devenv,
-    ...
-  } @ inputs: let
-    pkgs = nixpkgs.legacyPackages."x86_64-linux";
-  in {
-    devShell.x86_64-linux = devenv.lib.mkShell {
-      inherit inputs pkgs;
-      modules = [
-        ({
-          pkgs,
-          lib,
-          ...
-        }: {
-          dotenv.disableHint = true;
+  outputs =
+    { nixpkgs, devenv, ... }@inputs:
+    let
+      pkgs = nixpkgs.legacyPackages."x86_64-linux";
+    in
+    {
+      devShell.x86_64-linux = devenv.lib.mkShell {
+        inherit inputs pkgs;
+        modules = [
+          (
+            { pkgs, lib, ... }:
+            {
+              dotenv.disableHint = true;
 
-          packages = with pkgs; [
-            ffmpeg
-            isort
-            black
-            ruff
-            reuse
-          ];
+              packages = with pkgs; [
+                ffmpeg
+                isort
+                black
+                ruff
+                reuse
+              ];
 
-          pre-commit.hooks = {
-            isort.enable = true;
-            black.enable = true;
-            ruff = {
-              enable = true;
-              entry = lib.mkForce "${pkgs.ruff}/bin/ruff --fix --ignore=E501";
-            };
-          };
+              pre-commit.hooks = {
+                isort.enable = true;
+                black.enable = true;
+                ruff = {
+                  enable = true;
+                  entry = lib.mkForce "${pkgs.ruff}/bin/ruff --fix --ignore=E501";
+                };
+              };
 
-          languages.python = {
-            enable = true;
-            poetry = {
-              enable = true;
-              activate.enable = true;
-            };
-          };
+              languages.python = {
+                enable = true;
+                poetry = {
+                  enable = true;
+                  activate.enable = true;
+                };
+              };
 
-          scripts."run".exec = ''
-            poetry run python main.py $1
-          '';
-        })
-      ];
+              scripts = {
+                "run".exec = ''
+                  poetry run python main.py $1
+                '';
+                "grepr".exec = ''
+                  grep -r --exclude-dir=".git" --exclude-dir=".ruff_cache" --exclude-dir=".venv" --exclude=\*.pyc --color $1
+                '';
+              };
+            }
+          )
+        ];
+      };
     };
-  };
 }

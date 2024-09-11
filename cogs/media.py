@@ -22,6 +22,7 @@ from modules.media_embedders import (
     TwitterEmbedder,
 )
 from modules.misobot import MisoBot
+from modules.ui import RowPaginator, TextPaginator
 
 
 class Media(commands.Cog):
@@ -39,7 +40,7 @@ class Media(commands.Cog):
             "key": self.bot.keychain.GCS_DEVELOPER_KEY,
             "part": "snippet",
             "type": "video",
-            "maxResults": 25,
+            "maxResults": 50,
             "q": query,
         }
         async with self.bot.session.get(url, params=params) as response:
@@ -51,16 +52,12 @@ class Media(commands.Cog):
         if not data.get("items"):
             return await ctx.send("No results found!")
 
-        await util.paginate_list(
-            ctx,
+        await TextPaginator(
             [
                 f"https://youtube.com/watch?v={item['id']['videoId']}"
                 for item in data.get("items")
-            ],
-            use_locking=True,
-            only_author=True,
-            index_entries=True,
-        )
+            ]
+        ).run(ctx)
 
     @util.patrons_only()
     @commands.group(usage="<instagram | tiktok | reddit>", case_insensitive=True)
@@ -330,7 +327,7 @@ class Media(commands.Cog):
         if image:
             content.set_thumbnail(url=image.attrs["src"])
         content.timestamp = ctx.message.created_at
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @commands.command()
     async def xkcd(self, ctx: commands.Context, comic_id=None):

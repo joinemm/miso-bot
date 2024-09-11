@@ -66,10 +66,10 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
         """:class:`int`: Returns the total amount of pages."""
         return len(self.pages)
 
-    async def format_page(self, entries: list[T], /) -> discord.Embed:
+    async def format_page(self, entries: list[T], /) -> dict:
         """|coro|
 
-        Used to make the embed that the user sees.
+        Used to make the message that the user sees.
 
         Parameters
         ----------
@@ -78,8 +78,8 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
 
         Returns
         -------
-        :class:`discord.Embed`
-            The embed for this page.
+        :class:`dict`
+            Kwargs to pass to message sender
         """
         raise NotImplementedError("Subclass did not overwrite format_page coro.")
 
@@ -101,8 +101,8 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
         self, interaction: discord.Interaction, _button: discord.ui.Button
     ) -> None:
         entries = self._switch_page(-1)
-        embed = await self.format_page(entries)
-        return await interaction.response.edit_message(embed=embed, view=self)
+        message = await self.format_page(entries)
+        return await interaction.response.edit_message(view=self, **message)
 
     @discord.ui.button(label="...", style=STYLE, disabled=True)
     async def page_number(
@@ -115,16 +115,16 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
         self, interaction: discord.Interaction, _button: discord.ui.Button
     ) -> None:
         entries = self._switch_page(1)
-        embed = await self.format_page(entries)
-        return await interaction.response.edit_message(embed=embed, view=self)
+        message = await self.format_page(entries)
+        return await interaction.response.edit_message(view=self, **message)
 
-    async def run(self, context):
-        embed = await self.format_page(self.pages[0])
+    async def run(self, context: discord.abc.Messageable):
+        message = await self.format_page(self.pages[0])
         if self.total_pages > 1:
-            self.message = await context.send(embed=embed, view=self)
+            self.message = await context.send(view=self, **message)
         else:
             # no need to paginate at all
-            await context.send(embed=embed)
+            await context.send(**message)
             self.stop()
 
     async def on_timeout(self):
@@ -141,7 +141,7 @@ class RowPaginator(BaseButtonPaginator):
 
     async def format_page(self, entries):
         self.embed.description = "\n".join(entries)
-        return self.embed
+        return {"embed": self.embed}
 
 
 class Compliance(discord.ui.View):
@@ -180,3 +180,11 @@ class Compliance(discord.ui.View):
 
     async def on_timeout(self):
         self.stop()
+
+
+class TextPaginator(BaseButtonPaginator):
+    def __init__(self, entries: list[dict], **kwargs):
+        super().__init__(entries=entries, per_page=1, **kwargs)
+
+    async def format_page(self, entries: list[dict]):
+        return {"content": entries[0]}

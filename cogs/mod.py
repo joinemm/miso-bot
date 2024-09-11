@@ -8,9 +8,10 @@ import arrow
 import discord
 from discord.ext import commands, tasks
 from loguru import logger
-from modules.misobot import MisoBot
 
 from modules import exceptions, util
+from modules.misobot import MisoBot
+from modules.ui import RowPaginator
 
 
 class Mod(commands.Cog):
@@ -349,7 +350,7 @@ class Mod(commands.Cog):
             title=f":face_with_monocle: Inspecting {len(ids)} users...",
             color=int("bdddf4", 16),
         )
-        await util.send_as_pages(ctx, content, rows, maxrows=25)
+        await RowPaginator(content, rows).run(ctx)
 
     @commands.command(aliases=["massban"])
     @commands.has_permissions(ban_members=True)

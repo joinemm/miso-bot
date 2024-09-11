@@ -13,6 +13,7 @@ from loguru import logger
 
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
+from modules.ui import RowPaginator
 
 
 class CustomCommands(commands.Cog, name="Commands"):
@@ -223,7 +224,7 @@ class CustomCommands(commands.Cog, name="Commands"):
         ]
         if rows:
             content = discord.Embed(title=f"{ctx.guild.name} custom commands")
-            await util.send_as_pages(ctx, content, rows)
+            await RowPaginator(content, rows).run(ctx)
         else:
             raise exceptions.CommandInfo(
                 "No custom commands have been added on this server yet"

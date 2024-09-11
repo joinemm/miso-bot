@@ -20,7 +20,7 @@ from loguru import logger
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
 from modules.shazam import Shazam
-from modules.ui import BaseButtonPaginator, Compliance
+from modules.ui import BaseButtonPaginator, Compliance, RowPaginator
 
 
 class GifOptions(util.KeywordArguments):
@@ -1065,7 +1065,7 @@ class Utility(commands.Cog):
             for dt, member in sorted(dt_data, key=lambda x: int(x[0].format("Z")))
             if member is not None
         )
-        await util.send_as_pages(ctx, content, rows)
+        await RowPaginator(content, rows).run(ctx)
 
     @commands.group(case_insensitive=True)
     async def steam(self, ctx: commands.Context):
@@ -1137,8 +1137,8 @@ class MarketPaginator(BaseButtonPaginator):
         asset = result["asset_description"]
         item_hash = quote(asset["market_hash_name"])
         market_link = f"{self.MARKET_LISTING_URL}{ asset['appid']}/{item_hash}"
-        return (
-            discord.Embed(
+        return {
+            "embed": discord.Embed(
                 description=asset["type"],
                 color=int("68932f", 16),
             )
@@ -1150,7 +1150,7 @@ class MarketPaginator(BaseButtonPaginator):
             .add_field(name="Starting at", value=result["sell_price_text"])
             .add_field(name="Listings", value=str(result["sell_listings"]))
             .set_footer(icon_url=result["app_icon"], text=result["app_name"])
-        )
+        }
 
 
 def temp(celsius: float, convert_to_f: bool = False) -> str:
