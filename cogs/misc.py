@@ -745,12 +745,29 @@ class Misc(commands.Cog):
 
         Use this command in the server where you want to add the emojis.
         Also works with emoji ID if you don't have access to it.
+
+        You can also reply to any emoji with this command.
         """
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
         if not emojis:
-            return await util.send_command_help(ctx)
+            if (
+                ctx.message.reference
+                and ctx.message.reference.message_id
+                and isinstance(ctx.channel, (discord.Thread, discord.TextChannel))
+            ):
+                reply_message = await ctx.channel.fetch_message(
+                    ctx.message.reference.message_id
+                )
+                emojis = [
+                    f"<:{name}:{id}>"
+                    for name, id in util.find_custom_emojis(reply_message.content)
+                ]
+                if not emojis:
+                    raise exceptions.CommandWarning("Replied to message has no emojis")
+            else:
+                return await util.send_command_help(ctx)
 
         for emoji in emojis:
             my_emoji = self.parse_emoji(emoji)
@@ -786,14 +803,35 @@ class Misc(commands.Cog):
     @commands.command(usage="<sticker>")
     @commands.has_permissions(manage_emojis=True)
     async def stealsticker(self, ctx: commands.Context):
-        """Steal a sticker to your own server"""
+        """Steal a sticker to your own server
+
+        Use this command in the server where you want to add the stickers.
+
+        You can also reply to any sticker with this command.
+        """
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        if not ctx.message.stickers:
-            await util.send_command_help(ctx)
+        stickers = ctx.message.stickers
+        if not stickers:
+            if (
+                ctx.message.reference
+                and ctx.message.reference.message_id
+                and isinstance(ctx.channel, (discord.Thread, discord.TextChannel))
+            ):
+                reply_message = await ctx.channel.fetch_message(
+                    ctx.message.reference.message_id
+                )
+                if reply_message.stickers:
+                    stickers = reply_message.stickers
+                else:
+                    raise exceptions.CommandWarning(
+                        "Replied to message has no stickers"
+                    )
+            else:
+                await util.send_command_help(ctx)
 
-        for sticker in ctx.message.stickers:
+        for sticker in stickers:
             fetched_sticker = await sticker.fetch()
 
             if not isinstance(fetched_sticker, discord.GuildSticker):
