@@ -482,7 +482,6 @@ class Kpop(commands.Cog):
                 idol[2].split(",") if idol[2] else []
             )
             formers = idol[3].split(",") if idol[3] else []
-            print(idol[-1], "has groups", groups, "and former groups", formers)
             for groupname in groups:
                 group = await self.bot.db.fetch_value(
                     """SELECT group_id FROM kpop_group WHERE group_name = %s OR short_name = %s""",
@@ -513,6 +512,8 @@ class Kpop(commands.Cog):
                         group,
                         False,
                     )
+
+        await ctx.send("Relations :thumbs_up:")
 
 
 async def setup(bot):
