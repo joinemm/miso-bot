@@ -59,6 +59,9 @@
                 "grepr".exec = ''
                   grep -r --exclude-dir=".git" --exclude-dir=".ruff_cache" --exclude-dir=".venv" --exclude=\*.pyc --color $1
                 '';
+                "db".exec = ''
+                  mysql --host=localhost --port=3306 --user=bot --password=botpw misobot
+                '';
               };
             }
           )
