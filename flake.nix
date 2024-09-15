@@ -32,6 +32,7 @@
                 black
                 ruff
                 reuse
+                mariadb
               ];
 
               pre-commit.hooks = {

@@ -4,39 +4,54 @@
 
 CREATE TABLE IF NOT EXISTS kpop_group (
     group_id INT NOT NULL AUTO_INCREMENT,
-    profile_link VARCHAR(128),
+    gender ENUM("F", "M"),
+    profile_url VARCHAR(128),
     group_name VARCHAR(64) UNIQUE,
-    other_name VARCHAR(64),
+    short_name VARCHAR(64),
     korean_name VARCHAR(64),
     debut_date DATE,
     company VARCHAR(64),
+    members INT,
+    orig_members INT,
     fanclub VARCHAR(64),
-    gender ENUM("F", "M"),
-    active ENUM('yes', 'no', 'hiatus'),
+    active ENUM('Yes', 'No', 'Hiatus'),
+    image_url VARCHAR(256),
+    image_scrape_date DATETIME,
     PRIMARY KEY (group_id)
 );
 
 CREATE TABLE IF NOT EXISTS kpop_idol (
     idol_id INT NOT NULL AUTO_INCREMENT,
-    profile_link VARCHAR(128),
-    group_name VARCHAR(64),
+    gender ENUM("F", "M"),
+    profile_url VARCHAR(128),
     stage_name VARCHAR(64),
     full_name VARCHAR(64),
     korean_name VARCHAR(64),
     korean_stage_name VARCHAR(64),
     date_of_birth DATE,
+    group_name VARCHAR(64),
     country VARCHAR(32),
     second_country VARCHAR(32),
     height INT,
     weight INT,
     birthplace VARCHAR(32),
-    gender ENUM("F", "M"),
+    other_group VARCHAR(64),
+    former_group VARCHAR(64),
     position VARCHAR(64),
-    instagram VARCHAR(128),
-    twitter VARCHAR(128),
+    instagram VARCHAR(64),
+    twitter VARCHAR(64),
     image_url VARCHAR(256),
+    image_scrape_date DATETIME,
     UNIQUE(group_name, stage_name),
     PRIMARY KEY (idol_id)
+);
+
+CREATE TABLE IF NOT EXISTS group_membership (
+    idol_id INT NOT NULL,
+    group_id INT NOT NULL,
+    current_member BOOLEAN,
+    FOREIGN KEY (idol_id) REFERENCES kpop_idol(idol_id),
+    FOREIGN KEY (group_id) REFERENCES kpop_group(group_id)
 );
 
 CREATE TABLE IF NOT EXISTS stannable_artist (
