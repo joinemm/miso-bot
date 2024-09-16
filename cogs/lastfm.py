@@ -1267,7 +1267,10 @@ class LastFm(commands.Cog):
         chart_nodes = []
 
         data = await self.get_all_albums(ctx.lfm.username)
-        albums = [LastFmImage.from_url(a["image"][-1]["#text"]) for a in data]
+        albums = filter(
+            lambda x: not x.is_missing(),
+            [LastFmImage.from_url(a["image"][-1]["#text"]) for a in data],
+        )
 
         to_fetch = []
         albumcolors = await self.bot.db.fetch(

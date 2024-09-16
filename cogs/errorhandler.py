@@ -56,7 +56,7 @@ class ErrorHandler(commands.Cog):
             if ctx.guild is not None:
                 await queries.save_command_usage(ctx)
             return
-        except commands.CommandError as e:
+        except Exception as e:
             return await self.on_command_error(ctx, e)
 
     @staticmethod
@@ -70,7 +70,7 @@ class ErrorHandler(commands.Cog):
         try:
             await ctx.send(
                 embed=discord.Embed(
-                    description=f"{emoji} {message}",
+                    description=f"{emoji} {message[:1500]}",
                     color=int(color, 16) if color else None,
                 ),
                 **kwargs,

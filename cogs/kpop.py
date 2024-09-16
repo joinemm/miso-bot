@@ -289,9 +289,10 @@ class Kpop(commands.Cog):
             """,
             group_id,
         )
-        content.add_field(
-            name="Members", value=", ".join(x[0] for x in member_list), inline=False
-        )
+        if member_list:
+            content.add_field(
+                name="Members", value=", ".join(x[0] for x in member_list), inline=False
+            )
 
         if image_url is None or (today - image_scrape_date.date).days > 30:
             search_term = f"{name} kpop group"

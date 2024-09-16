@@ -209,13 +209,18 @@ class InstaFix:
     async def get_post(self, shortcode: str):
         text = await self.request(f"{self.BASE_URL}/p/{shortcode}")
         soup = BeautifulSoup(text, "lxml")
-        metadata = {
-            "url": soup.find("a").attrs["href"],
-            "description": soup.find("meta", {"property": "og:description"}).attrs[
-                "content"
-            ],
-            "username": soup.find("meta", {"name": "twitter:title"}).attrs["content"],
-        }
+        try:
+            metadata = {
+                "url": soup.find("a").attrs["href"],
+                "description": soup.find("meta", {"property": "og:description"}).attrs[
+                    "content"
+                ],
+                "username": soup.find("meta", {"name": "twitter:title"}).attrs[
+                    "content"
+                ],
+            }
+        except AttributeError:
+            raise InstagramError("There was a problem fetching media for this post")
 
         media = await self.try_media(shortcode)
 

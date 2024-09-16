@@ -395,6 +395,7 @@ class InstagramEmbedder(BaseEmbedder):
     ):
         instafix = InstaFix(self.bot.session)
         embedez = EmbedEz(self.bot.session)
+        error = None
 
         for provider in [instafix, embedez]:
             try:
@@ -427,9 +428,14 @@ class InstagramEmbedder(BaseEmbedder):
                 results = await asyncio.gather(*tasks)
             except (InstagramError, DownloadError) as e:
                 logger.warning(f"{provider} failed with {e}")
+                error = e
                 continue
             else:
+                error = None
                 break
+
+        if error is not None:
+            raise error
 
         if post.user.name:
             caption = f"{self.EMOJI} **{post.user.name}** `@{post.user.username}`"

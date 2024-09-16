@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS kpop_group (
     orig_members INT,
     fanclub VARCHAR(64),
     active ENUM('Yes', 'No', 'Hiatus'),
-    image_url VARCHAR(256),
+    image_url VARCHAR(1024),
     image_scrape_date DATETIME,
     PRIMARY KEY (group_id)
 );
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS kpop_idol (
     position VARCHAR(64),
     instagram VARCHAR(64),
     twitter VARCHAR(64),
-    image_url VARCHAR(256),
+    image_url VARCHAR(1024),
     image_scrape_date DATETIME,
     UNIQUE(group_name, stage_name),
     PRIMARY KEY (idol_id)

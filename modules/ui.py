@@ -130,7 +130,10 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
     async def on_timeout(self):
         self.on_arrow_forward.disabled = True
         self.on_arrow_backward.disabled = True
-        await self.message.edit(view=self)
+        try:
+            await self.message.edit(view=self)
+        except discord.NotFound:
+            pass
         self.stop()
 
 
