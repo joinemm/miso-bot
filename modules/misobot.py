@@ -131,7 +131,7 @@ class MisoBot(commands.AutoShardedBot):
         self.session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(limit=0),
             json_serialize=lambda x: orjson.dumps(x).decode(),
-            timeout=aiohttp.ClientTimeout(total=30),
+            timeout=aiohttp.ClientTimeout(total=10),
             trace_configs=[self.trace_config],
         )
         await self.redis.start()
