@@ -187,7 +187,7 @@ class Kpop(commands.Cog):
                 value=f"[@{instagram}](https://www.instagram.com/{instagram})",
             )
 
-        if image_url is None or (today - image_scrape_date.date).days > 30:
+        if image_url is None or (today - image_scrape_date.date()).days > 30:
             if group_name is None:
                 search_term = f"{full_name} kpop"
             else:
