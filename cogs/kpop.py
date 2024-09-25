@@ -163,7 +163,8 @@ class Kpop(commands.Cog):
         )
         content.add_field(name="Full name", value=full_name)
         content.add_field(
-            name="Korean name", value=f"{korean_stage_name} ({korean_name})"
+            name="Korean name",
+            value=str(korean_stage_name) + (f"({korean_name})" if korean_name else ""),
         )
         content.add_field(
             name="Birthday",
@@ -294,7 +295,7 @@ class Kpop(commands.Cog):
                 name="Members", value=", ".join(x[0] for x in member_list), inline=False
             )
 
-        if image_url is None or (today - image_scrape_date.date).days > 30:
+        if image_url is None or (today - image_scrape_date.date()).days > 30:
             search_term = f"{name} kpop group"
             image_url = await self.google_image_search(search_term)
             if image_url != "":
