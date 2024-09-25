@@ -13,6 +13,7 @@ import discord
 import humanize
 from bs4 import BeautifulSoup
 from discord.ext import commands
+from loguru import logger
 
 from modules import exceptions, util
 from modules.misobot import MisoBot
@@ -42,7 +43,8 @@ class Kpop(commands.Cog):
             results = await self.google_client.search(
                 keyword, safesearch=False, image_search=True
             )
-        except async_cse.search.APIError:
+        except async_cse.search.APIError as e:
+            logger.warning(f"Error googling image: {e}")
             return ""
         return results[0].image_url if results else ""
 
