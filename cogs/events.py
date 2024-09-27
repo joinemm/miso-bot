@@ -66,10 +66,10 @@ class Events(commands.Cog):
         # prevent double invocation for subcommands
         if ctx.invoked_subcommand is None:
             logger.info(util.log_command_format(ctx))
-            if ctx.guild is not None:
-                await queries.save_command_usage(ctx)
+            # if ctx.guild is not None:
+            #     await queries.save_command_usage(ctx)
 
-            if random.randint(1, 69) == 1 and not await queries.is_donator(
+            if random.randint(1, 100) == 1 and not await queries.is_donator(
                 ctx.bot, ctx.author
             ):
                 logger.info("Sending donation beg message")

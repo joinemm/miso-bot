@@ -102,7 +102,10 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
     ) -> None:
         entries = self._switch_page(-1)
         message = await self.format_page(entries)
-        return await interaction.response.edit_message(view=self, **message)
+        try:
+            return await interaction.response.edit_message(view=self, **message)
+        except discord.NotFound:
+            pass
 
     @discord.ui.button(label="...", style=STYLE, disabled=True)
     async def page_number(
@@ -116,7 +119,10 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
     ) -> None:
         entries = self._switch_page(1)
         message = await self.format_page(entries)
-        return await interaction.response.edit_message(view=self, **message)
+        try:
+            return await interaction.response.edit_message(view=self, **message)
+        except discord.NotFound:
+            pass
 
     async def run(self, context: discord.abc.Messageable):
         message = await self.format_page(self.pages[0])
