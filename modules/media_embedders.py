@@ -192,6 +192,7 @@ class BaseEmbedder:
             contents["files"] = contents["files"][:10]
             extra_contents["view"] = contents["view"]
             contents["view"] = None
+        contents["content"] = contents["content"][:2000]
         return contents, extra_contents
 
     async def send(

@@ -67,6 +67,9 @@ class TikTokNew:
                 text = await response.text()
 
             soup = BeautifulSoup(text, "lxml")
+            if soup.find("li", {"class": "splide__slide"}) is not None:
+                raise TiktokError("TikTok slideshows are not supported")
+
             download = soup.find("a", {"class": "without_watermark"})
             if download is None:
                 await asyncio.sleep(1)
