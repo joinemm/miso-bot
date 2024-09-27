@@ -14,7 +14,7 @@ packages = [{include = "miso_bot"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 aiohttp = "^3.10.2"
-discord-py = {extras = ["speed"], version = "^2.3.2"}
+discord-py = {extras = ["speed"], git = "https://github.com/Rapptz/discord.py", rev = "59f877fcf013c4ddeeb2b39fc21f03e76f995461"}
 aiomysql = "^0.2.0"
 arrow = "^1.3.0"
 beautifulsoup4 = "^4.12.2"
