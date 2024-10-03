@@ -449,8 +449,22 @@ class User(commands.Cog):
 
         data = await self.bot.db.fetch(
             """
-            SELECT user_id, MAX(wpm) as wpm, test_date, word_count FROM typing_stats
-            GROUP BY user_id ORDER BY wpm DESC
+            WITH RankedTests AS (
+                SELECT user_id, 
+                    wpm, 
+                    test_date, 
+                    word_count,
+                    ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY wpm DESC, test_date DESC) AS rn
+                FROM typing_stats
+            )
+
+            SELECT user_id, 
+                wpm, 
+                test_date, 
+                word_count
+            FROM RankedTests
+            WHERE rn = 1
+            ORDER BY wpm DESC
             """
         )
 
