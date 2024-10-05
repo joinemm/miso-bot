@@ -106,7 +106,18 @@ class Fishy(commands.Cog):
     # @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.cooldown(1, 5, type=commands.BucketType.user)
     @commands.command(
-        aliases=["fish", "fihy", "fisy", "foshy", "fisyh", "fsihy", "fin", "fush"]
+        aliases=[
+            "fish",
+            "fihy",
+            "fisy",
+            "foshy",
+            "fisyh",
+            "fsihy",
+            "fin",
+            "fush",
+            "<>",
+            "<))>",
+        ]
     )
     async def fishy(self, ctx: commands.Context, user: Optional[discord.Member] = None):
         """Go fishing"""
