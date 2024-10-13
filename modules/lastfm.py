@@ -393,6 +393,11 @@ class LastFmApi:
     # WEB SCRAPING #
     ################
 
+    @staticmethod
+    def double_encode(text: str) -> str:
+        """For some reason Last.fm URLs are percent-encoded twice..."""
+        return urllib.parse.quote_plus(urllib.parse.quote_plus(text))
+
     async def scrape_page(self, page_url: str, params: dict | None = None):
         """Scrapes the given url returning a Soup."""
         async with self.bot.session.get(
@@ -483,7 +488,7 @@ class LastFmApi:
 
     async def scrape_artist_image(self, artist: str) -> LastFmImage | None:
         """Get artist's top image."""
-        url = f"https://www.last.fm/music/{urllib.parse.quote_plus(artist)}/+images"
+        url = f"https://www.last.fm/music/{self.double_encode(artist)}/+images"
         try:
             soup = await self.scrape_page(url)
         except aiohttp.ClientResponseError:
@@ -499,7 +504,7 @@ class LastFmApi:
 
     async def scrape_album_metadata(self, artist: str, album: str) -> dict | None:
         """Get more info about an album."""
-        url = f"https://www.last.fm/music/{urllib.parse.quote_plus(artist)}/{urllib.parse.quote_plus(album)}"
+        url = f"https://www.last.fm/music/{self.double_encode(artist)}/{self.double_encode(album)}"
         soup = await self.scrape_page(url)
         metadata_headings = soup.select(".catalogue-metadata-heading")
         metadata_values = soup.select(".catalogue-metadata-description")
