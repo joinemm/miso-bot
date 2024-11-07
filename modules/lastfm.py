@@ -536,9 +536,7 @@ class LastFmApi:
         period: Period,
     ) -> list[LastFmImage]:
         """Get image hashes for user's top n artists"""
-        url: str = (
-            f"https://www.last.fm/user/{username}/library/artists?date_preset={period.web_format()}"
-        )
+        url: str = f"https://www.last.fm/user/{username}/library/artists?date_preset={period.web_format()}"
         tasks = []
         for i in range(1, math.ceil(amount / 50) + 1):
             params = {"page": str(i)} if i > 1 else None

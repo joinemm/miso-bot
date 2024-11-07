@@ -37,7 +37,7 @@
 
               pre-commit.hooks = {
                 isort.enable = true;
-                black.enable = true;
+                ruff-format.enable = true;
                 ruff = {
                   enable = true;
                   entry = lib.mkForce "${pkgs.ruff}/bin/ruff --fix --ignore=E501";

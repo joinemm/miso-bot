@@ -67,6 +67,7 @@ exclude = '''
 profile = "black"
 
 [tool.ruff]
+line-length = 88
 target-version = "py311"
 
 exclude = [
@@ -79,7 +80,7 @@ exclude = [
   ".venv",
 ]
 
-[tool.ruff.flake8-quotes]
+[tool.ruff.lint.flake8-quotes]
 docstring-quotes = "double"
 
 [tool.pyright]
