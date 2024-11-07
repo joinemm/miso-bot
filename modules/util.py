@@ -884,7 +884,9 @@ async def user_is_donator(user: discord.User, bot: "MisoBot") -> bool:
 
 
 async def patron_check(ctx):
-    if await user_is_donator(ctx.author, ctx.bot):
+    if (await user_is_donator(ctx.author, ctx.bot)) or (
+        await server_is_premium(ctx.guild, ctx.bot)
+    ):
         return True
     raise PatronCheckFailure
 
