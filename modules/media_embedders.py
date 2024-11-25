@@ -145,7 +145,6 @@ class BaseEmbedder:
                     error_message = f"{response.status} {response.reason}"
 
                 raise DownloadError(error_message)
-                return f"`[{error_message}]`"
 
             content_length = response.headers.get(
                 "Content-Length"
@@ -394,11 +393,15 @@ class InstagramEmbedder(BaseEmbedder):
         instagram_asset: InstagramPost | InstagramStory,
         options: Options | None = None,
     ):
-        instafix = InstaFix(self.bot.session)
-        embedez = EmbedEz(self.bot.session)
-        error = None
+        providers = []
+        if isinstance(instagram_asset, InstagramPost):
+            providers += [InstaFix(self.bot.session), EmbedEz(self.bot.session)]
 
-        for provider in [instafix, embedez]:
+        error = None
+        post = None
+        results = []
+
+        for provider in providers:
             try:
                 if isinstance(instagram_asset, InstagramPost):
                     post = await provider.get_post(instagram_asset.shortcode)
@@ -437,6 +440,9 @@ class InstagramEmbedder(BaseEmbedder):
 
         if error is not None:
             raise error
+
+        if not post:
+            raise InstagramError("No post found")
 
         if post.user.name:
             caption = f"{self.EMOJI} **{post.user.name}** `@{post.user.username}`"

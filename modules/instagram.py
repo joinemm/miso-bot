@@ -322,7 +322,7 @@ class Datalama:
                 text = await response.text()
                 raise InstagramError(f"{response.status} | {text}")
 
-    async def get_post_v1(self, shortcode: str) -> IgPost:
+    async def get_post(self, shortcode: str) -> IgPost:
         data, was_cached, cache_key = await self.api_request_with_cache(
             "/v1/media/by/code",
             {"code": shortcode},
@@ -342,7 +342,7 @@ class Datalama:
             data["caption_text"],
         )
 
-    async def get_story_v1(self, username: str, story_pk: str) -> IgPost:
+    async def get_story(self, username: str, story_pk: str) -> IgPost:
         data, was_cached, cache_key = await self.api_request_with_cache(
             "/v1/story/by/id",
             {"id": story_pk},
@@ -388,9 +388,9 @@ class Datalama:
         """Pass a dict which has user as a key to make it IgUser"""
         user = data["user"]
         return IgUser(
-            user["pk"],
-            user["username"] or f"instagram_user_{user['pk']}",
-            user["profile_pic_url"],
+            id=user["pk"],
+            username=(user["username"] or f"instagram_user_{user['pk']}"),
+            avatar_url=user["profile_pic_url"],
         )
 
     def parse_resource_v1(self, resource: dict) -> list[IgMedia]:
