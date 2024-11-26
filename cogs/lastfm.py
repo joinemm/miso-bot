@@ -1163,7 +1163,7 @@ class LastFm(commands.Cog):
                 chart_nodes.append(
                     (
                         scraped_images[i],
-                        f"<p class='label'>{name}</p><p class='playcount>{plays}</p>",
+                        f"<p class='label'>{name}</p><p class='playcount'>{plays}</p>",
                     )
                 )
                 if topster:
