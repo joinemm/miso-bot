@@ -3,6 +3,14 @@
 # https://git.joinemm.dev/miso-bot
 
 services:
+  nirn:
+    container_name: miso-gateway
+    image: "ghcr.io/germanoeich/nirn-proxy:main"
+    restart: unless-stopped
+    expose:
+      8080
+    profiles: [prod]
+
   nginx:
     image: nginx:latest
     container_name: miso-nginx
