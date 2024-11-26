@@ -88,6 +88,7 @@ services:
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
       - USE_REDIS_CACHE=1
+      - DISCORD_PROXY=http://nirn:8080
     tty: true
     profiles: [prod]
 
@@ -108,7 +109,6 @@ services:
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
       - USE_REDIS_CACHE=1
-      - DISCORD_PROXY=http://nirn:8080
     tty: true
     profiles: [dev, dev-extra]
 
