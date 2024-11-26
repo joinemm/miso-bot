@@ -7,6 +7,8 @@ import os
 import signal
 import sys
 
+import discord
+import discord.http
 import uvloop
 from dotenv import load_dotenv
 from loguru import logger
@@ -79,6 +81,11 @@ infrastructure_extensions = [
 
 
 def main():
+    if "DISCORD_PROXY" in os.environ:
+        discord.http.Route.BASE = (
+            f'{os.environ["DISCORD_PROXY"]}/api/v{discord.http.INTERNAL_API_VERSION}'
+        )
+
     bot: MisoBot = MisoBot(
         extensions=extensions + ([] if developer_mode else infrastructure_extensions),
         default_prefix=prefix,
