@@ -1421,9 +1421,16 @@ class LastFm(commands.Cog):
 
         albums = []
         for image, label in chart_nodes:
+            if size.width < 5:
+                image_url = image.as_full()
+            elif 9 > size.width >= 5:
+                image_url = image.as_300()
+            else:
+                image_url = image.as_174s()
+
             albums.append(
                 {
-                    "image_url": image.as_full(),
+                    "image_url": image_url,
                     "label": label if not hide_labels else "",
                 }
             )
