@@ -62,14 +62,6 @@ services:
       - db
     profiles: [prod, dev-extra]
 
-  emojifier:
-    container_name: miso-emojifier
-    build: https://github.com/joinemm/emojify.git#backend
-    restart: unless-stopped
-    expose:
-      - 3000
-    profiles: [prod, dev-extra]
-
   bot-prod:
     container_name: miso-bot
     build: .

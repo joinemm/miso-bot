@@ -20,6 +20,7 @@ from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
 from modules import emoji_literals, exceptions, util
+from modules.emojifier import Emojifier
 from modules.misobot import MisoBot
 
 EMOJIFIER_HOST = os.environ.get("EMOJIFIER_HOST")
@@ -31,6 +32,7 @@ class Misc(commands.Cog):
     def __init__(self, bot):
         self.bot: MisoBot = bot
         self.icon = "🔮"
+        self.emojifier = Emojifier(bot)
         self.hs = {
             "aries": {
                 "name": "Aries",
@@ -859,37 +861,40 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def emojify(
-        self, ctx: commands.Context, *, text: Union[discord.Message, str]
+        self, ctx: commands.Context, *, text: Union[discord.Message, str, None] = None
     ):
-        """Emojify your message
+        """Emojify some text.
+
+        You can also reply to someone else's message to emojify it
 
         Usage:
+            (as as reply) >emojify
             >emojify <text...>
             >emojify <link to message>
         """
+        if (
+            text is None
+            and ctx.message.reference
+            and ctx.message.reference.message_id
+            and isinstance(ctx.channel, (discord.Thread, discord.TextChannel))
+        ):
+            reply_message = await ctx.channel.fetch_message(
+                ctx.message.reference.message_id
+            )
+            input_text = reply_message.content
+        else:
+            input_text = (
+                text.content if isinstance(text, discord.Message) else str(text)
+            )
 
-        input_text = text.content if isinstance(text, discord.Message) else text
+        result = self.emojifier.convert(input_text)
 
-        async with self.bot.session.post(
-            f"http://{EMOJIFIER_HOST}:3000/convert",
-            json={
-                "density": 100,
-                "input": input_text,
-                "shouldFilterEmojis": False,
-            },
-            headers={
-                "Content-Type": "application/json",
-            },
-        ) as response:
-            data = await response.json(loads=orjson.loads)
-            result = data.get("result")
-
-            try:
-                await ctx.send(result)
-            except discord.errors.HTTPException:
-                raise exceptions.CommandWarning(
-                    "Your text once emojified is too long to send!"
-                )
+        try:
+            await ctx.send(result)
+        except discord.errors.HTTPException:
+            raise exceptions.CommandWarning(
+                "Your text once emojified is too long to send!"
+            )
 
     @commands.command()
     async def meme(self, ctx: commands.Context, template: str, *, content):
