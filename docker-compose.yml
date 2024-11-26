@@ -8,8 +8,8 @@ services:
     image: "ghcr.io/germanoeich/nirn-proxy:main"
     restart: unless-stopped
     expose:
-      8080
-    profiles: [prod]
+      - 8080
+    profiles: [prod, dev-extra]
 
   nginx:
     image: nginx:latest
@@ -68,7 +68,7 @@ services:
       - DB_HOST=db
     depends_on:
       - db
-    profiles: [prod, dev-extra]
+    profiles: [prod]
 
   bot-prod:
     container_name: miso-bot
@@ -105,10 +105,10 @@ services:
     environment:
       - DB_HOST=miso-db
       - IMAGE_SERVER_HOST=image-server
-      - EMOJIFIER_HOST=emojifier
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
       - USE_REDIS_CACHE=1
+      - DISCORD_PROXY=http://nirn:8080
     tty: true
     profiles: [dev, dev-extra]
 
