@@ -34,16 +34,14 @@ services:
 
   image-server:
     container_name: miso-image-server
-    build: https://github.com/joinemm/sushii-image-server.git#main
+    build: https://github.com/joinemm/html-imager.git#master
     restart: unless-stopped
     init: true
-    cap_add:
-      - SYS_ADMIN
     expose:
       - 3000
     volumes:
-      - ./static:/app/static:ro
-      - ./templates:/app/templates:ro
+      - ./html/static:/app/static:ro
+      - ./html/templates:/app/templates:ro
     profiles: [prod, dev-extra]
 
   shlink:

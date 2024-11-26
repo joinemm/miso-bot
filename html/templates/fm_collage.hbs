@@ -1,5 +1,5 @@
 {{!--
-SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+SPDX-FileCopyrightText: 2024 Joonas Rautiola <joinemm@pm.me>
 SPDX-License-Identifier: MPL-2.0
 https://git.joinemm.dev/miso-bot
 --}}
@@ -9,19 +9,17 @@ https://git.joinemm.dev/miso-bot
     <meta charset='utf-8' />
     <meta http-equiv='X-UA-Compatible' content='IE=edge' />
     <meta name='viewport' content='width=device-width, initial-scale=1' />
-    <link rel='stylesheet' href='{{BASE_URL}}/static/css/fm_collage.css' />
+    <link rel='stylesheet' href='{{STATIC}}/fm_collage.css' />
   </head>
   <body>
     <div class='layout'>
       <div
         class='wrapper {{WRAP_CLASSES}}'
-        style='width: {{RESOLUTION_WIDTH}}; height: {{RESOLUTION_HEIGHT}}; grid-template-columns: repeat({{COLUMNS}}, 1fr); grid-template-rows: repeat({{ROWS}}, 1fr);'
+        style='grid-template-columns: repeat({{COLUMNS}}, 1fr); grid-template-rows: repeat({{ROWS}}, 1fr);'
       >
         {{#each ALBUMS}}
-          <div class='box' style='background-image: url("{{this.image_url}}")'>
-            <p class='label' style='font-size: {{TOPSTER_FONT_SIZE}}'>
-              {{{this.label}}}
-            </p>
+          <div class='box' style='background-image: url("{{this.image_url}}"); font-size: {{FONT_SIZE}}'>
+            {{{this.label}}}
           </div>
         {{/each}}
       </div>

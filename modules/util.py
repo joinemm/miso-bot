@@ -917,11 +917,11 @@ def format_html(template, replacements):
     return re.sub(r"\$(\S*?)\$", dictsub, template)
 
 
-async def render_html(bot, payload, endpoint="html"):
+async def render_html_template(bot, params, context):
     try:
-        async with bot.session.post(
-            f"http://{IMAGE_SERVER_HOST}:3000/{endpoint}", data=payload
-        ) as response:
+        url = f"http://{IMAGE_SERVER_HOST}:3000/template"
+        async with bot.session.post(url, json=context, params=params) as response:
+            print(response.status)
             if response.status == 200:
                 return io.BytesIO(await response.read())
             raise exceptions.RendererError(

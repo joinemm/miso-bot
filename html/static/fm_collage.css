@@ -1,23 +1,40 @@
 /*
- * SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+ * SPDX-FileCopyrightText: 2024 Joonas Rautiola <joinemm@pm.me>
  * SPDX-License-Identifier: MPL-2.0
  * https://git.joinemm.dev/miso-bot
  */
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   background-color: #000;
-  font-family: monospace;
+  font-family: "Fira Code", monospace;
   color: #fff;
+  overflow: hidden;
 }
 
 .label {
   position: absolute;
   bottom: 0;
+  font-weight: bold;
   margin: 1px;
   padding-left: 5px;
   padding-bottom: 5px;
-  text-shadow: 1px 1px 0px #000;
+  text-shadow: 2px 2px 1px #000;
+}
+
+.playcount {
+  position: absolute;
+  bottom: 0;
+  font-weight: bold;
+  margin: 1px;
+  padding-right: 5px;
+  padding-bottom: 5px;
+  text-shadow: 2px 2px 1px #000;
+  right: 0;
 }
 
 .box {
@@ -33,7 +50,8 @@ body {
 }
 
 .wrapper {
-  max-height: 1080px;
+  height: 1440px;
+  width: 1440px;
   display: grid;
   grid-auto-flow: row;
   flex-shrink: 0;
@@ -41,7 +59,7 @@ body {
 }
 
 .wrapper.with-gaps {
-  grid-gap: 10px;
+  grid-gap: 15px;
   padding: 35px;
 }
 
@@ -59,6 +77,8 @@ body {
   position: relative;
   margin-top: 0;
   padding-left: 0;
+  font-weight: bold;
+  line-height: 1.175;
   white-space: nowrap;
   list-style-type: none;
   display: table-cell;

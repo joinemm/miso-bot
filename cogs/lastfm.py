@@ -5,7 +5,6 @@
 import asyncio
 import io
 import math
-import os
 import random
 import re
 import sys
@@ -1164,7 +1163,7 @@ class LastFm(commands.Cog):
                 chart_nodes.append(
                     (
                         scraped_images[i],
-                        f"<strong>{name}</strong></br>{plays} {'play' if plays == 1 else 'plays'}",
+                        f"<p class='label'>{name}</p><p class='playcount>{plays}</p>",
                     )
                 )
                 if topster:
@@ -1181,7 +1180,7 @@ class LastFm(commands.Cog):
                 chart_nodes.append(
                     (
                         LastFmImage.from_url(track["image"][0]["#text"]),
-                        f"<strong>{name}</br>{artist}</strong>",
+                        f"<p class='label'>{name}</br>{artist}</p>",
                     )
                 )
                 if topster:
@@ -1203,7 +1202,7 @@ class LastFm(commands.Cog):
                 chart_nodes.append(
                     (
                         LastFmImage.from_url(album["image"][0]["#text"]),
-                        f"<strong>{name}</br>{artist}</strong></br>{plays} {play_s(plays)}",
+                        f"<p class='label'>{name}</br>{artist}</p><p class='playcount'>{plays}</p>",
                     )
                 )
                 if topster:
@@ -1417,18 +1416,8 @@ class LastFm(commands.Cog):
         use_padding=False,
         topster_labels: list[str] | None = None,
     ):
-        resolution = 1080
-        font_size = 2.5
-        if size.count > 25:
-            font_size = 1.75
-        if size.count > 42:
-            resolution = 1440
-        if size.count > 49:
-            font_size = 1.25
-        if size.count > 69:
-            resolution = 2160
-        if size.count > 104:
-            font_size = 1.0
+        font_size = 60 / max(size.width, size.height)
+        topster_font_size = 1000 / size.height / size.width
 
         albums = []
         for image, label in chart_nodes:
@@ -1439,37 +1428,22 @@ class LastFm(commands.Cog):
                 }
             )
 
-        image_width = (
-            resolution
-            if size.width >= size.height
-            else int(resolution * (size.width / size.height))
-        )
-
-        render_context = {
+        context = {
             "ROWS": size.height,
             "COLUMNS": size.width,
             "ALBUMS": albums,
             "USE_TOPSTER": bool(topster_labels),
             "TOPSTER_LABELS": topster_labels or [],
-            "TOPSTER_FONT_SIZE": f"{font_size}em",
-            "LABEL_FONT_SIZE": f"{font_size/2}em",
-            "RESOLUTION_WIDTH": f"{image_width}px",
-            "RESOLUTION_HEIGHT": (
-                f"{resolution}px" if size.height > size.width else "auto"
-            ),
+            "TOPSTER_FONT_SIZE": f"{topster_font_size}px",
+            "FONT_SIZE": f"{font_size}px",
             "WRAP_CLASSES": "with-gaps" if use_padding else "",
-            "BASE_URL": "http://" + os.environ["IMAGE_SERVER_HOST"] + ":3000",
         }
 
-        payload = {
-            "templateName": "fm_collage",
-            "context": orjson.dumps(render_context).decode(),
-            "imageFormat": "jpg",
-            "width": 1,
-            "height": 1,
-        }
-
-        return await util.render_html(self.bot, payload, endpoint="template")
+        return await util.render_html_template(
+            self.bot,
+            {"template": "fm_collage"},
+            context,
+        )
 
     async def server_lastfm_usernames(
         self, guild: discord.Guild, filter_blacklisted=False
@@ -1927,7 +1901,7 @@ class LastFm(commands.Cog):
                 chart_nodes.append(
                     (
                         await self.api.get_artist_image(name),
-                        f"<strong>{name}</strong></br>{data['score'] / len(data):.2f}%",
+                        f"<p class='label'>{name}<p><p class='playcount'>{data['score'] / len(data):.2f}%<p>",
                     )
                 )
                 if topster:
@@ -1972,7 +1946,7 @@ class LastFm(commands.Cog):
                 chart_nodes.append(
                     (
                         LastFmImage.from_url(image),
-                        f"<strong>{track_name}</br>{artist_name}</strong>",
+                        f"<p class='label'>{track_name}</br>{artist_name}</p>",
                     )
                 )
                 if topster:
@@ -2032,7 +2006,7 @@ class LastFm(commands.Cog):
                 chart_nodes.append(
                     (
                         LastFmImage.from_url(data["image"]),
-                        f"<strong>{name}</strong></br>{data['score'] / len(data):.2f}%",
+                        f"<p class='label'>{name}</p><p class='playcount'>{data['score'] / len(data):.2f}%</p>",
                     )
                 )
                 if topster:
