@@ -8,8 +8,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Python
+      - name: Install python
         uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
       - name: Install poetry
         uses: abatilo/actions-poetry@v2
@@ -19,21 +21,24 @@ jobs:
           poetry config virtualenvs.create true --local
           poetry config virtualenvs.in-project true --local
 
-      - uses: actions/cache@v3
-        name: Define a cache for the virtual environment based on the dependencies lock file
+      - name: Cache the virtualenv
+        uses: actions/cache@v3
         with:
           path: ./.venv
           key: venv-${{ hashFiles('poetry.lock') }}
 
-      - name: Install the project dependencies
-        run: poetry install --no-root
+      - name: Install python dependencies
+        run: poetry install
 
-      - uses: astral-sh/ruff-action@v1
+      - name: Ruff check
+        uses: astral-sh/ruff-action@v1
         with:
           args: "check --ignore=E501"
 
-      - uses: astral-sh/ruff-action@v1
+      - name: Ruff format
+        uses: astral-sh/ruff-action@v1
         with:
           args: "format --check"
 
-      - uses: isort/isort-action@v1
+      - name: isort check
+        uses: isort/isort-action@v1
