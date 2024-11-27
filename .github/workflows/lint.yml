@@ -1,19 +1,37 @@
 name: Lint
+
 on: [ push, pull_request ]
+
 jobs:
-  black:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: psf/black@stable
-        with:
-          options: "--check --line-length=88 --verbose"
-          version: "~= 24.4"
-  ruff:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: chartboost/ruff-action@v1
-        with:
-          version: 0.4.4
-          args: "--line-length=88 --ignore=E501"
+  ci:
+    - uses: actions/checkout@v4
+
+    - name: Install Python
+      uses: actions/setup-python@v4
+
+    - name: Install poetry
+      uses: abatilo/actions-poetry@v2
+
+    - name: Setup a local virtual environment (if no poetry.toml file)
+      run: |
+        poetry config virtualenvs.create true --local
+        poetry config virtualenvs.in-project true --local
+
+    - uses: actions/cache@v3
+      name: Define a cache for the virtual environment based on the dependencies lock file
+      with:
+        path: ./.venv
+        key: venv-${{ hashFiles('poetry.lock') }}
+
+    - name: Install the project dependencies
+      run: poetry install
+
+    - uses: astral-sh/ruff-action@v1
+      with:
+        args: "--ignore=E501"
+
+    - uses: astral-sh/ruff-action@v1
+      with:
+        args: "format --check"
+
+    - uses: isort/isort-action@v1
