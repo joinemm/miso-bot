@@ -30,7 +30,7 @@ jobs:
 
       - uses: astral-sh/ruff-action@v1
         with:
-          args: "--ignore=E501"
+          args: "check --ignore=E501"
 
       - uses: astral-sh/ruff-action@v1
         with:
