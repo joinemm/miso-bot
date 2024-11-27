@@ -696,7 +696,7 @@ async def rgb_from_image_url(session: aiohttp.ClientSession, url: str) -> Rgb | 
                 None, lambda: colorgram.extract(image, 1)
             )
             return colors[0].rgb
-    except (aiohttp.InvalidURL, aiohttp.ClientError):
+    except aiohttp.ClientError:
         return None
 
 

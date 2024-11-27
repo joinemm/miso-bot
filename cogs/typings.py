@@ -82,22 +82,21 @@ class Typings(commands.Cog):
         except asyncio.TimeoutError:
             return await ctx.send(f"{ctx.author.mention} Too slow.")
 
-        else:
-            wpm, accuracy, not_long_enough = calculate_entry(
-                message, words_message, wordlist
-            )
-            if self.anticheat(message) or wpm > 300:
-                return await message.reply("Stop cheating >:(")
+        wpm, accuracy, not_long_enough = calculate_entry(
+            message, words_message, wordlist
+        )
+        if self.anticheat(message) or wpm > 300:
+            return await message.reply("Stop cheating >:(")
 
-            if not_long_enough:
-                await message.reply(
-                    ":warning: `score not valid, you must type at least 90% of the words`"
-                )
-            else:
-                await message.reply(f"**{int(wpm)} WPM / {int(accuracy)}% Accuracy**")
-                await self.save_wpm(
-                    ctx.author, ctx.guild, wpm, accuracy, wordcount, language, False
-                )
+        if not_long_enough:
+            await message.reply(
+                ":warning: `score not valid, you must type at least 90% of the words`"
+            )
+        else:
+            await message.reply(f"**{int(wpm)} WPM / {int(accuracy)}% Accuracy**")
+            await self.save_wpm(
+                ctx.author, ctx.guild, wpm, accuracy, wordcount, language, False
+            )
 
     @typing.command(name="race")
     async def typing_race(
@@ -270,30 +269,30 @@ class Typings(commands.Cog):
         except asyncio.TimeoutError:
             await ctx.send(f"{player.mention} too slow!")
             return player, 0, 0
-        else:
-            wpm, accuracy, not_long_enough = calculate_entry(
-                message, words_message, wordlist
-            )
-            if self.anticheat(message) or wpm > 300:
-                await message.reply("Stop cheating >:(")
-                return player, 0, 0
 
-            if not_long_enough:
-                await message.reply(
-                    ":warning: `score not valid, you must type at least 90% of the words`"
-                )
-                return player, 0, 0
-            await message.add_reaction("✅")
-            await self.save_wpm(
-                message.author,
-                ctx.guild,
-                wpm,
-                accuracy,
-                wordcount,
-                language,
-                True,
+        wpm, accuracy, not_long_enough = calculate_entry(
+            message, words_message, wordlist
+        )
+        if self.anticheat(message) or wpm > 300:
+            await message.reply("Stop cheating >:(")
+            return player, 0, 0
+
+        if not_long_enough:
+            await message.reply(
+                ":warning: `score not valid, you must type at least 90% of the words`"
             )
-            return player, wpm, accuracy
+            return player, 0, 0
+        await message.add_reaction("✅")
+        await self.save_wpm(
+            message.author,
+            ctx.guild,
+            wpm,
+            accuracy,
+            wordcount,
+            language,
+            True,
+        )
+        return player, wpm, accuracy
 
     @typing.command(name="history")
     async def typing_history(

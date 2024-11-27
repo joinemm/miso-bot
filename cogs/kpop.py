@@ -115,7 +115,7 @@ class Kpop(commands.Cog):
         idol_data = await self.bot.db.fetch_row(
             """
             SELECT idol_id, full_name, stage_name, korean_name, korean_stage_name,
-                   date_of_birth, country, group_name, height, weight, gender, 
+                   date_of_birth, country, group_name, height, weight, gender,
                    image_url, image_scrape_date, birthplace, former_group, instagram
                 FROM kpop_idol
             WHERE idol_id = %s
@@ -198,9 +198,9 @@ class Kpop(commands.Cog):
             if image_url != "":
                 await self.bot.db.execute(
                     """
-                    UPDATE kpop_idol 
-                        SET image_url = %s, 
-                        image_scrape_date = %s 
+                    UPDATE kpop_idol
+                        SET image_url = %s,
+                        image_scrape_date = %s
                     WHERE idol_id = %s
                     """,
                     image_url,
@@ -236,7 +236,7 @@ class Kpop(commands.Cog):
     async def send_group(self, ctx: commands.Context, group_id):
         group_data = await self.bot.db.fetch_row(
             """
-            SELECT group_id, gender, group_name, short_name, korean_name, 
+            SELECT group_id, gender, group_name, short_name, korean_name,
                    debut_date, company, members, image_url, image_scrape_date
                 FROM kpop_group
             WHERE group_id = %s
@@ -256,7 +256,7 @@ class Kpop(commands.Cog):
             korean_name,
             debut_date,
             company,
-            members,
+            _,
             image_url,
             image_scrape_date,
         ) = group_data
@@ -285,7 +285,7 @@ class Kpop(commands.Cog):
 
         member_list = await self.bot.db.fetch(
             """
-            SELECT i.stage_name 
+            SELECT i.stage_name
             FROM kpop_idol i JOIN group_membership gm ON i.idol_id = gm.idol_id
             JOIN kpop_group g ON gm.group_id = g.group_id
             WHERE g.group_id = %s
@@ -303,9 +303,9 @@ class Kpop(commands.Cog):
             if image_url != "":
                 await self.bot.db.execute(
                     """
-                    UPDATE kpop_group 
-                        SET image_url = %s, 
-                        image_scrape_date = %s 
+                    UPDATE kpop_group
+                        SET image_url = %s,
+                        image_scrape_date = %s
                     WHERE group_id = %s
                     """,
                     image_url,

@@ -450,17 +450,17 @@ class User(commands.Cog):
         data = await self.bot.db.fetch(
             """
             WITH RankedTests AS (
-                SELECT user_id, 
-                    wpm, 
-                    test_date, 
+                SELECT user_id,
+                    wpm,
+                    test_date,
                     word_count,
                     ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY wpm DESC, test_date DESC) AS rn
                 FROM typing_stats
             )
 
-            SELECT user_id, 
-                wpm, 
-                test_date, 
+            SELECT user_id,
+                wpm,
+                test_date,
                 word_count
             FROM RankedTests
             WHERE rn = 1

@@ -71,12 +71,11 @@ class TikTokNew:
                 raise TiktokError("TikTok slideshows are not supported")
 
             download = soup.find("a", {"class": "without_watermark"})
-            if download is None:
-                await asyncio.sleep(1)
-                retries += 1
-                continue
-            else:
+            if download is not None:
                 break
+
+            await asyncio.sleep(1)
+            retries += 1
 
         if download is None:
             raise TiktokError(

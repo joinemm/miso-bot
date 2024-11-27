@@ -1136,7 +1136,7 @@ class MarketPaginator(BaseButtonPaginator):
         result = entries[0]
         asset = result["asset_description"]
         item_hash = quote(asset["market_hash_name"])
-        market_link = f"{self.MARKET_LISTING_URL}{ asset['appid']}/{item_hash}"
+        market_link = f"{self.MARKET_LISTING_URL}{asset['appid']}/{item_hash}"
         return {
             "embed": discord.Embed(
                 description=asset["type"],

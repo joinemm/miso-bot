@@ -98,7 +98,7 @@ class EmbedEz:
     BASE_URL = "https://www.instagramez.com"
 
     def __init__(self, session: aiohttp.ClientSession):
-        self.session = session
+        self.session: aiohttp.ClientSession = session
 
     async def request(self, url: str) -> BeautifulSoup:
         async with self.session.get(

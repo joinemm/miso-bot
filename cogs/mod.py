@@ -517,10 +517,8 @@ class Mod(commands.Cog):
                 raise exceptions.CommandWarning(
                     f"Unable to unban. **{user}** is not banned"
                 )
-            else:
-                return await util.send_success(
-                    ctx, f"Unbanned **{user}** {user.mention}"
-                )
+
+            return await util.send_success(ctx, f"Unbanned **{user}** {user.mention}")
 
         success = []
         failure = []

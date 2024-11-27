@@ -184,7 +184,8 @@ class BaseEmbedder:
 
         return media_url
 
-    def msg_split(self, contents: dict) -> (dict, dict):
+    @staticmethod
+    def msg_split(contents: dict) -> tuple[dict, dict]:
         extra_contents = {}
         if len(contents.get("files", [])) > 10:
             extra_contents["files"] = contents["files"][10:]
