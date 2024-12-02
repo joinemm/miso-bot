@@ -9,6 +9,8 @@ services:
     restart: unless-stopped
     expose:
       - 8080
+    environment:
+      - REQUEST_TIMEOUT=10000 # 10 seconds
     profiles: [prod, dev-extra]
 
   nginx:
