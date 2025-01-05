@@ -13,12 +13,12 @@ services:
       - REQUEST_TIMEOUT=10000 # 10 seconds
     profiles: [prod, dev-extra]
 
-  db:
-    container_name: miso-db
+  bot-db:
+    container_name: miso-bot-db
     image: mariadb
     restart: unless-stopped
     volumes:
-      - database:/var/lib/mysql
+      - miso-data:/var/lib/mysql
       - ./sql/init:/docker-entrypoint-initdb.d:ro
       - ./sql/scheduled:/scripts:ro
     ports:
@@ -29,6 +29,21 @@ services:
       - MARIADB_DATABASE=misobot
       - MARIADB_ROOT_PASSWORD=secure-af
     profiles: [prod, dev, dev-extra]
+
+  shlink-db:
+    container_name: miso-shlink-db
+    image: mariadb
+    restart: unless-stopped
+    volumes:
+      - shlink-data:/var/lib/mysql
+    ports:
+      - 3306:3306
+    environment:
+      - MARIADB_USER=shlink
+      - MARIADB_PASSWORD=shlinkpw
+      - MARIADB_DATABASE=shlink
+      - MARIADB_ROOT_PASSWORD=secure-af
+    profiles: [prod]
 
   image-server:
     container_name: miso-image-server
@@ -53,11 +68,11 @@ services:
       - IS_HTTPS_ENABLED=true
       - DB_DRIVER=maria
       - DB_NAME=shlink
-      - DB_USER=bot
-      - DB_PASSWORD=botpw
-      - DB_HOST=db
+      - DB_USER=shlink
+      - DB_PASSWORD=shlinkpw
+      - DB_HOST=shlink-db
     depends_on:
-      - db
+      - shlink-db
     profiles: [prod]
 
   bot-prod:
@@ -70,11 +85,11 @@ services:
     expose:
       - 8080
     depends_on:
-      - db
+      - bot-db
     env_file:
       - .env
     environment:
-      - DB_HOST=miso-db
+      - DB_HOST=miso-bot-db
       - IMAGE_SERVER_HOST=image-server
       - EMOJIFIER_HOST=emojifier
       - WEBSERVER_PORT=8080
@@ -92,11 +107,11 @@ services:
     expose:
       - 8080
     depends_on:
-      - db
+      - bot-db
     env_file:
       - .env
     environment:
-      - DB_HOST=miso-db
+      - DB_HOST=miso-bot-db
       - IMAGE_SERVER_HOST=image-server
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
@@ -120,5 +135,6 @@ networks:
     driver: bridge
 
 volumes:
-  database:
+  miso-data:
+  shlink-data:
   redis-data:
