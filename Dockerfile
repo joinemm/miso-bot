@@ -3,9 +3,9 @@
 # https://git.joinemm.dev/miso-bot
 
 # The builder image, used to build the virtual environment
-FROM python:3.11-buster as builder
+FROM python:3.12-bookworm AS builder
 
-RUN pip install --no-cache-dir poetry==1.4.2
+RUN pip install --no-cache-dir poetry==2.0.0
 
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
@@ -22,7 +22,7 @@ RUN touch README.md
 RUN poetry install --without dev --no-root && rm -rf $POETRY_CACHE_DIR
 
 # The runtime image, used to just run the code provided its virtual environment
-FROM python:3.11-slim-buster as runtime
+FROM python:3.12-slim-bookworm AS runtime
 
 WORKDIR /app
 

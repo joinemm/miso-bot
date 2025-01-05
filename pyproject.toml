@@ -12,7 +12,7 @@ readme = "README.md"
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.12"
 aiohttp = "^3.10.2"
 discord-py = {extras = ["speed"], git = "https://github.com/Rapptz/discord.py", rev = "7db879b5bd7008a28613cf107f434a18b8ea7303"}
 aiomysql = "^0.2.0"
@@ -68,7 +68,7 @@ profile = "black"
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py312"
 
 exclude = [
   ".direnv",
@@ -94,5 +94,5 @@ exclude = [
 venvPath = "."
 venv = "venv"
 reportMissingImports = true
-pythonVersion = "3.11"
+pythonVersion = "3.12"
 pythonPlatform = "Linux"
