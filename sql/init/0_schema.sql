@@ -175,23 +175,6 @@ CREATE TABLE IF NOT EXISTS command_usage (
     PRIMARY KEY (guild_id, user_id, command_name, command_type)
 );
 
-CREATE TABLE IF NOT EXISTS custom_emoji_usage (
-    guild_id BIGINT,
-    user_id BIGINT,
-    emoji_id BIGINT,
-    emoji_name VARCHAR(32),
-    uses INT DEFAULT 1,
-    PRIMARY KEY (guild_id, user_id, emoji_id)
-);
-
-CREATE TABLE IF NOT EXISTS unicode_emoji_usage (
-    guild_id BIGINT,
-    user_id BIGINT,
-    emoji_name VARCHAR(128),
-    uses INT DEFAULT 1,
-    PRIMARY KEY (guild_id, user_id, emoji_name)
-);
-
 CREATE TABLE IF NOT EXISTS typing_stats (
     user_id BIGINT,
     guild_id BIGINT,

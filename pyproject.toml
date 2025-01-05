@@ -9,6 +9,7 @@ description = "Multipurpose Discord bot"
 authors = ["Joinemm <joonas@rautiola.co>"]
 license = "MPL-2.0"
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
