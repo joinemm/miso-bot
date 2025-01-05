@@ -7,9 +7,6 @@
 set -e
 
 BACKUP_DIR="$HOME/backups"
-CONTAINER_NAME="miso-db"
-DATABASES="misobot shlink"
-USERLOGIN="--user=bot --password=botpw"
 DUMP_OPTIONS="--force --quick --single-transaction --extended-insert --order-by-primary"
 BUCKET="s3:s3.us-west-004.backblazeb2.com/misobot"
 
@@ -37,14 +34,21 @@ echo "Copying old backups to $BACKUP_DIR-yesterday"
 cp -r "$BACKUP_DIR" "$BACKUP_DIR"-yesterday
 
 # Dump our databases
-for DATABASE_NAME in $DATABASES; do
-    echo "Dumping MySQL Database $DATABASE_NAME"
-    # shellcheck disable=SC2086
-    docker exec "$CONTAINER_NAME" \
-        /usr/bin/mysqldump $USERLOGIN $DUMP_OPTIONS \
-        --ignore-table="$DATABASE_NAME".sessions \
-        "$DATABASE_NAME" >"$BACKUP_DIR"/"$DATABASE_NAME".sql
-done
+DATABASE_NAME=misobot
+echo "Dumping MySQL Database $DATABASE_NAME"
+# shellcheck disable=SC2086
+docker exec miso-bot-db \
+    /usr/bin/mysqldump --user=bot --password=botpw $DUMP_OPTIONS \
+    --ignore-table="$DATABASE_NAME".sessions \
+    "$DATABASE_NAME" >"$BACKUP_DIR"/"$DATABASE_NAME".sql
+
+DATABASE_NAME=shlink
+echo "Dumping MySQL Database $DATABASE_NAME"
+# shellcheck disable=SC2086
+docker exec miso-bot-db \
+    /usr/bin/mysqldump --user=shlink --password=shlinkpw $DUMP_OPTIONS \
+    --ignore-table="$DATABASE_NAME".sessions \
+    "$DATABASE_NAME" >"$BACKUP_DIR"/"$DATABASE_NAME".sql
 
 echo "Uploading dumps to B2"
 

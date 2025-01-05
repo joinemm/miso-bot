@@ -37,7 +37,7 @@ services:
     volumes:
       - shlink-data:/var/lib/mysql
     ports:
-      - 3306:3306
+      - 3307:3306
     environment:
       - MARIADB_USER=shlink
       - MARIADB_PASSWORD=shlinkpw
