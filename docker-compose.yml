@@ -13,18 +13,6 @@ services:
       - REQUEST_TIMEOUT=10000 # 10 seconds
     profiles: [prod, dev-extra]
 
-  nginx:
-    image: nginx:latest
-    container_name: miso-nginx
-    restart: unless-stopped
-    volumes:
-      - ./infra/nginx.conf:/etc/nginx/nginx.conf
-      - /etc/letsencrypt/:/etc/letsencrypt/
-    ports:
-      - 80:80
-      - 443:443
-    profiles: [prod]
-
   db:
     container_name: miso-db
     image: mariadb
