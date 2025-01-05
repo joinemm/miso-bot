@@ -9,7 +9,6 @@ from loguru import logger
 
 class Keychain:
     def __init__(self):
-        self.TWITTER_BEARER_TOKEN: str = ""
         self.NAVER_APPID: str = ""
         self.NAVER_TOKEN: str = ""
         self.LASTFM_API_KEY: str = ""
@@ -17,10 +16,6 @@ class Keychain:
         self.TIMEZONEDB_API_KEY: str = ""
         self.GCS_DEVELOPER_KEY: str = ""
         self.WOLFRAM_APPID: str = ""
-        self.GFYCAT_CLIENT_ID: str = ""
-        self.GFYCAT_SECRET: str = ""
-        self.STREAMABLE_USER: str = ""
-        self.STREAMABLE_PASSWORD: str = ""
         self.THESAURUS_KEY: str = ""
         self.THESAURUS_INTERMEDIATE_KEY: str = ""
         self.FINNHUB_TOKEN: str = ""
@@ -31,10 +26,6 @@ class Keychain:
         self.AWS_ACCESS_KEY: str = ""
         self.AWS_ACCESS_SECRET: str = ""
         self.DATALAMA_ACCESS_KEY: str = ""
-        self.PROXY_URL: str = ""
-        self.PROXY_USER: str = ""
-        self.PROXY_PASS: str = ""
-        self.IG_COOKIE: str = ""
         self.SHLINK_API_KEY: str = ""
         self.GIPHY_API_KEY: str = ""
         self.LASTFM_USERNAME: str = ""
