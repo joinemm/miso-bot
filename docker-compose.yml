@@ -71,6 +71,7 @@ services:
       - DB_USER=shlink
       - DB_PASSWORD=shlinkpw
       - DB_HOST=shlink-db
+      - SHELL_VERBOSITY=3
     depends_on:
       - shlink-db
     profiles: [prod]
