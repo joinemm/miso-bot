@@ -25,7 +25,7 @@
         inherit inputs pkgs;
         modules = [
           (
-            { pkgs, lib, ... }:
+            { pkgs, ... }:
             {
               dotenv.disableHint = true;
 
@@ -41,10 +41,7 @@
               pre-commit.hooks = {
                 isort.enable = true;
                 ruff-format.enable = true;
-                ruff = {
-                  enable = true;
-                  entry = lib.mkForce "${pkgs.ruff}/bin/ruff --fix --ignore=E501";
-                };
+                ruff.enable = true;
               };
 
               languages.python = {
