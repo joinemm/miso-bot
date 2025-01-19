@@ -3,8 +3,11 @@
 # https://git.joinemm.dev/miso-bot
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
-    devenv.url = "github:cachix/devenv";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    devenv = {
+      url = "github:cachix/devenv";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   nixConfig = {
@@ -49,6 +52,7 @@
                 poetry = {
                   enable = true;
                   activate.enable = true;
+                  package = pkgs.poetry;
                 };
               };
 
