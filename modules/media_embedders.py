@@ -47,10 +47,11 @@ def filesize_limit(guild: discord.Guild | None):
     """discord normally has 8MB file size limit,
     but it can be increased in some guilds due to boosting
     and we want to take full advantage of that"""
-    if guild is None:
-        return 8388608
-
-    return guild.filesize_limit
+    return (
+        guild.filesize_limit
+        if guild is not None
+        else discord.utils.DEFAULT_FILE_SIZE_LIMIT_BYTES
+    )
 
 
 class DownloadError(Exception):
@@ -396,7 +397,10 @@ class InstagramEmbedder(BaseEmbedder):
     ):
         providers = []
         if isinstance(instagram_asset, InstagramPost):
-            providers += [InstaFix(self.bot.session), EmbedEz(self.bot.session)]
+            providers += [
+                EmbedEz(self.bot),
+                InstaFix(self.bot.session),
+            ]
 
         error = None
         post = None
@@ -414,6 +418,8 @@ class InstagramEmbedder(BaseEmbedder):
                     identifier = instagram_asset.story_pk
 
                 tasks = []
+                if not post.media:
+                    raise InstagramError("Unable to fetch media for this post")
                 for n, media in enumerate(post.media, start=1):
                     ext = (
                         "mp4"

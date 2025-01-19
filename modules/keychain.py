@@ -31,6 +31,7 @@ class Keychain:
         self.LASTFM_USERNAME: str = ""
         self.LASTFM_PASSWORD: str = ""
         self.SPONSORS_WEBHOOK_URL: str = ""
+        self.EZ_API_KEY: str = ""
 
         for name in self.__dict__:
             value = os.environ.get(name)

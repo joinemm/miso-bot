@@ -40,6 +40,16 @@ class MediaType(Enum):
     ALBUM = 8
     NONE = 0
 
+    @staticmethod
+    def from_string(s: str):
+        match s:
+            case "photo":
+                return MediaType.PHOTO
+            case "video":
+                return MediaType.VIDEO
+            case _:
+                raise ValueError(s)
+
 
 @dataclass
 class IgMedia:
@@ -95,64 +105,47 @@ class InstagramIdCodec:
 
 
 class EmbedEz:
-    BASE_URL = "https://www.instagramez.com"
-
-    def __init__(self, session: aiohttp.ClientSession):
-        self.session: aiohttp.ClientSession = session
-
-    async def request(self, url: str) -> BeautifulSoup:
-        async with self.session.get(
-            url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com",
-                "Content-Type": "text/x-component",
-            },
-        ) as response:
-            response.raise_for_status()
-            text = await response.text()
-            soup = BeautifulSoup(text, "lxml")
-            return soup
+    def __init__(self, bot: "MisoBot"):
+        self.bot = bot
 
     async def get_post(self, shortcode: str) -> IgPost:
-        soup = await self.request(f"{self.BASE_URL}/p/{shortcode}")
+        async with self.bot.session.get(
+            "https://embedez.com/api/v1/providers/combined",
+            headers={"Authorization": self.bot.keychain.EZ_API_KEY},
+            params={
+                "q": f"https://instagram.com/p/{shortcode}",
+            },
+        ) as response:
+            if not response.ok:
+                raise InstagramError(f"Api Error: {response.status}")
+            data = await response.json()
+            if not data["success"]:
+                raise InstagramError(f"Api Error: {data['message']}")
+            data = data["data"]
 
-        media = []
-        if links := soup.findAll("link", {"as": "image"}):
-            media += [
-                IgMedia(
-                    url=img.attrs["href"],
-                    media_type=MediaType.PHOTO,
-                )
-                for img in links[1:-1]
-            ]
-        if video := soup.find("video"):
-            media.append(IgMedia(url=video.attrs["src"], media_type=MediaType.VIDEO))
+        media = [
+            IgMedia(url=x["source"]["url"], media_type=MediaType.from_string(x["type"]))
+            for x in data["content"]["media"]
+        ]
 
-        name, username = (
-            soup.find("meta", {"name": "twitter:title"})
-            .attrs["content"]
-            .rsplit(maxsplit=1)
-        )
-        metadata = {
-            "name": name,
-            "username": username.strip("(@)"),
-            "description": soup.find("meta", {"name": "twitter:description"}).attrs[
-                "content"
-            ],
-            "url": soup.find("meta", {"property": "og:url"}).attrs["content"],
-        }
+        if not media:
+            raise InstagramError("There was a problem fetching media for this post")
 
         return IgPost(
-            url=metadata["url"],
-            user=IgUser(username=metadata["username"], name=metadata["name"]),
-            caption=metadata["description"],
+            url=data["content"]["link"],
+            user=IgUser(
+                username=data["user"]["name"],
+                name=data["user"]["displayName"],
+                avatar_url=data["user"]["pictures"]["url"],
+            ),
+            caption=data["content"]["description"],
             media=media,
             timestamp=None,
         )
 
     @staticmethod
     async def get_story(username: str, story_pk: str):
-        raise InstagramError("Instagram stories are not supported at the moment.")
+        raise InstagramError("Instagram stories are not supported!")
 
 
 class InstaFix:
@@ -237,7 +230,7 @@ class InstaFix:
 
     @staticmethod
     async def get_story(username: str, story_pk: str):
-        raise InstagramError("Instagram stories are not supported at the moment.")
+        raise InstagramError("Instagram stories are not supported!")
 
 
 class Datalama:
@@ -562,7 +555,7 @@ class Instagram:
 
             if data["status"] != "ok":
                 logger.warning(data)
-                raise InstagramError(f'[HTTP {response.status}] {data.get("message")}')
+                raise InstagramError(f"[HTTP {response.status}] {data.get('message')}")
 
         return data
 
