@@ -461,7 +461,7 @@ class InstagramEmbedder(BaseEmbedder):
         if post.timestamp:
             caption += f" <t:{post.timestamp}:d>"
 
-        if options and options.captions:
+        if post.caption and options and options.captions:
             caption += f"\n>>> {post.caption}"
 
         files = []

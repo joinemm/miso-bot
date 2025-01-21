@@ -72,7 +72,7 @@ class IgPost:
     user: IgUser
     media: list[IgMedia]
     timestamp: int | None = None
-    caption: str = ""
+    caption: str | None = None
 
 
 class InstagramIdCodec:
