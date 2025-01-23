@@ -24,7 +24,7 @@ class EmbedHelpCommand(commands.HelpCommand):
         this_cmd = ""
         if hasattr(c, "commands"):
             for subc in c.commands:
-                this_cmd += f"\n{' '*depth}└ **{subc.name}**{self.get_subcommands(subc, depth + 1)}"
+                this_cmd += f"\n{' ' * depth}└ **{subc.name}**{self.get_subcommands(subc, depth + 1)}"
 
         return this_cmd
 

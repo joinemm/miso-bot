@@ -203,7 +203,7 @@ class User(commands.Cog):
         for i, member in enumerate(sorted_members):
             if member.joined_at:
                 jointime = member.joined_at.strftime("%y%m%d %H:%M")
-                rows.append(f"[`{jointime}`] **#{membercount-i}** : **{member}**")
+                rows.append(f"[`{jointime}`] **#{membercount - i}** : **{member}**")
 
         await RowPaginator(content, rows).run(ctx)
 

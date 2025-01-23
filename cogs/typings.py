@@ -402,7 +402,7 @@ class Typings(commands.Cog):
             f"Tests taken: **{test_count}** of which **{race_count}** were races\n"
             f"Races won: **{win_count or 0}** "
             + (
-                f"(**{(win_count/race_count)*100:.1f}%** win rate)"
+                f"(**{(win_count / race_count) * 100:.1f}%** win rate)"
                 if race_count is not None
                 else ""
             )

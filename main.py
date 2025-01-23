@@ -83,7 +83,7 @@ infrastructure_extensions = [
 def main():
     if "DISCORD_PROXY" in os.environ:
         discord.http.Route.BASE = (
-            f'{os.environ["DISCORD_PROXY"]}/api/v{discord.http.INTERNAL_API_VERSION}'
+            f"{os.environ['DISCORD_PROXY']}/api/v{discord.http.INTERNAL_API_VERSION}"
         )
 
     bot: MisoBot = MisoBot(

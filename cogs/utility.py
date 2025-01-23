@@ -230,7 +230,7 @@ class Utility(commands.Cog):
                 "I was unable to recognize any music from this"
             )
 
-        metadata = "\n".join([f'`{m["title"]}:` {m["text"]}' for m in result.metadata])
+        metadata = "\n".join([f"`{m['title']}:` {m['text']}" for m in result.metadata])
         content = discord.Embed(
             description=f":notes: ***{result.song}*** by **{result.artist}**\n>>> {metadata}",
             color=int("1b64f7", 16),

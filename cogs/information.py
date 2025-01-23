@@ -345,7 +345,7 @@ class Information(commands.Cog):
                 SELECT command_name, SUM(uses) as use_sum, user_id FROM command_usage
                     WHERE command_type = 'internal'
                       AND guild_id = %s
-                    {'AND user_id = %s' if user is not None else ''}
+                    {"AND user_id = %s" if user is not None else ""}
                 GROUP BY command_name, user_id
             ) as subq
             GROUP BY command_name
@@ -390,7 +390,7 @@ class Information(commands.Cog):
             SELECT command_name, SUM(use_sum) as total FROM (
                 SELECT command_name, SUM(uses) as use_sum, user_id FROM command_usage
                     WHERE command_type = 'internal'
-                    {'AND user_id = %s' if user is not None else ''}
+                    {"AND user_id = %s" if user is not None else ""}
                 GROUP BY command_name, user_id
             ) as subq
             GROUP BY command_name
@@ -449,7 +449,7 @@ class Information(commands.Cog):
             SELECT SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
                 SELECT SUM(uses) as use_sum, user_id FROM command_usage
                     WHERE command_type = 'internal'
-                      AND command_name {'IN %s' if group else '= %s'}
+                      AND command_name {"IN %s" if group else "= %s"}
                 GROUP BY user_id
             ) as subq
             """,
@@ -465,7 +465,7 @@ class Information(commands.Cog):
             SELECT guild_id, MAX(use_sum) FROM (
                 SELECT guild_id, SUM(uses) as use_sum FROM command_usage
                     WHERE command_type = 'internal'
-                      AND command_name {'IN %s' if group else '= %s'}
+                      AND command_name {"IN %s" if group else "= %s"}
                 GROUP BY guild_id
             ) as subq
             """,
@@ -480,7 +480,7 @@ class Information(commands.Cog):
                     f"""
                     SELECT SUM(uses) FROM command_usage
                         WHERE command_type = 'internal'
-                        AND command_name {'IN %s' if group else '= %s'}
+                        AND command_name {"IN %s" if group else "= %s"}
                         AND guild_id = %s
                     GROUP BY guild_id
                     """,

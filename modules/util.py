@@ -737,7 +737,7 @@ async def image_info_from_url(session: aiohttp.ClientSession, url) -> Optional[d
 
         dimensions = image.size
         if filesize > 1024:
-            filesize = f"{filesize/1024:.2f}MB"
+            filesize = f"{filesize / 1024:.2f}MB"
         else:
             filesize = f"{filesize:.2f}KB"
 

@@ -508,7 +508,7 @@ class LastFm(commands.Cog):
 
         if metadata and metadata["release_date"]:
             content.description = (
-                f'{content.description} [{metadata["release_date"].format("YYYY")}]'
+                f"{content.description} [{metadata['release_date'].format('YYYY')}]"
             )
 
         # tags and playcount
@@ -591,7 +591,7 @@ class LastFm(commands.Cog):
             ),
             f"Top 100 Artists ({timeframe.display()})",
             image=await self.api.get_artist_image(data["artist"][0]["name"]),
-            footer=f'Total unique artists: {data["@attr"]["total"]}',
+            footer=f"Total unique artists: {data['@attr']['total']}",
         )
 
     @fm.command(aliases=["tt"], usage="[timeframe]")
@@ -618,14 +618,14 @@ class LastFm(commands.Cog):
                 [
                     (
                         int(track["playcount"]),
-                        f'{track["artist"]["name"]} — {track["name"]}',
+                        f"{track['artist']['name']} — {track['name']}",
                     )
                     for track in data["track"]
                 ]
             ),
             f"Top 100 Tracks ({timeframe.display()})",
             image=await self.api.scrape_track_image(data["track"][0]["url"]),
-            footer=f'Total unique tracks: {data["@attr"]["total"]}',
+            footer=f"Total unique tracks: {data['@attr']['total']}",
         )
 
     @fm.command(aliases=["talb"], usage="[timeframe]")
@@ -652,14 +652,14 @@ class LastFm(commands.Cog):
                 [
                     (
                         int(album["playcount"]),
-                        f'{album["artist"]["name"]} — {album["name"]}',
+                        f"{album['artist']['name']} — {album['name']}",
                     )
                     for album in data["album"]
                 ]
             ),
             f"Top 100 Albums ({timeframe.display()})",
             image=LastFmImage.from_url(data["album"][0]["image"][0]["#text"]),
-            footer=f'Total unique albums: {data["@attr"]["total"]}',
+            footer=f"Total unique albums: {data['@attr']['total']}",
         )
 
     @fm.command(aliases=["re", "recents"])
@@ -676,17 +676,17 @@ class LastFm(commands.Cog):
         rows = []
         for track in data["track"]:
             try:
-                timestamp = f'<t:{track["date"]["uts"]}:R>'
+                timestamp = f"<t:{track['date']['uts']}:R>"
             except KeyError:
                 timestamp = ":notes:"
-            rows.append(f'**{track["artist"]["#text"]} — {track["name"]}** {timestamp}')
+            rows.append(f"**{track['artist']['#text']} — {track['name']}** {timestamp}")
 
         await self.paginated_user_stat_embed(
             ctx,
             rows,
             "Recently played",
             image=LastFmImage.from_url(data["track"][0]["image"][0]["#text"]),
-            footer=f'Total scrobbles: {data["@attr"]["total"]}',
+            footer=f"Total scrobbles: {data['@attr']['total']}",
         )
 
     @fm.command(aliases=["yt"], usage="")
@@ -1169,7 +1169,7 @@ class LastFm(commands.Cog):
                 if topster:
                     if i > 0 and i % size.width == 0:
                         topster_labels.append(dict(text="</br>"))
-                    topster_labels.append(dict(text=f"<li>{i+1}. {name}</li>"))
+                    topster_labels.append(dict(text=f"<li>{i + 1}. {name}</li>"))
 
         elif "recent" in args or "recents" in args:
             chart_title = "recent tracks"
@@ -1187,7 +1187,7 @@ class LastFm(commands.Cog):
                     if i > 0 and i % size.width == 0:
                         topster_labels.append(dict(text="</br>"))
                     topster_labels.append(
-                        dict(text=f"<li>{i+1}. {artist} — {name}</li>")
+                        dict(text=f"<li>{i + 1}. {artist} — {name}</li>")
                     )
 
         else:
@@ -1209,7 +1209,7 @@ class LastFm(commands.Cog):
                     if i > 0 and i % size.width == 0:
                         topster_labels.append(dict(text="</br>"))
                     topster_labels.append(
-                        dict(text=f"<li>{i+1}. {artist} — {name}</li>")
+                        dict(text=f"<li>{i + 1}. {artist} — {name}</li>")
                     )
 
         buffer = await self.chart_factory(
@@ -1914,7 +1914,7 @@ class LastFm(commands.Cog):
                 if topster:
                     if i > 0 and i % size.width == 0:
                         topster_labels.append(dict(text="</br>"))
-                    topster_labels.append(dict(text=f"<li>{i+1}. {name}</li>"))
+                    topster_labels.append(dict(text=f"<li>{i + 1}. {name}</li>"))
 
         elif "recent" in args or "recents" in args:
             chart_title = "recent tracks"
@@ -1960,7 +1960,7 @@ class LastFm(commands.Cog):
                     if i > 0 and i % size.width == 0:
                         topster_labels.append(dict(text="</br>"))
                     topster_labels.append(
-                        dict(text=f"<li>{i+1}. {artist_name} — {track_name}</li>")
+                        dict(text=f"<li>{i + 1}. {artist_name} — {track_name}</li>")
                     )
 
         else:
@@ -2019,7 +2019,7 @@ class LastFm(commands.Cog):
                 if topster:
                     if i > 0 and i % size.width == 0:
                         topster_labels.append(dict(text="</br>"))
-                    topster_labels.append(dict(text=f"<li>{i+1}. {name}</li>"))
+                    topster_labels.append(dict(text=f"<li>{i + 1}. {name}</li>"))
 
         buffer = await self.chart_factory(
             chart_nodes,
@@ -2035,8 +2035,7 @@ class LastFm(commands.Cog):
             f"{size} {chart_title} collage**"
         )
         filename = (
-            f"miso_collage_{ctx.guild.name}_"
-            f"{timeframe}_{arrow.now().int_timestamp}.jpg"
+            f"miso_collage_{ctx.guild.name}_{timeframe}_{arrow.now().int_timestamp}.jpg"
         )
 
         await ctx.send(caption, file=discord.File(fp=buffer, filename=filename))

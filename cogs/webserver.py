@@ -121,7 +121,7 @@ class WebServer(commands.Cog):
         return web.json_response(self.cached["donators"])
 
     async def ping_handler(self, request):
-        return web.Response(text=f"{self.bot.latency*1000}")
+        return web.Response(text=f"{self.bot.latency * 1000}")
 
     async def website_statistics(self, request):
         return web.json_response(self.cached)
