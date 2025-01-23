@@ -13,6 +13,7 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
+orjson = "3.10.13" # 3.10.15 errors on build
 aiohttp = "^3.10.2"
 discord-py = {extras = ["speed"], git = "https://github.com/Rapptz/discord.py", rev = "db7b2d9058e4e7f357a6a9f02aad41e8b053a1bd"}
 aiomysql = "^0.2.0"
