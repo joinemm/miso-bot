@@ -167,7 +167,7 @@ class Misc(commands.Cog):
     @commands.command(aliases=["imbored"])
     async def iambored(self, ctx: commands.Context):
         """Get something to do"""
-        url = "https://bored-api.appbrewery.com/random"
+        url = "https://bored.api.lewagon.com/api/activity"
         async with self.bot.session.get(url) as response:
             data = await response.json(loads=orjson.loads)
 
@@ -694,7 +694,7 @@ class Misc(commands.Cog):
         else:
             content.description = "\n".join(
                 [
-                    f'`{c["requestedHex"]}` **| {c["name"]}**'
+                    f"`{c['requestedHex']}` **| {c['name']}**"
                     for c in colordata["colors"]
                 ]
             )
