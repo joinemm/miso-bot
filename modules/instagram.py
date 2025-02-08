@@ -117,11 +117,13 @@ class EmbedEz:
             },
         ) as response:
             if not response.ok:
-                raise InstagramError(f"Api Error: {response.status}")
+                raise InstagramError(f"API Error: {response.status}")
             data = await response.json()
             if not data["success"]:
-                raise InstagramError(f"Api Error: {data['message']}")
+                raise InstagramError(f"API Error: {data['message']}")
             data = data["data"]
+            if not data["content"]:
+                raise InstagramError("No content found from API response!")
 
         media = [
             IgMedia(url=x["source"]["url"], media_type=MediaType.from_string(x["type"]))
