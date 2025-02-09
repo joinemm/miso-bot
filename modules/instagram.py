@@ -20,14 +20,6 @@ if TYPE_CHECKING:
     from modules.misobot import MisoBot
 
 
-class ExpiredCookie(Exception):
-    pass
-
-
-class ExpiredStory(Exception):
-    pass
-
-
 class InstagramError(Exception):
     def __init__(self, message):
         self.message = message
@@ -75,55 +67,45 @@ class IgPost:
     caption: str | None = None
 
 
-class InstagramIdCodec:
-    ENCODING_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-
-    @staticmethod
-    def encode(num, alphabet=ENCODING_CHARS):
-        """Covert a numeric value to a shortcode."""
-        num = int(num)
-        if num == 0:
-            return alphabet[0]
-        arr = []
-        base = len(alphabet)
-        while num:
-            rem = num % base
-            num //= base
-            arr.append(alphabet[rem])
-        arr.reverse()
-        return "".join(arr)
-
-    @staticmethod
-    def decode(shortcode, alphabet=ENCODING_CHARS):
-        """Covert a shortcode to a numeric value."""
-        base = len(alphabet)
-        strlen = len(shortcode)
-        return sum(
-            alphabet.index(char) * base ** (strlen - (idx + 1))
-            for idx, char in enumerate(shortcode)
-        )
-
-
 class EmbedEz:
     def __init__(self, bot: "MisoBot"):
         self.bot = bot
 
+    async def try_cache(self, cache_key: str) -> dict | None:
+        try:
+            cached_response = await self.bot.redis.get(cache_key)
+            if cached_response is not None:
+                logger.info(f"Instagram request was pulled from the cache: {cache_key}")
+                return orjson.loads(cached_response)
+        except redis.ConnectionError:
+            logger.warning("Could not get cached content from redis (ConnectionError)")
+
+    async def save_cache(self, cache_key: str, data: dict, lifetime: int):
+        try:
+            await self.bot.redis.set(cache_key, orjson.dumps(data), lifetime)
+            logger.info(f"Instagram request was cached: {cache_key}")
+        except redis.ConnectionError:
+            logger.warning("Could not save content into redis cache (ConnectionError)")
+
     async def get_post(self, shortcode: str) -> IgPost:
-        async with self.bot.session.get(
-            "https://embedez.com/api/v1/providers/combined",
-            headers={"Authorization": self.bot.keychain.EZ_API_KEY},
-            params={
-                "q": f"https://instagram.com/p/{shortcode}",
-            },
-        ) as response:
-            if not response.ok:
-                raise InstagramError(f"API Error: {response.status}")
-            data = await response.json()
-            if not data["success"]:
-                raise InstagramError(f"API Error: {data['message']}")
-            data = data["data"]
-            if not data["content"]:
-                raise InstagramError("No content found from API response!")
+        url = f"https://embedez.com/api/v1/providers/combined?q=https://instagram.com/p/{shortcode}"
+        data = await self.try_cache(url)
+        if data is None:
+            async with self.bot.session.get(
+                url,
+                headers={"Authorization": self.bot.keychain.EZ_API_KEY},
+            ) as response:
+                if not response.ok:
+                    raise InstagramError(f"API Error: {response.status}")
+                data = await response.json()
+                if not data["success"]:
+                    raise InstagramError(f"API Error: {data['message']}")
+                data = data["data"]
+                if not data.get("content") or not data["content"].get("media"):
+                    raise InstagramError("No media was found for this post")
+
+                # cache this response for a week
+                await self.save_cache(url, data, 604800)
 
         media = [
             IgMedia(url=x["source"]["url"], media_type=MediaType.from_string(x["type"]))
@@ -131,7 +113,7 @@ class EmbedEz:
         ]
 
         if not media:
-            raise InstagramError("There was a problem fetching media for this post")
+            raise InstagramError("No media was found for this post")
 
         return IgPost(
             url=data["content"]["link"],
@@ -156,7 +138,7 @@ class InstaFix:
     def __init__(self, session: aiohttp.ClientSession):
         self.session = session
 
-    async def request(self, url: str):
+    async def request(self, url: str) -> str:
         tries = 0
         while tries < 3:
             try:
@@ -173,6 +155,8 @@ class InstaFix:
                 logger.warning(e)
                 tries += 1
                 await asyncio.sleep(1)
+
+        raise InstagramError("Could not connect to Instagram!")
 
     async def try_media(self, shortcode: str) -> list:
         media = []
@@ -463,221 +447,6 @@ class Datalama:
             self.parse_user(post),
             self.parse_resource_a1(post),
             post["taken_at"],
-        )
-
-
-class Instagram:
-    def __init__(
-        self,
-        bot: "MisoBot",
-        use_proxy: bool = False,
-    ):
-        self.bot: "MisoBot" = bot
-        self.jar = aiohttp.CookieJar(unsafe=True)
-        self.session = aiohttp.ClientSession(
-            cookie_jar=self.jar,
-            trace_configs=[self.bot.trace_config],
-        )
-
-        if use_proxy:
-            proxy_url: str = bot.keychain.PROXY_URL
-            proxy_user: str = bot.keychain.PROXY_USER
-            proxy_pass: str = bot.keychain.PROXY_PASS
-
-            self.proxy: str | None = proxy_url
-            self.proxy_auth = aiohttp.BasicAuth(proxy_user, proxy_pass)
-        else:
-            self.proxy = None
-            self.proxy_auth = None
-
-    @property
-    def emoji(self):
-        return "<:ig:937425165162262528>"
-
-    @property
-    def color(self):
-        return int("ce0071", 16)
-
-    async def close(self):
-        await self.session.close()
-
-    @staticmethod
-    def parse_media(resource):
-        resource_media_type = MediaType(int(resource["media_type"]))
-        if resource_media_type == MediaType.PHOTO:
-            res = resource["image_versions2"]["candidates"][0]
-            return IgMedia(resource_media_type, res["url"])
-        if resource_media_type == MediaType.VIDEO:
-            res = resource["video_versions"][0]
-            return IgMedia(resource_media_type, res["url"])
-        return IgMedia(resource_media_type, "")
-
-    async def graphql_request(self, shortcode: str):
-        url = "https://www.instagram.com/graphql/query/"
-        params = {
-            "query_hash": "9f8827793ef34641b2fb195d4d41151c",
-            "variables": '{"shortcode": "'
-            + shortcode
-            + '", "child_comment_count": 3, "fetch_comment_count": 40, '
-            + '"parent_comment_count": 24, "has_threaded_comments": "true"}',
-        }
-        headers = {
-            "Host": "www.instagram.com",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:104.0) Gecko/20100101 Firefox/104.0",
-            "Accept": "*/*",
-            "Accept-Language": "en,en-US;q=0.5",
-            "Accept-Encoding": "gzip, deflate, br",
-            "X-Instagram-AJAX": "1006292718",
-            "X-IG-App-ID": "936619743392459",
-            "X-ASBD-ID": "198387",
-            "X-IG-WWW-Claim": "0",
-            "X-Requested-With": "XMLHttpRequest",
-            "DNT": "1",
-            "Connection": "keep-alive",
-            "Referer": "https://www.instagram.com/p/Ci3_9mnrK9z/",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-origin",
-            "Pragma": "no-cache",
-            "Cache-Control": "no-cache",
-            "TE": "trailers",
-            "Cookie": self.bot.keychain.IG_COOKIE,
-        }
-        async with self.session.get(
-            url,
-            headers=headers,
-            proxy=self.proxy,
-            params=params,
-            proxy_auth=self.proxy_auth,
-        ) as response:
-            try:
-                data = await response.json(loads=orjson.loads)
-            except aiohttp.ContentTypeError:
-                raise ExpiredCookie
-
-            if data["status"] != "ok":
-                logger.warning(data)
-                raise InstagramError(f"[HTTP {response.status}] {data.get('message')}")
-
-        return data
-
-    async def v1_api_request(self, endpoint: str, params: Optional[dict] = None):
-        headers = {
-            "Cookie": self.bot.keychain.IG_COOKIE,
-            "Host": "i.instagram.com",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:104.0) Gecko/20100101 Firefox/104.0",
-            "Accept": "*/*",
-            "Accept-Language": "en,en-US;q=0.5",
-            "Accept-Encoding": "gzip, deflate, br",
-            "X-Instagram-AJAX": "1006164448",
-            "X-IG-App-ID": "936619743392459",
-            "X-ASBD-ID": "198387",
-            "Origin": "https://www.instagram.com",
-            "DNT": "1",
-            "Connection": "keep-alive",
-            "Referer": "https://www.instagram.com/",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-site",
-            "Pragma": "no-cache",
-            "Cache-Control": "no-cache",
-            "TE": "trailers",
-        }
-        base_url = "https://i.instagram.com/api/v1/"
-        async with self.session.get(
-            base_url + endpoint,
-            headers=headers,
-            proxy=self.proxy,
-            params=params,
-            proxy_auth=self.proxy_auth,
-        ) as response:
-            try:
-                data = await response.json(loads=orjson.loads)
-            except aiohttp.ContentTypeError:
-                raise ExpiredCookie
-
-            if data["status"] != "ok":
-                raise InstagramError(data.get("message"))
-
-        return data
-
-    async def get_story(self, username: str, story_pk: str) -> IgPost:
-        user = await self.get_user(username)
-        data = await self.v1_api_request("feed/reels_media/", {"reel_ids": user.id})
-        stories = data["reels"][user.id]["items"]
-        try:
-            story = next(filter(lambda x: x["pk"] == story_pk, stories))
-        except StopIteration:
-            raise ExpiredStory
-
-        return IgPost(
-            f"https://www.instagram.com/stories/{username}/{story_pk}",
-            user,
-            [self.parse_media(story)],
-            story["taken_at"],
-        )
-
-    async def get_user(self, username) -> IgUser:
-        data = await self.v1_api_request(
-            "users/web_profile_info/", {"username": username}
-        )
-        user = data["data"]["user"]
-        return IgUser(user["id"], user["username"], user["profile_pic_url"])
-
-    async def get_post(self, shortcode: str) -> IgPost:
-        """Extract all media from given Instagram post"""
-        try:
-            real_media_id = InstagramIdCodec.decode(shortcode[:11])
-        except ValueError:
-            raise InstagramError("Not a valid Instagram link")
-
-        data = await self.v1_api_request(f"media/{real_media_id}/info/")
-        data = data["items"][0]
-
-        resources = []
-        media_type = MediaType(int(data["media_type"]))
-        if media_type == MediaType.ALBUM:
-            resources.extend(iter(data["carousel_media"]))
-        else:
-            resources = [data]
-
-        media = [self.parse_media(resource) for resource in resources]
-        timestamp = data["taken_at"]
-        user = data["user"]
-        user = IgUser(
-            user["pk"],
-            user["username"],
-            user["profile_pic_url"],
-        )
-        return IgPost(
-            f"https://www.instagram.com/p/{shortcode}", user, media, timestamp
-        )
-
-    async def get_post_graphql(self, shortcode: str) -> IgPost:
-        data = await self.graphql_request(shortcode)
-        data = data["data"]["shortcode_media"]
-        mediatype = to_mediatype(data["__typename"])
-
-        media = []
-        if mediatype == MediaType.ALBUM:
-            for node in data["edge_sidecar_to_children"]["edges"]:
-                node = node["node"]
-                node_mediatype = to_mediatype(node["__typename"])
-                display_url = node["display_resources"][-1]["src"]
-                media.append(IgMedia(node_mediatype, display_url))
-        else:
-            display_url = data["display_resources"][-1]["src"]
-            media.append(IgMedia(mediatype, display_url))
-
-        timestamp = data["taken_at_timestamp"]
-        user = data["owner"]
-        user = IgUser(
-            user["id"],
-            user["username"],
-            user["profile_pic_url"],
-        )
-        return IgPost(
-            f"https://www.instagram.com/p/{shortcode}", user, media, timestamp
         )
 
 
