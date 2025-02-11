@@ -104,8 +104,8 @@ class EmbedEz:
                 if not data.get("content") or not data["content"].get("media"):
                     raise InstagramError("No media was found for this post")
 
-                # cache this response for a week
-                await self.save_cache(url, data, 604800)
+                # cache this response for a day
+                await self.save_cache(url, data, 86400)
 
         media = [
             IgMedia(url=x["source"]["url"], media_type=MediaType.from_string(x["type"]))
