@@ -9,12 +9,13 @@ import redis.asyncio as redis
 
 class Redis:
     def __init__(self) -> None:
-        self.enabled = os.environ.get("USE_REDIS_CACHE") == "1"
+        self.url = os.environ.get("REDIS_URL")
+        self.enabled = self.url is not None
         self.pool: redis.Redis
 
     async def start(self):
         if self.enabled:
-            self.pool = await redis.from_url("redis://redis")
+            self.pool = await redis.from_url(self.url)
 
     async def set(self, key, value, expiry: int | None = None):
         if not self.enabled:

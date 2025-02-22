@@ -95,7 +95,7 @@ services:
       - EMOJIFIER_HOST=emojifier
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
-      - USE_REDIS_CACHE=1
+      - REDIS_URL=redis://redis
       - DISCORD_PROXY=http://nirn:8080
     tty: true
     profiles: [prod]
@@ -116,7 +116,7 @@ services:
       - IMAGE_SERVER_HOST=image-server
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
-      - USE_REDIS_CACHE=1
+      - REDIS_URL=redis://redis
     tty: true
     profiles: [dev, dev-extra]
 
@@ -127,6 +127,8 @@ services:
       - REDIS_REPLICATION_MODE=master
     expose:
       - 6379
+    ports:
+      - 6379:6379
     volumes:
       - redis-data:/data
     profiles: [prod, dev-extra]
