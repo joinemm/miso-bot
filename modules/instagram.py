@@ -72,25 +72,23 @@ class EmbedEz:
         self.bot = bot
 
     async def try_cache(self, cache_key: str) -> dict | None:
-        try:
-            cached_response = await self.bot.redis.get(cache_key)
-            if cached_response is not None:
-                logger.info(f"Instagram request was pulled from the cache: {cache_key}")
-                return orjson.loads(cached_response)
-        except redis.ConnectionError:
-            logger.warning("Could not get cached content from redis (ConnectionError)")
+        cached_response = await self.bot.redis.get(cache_key)
+        if cached_response is not None:
+            logger.info(f"Instagram request was pulled from the cache: {cache_key}")
+            return orjson.loads(cached_response)
 
     async def save_cache(self, cache_key: str, data: dict, lifetime: int):
-        try:
-            await self.bot.redis.set(cache_key, orjson.dumps(data), lifetime)
-            logger.info(f"Instagram request was cached: {cache_key}")
-        except redis.ConnectionError:
-            logger.warning("Could not save content into redis cache (ConnectionError)")
+        await self.bot.redis.set(cache_key, orjson.dumps(data), lifetime)
+        logger.info(f"Instagram request was cached: {cache_key}")
 
     async def get_post(self, shortcode: str) -> IgPost:
         url = f"https://embedez.com/api/v1/providers/combined?q=https://instagram.com/p/{shortcode}"
         data = await self.try_cache(url)
         if data is None:
+            cooldown = await self.bot.redis.get("ez_on_cooldown")
+            if cooldown is not None:
+                raise InstagramError("API Error: Rate limited (cached)")
+
             async with self.bot.session.get(
                 url,
                 headers={"Authorization": self.bot.keychain.EZ_API_KEY},
@@ -101,8 +99,11 @@ class EmbedEz:
                 if not data["success"]:
                     raise InstagramError(f"API Error: {data['message']}")
                 data = data["data"]
-                if not data.get("content") or not data["content"].get("media"):
-                    raise InstagramError("No media was found for this post")
+                if not data.get("content"):
+                    # rate limited
+                    await self.bot.redis.set("ez_on_cooldown", 1, 600)
+                    logger.info("Stopping EZ requests for one hour")
+                    raise InstagramError("API Error: Rate limited")
 
                 # cache this response for a day
                 await self.save_cache(url, data, 86400)
