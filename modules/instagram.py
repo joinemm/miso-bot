@@ -94,16 +94,17 @@ class EmbedEz:
                 headers={"Authorization": self.bot.keychain.EZ_API_KEY},
             ) as response:
                 if not response.ok:
-                    raise InstagramError(f"API Error: {response.status}")
+                    if response.status == 429:
+                        # rate limited
+                        await self.bot.redis.set("ez_on_cooldown", 1, 600)
+                        logger.info("Stopping EZ requests for one hour")
+                        raise InstagramError("API Error: Rate limited")
+                    else:
+                        raise InstagramError(f"API Error: {response.status}")
                 data = await response.json()
                 if not data["success"]:
                     raise InstagramError(f"API Error: {data['message']}")
                 data = data["data"]
-                if not data.get("content"):
-                    # rate limited
-                    await self.bot.redis.set("ez_on_cooldown", 1, 600)
-                    logger.info("Stopping EZ requests for one hour")
-                    raise InstagramError("API Error: Rate limited")
 
                 # cache this response for a day
                 await self.save_cache(url, data, 86400)
@@ -128,10 +129,6 @@ class EmbedEz:
             timestamp=None,
         )
 
-    @staticmethod
-    async def get_story(username: str, story_pk: str):
-        raise InstagramError("Instagram stories are not supported!")
-
 
 class InstaFix:
     BASE_URL = "https://www.ddinstagram.com"
@@ -141,11 +138,15 @@ class InstaFix:
 
     async def request(self, url: str) -> str:
         tries = 0
-        while tries < 3:
+        while tries < 2:
             try:
                 async with self.session.get(
                     url, allow_redirects=False, headers={"User-Agent": "bot"}
                 ) as response:
+                    if response.status != 200:
+                        raise InstagramError(
+                            f"Unable to scrape post: HTTP {response.status}"
+                        )
                     data = await response.read()
                     # because the world is not perfect, and a server that
                     # promises utf-8 will not actually return utf-8
@@ -199,13 +200,14 @@ class InstaFix:
                     "content"
                 ],
             }
-        except AttributeError:
-            raise InstagramError("There was a problem fetching media for this post")
+        except AttributeError as e:
+            logger.error(e)
+            raise InstagramError("There was a problem scraping this post!")
 
         media = await self.try_media(shortcode)
 
         if not media:
-            raise InstagramError("There was a problem fetching media for this post")
+            raise InstagramError("There was a problem finding media for this post")
 
         return IgPost(
             url=metadata["url"],
@@ -214,10 +216,6 @@ class InstaFix:
             media=media,
             timestamp=None,
         )
-
-    @staticmethod
-    async def get_story(username: str, story_pk: str):
-        raise InstagramError("Instagram stories are not supported!")
 
 
 class Datalama:

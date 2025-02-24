@@ -30,12 +30,6 @@ class InstagramPost:
 
 
 @dataclass
-class InstagramStory:
-    username: str
-    story_pk: str
-
-
-@dataclass
 class Options:
     captions: bool = False
     delete_after: bool = False
@@ -352,19 +346,17 @@ class RedditEmbedder(BaseEmbedder):
 class InstagramEmbedder(BaseEmbedder):
     NAME = "instagram"
     EMOJI = "<:ig:937425165162262528>"
-    NO_RESULTS_ERROR = "Found no Instagram links to embed!"
+    NO_RESULTS_ERROR = "Found no valid Instagram posts to embed!"
 
     @staticmethod
-    def extract_links(
-        text: str, include_shortcodes=True
-    ) -> list[InstagramPost | InstagramStory]:
+    def extract_links(text: str, include_shortcodes=True) -> list[InstagramPost]:
         text = "\n".join(text.split())
         instagram_regex = (
             r"(?:https?:\/\/)?(?:www.)?instagram.com\/"
             r"?([a-zA-Z0-9\.\_\-]+)?\/([p]+)?([reel]+)?([tv]+)?([stories]+)?\/"
             r"([a-zA-Z0-9\-\_\.]+)\/?([0-9]+)?"
         )
-        results: list[InstagramPost | InstagramStory] = []
+        results: list[InstagramPost] = []
         for match in regex.finditer(instagram_regex, text):
             # group 1 for username
             # group 2 for p
@@ -374,10 +366,8 @@ class InstagramEmbedder(BaseEmbedder):
             # group 6 for shortcode and username stories
             # group 7 for stories pk
             if match.group(5) == "stories":
-                username: str = match.group(6)
-                story_id: str = match.group(7)
-                if username and story_id:
-                    results.append(InstagramStory(username=username, story_pk=story_id))
+                # stories are not supported at this point
+                pass
 
             elif match.group(6):
                 results.append(InstagramPost(shortcode=match.group(6)))
@@ -392,7 +382,7 @@ class InstagramEmbedder(BaseEmbedder):
     async def create_message(
         self,
         channel: "discord.abc.MessageableChannel",
-        instagram_asset: InstagramPost | InstagramStory,
+        instagram_asset: InstagramPost,
         options: Options | None = None,
     ):
         providers = []
@@ -408,14 +398,8 @@ class InstagramEmbedder(BaseEmbedder):
 
         for provider in providers:
             try:
-                if isinstance(instagram_asset, InstagramPost):
-                    post = await provider.get_post(instagram_asset.shortcode)
-                    identifier = instagram_asset.shortcode
-                elif isinstance(instagram_asset, InstagramStory):
-                    post = await provider.get_story(
-                        instagram_asset.username, instagram_asset.story_pk
-                    )
-                    identifier = instagram_asset.story_pk
+                post = await provider.get_post(instagram_asset.shortcode)
+                identifier = instagram_asset.shortcode
 
                 tasks = []
                 if not post.media:
