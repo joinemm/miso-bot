@@ -22,7 +22,7 @@ services:
       - ./sql/init:/docker-entrypoint-initdb.d:ro
       - ./sql/scheduled:/scripts:ro
     ports:
-      - 3306:3306 # for development
+      - 127.0.0.1:3306:3306 # for development
     environment:
       - MARIADB_USER=bot
       - MARIADB_PASSWORD=botpw
@@ -60,7 +60,7 @@ services:
     image: shlinkio/shlink:latest
     restart: unless-stopped
     ports:
-      - 8080:8080
+      - 127.0.0.1:8080:8080
     expose:
       - 8080
     environment:
@@ -82,7 +82,7 @@ services:
     command: python -O main.py
     restart: unless-stopped
     ports:
-      - 3000:8080
+      - 127.0.0.1:3000:8080
     expose:
       - 8080
     depends_on:
@@ -128,7 +128,7 @@ services:
     expose:
       - 6379
     ports:
-      - 6379:6379
+      - 127.0.0.1:6379:6379
     volumes:
       - redis-data:/data
     profiles: [prod, dev-extra]
