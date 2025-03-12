@@ -388,8 +388,8 @@ class InstagramEmbedder(BaseEmbedder):
         providers = []
         if isinstance(instagram_asset, InstagramPost):
             providers += [
-                EmbedEz(self.bot),
                 InstaFix(self.bot.session),
+                EmbedEz(self.bot),
             ]
 
         error = None
