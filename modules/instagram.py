@@ -163,27 +163,18 @@ class InstaFix:
     async def try_media(self, shortcode: str) -> list:
         media = []
         for i in range(1, 21):
-            text = await self.request(f"{self.BASE_URL}/p/{shortcode}/{i}")
-            soup = BeautifulSoup(text, "lxml")
-            imagetag = soup.find("meta", {"property": "og:image"})
-            videotag = soup.find("meta", {"property": "og:video"})
-
-            if imagetag:
-                media.append(
-                    IgMedia(
-                        url=self.BASE_URL + imagetag.attrs["content"],
-                        media_type=MediaType.PHOTO,
+            async with self.session.get(
+                f"{self.BASE_URL}/images/{shortcode}/{i}", allow_redirects=False
+            ) as response:
+                if response.ok:
+                    media.append(
+                        IgMedia(
+                            url=str(response.url),
+                            media_type=MediaType.PHOTO,
+                        )
                     )
-                )
-            elif videotag:
-                media.append(
-                    IgMedia(
-                        url=self.BASE_URL + videotag.attrs["content"],
-                        media_type=MediaType.VIDEO,
-                    )
-                )
-            else:
-                break
+                else:
+                    break
 
         return media
 
