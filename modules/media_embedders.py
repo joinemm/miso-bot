@@ -118,6 +118,7 @@ class BaseEmbedder:
         self,
         media_url: str,
         filename: str,
+        ext: str | None,
         max_filesize: int,
         url_tags: list[str] | None = None,
         spoiler: bool = False,
@@ -140,6 +141,15 @@ class BaseEmbedder:
                     error_message = f"{response.status} {response.reason}"
 
                 raise DownloadError(error_message)
+
+            if ext is None:
+                match response.headers.get("Content-Type"):
+                    case "video/mp4":
+                        ext = "mp4"
+                    case _:
+                        ext = "jpg"
+
+            filename = f"{filename}.{ext}"
 
             content_length = response.headers.get(
                 "Content-Length"
@@ -302,11 +312,12 @@ class RedditEmbedder(BaseEmbedder):
         tasks = []
         for n, media in enumerate(post.media, start=1):
             extension = media.rsplit(".")[-1]
-            filename = f"{dateformat}-{post.subreddit}-{reddit_post_id}-{n}.{extension}"
+            filename = f"{dateformat}-{post.subreddit}-{reddit_post_id}-{n}"
             tasks.append(
                 self.download_media(
                     media,
                     filename,
+                    extension,
                     filesize_limit(channel.guild),
                     url_tags=["reddit"],
                     spoiler=options.spoiler if options else False,
@@ -405,16 +416,20 @@ class InstagramEmbedder(BaseEmbedder):
                 if not post.media:
                     raise InstagramError("Unable to fetch media for this post")
                 for n, media in enumerate(post.media, start=1):
-                    ext = (
-                        "mp4"
-                        if media.media_type == instagram.MediaType.VIDEO
-                        else "jpg"
-                    )
-                    filename = f"@{post.user.username}-{identifier}-{n}.{ext}"
+                    match media.media_type:
+                        case instagram.MediaType.VIDEO:
+                            ext = "mp4"
+                        case instagram.MediaType.PHOTO:
+                            ext = "jpg"
+                        case _:
+                            ext = None
+
+                    filename = f"@{post.user.username}-{identifier}-{n}"
                     tasks.append(
                         self.download_media(
                             media.url,
                             filename,
+                            ext,
                             filesize_limit(channel.guild),
                             url_tags=["instagram"],
                             spoiler=options.spoiler if options else False,
@@ -504,7 +519,8 @@ class TikTokEmbedder(BaseEmbedder):
         video = await self.downloader.get_video(tiktok_url)
         file = await self.download_media(
             video.video_url,
-            f"{video.user}_{tiktok_url.split('/')[-1]}.mp4",
+            f"{video.user}_{tiktok_url.split('/')[-1]}",
+            "mp4",
             filesize_limit(channel.guild),
             url_tags=["tiktok"],
             spoiler=options.spoiler if options else False,
@@ -618,11 +634,12 @@ class TwitterEmbedder(BaseEmbedder):
 
         tasks = []
         for n, (extension, media_url) in enumerate(media_urls, start=1):
-            filename = f"{ts_format}@{screen_name}-{tweet_id}-{n}.{extension}"
+            filename = f"{ts_format}@{screen_name}-{tweet_id}-{n}"
             tasks.append(
                 self.download_media(
                     media_url,
                     filename,
+                    extension,
                     filesize_limit(channel.guild),
                     url_tags=["twitter"],
                     spoiler=options.spoiler if options else False,

@@ -164,13 +164,13 @@ class InstaFix:
         media = []
         for i in range(1, 21):
             async with self.session.get(
-                f"{self.BASE_URL}/images/{shortcode}/{i}", allow_redirects=False
+                f"{self.BASE_URL}/videos/{shortcode}/{i}", allow_redirects=False
             ) as response:
                 if response.ok:
                     media.append(
                         IgMedia(
                             url=str(response.url),
-                            media_type=MediaType.PHOTO,
+                            media_type=MediaType.NONE,
                         )
                     )
                 else:
