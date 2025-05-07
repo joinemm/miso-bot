@@ -141,9 +141,13 @@ class InstaFix:
         while tries < 2:
             try:
                 async with self.session.get(
-                    url, allow_redirects=False, headers={"User-Agent": "bot"}
+                    url,
+                    allow_redirects=False,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)"
+                    },
                 ) as response:
-                    if response.status != 200:
+                    if not response.ok:
                         raise InstagramError(
                             f"Unable to scrape post: HTTP {response.status}"
                         )
@@ -179,21 +183,26 @@ class InstaFix:
         return media
 
     async def get_post(self, shortcode: str):
-        text = await self.request(f"{self.BASE_URL}/p/{shortcode}")
+        text = await self.request(f"{self.BASE_URL}/p/{shortcode}/")
         soup = BeautifulSoup(text, "lxml")
+        metadata = {"url": f"https://www.instagram.com/p/{shortcode}/"}
         try:
-            metadata = {
-                "url": soup.find("a").attrs["href"],
-                "description": soup.find("meta", {"property": "og:description"}).attrs[
-                    "content"
-                ],
-                "username": soup.find("meta", {"name": "twitter:title"}).attrs[
-                    "content"
-                ],
-            }
-        except AttributeError as e:
-            logger.error(e)
-            raise InstagramError("There was a problem scraping this post!")
+            metadata["description"] = soup.find(
+                "meta", {"property": "og:description"}
+            ).attrs["content"]
+        except AttributeError:
+            logger.error("No description found in meta")
+            metadata["description"] = ""
+            pass
+
+        try:
+            metadata["username"] = soup.find(
+                "meta", {"property": "twitter:title"}
+            ).attrs["content"]
+        except AttributeError:
+            logger.error("No description found in meta")
+            metadata["username"] = ""
+            pass
 
         media = await self.try_media(shortcode)
 

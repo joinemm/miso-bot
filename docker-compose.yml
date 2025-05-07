@@ -116,7 +116,6 @@ services:
       - IMAGE_SERVER_HOST=image-server
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
-      - REDIS_URL=redis://redis
     tty: true
     profiles: [dev, dev-extra]
 
