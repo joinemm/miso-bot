@@ -3,6 +3,7 @@
 # https://git.joinemm.dev/miso-bot
 
 import asyncio
+from typing import Optional
 
 import arrow
 import discord
@@ -21,9 +22,10 @@ class Owner(commands.Cog):
         self.bot: MisoBot = bot
         self.icon = "👑"
 
-    async def cog_check(self, ctx: commands.Context):
+    async def cog_check(self, ctx: commands.Context) -> bool:
         """Check if command author is Owner"""
-        return await self.bot.is_owner(ctx.author)
+        am_i = await self.bot.is_owner(ctx.author)
+        return am_i
 
     @commands.command()
     async def shardof(self, ctx: commands.Context, guild_id: int):
@@ -370,6 +372,23 @@ class Owner(commands.Cog):
     @commands.command()
     async def alwaysfail(self, _):
         return 1 / 0
+
+    @commands.command()
+    async def resetfishy(
+        self, ctx: commands.Context, user: Optional[discord.Member] = None
+    ):
+        target = user or ctx.author
+        await self.bot.db.execute(
+            """
+            INSERT INTO fishy (user_id, last_fishy)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                last_fishy = VALUES(last_fishy)
+            """,
+            target.id,
+            None,
+        )
+        await util.send_success(ctx, "OK")
 
 
 def clean_codeblock(text):

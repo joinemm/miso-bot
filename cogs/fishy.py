@@ -3,13 +3,13 @@
 # https://git.joinemm.dev/miso-bot
 
 import random
-from typing import Optional
+from typing import Literal, Optional, Union
 
 import discord
 import humanize
 from discord.ext import commands
 
-from modules import exceptions, util
+from modules import util
 from modules.misobot import MisoBot
 
 
@@ -213,53 +213,72 @@ class Fishy(commands.Cog):
             await ctx.send(":thinking: You have never fished...?")
 
     @commands.command(aliases=["finstats", "fisystats", "foshystats", "fs"])
-    async def fishystats(self, ctx: commands.Context, user=None):
-        """See fishing statistics"""
-        globaldata = user == "global"
-        if not globaldata:
-            user = await util.get_user(ctx, user, fallback=ctx.author)
-            if user is None:
-                raise exceptions.CommandWarning(f"Cannot find user `{user}`")
-            owner = user
-            data = await self.bot.db.fetch_row(
-                """
-                SELECT fishy_count, fishy_gifted_count, biggest_fish,
-                    trash, common, uncommon, rare, legendary
-                    FROM fishy JOIN fish_type
-                        ON fishy.user_id = fish_type.user_id
-                    WHERE fishy.user_id = %s
-                """,
-                user.id,
-            )
+    async def fishystats(
+        self,
+        ctx: commands.Context,
+        user: Union[discord.Member, Literal["global", "self"]] = "self",
+    ):
+        """See statistics about your fishing endeavours"""
+        if user == "self":
+            await self.fishystats_user(ctx, ctx.author)
+        elif isinstance(user, discord.Member):
+            await self.fishystats_user(ctx, user)
+        elif user == "global":
+            await self.fishystats_global(ctx)
 
-        else:
-            owner = "Global"
-            data = await self.bot.db.fetch_row(
-                """
-                SELECT SUM(fishy_count), SUM(fishy_gifted_count), MAX(biggest_fish),
-                    SUM(trash), SUM(common), SUM(uncommon), SUM(rare), SUM(legendary)
-                    FROM fishy JOIN fish_type
-                        ON fishy.user_id = fish_type.user_id
-                """,
-            )
-
+    async def fishystats_global(self, ctx: commands.Context):
+        data = await self.bot.db.fetch_row(
+            """
+            SELECT SUM(fishy_count), SUM(fishy_gifted_count), MAX(biggest_fish),
+                SUM(trash), SUM(common), SUM(uncommon), SUM(rare), SUM(legendary)
+                FROM fishy JOIN fish_type
+                    ON fishy.user_id = fish_type.user_id
+            """,
+        )
         if not data:
             return await ctx.send("No data! Go fishing first.")
 
-        total = sum(data[3:])
-        content = discord.Embed(
-            title=f":fishing_pole_and_fish: {owner} fishy stats",
-            color=int("55acee", 16),
-            description="\n".join(
-                [
-                    f"Fishy held: **{data[0]}**",
-                    f"Fishy gifted: **{data[1]}**",
-                    f"Times fished: **{total}**",
-                    f"Biggest fishy: **{data[2]}**",
-                    f"Average fishy: **{data[0] / total:.2f}**",
-                ]
-            ),
+        content = discord.Embed()
+        content.set_author(name="Global fishy stats")
+        content = await self.render_fishystats(content, data)
+        await ctx.send(embed=content)
+
+    async def fishystats_user(
+        self, ctx: commands.Context, user: discord.Member | discord.User
+    ):
+        data = await self.bot.db.fetch_row(
+            """
+            SELECT fishy_count, fishy_gifted_count, biggest_fish,
+                trash, common, uncommon, rare, legendary
+                FROM fishy JOIN fish_type
+                    ON fishy.user_id = fish_type.user_id
+                WHERE fishy.user_id = %s
+            """,
+            user.id,
         )
+        if not data:
+            return await ctx.send("No data! Go fishing first.")
+
+        content = discord.Embed()
+        content.set_author(
+            name=f"{util.displayname(user)} | Fishy stats",
+            icon_url=user.display_avatar.url,
+        )
+        content = await self.render_fishystats(content, data)
+        await ctx.send(embed=content)
+
+    async def render_fishystats(self, content: discord.Embed, data: list):
+        total = sum(data[3:])
+        content.description = "\n".join(
+            [
+                f"Fishy held: **{data[0]}**",
+                f"Fishy gifted: **{data[1]}**",
+                f"Times fished: **{total}**",
+                f"Biggest fishy: **{data[2]}**",
+                f"Average fishy: **{data[0] / total:.2f}**",
+            ]
+        )
+
         content.add_field(
             name="Rarity breakdown",
             value="\n".join(
@@ -272,7 +291,8 @@ class Fishy(commands.Cog):
                 ]
             ),
         )
-        await ctx.send(embed=content)
+
+        return content
 
     @staticmethod
     async def fish_common(ctx: commands.Context, user, gift):
