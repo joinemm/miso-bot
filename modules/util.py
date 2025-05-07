@@ -455,6 +455,14 @@ def timefromstring(s):
     :returns : Time in seconds
     """
     s = s.removeprefix("for")
+
+    # reduce colon notation to hms notation
+    if ":" in s:
+        # if only one colon, assume Xm:Xs
+        if s.count(":") == 1:
+            s = f"0:{s}"
+        s = s.replace(":", "h", 1).replace(":", "m", 1) + "s"
+
     return int(Duration(s).to_seconds())
 
 
