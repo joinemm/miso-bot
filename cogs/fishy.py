@@ -267,7 +267,8 @@ class Fishy(commands.Cog):
         content = await self.render_fishystats(content, data)
         await ctx.send(embed=content)
 
-    async def render_fishystats(self, content: discord.Embed, data: list):
+    @staticmethod
+    async def render_fishystats(content: discord.Embed, data: list):
         total = sum(data[3:])
         content.description = "\n".join(
             [
