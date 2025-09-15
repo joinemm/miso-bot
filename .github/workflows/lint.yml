@@ -19,17 +19,20 @@ jobs:
         run: uv sync --locked --all-extras --dev
 
       - name: Ruff check
-        uses: astral-sh/ruff-action@v1
+        uses: astral-sh/ruff-action@v3
         with:
           args: "check --ignore=E501"
 
       - name: Ruff format
-        uses: astral-sh/ruff-action@v1
+        uses: astral-sh/ruff-action@v3
         with:
           args: "format --check"
 
       - name: isort check
         uses: isort/isort-action@v1
+
+      - name: REUSE Compliance Check
+        uses: fsfe/reuse-action@v5
 
       - name: Minimize uv cache
         run: uv cache prune --ci
