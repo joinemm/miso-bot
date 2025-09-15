@@ -9,6 +9,7 @@ import re
 import urllib.parse
 from dataclasses import dataclass
 from io import BytesIO
+from pathlib import Path
 from typing import Literal
 
 import arrow
@@ -1001,6 +1002,7 @@ class Misc(commands.Cog):
         image.write_watermark(wm_size, wm_color)
 
         save_location = f"downloads/{ctx.message.id}_output_{filename.split('/')[-1]}"
+        Path("downloads").mkdir(exist_ok=True)
         image.save(save_location)
 
         with open(save_location, "rb") as img:

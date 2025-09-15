@@ -1,5 +1,4 @@
-downloads/*
-!downloads/temp
+downloads/
 venv/
 .vscode/
 .env

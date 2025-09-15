@@ -4,6 +4,7 @@
 
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import arrow
@@ -110,9 +111,10 @@ class Reddit:
             elif hint == "hosted:video":
                 video_url = post["media"]["reddit_video"]["dash_url"]
                 video_path = f"downloads/{reddit_post_id}.mp4"
+                Path("downloads").mkdir(exist_ok=True)
                 ffmpeg = subprocess.call(
                     [
-                        "/usr/bin/ffmpeg",
+                        "ffmpeg",
                         "-y",
                         "-hide_banner",
                         "-loglevel",
