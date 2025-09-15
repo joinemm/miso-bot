@@ -3,16 +3,6 @@
 # https://git.joinemm.dev/miso-bot
 
 services:
-  nirn:
-    container_name: miso-gateway
-    image: "ghcr.io/germanoeich/nirn-proxy:main"
-    restart: unless-stopped
-    expose:
-      - 8080
-    environment:
-      - REQUEST_TIMEOUT=10000 # 10 seconds
-    profiles: [prod, dev-extra]
-
   bot-db:
     container_name: miso-bot-db
     image: mariadb
@@ -95,7 +85,6 @@ services:
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
       - REDIS_URL=redis://redis
-      - DISCORD_PROXY=http://nirn:8080
     tty: true
     profiles: [prod]
 
