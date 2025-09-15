@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-FileCopyrightText: 2018-2025 Joonas Rautiola <mail@joinemm.dev>
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 

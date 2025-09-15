@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# SPDX-FileCopyrightText: 2024 Joonas Rautiola <joinemm@pm.me>
+# SPDX-FileCopyrightText: 2024 Joonas Rautiola <mail@joinemm.dev>
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 

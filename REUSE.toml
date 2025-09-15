@@ -1,0 +1,16 @@
+version = 1
+SPDX-PackageName = "Miso Bot"
+SPDX-PackageSupplier = "Joonas Rautiola <mail@joinemm.dev>"
+SPDX-PackageDownloadLocation = "https://git.joinemm.dev/miso-bot"
+
+[[annotations]]
+path = ["downloads/**", "images/**", "data/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2018-2025 Joonas Rautiola <mail@joinemm.dev>"
+SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = ["**.md", ".**", "**.lock"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2018-2025 Joonas Rautiola <mail@joinemm.dev>"
+SPDX-License-Identifier = "MPL-2.0"
