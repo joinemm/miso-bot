@@ -269,7 +269,7 @@ class BaseEmbedder:
         msg_extra: discord.Message | None,
         msg_content: dict,
         msg_extra_content: dict,
-        author: discord.User,
+        author: discord.User | discord.Member,
     ):
         if msg_extra:
             view = msg_extra_content["view"]
@@ -620,10 +620,7 @@ class TwitterEmbedder(BaseEmbedder):
             if media["type"] in ["video", "gif"]:
                 media_urls.append(("mp4", media["url"]))
             else:
-                base, extension = media["url"].rsplit(".", 1)
-                media_urls.append(
-                    ("jpg", f"{base}?format={extension}&name=orig"),
-                )
+                media_urls.append(("jpg", media["url"]))
 
         screen_name = tweet.get("user_screen_name") or tweet["author"]["screen_name"]
         caption = f"{self.EMOJI} **@{discord.utils.escape_markdown(screen_name)}**"
