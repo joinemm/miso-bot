@@ -42,5 +42,10 @@ executionEnvironments = [
 ]
 
 reportMissingTypeArgument = false
+reportMissingParameterType = false
+reportUnknownParameterType = false
 reportUnknownMemberType = false
+reportUnannotatedClassAttribute = false
 reportUnknownVariableType = false
+reportExplicitAny = false
+reportUnusedCallResult = false

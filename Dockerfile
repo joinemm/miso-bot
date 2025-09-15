@@ -29,10 +29,4 @@ COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
-# Reset the entrypoint, don't invoke `uv`
-ENTRYPOINT []
-
-# don't buffer stdout, just show it normally
-ENV PYTHONUNBUFFERED=1
-
-CMD ["python", "-O", "main.py"]
+ENTRYPOINT ["uv", "run", "main.py"]
