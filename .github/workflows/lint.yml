@@ -10,27 +10,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install python
-        uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.12"
+          enable-cache: true
 
-      - name: Install poetry
-        uses: abatilo/actions-poetry@v2
-
-      - name: Setup a local virtual environment
-        run: |
-          poetry config virtualenvs.create true --local
-          poetry config virtualenvs.in-project true --local
-
-      - name: Cache the virtualenv
-        uses: actions/cache@v3
-        with:
-          path: ./.venv
-          key: venv-${{ hashFiles('poetry.lock') }}
-
-      - name: Install python dependencies
-        run: poetry install
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
 
       - name: Ruff check
         uses: astral-sh/ruff-action@v1
@@ -44,3 +30,6 @@ jobs:
 
       - name: isort check
         uses: isort/isort-action@v1
+
+      - name: Minimize uv cache
+        run: uv cache prune --ci

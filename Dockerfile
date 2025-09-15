@@ -2,27 +2,8 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
-# The builder image, used to build the virtual environment
-FROM python:3.12-bookworm AS builder
-
-RUN pip install --no-cache-dir poetry==2.0.0
-
-ENV POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_IN_PROJECT=1 \
-    POETRY_VIRTUALENVS_CREATE=1 \
-    POETRY_CACHE_DIR=/tmp/poetry_cache
-
-WORKDIR /app
-
-COPY pyproject.toml poetry.lock ./
-
-# poetry complains if there is no readme for some reason
-RUN touch README.md
-
-RUN poetry install --without dev --no-root && rm -rf $POETRY_CACHE_DIR
-
-# The runtime image, used to just run the code provided its virtual environment
-FROM python:3.12-slim-bookworm AS runtime
+# Use a Python image with uv pre-installed
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 WORKDIR /app
 
@@ -35,14 +16,21 @@ RUN apt-get update -y \
 # get font used for memes
 RUN wget --progress=dot:giga https://github.com/isis-project/isis-fonts/blob/master/NanumGothic.ttf?raw=true -O NanumGothic.ttf 
 
-# copy over just the virtualenv from our builder image
-ENV VIRTUAL_ENV=/app/.venv \
-    PATH="/app/.venv/bin:$PATH"
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+ENV UV_TOOL_BIN_DIR=/usr/local/bin
 
-COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-dev
 
-# copy over the source code
-COPY . .
+COPY . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
+
+# Reset the entrypoint, don't invoke `uv`
+ENTRYPOINT []
 
 # don't buffer stdout, just show it normally
 ENV PYTHONUNBUFFERED=1

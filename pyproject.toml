@@ -1,99 +1,46 @@
-# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
-# SPDX-License-Identifier: MPL-2.0
-# https://git.joinemm.dev/miso-bot
-
-[tool.poetry]
+[project]
 name = "miso-bot"
-version = "6.0"
+version = "7.0"
 description = "Multipurpose Discord bot"
-authors = ["Joinemm <joonas@rautiola.co>"]
-license = "MPL-2.0"
 readme = "README.md"
-package-mode = false
+requires-python = ">=3.13"
+license = "MPL-2.0"
 
-[tool.poetry.dependencies]
-python = "^3.12"
-orjson = "3.10.13" # 3.10.15 errors on build
-aiohttp = "^3.10.2"
-discord-py = {extras = ["speed"], git = "https://github.com/Rapptz/discord.py", rev = "db7b2d9058e4e7f357a6a9f02aad41e8b053a1bd"}
-aiomysql = "^0.2.0"
-arrow = "^1.3.0"
-beautifulsoup4 = "^4.12.2"
-bleach = "^6.1.0"
-colorgram-py = "^1.2.0"
-durations-nlp = "^1.0.1"
-humanize = "^4.9.0"
-jishaku = "^2.5.2"
-kdtree = "^0.16"
-matplotlib = "^3.8.2"
-numpy = "^1.26.3"
-pillow = "^10.2.0"
-psutil = "^5.9.7"
-python-dotenv = "^1.0.0"
-regex = "^2023.12.25"
-scipy = "^1.11.4"
-uvloop = "^0.19.0"
-prometheus-async = "^22.2.0"
-markdownify = "^0.11.6"
-lxml = "^5.1.0"
-loguru = "^0.7.2"
-redis = "^5.0.1"
-shazamio = "^0.4.0.1"
-random-user-agent = "^1.0.1"
-minestat = "^2.6.2"
-async-cse = "^0.3.0"
-
-[tool.poetry.group.dev.dependencies]
-pre-commit = "^3.6.0"
-mypy = "^1.8.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-exclude = '''
-/(
-    \.git
-  | \.mypy_cache
-  | \.pytest_cache
-  | \.vscode
-  | \.venv
-  | venv
-  | __pycache__
-)/
-'''
-
-[tool.isort]
-profile = "black"
-
-[tool.ruff]
-line-length = 88
-target-version = "py312"
-
-exclude = [
-  ".direnv",
-  ".git",
-  ".mypy_cache",
-  ".ruff_cache",
-  ".venv",
-  "venv",
-  ".venv",
+dependencies = [
+    "aiomysql>=0.2.0",
+    "arrow>=1.3.0",
+    "async-cse>=0.3.0",
+    "beautifulsoup4>=4.13.5",
+    "bleach>=6.2.0",
+    "colorgram-py>=1.2.0",
+    "discord-py[speed]>=2.6.3",
+    "durations-nlp>=1.0.1",
+    "humanize>=4.13.0",
+    "jishaku>=2.6.0",
+    "kdtree>=0.16",
+    "loguru>=0.7.3",
+    "lxml>=6.0.1",
+    "markdownify>=1.2.0",
+    "minestat>=2.6.3",
+    "prometheus-async>=25.1.0",
+    "python-dotenv>=1.1.1",
+    "random-user-agent>=1.0.1",
+    "redis>=6.4.0",
+    "regex>=2025.9.1",
+    "shazamio>=0.8.1",
+    "uvloop>=0.21.0",
 ]
 
-[tool.ruff.lint.flake8-quotes]
-docstring-quotes = "double"
-
-[tool.pyright]
-executionEnvironments = [
-    { root = "." }
-]
-exclude = [
-    "**/__pycache__",
-    "./venv"
-]
-venvPath = "."
+[tool.basedpyright]
+venvPath = ".devenv/state"
 venv = "venv"
-reportMissingImports = true
-pythonVersion = "3.12"
-pythonPlatform = "Linux"
+exclude = [
+  "**/__pycache__"
+]
+executionEnvironments = [
+  { root = "." }
+]
+
+reportMissingTypeArgument = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false

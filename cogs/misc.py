@@ -6,9 +6,10 @@ import base64
 import os
 import random
 import re
+import urllib.parse
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Literal, Tuple, Union
+from typing import Literal
 
 import arrow
 import discord
@@ -29,11 +30,11 @@ EMOJIFIER_HOST = os.environ.get("EMOJIFIER_HOST")
 class Misc(commands.Cog):
     """Miscellaneous commands"""
 
-    def __init__(self, bot):
+    def __init__(self, bot: MisoBot):
         self.bot: MisoBot = bot
-        self.icon = "🔮"
-        self.emojifier = Emojifier(bot)
-        self.hs = {
+        self.icon: str = "🔮"
+        self.emojifier: Emojifier = Emojifier(bot)
+        self.hs: dict = {
             "aries": {
                 "name": "Aries",
                 "emoji": ":aries:",
@@ -429,39 +430,39 @@ class Misc(commands.Cog):
             await ctx.send(embed=content)
 
     @commands.command()
-    async def clap(self, ctx: commands.Context, *sentence):
+    async def clap(self, ctx: commands.Context[MisoBot], *sentence):
         """Add a clap emoji between words"""
         await ctx.send(" 👏 ".join(sentence) + " 👏")
 
     @commands.group(aliases=["hs"], case_insensitive=True)
-    async def horoscope(self, ctx: commands.Context):
+    async def horoscope(self, ctx: commands.Context[MisoBot]):
         """Get your daily horoscope"""
         if ctx.invoked_subcommand is None:
             await self.send_hs(ctx, "daily-today")
 
     @horoscope.command(name="tomorrow")
-    async def horoscope_tomorrow(self, ctx: commands.Context):
+    async def horoscope_tomorrow(self, ctx: commands.Context[MisoBot]):
         """Get tomorrow's horoscope"""
         await self.send_hs(ctx, "daily-tomorrow")
 
     @horoscope.command(name="yesterday")
-    async def horoscope_yesterday(self, ctx: commands.Context):
+    async def horoscope_yesterday(self, ctx: commands.Context[MisoBot]):
         """Get yesterday's horoscope"""
         await self.send_hs(ctx, "daily-yesterday")
 
     @horoscope.command(name="weekly", aliases=["week"])
-    async def horoscope_weekly(self, ctx: commands.Context):
+    async def horoscope_weekly(self, ctx: commands.Context[MisoBot]):
         """Get this week's horoscope"""
         await self.send_hs(ctx, "weekly")
 
     @horoscope.command(name="monthly", aliases=["month"])
-    async def horoscope_monthly(self, ctx: commands.Context):
+    async def horoscope_monthly(self, ctx: commands.Context[MisoBot]):
         """Get this month's horoscope"""
         await self.send_hs(ctx, "monthly")
 
     async def send_hs(
         self,
-        ctx: commands.Context,
+        ctx: commands.Context[MisoBot],
         variant: Literal[
             "daily-yesterday", "daily-today", "daily-tomorrow", "weekly", "monthly"
         ],
@@ -575,7 +576,7 @@ class Misc(commands.Cog):
     async def color(
         self,
         ctx: commands.Context,
-        *sources: Union[int, discord.Member, discord.Role, str],
+        *sources: int | discord.Member | discord.Role | str,
     ):
         """
         Visualise colors
@@ -688,8 +689,11 @@ class Misc(commands.Cog):
             hexvalue = "#" + colors[0]
             rgbvalue = discord_color.to_rgb()
             content.add_field(name="Hex", value=f"`{hexvalue}`")
-            content.add_field(name="RGB", value=f"`{rgbvalue}`")
-            image_url = f"https://singlecolorimage.com/get/{colors[0]}/200x100"
+            content.add_field(name="RGB", value=f"`rgb{rgbvalue}`")
+            image_url = (
+                f"https://preview.colorkit.co/color/{colors[0]}.png"
+                f"?type=article-preview-logo&size=social&colorname={urllib.parse.quote_plus(colordata['paletteTitle'])}"
+            )
             content.set_image(url=image_url)
         else:
             content.description = "\n".join(
@@ -698,6 +702,11 @@ class Misc(commands.Cog):
                     for c in colordata["colors"]
                 ]
             )
+            image_url = (
+                "https://preview.colorkit.co/palette/"
+                f"{'-'.join(x['requestedHex'].strip('#') for x in colordata['colors'])}.png?size=social"
+            )
+            content.set_image(url=image_url)
 
         await ctx.send(embed=content)
 
@@ -753,6 +762,7 @@ class Misc(commands.Cog):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
+        parsed_emojis = []
         if not emojis:
             if (
                 ctx.message.reference
@@ -762,16 +772,16 @@ class Misc(commands.Cog):
                 reply_message = await ctx.channel.fetch_message(
                     ctx.message.reference.message_id
                 )
-                emojis = [
+                parsed_emojis = [
                     f"<:{name}:{id}>"
                     for name, id in util.find_custom_emojis(reply_message.content)
                 ]
-                if not emojis:
+                if not parsed_emojis:
                     raise exceptions.CommandWarning("Replied to message has no emojis")
             else:
                 return await util.send_command_help(ctx)
 
-        for emoji in emojis:
+        for emoji in parsed_emojis:
             my_emoji = self.parse_emoji(emoji)
 
             if my_emoji.name and not my_emoji.id:
@@ -861,7 +871,7 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def emojify(
-        self, ctx: commands.Context, *, text: Union[discord.Message, str, None] = None
+        self, ctx: commands.Context, *, text: discord.Message | str | None = None
     ):
         """Emojify some text.
 
@@ -979,11 +989,11 @@ class Misc(commands.Cog):
     def meme_factory(
         ctx: commands.Context,
         filename: str,
-        boxdimensions: Tuple[int, int, int, int],
+        boxdimensions: tuple[int, int, int, int],
         text: str,
-        color: Tuple[int, int, int] = (40, 40, 40),
+        color: tuple[int, int, int] = (40, 40, 40),
         wm_size=30,
-        wm_color: Tuple[int, int, int, int] = (150, 150, 150, 100),
+        wm_color: tuple[int, int, int, int] = (150, 150, 150, 100),
         angle=0,
     ):
         image = ImageObject(filename)
@@ -1131,5 +1141,5 @@ class ImageObject:
             height += line_height
 
         if angle != 0 and txt:
-            txt = txt.rotate(angle, resample=Image.BILINEAR)
+            txt = txt.rotate(angle, resample=Image.Resampling.BILINEAR)
             self.image.paste(txt, mask=txt)

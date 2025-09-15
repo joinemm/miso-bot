@@ -19,9 +19,10 @@
     { nixpkgs, devenv, ... }@inputs:
     let
       pkgs = nixpkgs.legacyPackages."x86_64-linux";
+      binary-deps = with pkgs; [ ffmpeg ];
     in
     {
-      devShell.x86_64-linux = devenv.lib.mkShell {
+      devShells.x86_64-linux.default = devenv.lib.mkShell {
         inherit inputs pkgs;
         modules = [
           (
@@ -29,16 +30,15 @@
             {
               dotenv.disableHint = true;
 
-              packages = with pkgs; [
-                ffmpeg
-                isort
-                black
-                ruff
-                reuse
-                mariadb
-              ];
+              packages =
+                with pkgs;
+                [
+                  reuse
+                  mariadb
+                ]
+                ++ binary-deps;
 
-              pre-commit.hooks = {
+              git-hooks.hooks = {
                 isort.enable = true;
                 ruff-format.enable = true;
                 ruff.enable = true;
@@ -46,19 +46,34 @@
 
               languages.python = {
                 enable = true;
-                poetry = {
-                  enable = true;
-                  activate.enable = true;
-                  package = pkgs.poetry;
-                };
+                uv.enable = true;
+              };
+
+              services.mysql = {
+                enable = true;
+                ensureUsers = [
+                  {
+                    name = "bot";
+                    password = "botpw";
+                    ensurePermissions = {
+                      "misobot.*" = "ALL PRIVILEGES";
+                    };
+                  }
+                ];
+                initialDatabases = [
+                  {
+                    name = "misobot";
+                    schema = ./sql/init/0_schema.sql;
+                  }
+                ];
               };
 
               scripts = {
                 "run".exec = ''
-                  poetry run python main.py $1
+                  uv run main.py $1
                 '';
                 "grepr".exec = ''
-                  grep -r --exclude-dir=".git" --exclude-dir=".ruff_cache" --exclude-dir=".venv" --exclude=\*.pyc --color $1
+                  grep -r --exclude-dir=".git" --exclude-dir=".ruff_cache" --exclude-dir=".venv" --exclude-dir=".devenv" --exclude=\*.pyc --color $1
                 '';
                 "db".exec = ''
                   mysql --host=localhost --port=3306 --user=bot --password=botpw misobot
