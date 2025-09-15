@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Joonas Rautiola <joinemm@pm.me>
+# SPDX-License-Identifier: MPL-2.0
+# https://git.joinemm.dev/miso-bot
+
 [project]
 name = "miso-bot"
 version = "7.0"
@@ -49,3 +53,6 @@ reportUnannotatedClassAttribute = false
 reportUnknownVariableType = false
 reportExplicitAny = false
 reportUnusedCallResult = false
+
+[tool.isort]
+profile = "black"
