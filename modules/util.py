@@ -727,10 +727,10 @@ def find_unicode_emojis(text):
     return emoji_list
 
 
-def find_custom_emojis(text):
+def find_custom_emojis(text) -> list[str]:
     """Finds and returns all custom discord emojis from a string"""
     data = regex.findall(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>", text)
-    return {(emoji_name, emoji_id) for _a, emoji_name, emoji_id in data}
+    return [f"<{a}:{emoji_name}:{emoji_id}>" for a, emoji_name, emoji_id in data]
 
 
 async def image_info_from_url(session: aiohttp.ClientSession, url) -> Optional[dict]:

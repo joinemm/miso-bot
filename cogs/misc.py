@@ -763,42 +763,47 @@ class Misc(commands.Cog):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        parsed_emojis = []
-        if not emojis:
-            if (
-                ctx.message.reference
-                and ctx.message.reference.message_id
-                and isinstance(ctx.channel, (discord.Thread, discord.TextChannel))
-            ):
-                reply_message = await ctx.channel.fetch_message(
-                    ctx.message.reference.message_id
-                )
-                parsed_emojis = [
-                    f"<:{name}:{id}>"
-                    for name, id in util.find_custom_emojis(reply_message.content)
-                ]
-                if not parsed_emojis:
-                    raise exceptions.CommandWarning("Replied to message has no emojis")
-            else:
-                return await util.send_command_help(ctx)
+        parsed_emojis: list[DisplayEmoji] = []
+
+        # check if this is a reply, if so, parse the reference message for emojis
+        if (
+            ctx.message.reference
+            and ctx.message.reference.message_id
+            and isinstance(ctx.channel, (discord.Thread, discord.TextChannel))
+        ):
+            reply_message = await ctx.channel.fetch_message(
+                ctx.message.reference.message_id
+            )
+            for emoji in util.find_custom_emojis(reply_message.content):
+                parsed_emojis.append(self.parse_emoji(emoji))
+
+            if not parsed_emojis:
+                raise exceptions.CommandWarning("Referenced message has no emojis")
+        else:
+            for emoji in emojis:
+                parsed_emojis.append(self.parse_emoji(emoji))
+
+        if not parsed_emojis:
+            return await util.send_command_help(ctx)
 
         for emoji in parsed_emojis:
-            my_emoji = self.parse_emoji(emoji)
-
-            if my_emoji.name and not my_emoji.id:
-                raise exceptions.CommandWarning(
-                    "Why are you trying to steal a default emoji? :skull:"
+            if emoji.name and not emoji.id:
+                await ctx.send(
+                    f"[:{emoji.name}:] Why are you trying to steal a default emoji? :skull:"
                 )
+                continue
 
-            async with self.bot.session.get(my_emoji.url) as response:
+            async with self.bot.session.get(emoji.url) as response:
                 try:
                     response.raise_for_status()
                     image_bytes = await response.read()
                 except ClientResponseError:
-                    raise exceptions.CommandWarning(f"No such emoji `{my_emoji.url}`")
+                    raise exceptions.CommandWarning(
+                        f"Emoji not found in Discord cdn: `{emoji.url}`"
+                    )
 
-            my_new_emoji = await ctx.guild.create_custom_emoji(
-                name=my_emoji.name or "stolen_emoji",
+            new_emoji = await ctx.guild.create_custom_emoji(
+                name=emoji.name or "stolen_emoji",
                 reason=f"Stolen by {ctx.author}",
                 image=image_bytes,
             )
@@ -806,8 +811,8 @@ class Misc(commands.Cog):
             await ctx.send(
                 embed=discord.Embed(
                     description=(
-                        f":pirate_flag: Succesfully stole `:{my_new_emoji.name}:` "
-                        f"and added it to this server {my_new_emoji}"
+                        f":pirate_flag: Succesfully stole `:{new_emoji.name}:` "
+                        f"and added it to this server {new_emoji}"
                     ),
                     color=int("e6e7e8", 16),
                 )
@@ -841,8 +846,9 @@ class Misc(commands.Cog):
                     raise exceptions.CommandWarning(
                         "Replied to message has no stickers"
                     )
-            else:
-                await util.send_command_help(ctx)
+
+        if not stickers:
+            await util.send_command_help(ctx)
 
         for sticker in stickers:
             fetched_sticker = await sticker.fetch()
