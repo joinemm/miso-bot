@@ -4,6 +4,7 @@
 
 import asyncio
 import io
+import urllib.request
 from typing import TYPE_CHECKING, Any
 
 import arrow
@@ -362,26 +363,27 @@ class InstagramEmbedder(BaseEmbedder):
     @staticmethod
     def extract_links(text: str, include_shortcodes=True) -> list[InstagramPost]:
         text = "\n".join(text.split())
-        instagram_regex = (
-            r"(?:https?:\/\/)?(?:www.)?instagram.com\/"
-            r"?([a-zA-Z0-9\.\_\-]+)?\/([p]+)?([reel]+)?([tv]+)?([stories]+)?\/"
-            r"([a-zA-Z0-9\-\_\.]+)\/?([0-9]+)?"
-        )
+        instagram_regex = r"(?:https?:\/\/)?(?:www.)?instagram.com\/([a-zA-Z0-9\.\_\-]+)\/([a-zA-Z0-9\.\_\-]+)\/?(\S*)"
         results: list[InstagramPost] = []
-        for match in regex.finditer(instagram_regex, text):
-            # group 1 for username
-            # group 2 for p
-            # group 3 for reel
-            # group 4 for tv
-            # group 5 for stories
-            # group 6 for shortcode and username stories
-            # group 7 for stories pk
-            if match.group(5) == "stories":
-                # stories are not supported at this point
-                pass
 
-            elif match.group(6):
-                results.append(InstagramPost(shortcode=match.group(6)))
+        def parse(regex_match: regex.Match[str]):
+            url_type = regex_match.group(1)
+            if url_type in ["p", "reel"]:
+                results.append(InstagramPost(shortcode=regex_match.group(2)))
+            elif url_type == "share":
+                # get the redirect location
+                share_url = f"https://instagram.com/share/{regex_match.group(2)}/{regex_match.group(3)}"
+                final_url = urllib.request.urlopen(share_url).geturl()
+                new_match = regex.search(instagram_regex, final_url)
+                if new_match is not None:
+                    parse(new_match)
+                else:
+                    raise InstagramError("Share link redirected to unsupported url")
+            else:
+                raise InstagramError(f"Unsupported instagram path `/{url_type}/`")
+
+        for regex_match in regex.finditer(instagram_regex, text):
+            parse(regex_match)
 
         if include_shortcodes:
             shortcode_regex = r"(?:\s|^)([^-][a-zA-Z0-9\-\_\.]{9,})(?=\s|$)"
