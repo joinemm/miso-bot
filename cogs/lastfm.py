@@ -1266,10 +1266,12 @@ class LastFm(commands.Cog):
         chart_nodes = []
 
         data = await self.get_all_albums(ctx.lfm.username)
-        albums = filter(
-            lambda x: not x.is_missing(),
-            [LastFmImage.from_url(a["image"][-1]["#text"]) for a in data],
-        )
+        albums = []
+        for a in data:
+            img = LastFmImage.from_url(a["image"][-1]["#text"])
+            if img.is_missing():
+                continue
+            albums.append(img)
 
         to_fetch = []
         albumcolors = await self.bot.db.fetch(
@@ -1326,7 +1328,10 @@ class LastFm(commands.Cog):
                 to_cache,
             )
 
-        tree = kdtree.create(album_color_nodes)
+        if not album_color_nodes:
+            raise exceptions.CommandError("Failed at getting album data")
+
+        tree = kdtree.create(point_list=album_color_nodes)
         if rainbow:
             rainbow_colors = (
                 [
