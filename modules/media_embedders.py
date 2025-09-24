@@ -18,7 +18,7 @@ from discord.ui import View
 from loguru import logger
 
 from modules import emojis, exceptions, instagram, util
-from modules.instagram import EmbedEz, InstaFix, InstagramError
+from modules.instagram import InstagramError, Snapsave
 from modules.tiktok import TikTokNew
 
 if TYPE_CHECKING:
@@ -28,6 +28,12 @@ if TYPE_CHECKING:
 @dataclass
 class InstagramPost:
     shortcode: str
+
+
+@dataclass
+class InstagramStory:
+    username: str
+    id: str
 
 
 @dataclass
@@ -361,15 +367,23 @@ class InstagramEmbedder(BaseEmbedder):
     NO_RESULTS_ERROR = "Found no valid Instagram posts to embed!"
 
     @staticmethod
-    def extract_links(text: str, include_shortcodes=True) -> list[InstagramPost]:
+    def extract_links(
+        text: str, include_shortcodes=True
+    ) -> list[InstagramPost | InstagramStory]:
         text = "\n".join(text.split())
         instagram_regex = r"(?:https?:\/\/)?(?:www.)?instagram.com\/([a-zA-Z0-9\.\_\-]+)\/([a-zA-Z0-9\.\_\-]+)\/?(\S*)"
-        results: list[InstagramPost] = []
+        results: list[InstagramPost | InstagramStory] = []
 
         def parse(regex_match: regex.Match[str]):
             url_type = regex_match.group(1)
             if url_type in ["p", "reel"]:
                 results.append(InstagramPost(shortcode=regex_match.group(2)))
+            elif url_type == "stories":
+                results.append(
+                    InstagramStory(
+                        username=regex_match.group(2), id=regex_match.group(3)
+                    )
+                )
             elif url_type == "share":
                 # get the redirect location
                 share_url = f"https://instagram.com/share/{regex_match.group(2)}/{regex_match.group(3)}"
@@ -395,15 +409,12 @@ class InstagramEmbedder(BaseEmbedder):
     async def create_message(
         self,
         channel: "discord.abc.MessageableChannel",
-        instagram_asset: InstagramPost,
+        instagram_asset: InstagramPost | InstagramStory,
         options: Options | None = None,
     ):
-        providers = []
-        if isinstance(instagram_asset, InstagramPost):
-            providers += [
-                EmbedEz(self.bot),
-                InstaFix(self.bot.session),
-            ]
+        providers = [
+            Snapsave(self.bot.session),
+        ]
 
         error = None
         post = None
@@ -411,8 +422,14 @@ class InstagramEmbedder(BaseEmbedder):
 
         for provider in providers:
             try:
-                post = await provider.get_post(instagram_asset.shortcode)
-                identifier = instagram_asset.shortcode
+                if isinstance(instagram_asset, InstagramPost):
+                    post = await provider.get_post(instagram_asset.shortcode)
+                    identifier = instagram_asset.shortcode
+                else:  # InstagramStory
+                    post = await provider.get_story(
+                        instagram_asset.id, instagram_asset.username
+                    )
+                    identifier = instagram_asset.id
 
                 tasks = []
                 if not post.media:

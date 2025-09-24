@@ -3,6 +3,7 @@
 # https://git.joinemm.dev/miso-bot
 
 import asyncio
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
@@ -36,6 +37,8 @@ class MediaType(Enum):
     def from_string(s: str):
         match s:
             case "photo":
+                return MediaType.PHOTO
+            case "image":
                 return MediaType.PHOTO
             case "video":
                 return MediaType.VIDEO
@@ -128,6 +131,81 @@ class EmbedEz:
             media=media,
             timestamp=None,
         )
+
+
+class Snapsave:
+    BASE_URL = "http://embed-server:3000"
+
+    def __init__(self, session: aiohttp.ClientSession):
+        self.session = session
+
+    async def get_metadata(self, shortcode: str):
+        url = f"https://www.instagram.com/p/{shortcode}/embed/captioned/"
+        async with self.session.get(url) as response:
+            text = await response.text()
+
+        username_match = re.search(r"<span class=\"UsernameText\">(.*?)</span>", text)
+        username = username_match.group(1) if username_match is not None else ""
+
+        return {
+            "username": username,
+            "url": f"https://www.instagram.com/p/{shortcode}",
+            "description": "",
+        }
+
+    async def get_post(self, shortcode: str):
+        media = await self.embed(f"https://www.instagram.com/p/{shortcode}/")
+
+        metadata = await self.get_metadata(shortcode)
+
+        return IgPost(
+            url=metadata["url"],
+            user=IgUser(username=metadata["username"].strip("@")),
+            caption=metadata["description"],
+            media=media,
+            timestamp=None,
+        )
+
+    async def get_story(self, id: str, username: str):
+        media = await self.embed(f"https://www.instagram.com/stories/{username}/{id}")
+
+        metadata = {
+            "username": username,
+            "url": f"https://www.instagram.com/stories/{username}/{id}",
+            "description": "",
+        }
+
+        return IgPost(
+            url=metadata["url"],
+            user=IgUser(username=metadata["username"].strip("@")),
+            caption=metadata["description"],
+            media=media,
+            timestamp=None,
+        )
+
+    async def embed(self, url: str):
+        try:
+            async with self.session.get(
+                f"{self.BASE_URL}/embed",
+                params={"url": url},
+            ) as response:
+                response.raise_for_status()
+                data = await response.json()
+        except aiohttp.ClientError:
+            raise InstagramError("Network error in embedder connection")
+
+        if not data["success"]:
+            raise InstagramError("Embedder failed!")
+
+        media = [
+            IgMedia(url=x["url"], media_type=MediaType.from_string(x["type"]))
+            for x in data["data"]["media"]
+        ]
+
+        if not media:
+            raise InstagramError("No media found!")
+
+        return media
 
 
 class InstaFix:

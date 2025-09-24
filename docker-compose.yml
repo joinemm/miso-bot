@@ -44,6 +44,15 @@ services:
       - ./html/static:/app/static:ro
       - ./html/templates:/app/templates:ro
     profiles: [prod, dev-extra]
+  
+  embed-server:
+    container_name: miso-embed-server
+    build: https://github.com/miso-bot/miso-embed-server.git#master
+    restart: unless-stopped
+    init: true
+    expose:
+      - 3000
+    profiles: [prod, dev-extra]
 
   shlink:
     container_name: miso-shlink
