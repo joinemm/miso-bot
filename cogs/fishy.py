@@ -120,7 +120,7 @@ class Fishy(commands.Cog):
         ]
     )
     async def fishy(self, ctx: commands.Context, user: Optional[discord.Member] = None):
-        """Go fishing"""
+        """Go fishing - mention a user to gift the fish for them"""
         receiver = user or ctx.author
         gift = receiver is not ctx.author
 
