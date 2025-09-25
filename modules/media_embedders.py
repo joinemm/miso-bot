@@ -611,12 +611,20 @@ class TwitterEmbedder(BaseEmbedder):
     ):
         api_route = "https://api.fxtwitter.com/u/status/{0}"
         media_urls = []
-        async with self.bot.session.get(api_route.format(tweet_id)) as response:
-            if not response.ok:
-                raise exceptions.CommandWarning(
-                    f"Tweet with id `{tweet_id}` returned **{response.status}**!"
-                )
-            tweet = await response.json()
+        tweet = None
+        tries = 0
+        while tweet is None and tries < 3:
+            async with self.bot.session.get(api_route.format(tweet_id)) as response:
+                tries += 1
+                if not response.ok:
+                    if tries >= 3:
+                        raise exceptions.CommandWarning(
+                            f"Tweet with id `{tweet_id}` returned **{response.status}**!"
+                        )
+                    continue
+                tweet = await response.json()
+
+        assert tweet is not None
 
         too_big_files = []
         if tweet.get("tweet"):
