@@ -16,6 +16,7 @@ import orjson
 import redis
 from bs4 import BeautifulSoup
 from loguru import logger
+from markdownify import markdownify as md
 
 if TYPE_CHECKING:
     from modules.misobot import MisoBot
@@ -144,13 +145,37 @@ class Snapsave:
         async with self.session.get(url) as response:
             text = await response.text()
 
-        username_match = re.search(r"<span class=\"UsernameText\">(.*?)</span>", text)
+        username_match = re.search(r'<span class="UsernameText">(.*?)</span>', text)
         username = username_match.group(1) if username_match is not None else ""
+
+        caption = ""
+        caption_match = re.search(
+            r'<div class="Caption">(.*?)(<div class="CaptionComments">|</div>)',
+            text,
+        )
+        if caption_match is not None:
+            caption = caption_match.group(1)
+
+            # remove username
+            caption = re.sub(
+                r'<a class="CaptionUsername".*?</a><br /><br />', "", caption
+            )
+            # fix links that point to local paths
+            caption = re.sub(
+                r'href="/(.*?)"', r'href="https://instagram.com/\1"', caption
+            )
+
+            # remove anything after three or more lines of dots, often used for separating hashtags
+            # we don't really care about the hashtags so they can go
+            caption = re.sub(r"(?:\.<br />\s*){3,}", "", caption)
+
+            # parse html into markdown
+            caption = md(caption, escape_underscores=False)
 
         return {
             "username": username,
             "url": f"https://www.instagram.com/p/{shortcode}",
-            "description": "",
+            "description": caption,
         }
 
     async def get_post(self, shortcode: str):
