@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 from urllib import parse
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import aiohttp
 import arrow
@@ -223,7 +223,10 @@ class Snapsave:
             raise InstagramError("Embedder failed!")
 
         media = [
-            IgMedia(url=x["url"], media_type=MediaType.from_string(x["type"]))
+            IgMedia(
+                url=remove_params(x["url"], ["dl"]),
+                media_type=MediaType.from_string(x["type"]),
+            )
             for x in data["data"]["media"]
         ]
 
@@ -550,6 +553,16 @@ class Datalama:
             self.parse_resource_a1(post),
             post["taken_at"],
         )
+
+
+def remove_params(url: str, params_to_remove: list[str]):
+    parsed = urlparse(url)
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    # Remove unwanted keys
+    for p in params_to_remove:
+        query.pop(p, None)
+    new_query = urlencode(query, doseq=True)
+    return urlunparse(parsed._replace(query=new_query))
 
 
 def to_mediatype(typename: str) -> MediaType:
