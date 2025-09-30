@@ -6,7 +6,7 @@ import asyncio
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, override
 from urllib import parse
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
@@ -52,6 +52,10 @@ class IgMedia:
     media_type: MediaType
     url: str
     expires: int | None = None
+
+    @override
+    def __hash__(self):
+        return hash(self.url)
 
 
 @dataclass
@@ -140,7 +144,7 @@ class Snapsave:
     def __init__(self, session: aiohttp.ClientSession):
         self.session = session
 
-    async def get_metadata(self, shortcode: str):
+    async def get_metadata(self, shortcode: str) -> dict[str, str]:
         url = f"https://www.instagram.com/p/{shortcode}/embed/captioned/"
         async with self.session.get(url) as response:
             text = await response.text()
@@ -160,14 +164,17 @@ class Snapsave:
             caption = re.sub(
                 r'<a class="CaptionUsername".*?</a><br /><br />', "", caption
             )
+
+            # just remove all hashtags
+            caption = re.sub(r"<a[^>]*?>#.*?</a>", "", caption)
+
             # fix links that point to local paths
             caption = re.sub(
                 r'href="/(.*?)"', r'href="https://instagram.com/\1"', caption
             )
 
-            # remove anything after three or more lines of dots, often used for separating hashtags
-            # we don't really care about the hashtags so they can go
-            caption = re.sub(r"(?:\.<br />\s*){3,}", "", caption)
+            # remove lines with only dots as they are used to separate hashtags
+            caption = re.sub(r"(?:<br />\.\s*)", "", caption)
 
             # parse html into markdown
             caption = md(caption, escape_underscores=False)
@@ -178,7 +185,7 @@ class Snapsave:
             "description": caption,
         }
 
-    async def get_post(self, shortcode: str):
+    async def get_post(self, shortcode: str) -> IgPost:
         media = await self.embed(f"https://www.instagram.com/p/{shortcode}/")
 
         metadata = await self.get_metadata(shortcode)
@@ -191,7 +198,7 @@ class Snapsave:
             timestamp=None,
         )
 
-    async def get_story(self, id: str, username: str):
+    async def get_story(self, id: str, username: str) -> IgPost:
         media = await self.embed(f"https://www.instagram.com/stories/{username}/{id}")
 
         metadata = {
@@ -208,7 +215,7 @@ class Snapsave:
             timestamp=None,
         )
 
-    async def embed(self, url: str):
+    async def embed(self, url: str) -> list[IgMedia]:
         try:
             async with self.session.get(
                 f"{self.BASE_URL}/embed",
@@ -222,18 +229,20 @@ class Snapsave:
         if not data["success"]:
             raise InstagramError("Embedder failed!")
 
-        media = [
-            IgMedia(
-                url=remove_params(x["url"], ["dl"]),
-                media_type=MediaType.from_string(x["type"]),
+        media = []
+        for item in data["data"]["media"]:
+            media.append(
+                IgMedia(
+                    url=remove_params(item["url"], ["dl"]),
+                    media_type=MediaType.from_string(item["type"]),
+                )
             )
-            for x in data["data"]["media"]
-        ]
 
         if not media:
             raise InstagramError("No media found!")
 
-        return media
+        # remove possible duplicates
+        return list(dict.fromkeys(media))
 
 
 class InstaFix:
@@ -579,8 +588,8 @@ def to_mediatype(typename: str) -> MediaType:
 
 def get_best_candidate(
     candidates: list[dict],
-    og_width: Optional[int] = None,
-    og_height: Optional[int] = None,
+    og_width: int | None = None,
+    og_height: int | None = None,
 ) -> str:
     """Filter out the best image candidate, based on resolution. Returns media url"""
     if og_height and og_width:
