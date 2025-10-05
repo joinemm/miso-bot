@@ -377,7 +377,7 @@ class InstagramEmbedder(BaseEmbedder):
 
         def parse(regex_match: regex.Match[str]):
             url_type = regex_match.group(1)
-            if url_type in ["p", "reel"]:
+            if url_type in ["p", "reel", "reels"]:
                 results.append(InstagramPost(shortcode=regex_match.group(2)))
             elif url_type == "stories":
                 results.append(
