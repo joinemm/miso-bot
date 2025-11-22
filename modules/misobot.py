@@ -189,8 +189,6 @@ class MisoBot(commands.AutoShardedBot):
             self.boot_up_time = time() - self.start_time
         logger.info(f"Connected in {util.stringfromtime(self.boot_up_time)}")
         logger.info(f"Loading complete | running {len(latencies)} shards")
-        for shard_id, latency in latencies:
-            logger.info(f"Shard [{shard_id}] - HEARTBEAT {latency}s")
 
     @staticmethod
     async def before_any_command(ctx: MisoContext):

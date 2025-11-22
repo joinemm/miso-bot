@@ -947,13 +947,19 @@ def ordinal(n):
 
 
 async def require_chunked(guild: discord.Guild):
-    if guild is not None and not guild.chunked:
+    if not guild.chunked:
         start_time = time()
-        await guild.chunk(cache=True)
-        logger.info(
-            f"Chunked [{guild}] with {guild.member_count} members "
-            f"in {time() - start_time:.2f} seconds"
-        )
+        timeout = 5
+        try:
+            await asyncio.wait_for(guild.chunk(cache=True), timeout)
+            logger.info(
+                f"Chunked [{guild}] with {guild.member_count} members "
+                f"in {time() - start_time:.2f} seconds"
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Timeout occurred after waiting {timeout} seconds for guild chunking ({guild})"
+            )
 
 
 user_agent_rotator = UserAgent(hardware_types=[HardwareType.COMPUTER.value], limit=100)
