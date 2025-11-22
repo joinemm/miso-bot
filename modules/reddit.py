@@ -2,9 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # https://git.joinemm.dev/miso-bot
 
-import subprocess
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import arrow
@@ -31,6 +29,7 @@ class RedditPost:
     timestamp: int
     url: str
     subreddit: str
+    nsfw: bool
 
 
 class Reddit:
@@ -110,27 +109,7 @@ class Reddit:
 
             elif hint == "hosted:video":
                 video_url = post["media"]["reddit_video"]["dash_url"]
-                video_path = f"downloads/{reddit_post_id}.mp4"
-                Path("downloads").mkdir(exist_ok=True)
-                ffmpeg = subprocess.call(
-                    [
-                        "ffmpeg",
-                        "-y",
-                        "-hide_banner",
-                        "-loglevel",
-                        "error",
-                        "-i",
-                        video_url,
-                        "-c",
-                        "copy",
-                        video_path,
-                    ]
-                )
-                if ffmpeg != 0:
-                    raise exceptions.CommandError(
-                        "There was an error encoding your video!"
-                    )
-                videos.append(video_path)
+                videos.append(video_url)
 
         elif post["is_self"]:
             raise exceptions.CommandWarning(
@@ -150,4 +129,5 @@ class Reddit:
             timestamp=timestamp,
             url=post["permalink"],
             subreddit=post["subreddit"],
+            nsfw=post["over_18"],
         )

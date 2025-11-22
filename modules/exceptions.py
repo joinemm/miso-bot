@@ -36,6 +36,12 @@ class LastFMError(commands.CommandError):
         return f"LastFM error {self.error_code} : {self.message}"
 
 
+class AgeRestricted(commands.CommandError):
+    def __init__(self, message):
+        super().__init__()
+        self.message = message
+
+
 class RendererError(commands.CommandError):
     pass
 

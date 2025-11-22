@@ -4,7 +4,9 @@
 
 import asyncio
 import io
+import subprocess
 import urllib.request
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import arrow
@@ -53,6 +55,13 @@ def filesize_limit(guild: discord.Guild | None):
         if guild is not None
         else discord.utils.DEFAULT_FILE_SIZE_LIMIT_BYTES
     )
+
+
+def nsfw_check(channel: "discord.abc.MessageableChannel", post_is_nsfw: bool):
+    if (not getattr(channel, "nsfw", False)) and post_is_nsfw:
+        raise exceptions.AgeRestricted(
+            "The media you are trying to embed is NSFW and you are not in an age-restricted channel! (This is a Discord TOS limitation)"
+        )
 
 
 class DownloadError(Exception):
@@ -312,8 +321,8 @@ class RedditEmbedder(BaseEmbedder):
         options: Options | None = None,
     ):
         post = await self.bot.reddit_client.get_post(reddit_post_id)
-        videos = post.videos
-        caption = post.caption
+
+        nsfw_check(channel, post.nsfw)
 
         dateformat = arrow.get(post.timestamp).format("YYMMDD")
 
@@ -332,6 +341,7 @@ class RedditEmbedder(BaseEmbedder):
                 )
             )
 
+        caption = post.caption
         files = []
         suppress = True
         results = await asyncio.gather(*tasks)
@@ -342,10 +352,32 @@ class RedditEmbedder(BaseEmbedder):
                 suppress = False
                 caption += "\n" + result
 
-        for video in videos:
+        for video_url in post.videos:
+            Path("downloads").mkdir(exist_ok=True)
+            video_path = f"downloads/reddit_video_{reddit_post_id}.mp4"
+            if not Path(video_path).exists():
+                ffmpeg = subprocess.call(
+                    [
+                        "ffmpeg",
+                        "-y",
+                        "-hide_banner",
+                        "-loglevel",
+                        "error",
+                        "-i",
+                        video_url,
+                        "-c",
+                        "copy",
+                        video_path,
+                    ]
+                )
+                if ffmpeg != 0:
+                    raise exceptions.CommandError(
+                        "There was an error encoding your video!"
+                    )
+
             files.append(
                 discord.File(
-                    video,
+                    video_path,
                     spoiler=options.spoiler if options else False,
                 )
             )

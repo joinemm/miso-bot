@@ -287,6 +287,10 @@ class ErrorHandler(commands.Cog):
             case InstagramError():
                 await self.send_warning(ctx, error.message)
 
+            case exceptions.AgeRestricted():
+                logger.warning(self.log_format(ctx, error, error.message))
+                await self.send_embed(ctx, error.message, ":underage:", "DD2E44")
+
             case _:
                 await self.send_error(
                     ctx, f"{type(error).__name__}: {error}", error, language="ex"
