@@ -10,6 +10,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install system dependencies
+        run: sudo apt install -y libasound2-dev
+
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
