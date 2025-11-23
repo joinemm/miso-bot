@@ -39,7 +39,6 @@
                 ++ binary-deps;
 
               git-hooks.hooks = {
-                isort.enable = true;
                 ruff-format.enable = true;
                 ruff.enable = true;
               };

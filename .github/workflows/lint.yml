@@ -21,15 +21,12 @@ jobs:
       - name: Ruff check
         uses: astral-sh/ruff-action@v3
         with:
-          args: "check --ignore=E501"
+          args: "check"
 
       - name: Ruff format
         uses: astral-sh/ruff-action@v3
         with:
           args: "format --check"
-
-      - name: isort check
-        uses: isort/isort-action@v1
 
       - name: REUSE Compliance Check
         uses: fsfe/reuse-action@v5
