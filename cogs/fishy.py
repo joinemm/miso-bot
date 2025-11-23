@@ -3,7 +3,7 @@
 # https://git.joinemm.dev/miso-bot
 
 import random
-from typing import Literal, Optional, Union
+from typing import Literal
 
 import discord
 import humanize
@@ -119,9 +119,14 @@ class Fishy(commands.Cog):
             "<))>",
         ]
     )
-    async def fishy(self, ctx: commands.Context, user: Optional[discord.Member] = None):
+    async def fishy(
+        self, ctx: commands.Context, user: discord.Member | int | None = None
+    ):
         """Go fishing - mention a user to gift the fish for them"""
-        receiver = user or ctx.author
+        user_by_id = await util.user_by_id(self.bot, user)
+        user_found = user_by_id or user
+
+        receiver = user_found or ctx.author
         gift = receiver is not ctx.author
 
         cached_last_fishy = self.ts_lock.get(str(ctx.author.id))
@@ -216,15 +221,21 @@ class Fishy(commands.Cog):
     async def fishystats(
         self,
         ctx: commands.Context,
-        user: Union[discord.Member, Literal["global", "self"]] = "self",
+        user: discord.Member | Literal["global", "self"] | int = "self",
     ):
         """See statistics about your fishing endeavours"""
         if user == "self":
             await self.fishystats_user(ctx, ctx.author)
-        elif isinstance(user, discord.Member):
-            await self.fishystats_user(ctx, user)
         elif user == "global":
             await self.fishystats_global(ctx)
+        elif isinstance(user, discord.Member):
+            await self.fishystats_user(ctx, user)
+        else:  # it's int
+            user_by_id = await util.user_by_id(self.bot, user)
+            if user_by_id is not None:
+                await self.fishystats_user(ctx, user_by_id)
+            else:
+                await self.fishystats_user(ctx, ctx.author)
 
     async def fishystats_global(self, ctx: commands.Context):
         data = await self.bot.db.fetch_row(

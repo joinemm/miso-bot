@@ -76,6 +76,19 @@ async def suppress(message: discord.Message):
         pass
 
 
+async def user_by_id(bot: "MisoBot", user_id) -> discord.User | None:
+    user_found = None
+    if isinstance(user_id, int) and len(str(user_id)) > 16:
+        user_found = bot.get_user(user_id)
+        if user_found is None:
+            try:
+                user_found = await bot.fetch_user(user_id)
+            except discord.errors.NotFound:
+                user_found = None
+
+    return user_found
+
+
 def displayname(member: Optional[discord.User | discord.Member], escape=True):
     if member is None:
         return "[unknown user]"
