@@ -52,6 +52,8 @@ services:
     init: true
     expose:
       - 3000
+    ports:
+      - 127.0.0.1:3100:3000 # for development
     profiles: [prod, dev-extra]
 
   shlink:
@@ -90,6 +92,8 @@ services:
     environment:
       - DB_HOST=miso-bot-db
       - IMAGE_SERVER_HOST=image-server
+      - EMBEDDER_HOST=embed-server
+      - EMBEDDER_PORT=3000
       - EMOJIFIER_HOST=emojifier
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
@@ -111,6 +115,7 @@ services:
     environment:
       - DB_HOST=miso-bot-db
       - IMAGE_SERVER_HOST=image-server
+      - EMBEDDER_HOST=embed-server
       - WEBSERVER_PORT=8080
       - WEBSERVER_HOSTNAME=0.0.0.0
     tty: true
