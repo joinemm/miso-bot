@@ -404,33 +404,36 @@ class InstagramEmbedder(BaseEmbedder):
         text: str, include_shortcodes=True
     ) -> list[InstagramPost | InstagramStory]:
         text = "\n".join(text.split())
-        instagram_regex = r"(?:https?:\/\/)?(?:www.)?instagram.com\/([a-zA-Z0-9\.\_\-]+)\/([a-zA-Z0-9\.\_\-]+)\/?(\d*)"
+        instagram_regex = r"(?:https?:\/\/)?(?:www.)?instagram.com\/([a-zA-Z0-9\.\_\-]+)\/([a-zA-Z0-9\.\_\-]+)\/?([a-zA-Z0-9\.\_\-]+)?"
         results: list[InstagramPost | InstagramStory] = []
 
-        def parse(regex_match: regex.Match[str]):
-            url_type = regex_match.group(1)
-            if url_type in ["p", "reel", "reels"]:
-                results.append(InstagramPost(shortcode=regex_match.group(2)))
+        def parse(fragments: tuple[str, ...], round=1):
+            url_type = fragments[0]
+            if url_type in ["p", "reel", "reels", "tv"]:
+                results.append(InstagramPost(shortcode=fragments[1]))
             elif url_type == "stories":
                 results.append(
-                    InstagramStory(
-                        username=regex_match.group(2), id=int(regex_match.group(3))
-                    )
+                    InstagramStory(username=fragments[1], id=int(fragments[2]))
                 )
             elif url_type == "share":
                 # get the redirect location
-                share_url = f"https://instagram.com/share/{regex_match.group(2)}/{regex_match.group(3)}"
+                share_url = f"https://instagram.com/share/{fragments[1]}/{fragments[2]}"
                 final_url = urllib.request.urlopen(share_url).geturl()
                 new_match = regex.search(instagram_regex, final_url)
                 if new_match is not None:
-                    parse(new_match)
+                    parse(new_match.groups())
                 else:
                     raise InstagramError("Share link redirected to unsupported url")
             else:
-                raise InstagramError(f"Unsupported instagram path `/{url_type}/`")
+                if round == 1:
+                    # let's assume it's username, and user clicked through the profile page for this
+                    # shift fragments over by one and try parsing again
+                    parse(fragments[1:], 2)
+                else:
+                    raise InstagramError(f"Unsupported instagram path `/{url_type}/`")
 
         for regex_match in regex.finditer(instagram_regex, text):
-            parse(regex_match)
+            parse(regex_match.groups())
 
         if include_shortcodes:
             shortcode_regex = r"(?:\s|^)([^-][a-zA-Z0-9\-\_\.]{9,})(?=\s|$)"
