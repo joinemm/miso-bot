@@ -3,6 +3,8 @@
 # https://git.joinemm.dev/miso-bot
 
 import asyncio
+import base64
+import os
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -20,6 +22,24 @@ from markdownify import markdownify as md
 
 if TYPE_CHECKING:
     from modules.misobot import MisoBot
+
+
+def shortcode_to_id(shortcode: str) -> int:
+    code = ("A" * (12 - len(shortcode))) + shortcode
+    return int.from_bytes(base64.b64decode(code.encode(), b"-_"), "big")
+
+
+def id_to_shortcode(pk: int) -> str:
+    bytes_str = base64.b64encode(pk.to_bytes(9, "big"), b"-_")
+    return bytes_str.decode().replace("A", " ").lstrip().replace(" ", "A")
+
+
+def pk_to_timestamp(pk: int) -> int:
+    ig_epoch = 1314220021
+    binary = format(pk, "064b")
+    timestamp_ms = int(binary[:41], 2)
+    timestamp = int(timestamp_ms / 1000)
+    return ig_epoch + timestamp
 
 
 class InstagramError(Exception):
@@ -139,7 +159,7 @@ class EmbedEz:
 
 
 class Snapsave:
-    BASE_URL = "http://embed-server:3000"
+    BASE_URL = f"http://{os.environ['EMBEDDER_HOST']}:{os.environ['EMBEDDER_PORT']}"
 
     def __init__(self, session: aiohttp.ClientSession):
         self.session = session
@@ -195,10 +215,10 @@ class Snapsave:
             user=IgUser(username=metadata["username"].strip("@")),
             caption=metadata["description"],
             media=media,
-            timestamp=None,
+            timestamp=pk_to_timestamp(shortcode_to_id(shortcode)),
         )
 
-    async def get_story(self, id: str, username: str) -> IgPost:
+    async def get_story(self, id: int, username: str) -> IgPost:
         media = await self.embed(f"https://www.instagram.com/stories/{username}/{id}")
 
         metadata = {
@@ -212,7 +232,7 @@ class Snapsave:
             user=IgUser(username=metadata["username"].strip("@")),
             caption=metadata["description"],
             media=media,
-            timestamp=None,
+            timestamp=pk_to_timestamp(id),
         )
 
     async def embed(self, url: str) -> list[IgMedia]:
@@ -227,7 +247,7 @@ class Snapsave:
             raise InstagramError("Network error in embedder connection")
 
         if not data["success"]:
-            raise InstagramError("Embedder failed!")
+            raise InstagramError(data["message"])
 
         media = []
         for item in data["data"]["media"]:

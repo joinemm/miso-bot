@@ -35,7 +35,7 @@ class InstagramPost:
 @dataclass
 class InstagramStory:
     username: str
-    id: str
+    id: int
 
 
 @dataclass
@@ -404,7 +404,7 @@ class InstagramEmbedder(BaseEmbedder):
         text: str, include_shortcodes=True
     ) -> list[InstagramPost | InstagramStory]:
         text = "\n".join(text.split())
-        instagram_regex = r"(?:https?:\/\/)?(?:www.)?instagram.com\/([a-zA-Z0-9\.\_\-]+)\/([a-zA-Z0-9\.\_\-]+)\/?(\S*)"
+        instagram_regex = r"(?:https?:\/\/)?(?:www.)?instagram.com\/([a-zA-Z0-9\.\_\-]+)\/([a-zA-Z0-9\.\_\-]+)\/?(\d*)"
         results: list[InstagramPost | InstagramStory] = []
 
         def parse(regex_match: regex.Match[str]):
@@ -414,7 +414,7 @@ class InstagramEmbedder(BaseEmbedder):
             elif url_type == "stories":
                 results.append(
                     InstagramStory(
-                        username=regex_match.group(2), id=regex_match.group(3)
+                        username=regex_match.group(2), id=int(regex_match.group(3))
                     )
                 )
             elif url_type == "share":
