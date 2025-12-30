@@ -3,7 +3,6 @@
 # https://git.joinemm.dev/miso-bot
 
 import asyncio
-from typing import Optional
 
 import arrow
 import discord
@@ -372,23 +371,6 @@ class Owner(commands.Cog):
     @commands.command()
     async def alwaysfail(self, _):
         return 1 / 0
-
-    @commands.command()
-    async def resetfishy(
-        self, ctx: commands.Context, user: Optional[discord.Member] = None
-    ):
-        target = user or ctx.author
-        await self.bot.db.execute(
-            """
-            INSERT INTO fishy (user_id, last_fishy)
-                VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE
-                last_fishy = VALUES(last_fishy)
-            """,
-            target.id,
-            None,
-        )
-        await util.send_success(ctx, "OK")
 
 
 def clean_codeblock(text):

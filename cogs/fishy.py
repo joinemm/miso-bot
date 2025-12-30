@@ -370,6 +370,25 @@ class Fishy(commands.Cog):
 
     @commands.command(hidden=True)
     @commands.is_owner()
+    async def resetfishy(
+        self, ctx: commands.Context, user: discord.Member | None = None
+    ):
+        target = user or ctx.author
+        await self.bot.db.execute(
+            """
+            INSERT INTO fishy (user_id, last_fishy)
+                VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE
+                last_fishy = VALUES(last_fishy)
+            """,
+            target.id,
+            None,
+        )
+        self.ts_lock[str(target.id)] = None
+        await util.send_success(ctx, "OK")
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
     async def fishytransfer(
         self,
         ctx: commands.Context,
