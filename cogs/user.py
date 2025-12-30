@@ -393,6 +393,8 @@ class User(commands.Cog):
                 rows.append(
                     f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy gifted"
                 )
+                if i > 200:
+                    break
                 i += 1
         if not rows:
             raise exceptions.CommandInfo("Nobody has gifted fish yet!")
@@ -414,7 +416,7 @@ class User(commands.Cog):
 
         global_data = scope.lower() == "global"
         data = await self.bot.db.fetch(
-            "SELECT user_id, fishy_count FROM fishy ORDER BY fishy_count DESC LIMIT 200"
+            "SELECT user_id, fishy_count FROM fishy ORDER BY fishy_count DESC"
         )
 
         rows = []
@@ -439,6 +441,8 @@ class User(commands.Cog):
                 rows.append(
                     f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy"
                 )
+                if i > 200:
+                    break
                 i += 1
         if not rows:
             raise exceptions.CommandInfo("Nobody has any fish yet!")

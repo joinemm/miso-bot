@@ -166,6 +166,24 @@ class Misc(commands.Cog):
 
         await ctx.send(f"<:funwaa:1063446110565310515> {data['joke']}")
 
+    @commands.command()
+    async def wakatime(self, ctx: commands.Context, username: str):
+        """Get Wakatime top languages for the last week"""
+        # TODO: https://wakatime.com/developers#stats
+        async with self.bot.session.get(
+            f"https://wakatime.com/api/v1/users/{username}/stats/last_7_days",
+        ) as response:
+            data = await response.json(loads=orjson.loads)
+
+        content = discord.Embed(
+            title=f"{username} - Top languages {data['data']['human_readable_range']}",
+            colour=discord.Colour.green(),
+        )
+        content.description = "\n".join(
+            [f"**{x['name']}** - {x['text']}" for x in data["data"]["languages"][:10]]
+        )
+        await ctx.send(embed=content)
+
     @commands.command(aliases=["imbored"])
     async def iambored(self, ctx: commands.Context):
         """Get something to do"""
