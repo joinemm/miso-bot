@@ -393,7 +393,7 @@ class User(commands.Cog):
                 rows.append(
                     f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy gifted"
                 )
-                if i > 200:
+                if i >= 200:
                     break
                 i += 1
         if not rows:
@@ -441,7 +441,7 @@ class User(commands.Cog):
                 rows.append(
                     f"{ranking} **{util.displayname(user)}** — **{fishy_count}** fishy"
                 )
-                if i > 200:
+                if i >= 200:
                     break
                 i += 1
         if not rows:
