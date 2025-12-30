@@ -381,7 +381,12 @@ class User(commands.Cog):
                 else:
                     user = ctx.guild.get_member(user_id)
 
-                if user is None or user.bot or fishy_count == 0:
+                if (
+                    user is None
+                    or user.bot
+                    or fishy_count == 0
+                    or util.user_is_blacklisted(ctx.bot, user)
+                ):
                     continue
 
                 ranking = medal_emoji[i - 1] if i <= len(medal_emoji) else f"`#{i:2}`"
@@ -409,7 +414,7 @@ class User(commands.Cog):
 
         global_data = scope.lower() == "global"
         data = await self.bot.db.fetch(
-            "SELECT user_id, fishy_count FROM fishy ORDER BY fishy_count DESC"
+            "SELECT user_id, fishy_count FROM fishy ORDER BY fishy_count DESC LIMIT 200"
         )
 
         rows = []
@@ -422,7 +427,12 @@ class User(commands.Cog):
                 else:
                     user = ctx.guild.get_member(user_id)
 
-                if user is None or user.bot or fishy_count == 0:
+                if (
+                    user is None
+                    or user.bot
+                    or fishy_count == 0
+                    or util.user_is_blacklisted(ctx.bot, user)
+                ):
                     continue
 
                 ranking = medal_emoji[i - 1] if i <= len(medal_emoji) else f"`#{i:2}`"
@@ -477,7 +487,7 @@ class User(commands.Cog):
                     if _global_
                     else ctx.guild.get_member(userid)
                 )
-                if user is None or user.bot:
+                if user is None or user.bot or util.user_is_blacklisted(ctx.bot, user):
                     continue
 
                 if i <= len(self.medal_emoji):
@@ -517,7 +527,7 @@ class User(commands.Cog):
         if data:
             for i, (user_id, amount) in enumerate(data, start=1):
                 user = ctx.guild.get_member(user_id)
-                if user is None or user.bot:
+                if user is None or user.bot or util.user_is_blacklisted(ctx.bot, user):
                     continue
 
                 if i <= len(self.medal_emoji):

@@ -152,6 +152,10 @@ async def determine_prefix(bot, message: discord.Message):
     return commands.when_mentioned_or(bot.default_prefix)(bot, message)
 
 
+def user_is_blacklisted(bot: "MisoBot", user: discord.User | discord.Member) -> bool:
+    return user.id in bot.cache.blacklist["global"]["user"]
+
+
 async def is_blacklisted(ctx: commands.Context) -> bool:
     """Check command invocation context for blacklist triggers"""
     if ctx.author.id in ctx.bot.cache.blacklist["global"]["user"]:
