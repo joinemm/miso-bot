@@ -16,6 +16,7 @@ from modules.media_embedders import (
     InstagramEmbedder,
     RedditEmbedder,
     TikTokEmbedder,
+    TwitterEmbedder,
 )
 from modules.misobot import MisoBot
 
@@ -390,6 +391,12 @@ class Events(commands.Cog):
 
         if media_settings["reddit"]:
             embedder = RedditEmbedder(self.bot)
+            posts = embedder.extract_links(message.content)
+            if posts:
+                await self.embed_posts(posts, message, embedder)
+
+        if media_settings["twitter"]:
+            embedder = TwitterEmbedder(self.bot)
             posts = embedder.extract_links(message.content)
             if posts:
                 await self.embed_posts(posts, message, embedder)
