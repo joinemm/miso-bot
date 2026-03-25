@@ -80,7 +80,7 @@ services:
   bot-prod:
     container_name: miso-bot
     build: .
-    restart: unless-stopped
+    restart: on-failure:10
     ports:
       - 127.0.0.1:3000:8080
     expose:
