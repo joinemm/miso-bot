@@ -60,16 +60,20 @@ class Media(commands.Cog):
         ).run(ctx)
 
     @util.patrons_only()
-    @commands.group(usage="<instagram | tiktok | reddit>", case_insensitive=True)
+    @commands.group(
+        usage="<instagram | tiktok | reddit | twitter>", case_insensitive=True
+    )
     async def autoembedder(
-        self, ctx: commands.Context, provider: Literal["instagram", "tiktok", "reddit"]
+        self,
+        ctx: commands.Context,
+        provider: Literal["instagram", "tiktok", "reddit", "twitter"],
     ):
         """Set up automatic embeds for various media sources
 
         The links will be expanded automatically when detected in chat,
         without requiring the use of the corresponding command.
 
-        Supported providers: `instagram`, `tiktok`, `reddit`
+        Supported providers: `instagram`, `tiktok`, `reddit`, 'twitter'
 
         Example: >autoembedder tiktok toggle
         """
