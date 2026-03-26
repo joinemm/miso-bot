@@ -127,6 +127,11 @@ class Fishy(commands.Cog):
         user_found = user_by_id or user
 
         receiver = user_found or ctx.author
+
+        # somehow it can stay as int
+        if isinstance(receiver, int):
+            receiver = ctx.author
+
         gift = receiver is not ctx.author
 
         cached_last_fishy = self.ts_lock.get(str(ctx.author.id))
