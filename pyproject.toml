@@ -33,6 +33,7 @@ dependencies = [
     "regex>=2025.9.1",
     "shazamio>=0.8.1",
     "uvloop>=0.21.0",
+    "pillow>=12.1.1",
 ]
 
 [tool.basedpyright]
