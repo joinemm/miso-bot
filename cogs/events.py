@@ -397,7 +397,7 @@ class Events(commands.Cog):
 
         if media_settings["twitter"]:
             embedder = TwitterEmbedder(self.bot)
-            posts = embedder.extract_links(message.content)
+            posts = embedder.extract_links(message.content, include_id_only=False)
             if posts:
                 await self.embed_posts(posts, message, embedder)
 
