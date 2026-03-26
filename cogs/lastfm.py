@@ -266,15 +266,17 @@ class LastFm(commands.Cog):
     @tasks.loop(minutes=1)
     async def lastfm_login_task(self):
         logger.info("Running lastfm login task...")
+        success = None
         try:
-            await self.api.login(
+            success = await self.api.login(
                 self.bot.keychain.LASTFM_USERNAME, self.bot.keychain.LASTFM_PASSWORD
             )
         except aiohttp.ClientError:
             pass
         else:
-            self.lastfm_login_task.cancel()
-            logger.info("Lastfm login successfull, canceling task")
+            if success:
+                self.lastfm_login_task.cancel()
+                logger.info("Lastfm login successfull, canceling task")
 
     async def cog_load(self):
         self.lastfm_login_task.start()

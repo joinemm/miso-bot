@@ -13,6 +13,7 @@ import arrow
 import orjson
 from bs4 import BeautifulSoup, Tag
 from loguru import logger
+from markdownify import markdownify as md
 
 from modules import exceptions
 from modules.misobot import MisoBot
@@ -124,45 +125,56 @@ class LastFmApi:
     LASTFM_RED = "b90000"
     API_BASE_URL = "http://ws.audioscrobbler.com/2.0/"
     USER_AGENT = (
-        "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0"
+        "Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0"
     )
 
     def __init__(self, bot: MisoBot):
         self.bot = bot
 
-    async def login(self, username: str, password: str):
+    async def login(self, username: str, password: str) -> bool:
         """Login to lastfm for authenticated web scraping requests"""
         login_url = "https://www.last.fm/login"
+        csrf = None
         async with self.bot.session.get(login_url) as response:
             soup = BeautifulSoup(await response.text(), "lxml")
             el = soup.find("input", {"type": "hidden", "name": "csrfmiddlewaretoken"})
             csrf = el.attrs.get("value")
+            csrf = str(csrf)
             response.raise_for_status()
 
         async with self.bot.session.post(
             login_url,
+            allow_redirects=False,
             headers={
                 "User-Agent": self.USER_AGENT,
-                "referer": login_url,
+                "Referer": login_url,
+                "Host": "www.last.fm",
+                "Origin": "https://www.last.fm",
+                "Content-Type": "application/x-www-form-urlencoded",
             },
             data={
                 "csrfmiddlewaretoken": csrf,
-                "next": "/user/_",
+                "next": f"/user/{username}",
                 "username_or_email": username,
                 "password": password,
                 "submit": "",
             },
         ) as response:
-            success = (
-                username.lower()
-                == response.headers.get("X-PJAX-URL").split("/")[-1].lower()
-            )
-            if success:
-                logger.info("Logged into Last.fm successfully")
+            if response.status == 302:
+                location = response.headers.get("location", "")
+                if location == f"/user/{username}":
+                    logger.info(f"Session logged into Last.fm as '{username}'")
+                    return True
+
+            logger.warning(f"Problem logging into Last.fm ({response.status})")
+            textcontent = await response.text()
+            soup = BeautifulSoup(textcontent, "lxml")
+            alertbox = soup.find("div", {"class": "alert"})
+            if alertbox:
+                logger.warning(alertbox.text)
             else:
-                logger.warning("Problem logging into Last.fm")
-                logger.warning(await response.text())
-                response.raise_for_status()
+                logger.warning(md(textcontent))
+            return False
 
     async def api_request(self, method: str, params: dict) -> dict:
         """Make a request to the lastfm api, returns json."""
