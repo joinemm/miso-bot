@@ -511,7 +511,11 @@ class LastFm(commands.Cog):
         if image.is_missing() and track["album"].get("image") is not None:
             image = LastFmImage.from_url(track["album"]["image"][-1]["#text"])
 
-        metadata = await self.api.scrape_album_metadata(artist_name, album_name)
+        metadata = None
+        try:
+            metadata = await self.api.scrape_album_metadata(artist_name, album_name)
+        except aiohttp.ClientError as e:
+            logger.error(f"Error fetching metadata: {e}")
 
         content = discord.Embed(
             color=await self.image_color(image),

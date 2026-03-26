@@ -11,6 +11,7 @@ from loguru import logger
 
 from modules import emojis, exceptions, queries, util
 from modules.instagram import InstagramError
+from modules.media_embedders import DownloadError
 from modules.misobot import MisoBot
 from modules.tiktok import TiktokError
 
@@ -285,6 +286,9 @@ class ErrorHandler(commands.Cog):
                 )
 
             case InstagramError():
+                await self.send_warning(ctx, error.message)
+
+            case DownloadError():
                 await self.send_warning(ctx, error.message)
 
             case exceptions.AgeRestricted():

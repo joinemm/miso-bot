@@ -130,13 +130,14 @@ class LastFmApi:
     def __init__(self, bot: MisoBot):
         self.bot = bot
 
-    async def login(self, username: str, password: str) -> bool:
+    async def login(self, username: str, password: str):
         """Login to lastfm for authenticated web scraping requests"""
         login_url = "https://www.last.fm/login"
         async with self.bot.session.get(login_url) as response:
             soup = BeautifulSoup(await response.text(), "lxml")
             el = soup.find("input", {"type": "hidden", "name": "csrfmiddlewaretoken"})
             csrf = el.attrs.get("value")
+            response.raise_for_status()
 
         async with self.bot.session.post(
             login_url,
@@ -160,6 +161,8 @@ class LastFmApi:
                 logger.info("Logged into Last.fm successfully")
             else:
                 logger.warning("Problem logging into Last.fm")
+                logger.warning(await response.text())
+                response.raise_for_status()
 
     async def api_request(self, method: str, params: dict) -> dict:
         """Make a request to the lastfm api, returns json."""
