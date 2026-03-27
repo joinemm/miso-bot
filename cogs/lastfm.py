@@ -11,6 +11,7 @@ import sys
 import urllib.parse
 from dataclasses import dataclass
 from enum import Enum, auto
+from itertools import batched
 from typing import TYPE_CHECKING, Annotated, Any, Callable, Literal, Optional, Union
 
 import aiohttp
@@ -41,7 +42,7 @@ def is_small_server():
             """,
             [user.id for user in ctx.guild.members],
         )
-        if users and users > 200:
+        if users and users > 150:
             raise exceptions.ServerTooBig(ctx.guild.member_count)
 
         return True
@@ -2205,12 +2206,16 @@ class LastFm(commands.Cog):
                 "Nobody on this server has connected their Last.fm account yet!"
             )
 
-        futures = [
-            playcount_fn(lastfm_username, user_id)
-            for user_id, lastfm_username in fm_members
-        ]
+        data = []
+        for member_chunk in batched(fm_members, 30):
+            tasks = []
+            async with asyncio.TaskGroup() as tg:
+                for user_id, lastfm_username in member_chunk:
+                    task = tg.create_task(playcount_fn(lastfm_username, user_id))
+                    tasks.append(task)
 
-        data = await asyncio.gather(*futures)
+            chunkdata = [task.result() for task in tasks]
+            data += chunkdata
         crown_holder = None
         crown_playcount = 0
         total = 0
