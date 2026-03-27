@@ -219,6 +219,8 @@ class Events(commands.Cog):
             return
 
         message = payload.cached_message
+        if message is None:
+            return
 
         # ignore bots
         if message.author.bot:
@@ -233,9 +235,7 @@ class Events(commands.Cog):
             return
 
         # ignore empty messages
-        if message is None or (
-            len(message.content) == 0 and len(message.attachments) == 0
-        ):
+        if len(message.content) == 0 and len(message.attachments) == 0:
             return
 
         channel_id = logging_settings.get("message_log_channel_id")
