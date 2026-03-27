@@ -92,48 +92,6 @@ class Events(commands.Cog):
             )
             return await guild.leave()
 
-        logger.info(f"New guild : {guild}")
-        content = discord.Embed(color=discord.Color.green())
-        content.title = "New guild!"
-        content.description = (
-            f"Miso just joined **{guild}**\nWith **{guild.member_count}** members :D"
-        )
-        try:
-            content.set_thumbnail(url=guild.icon.url)
-        except AttributeError:
-            pass
-        content.set_footer(text=f"#{guild.id}")
-        content.timestamp = arrow.utcnow().datetime
-        logchannel = self.bot.get_partial_messageable(self.guildlog)
-        try:
-            await logchannel.send(embed=content)
-        except discord.HTTPException:
-            logger.error("Cannot send message to guild log channel")
-
-    @commands.Cog.listener()
-    async def on_guild_remove(self, guild):
-        """Called when the bot leaves a guild"""
-        await self.bot.wait_until_ready()
-        if not guild:
-            return
-        logger.info(f"Left guild {guild}")
-        content = discord.Embed(color=discord.Color.red())
-        content.title = "Left guild!"
-        content.description = (
-            f"Miso just left **{guild}**\nWith **{guild.member_count}** members :("
-        )
-        try:
-            content.set_thumbnail(url=guild.icon.url)
-        except AttributeError:
-            pass
-        content.set_footer(text=f"#{guild.id}")
-        content.timestamp = arrow.utcnow().datetime
-        logchannel = self.bot.get_partial_messageable(self.guildlog)
-        try:
-            await logchannel.send(embed=content)
-        except discord.HTTPException:
-            logger.error("Cannot send message to guild log channel")
-
     @commands.Cog.listener()
     async def on_member_join(self, member):
         """Called when a new member joins a guild"""
@@ -257,15 +215,10 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_message_delete(self, payload):
         """Listener that gets called when any message is deleted"""
-        await self.bot.wait_until_ready()
-
-        channel = self.bot.get_channel(payload.channel_id)
-        if channel is None:
+        if not self.bot.is_ready():
             return
 
         message = payload.cached_message
-        if message is None:
-            return
 
         # ignore bots
         if message.author.bot:
@@ -275,15 +228,17 @@ class Events(commands.Cog):
         if message.guild is None:
             return
 
-        # ignore empty messages
-        if len(message.content) == 0 and len(message.attachments) == 0:
+        logging_settings = self.bot.cache.logging_settings.get(str(message.guild.id))
+        if not logging_settings:
             return
 
-        channel_id = None
-        if logging_settings := self.bot.cache.logging_settings.get(
-            str(message.guild.id)
+        # ignore empty messages
+        if message is None or (
+            len(message.content) == 0 and len(message.attachments) == 0
         ):
-            channel_id = logging_settings.get("message_log_channel_id")
+            return
+
+        channel_id = logging_settings.get("message_log_channel_id")
         if channel_id:
             log_channel = message.guild.get_channel(channel_id)
             if log_channel is not None and message.channel != log_channel:
@@ -311,6 +266,10 @@ class Events(commands.Cog):
         if message.author.bot:
             return
 
+        # ignore empty messages
+        if len(message.content) == 0 and len(message.attachments) == 0:
+            return
+
         ctx = await self.bot.get_context(message)
         if ctx.valid:
             # a command will be run
@@ -318,7 +277,7 @@ class Events(commands.Cog):
 
         media_settings = self.bot.cache.media_auto_embed.get(str(message.guild.id), {})
         if True in media_settings.values():
-            # chunk the guild if it't not chunked yet, like commands do
+            # chunk the guild if it's not chunked yet, like commands do
             # this ensures user information is available
             await util.require_chunked(ctx.guild)
 
@@ -456,7 +415,14 @@ class Events(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         """Starboard event handler"""
-        await self.bot.wait_until_ready()
+        if not self.bot.is_ready():
+            return
+
+        starboard_settings = self.bot.cache.starboard_settings.get(
+            str(payload.guild_id)
+        )
+        if not starboard_settings:
+            return
 
         user = self.bot.get_user(payload.user_id)
 
@@ -467,12 +433,6 @@ class Events(commands.Cog):
             return
 
         if payload.channel_id in self.bot.cache.starboard_blacklisted_channels:
-            return
-
-        starboard_settings = self.bot.cache.starboard_settings.get(
-            str(payload.guild_id)
-        )
-        if not starboard_settings:
             return
 
         (
