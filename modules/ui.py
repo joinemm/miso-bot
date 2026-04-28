@@ -36,6 +36,7 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
         clamp_pages: bool = True,
     ) -> None:
         super().__init__(timeout=180)
+        self.embed: discord.Embed
         self.entries: list[T] = entries
         self.per_page: int = per_page
         self.clamp_pages: bool = clamp_pages
@@ -141,6 +142,21 @@ class BaseButtonPaginator(Generic[T], discord.ui.View):
         except discord.NotFound:
             pass
         self.stop()
+
+
+class ImagePaginator(BaseButtonPaginator):
+    def __init__(self, base_embed, entries: list[dict], **kwargs):
+        self.embed = base_embed
+        super().__init__(entries=entries, per_page=1, **kwargs)
+
+    async def format_page(self, entries: list[dict]):
+        self.embed.set_image(url=entries[0]["properties"]["url"])
+        self.embed.set_author(name=entries[0]["title"], url=entries[0]["url"])
+        self.embed.set_footer(
+            text=entries[0]["meta_url"]["hostname"],
+            icon_url=entries[0]["meta_url"]["favicon"],
+        )
+        return {"embed": self.embed}
 
 
 class RowPaginator(BaseButtonPaginator):

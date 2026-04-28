@@ -76,6 +76,37 @@ async def suppress(message: discord.Message):
         pass
 
 
+def is_nsfw(ctx: commands.Context):
+    channel = ctx.channel
+
+    if isinstance(channel, discord.DMChannel):
+        return True
+
+    if isinstance(channel, (discord.Thread, discord.TextChannel)):
+        return channel.is_nsfw()
+
+    return False
+
+
+async def image_search(bot: "MisoBot", q: str, safesearch: bool = True) -> dict:
+    url = "https://api.search.brave.com/res/v1/images/search"
+    headers = {
+        "Accept": "application/json",
+        "Accept-Encoding": "gzip",
+        "X-Subscription-Token": bot.keychain.BRAVE_SEARCH_API_KEY,
+    }
+    params = {
+        "q": q,
+        "country": "ALL",
+        "safesearch": "strict" if safesearch else "off",
+    }
+
+    async with bot.session.get(url, headers=headers, params=params) as response:
+        response.raise_for_status()
+        data = await response.json()
+        return data
+
+
 async def user_by_id(bot: "MisoBot", user_id) -> discord.User | None:
     user_found = None
     if isinstance(user_id, int) and len(str(user_id)) > 16:

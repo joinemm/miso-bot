@@ -22,7 +22,7 @@ from modules.media_embedders import (
     TwitterEmbedder,
 )
 from modules.misobot import MisoBot
-from modules.ui import RowPaginator, TextPaginator
+from modules.ui import ImagePaginator, RowPaginator, TextPaginator
 
 
 class Media(commands.Cog):
@@ -32,8 +32,27 @@ class Media(commands.Cog):
         self.bot: MisoBot = bot
         self.icon = "🖼️"
 
+    @commands.command(aliases=["img"])
+    async def image(self, ctx: commands.Context, *, query: str):
+        """Web image search"""
+        results = await util.image_search(
+            self.bot, query, safesearch=not util.is_nsfw(ctx)
+        )
+        if len(results["results"]) == 0:
+            if results["query"]["show_strict_warning"]:
+                return await ctx.send(
+                    ":warning: All results were hidden by safe search, run in NSFW channel to disable safe search"
+                )
+            return await ctx.send("No results! :(")
+        elif results["query"]["show_strict_warning"]:
+            await ctx.send(
+                ":warning: Some of the images may be hidden due to safe search, run in NSFW channel to disable safe search"
+            )
+        content = discord.Embed()
+        await ImagePaginator(content, results["results"]).run(ctx)
+
     @commands.command(aliases=["yt"])
-    async def youtube(self, ctx: commands.Context, *, query):
+    async def youtube(self, ctx: commands.Context, *, query: str):
         """Search for videos from youtube"""
         url = "https://www.googleapis.com/youtube/v3/search"
         params = {

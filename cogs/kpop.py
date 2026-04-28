@@ -7,13 +7,12 @@ import csv
 import datetime
 import random
 
+import aiohttp
 import arrow
-import async_cse
 import discord
 import humanize
 from bs4 import BeautifulSoup
 from discord.ext import commands
-from loguru import logger
 
 from modules import exceptions, util
 from modules.misobot import MisoBot
@@ -25,28 +24,11 @@ class Kpop(commands.Cog):
 
     def __init__(self, bot):
         self.bot: MisoBot = bot
-        self.google_client = async_cse.Search(bot.keychain.GCS_DEVELOPER_KEY)
         self.icon = "💃"
         self.gender_icon = {
             "F": ":female_sign: ",
             "M": ":male_sign: ",
         }
-
-    async def cog_unload(self):
-        await self.shutdown()
-
-    async def shutdown(self):
-        await self.google_client.close()
-
-    async def google_image_search(self, keyword):
-        try:
-            results = await self.google_client.search(
-                keyword, safesearch=False, image_search=True
-            )
-        except async_cse.search.APIError as e:
-            logger.warning(f"Error googling image: {e}")
-            return ""
-        return results[0].image_url if results else ""
 
     @commands.command(name="idol", hidden=True)
     async def deprecate_idol(self, ctx: commands.Context):
@@ -194,8 +176,9 @@ class Kpop(commands.Cog):
                 search_term = f"{full_name} kpop"
             else:
                 search_term = f"{stage_name} of {group_name} kpop"
-            image_url = await self.google_image_search(search_term)
-            if image_url != "":
+            try:
+                image_search_results = await util.image_search(self.bot, search_term)
+                image_url = image_search_results["results"][0]["properties"]["url"]
                 await self.bot.db.execute(
                     """
                     UPDATE kpop_idol
@@ -207,6 +190,8 @@ class Kpop(commands.Cog):
                     today,
                     idol_id,
                 )
+            except (KeyError, aiohttp.ClientError):
+                pass
 
         content.set_image(url=image_url)
         await ctx.send(embed=content)
@@ -299,8 +284,9 @@ class Kpop(commands.Cog):
 
         if image_url is None or (today - image_scrape_date.date()).days > 30:
             search_term = f"{name} kpop group"
-            image_url = await self.google_image_search(search_term)
-            if image_url != "":
+            try:
+                image_search_results = await util.image_search(self.bot, search_term)
+                image_url = image_search_results["results"][0]["properties"]["url"]
                 await self.bot.db.execute(
                     """
                     UPDATE kpop_group
@@ -312,6 +298,8 @@ class Kpop(commands.Cog):
                     today,
                     group_id,
                 )
+            except (KeyError, aiohttp.ClientError):
+                pass
 
         content.set_image(url=image_url)
         await ctx.send(embed=content)
