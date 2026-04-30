@@ -6,3 +6,4 @@ __pycache__
 .devenv
 # because it is managed with nix
 .pre-commit-config.yaml
+.codex
