@@ -9,7 +9,7 @@ import discord
 from discord.ext import commands
 from loguru import logger
 
-from modules import emojis, exceptions, queries, util
+from modules import emojis, exceptions, util
 from modules.instagram import InstagramError
 from modules.media_embedders import DownloadError
 from modules.misobot import MisoBot
@@ -49,16 +49,6 @@ class ErrorHandler(commands.Cog):
             f"{ctx.guild} @ {ctx.author} : {ctx.message.content} "
             f"=> {type(error).__name__}: {message or str(error)}"
         )
-
-    async def reinvoke_command(self, ctx: commands.Context):
-        try:
-            await ctx.reinvoke()
-            logger.info(util.log_command_format(ctx))
-            if ctx.guild is not None:
-                await queries.save_command_usage(ctx)
-            return
-        except Exception as e:
-            return await self.on_command_error(ctx, e)
 
     @staticmethod
     async def send_embed(
@@ -138,22 +128,6 @@ class ErrorHandler(commands.Cog):
     async def handle_blacklist(
         self, ctx: commands.Context, error: exceptions.Blacklist
     ):
-        if ctx.author.id == ctx.bot.owner_id or (
-            isinstance(
-                error,
-                (
-                    exceptions.BlacklistedMember,
-                    exceptions.BlacklistedChannel,
-                    exceptions.BlacklistedCommand,
-                ),
-            )
-            and isinstance(ctx.author, discord.Member)
-            and (ctx.channel.permissions_for(ctx.author).administrator)
-        ):
-            # bypass the blacklist
-            await self.reinvoke_command(ctx)
-            return
-
         delete = False
         if ctx.guild:
             delete = await self.bot.db.fetch_value(
@@ -173,19 +147,12 @@ class ErrorHandler(commands.Cog):
     async def handle_cooldown(
         self, ctx: commands.Context, error: commands.CommandOnCooldown
     ):
-        if (
-            ctx.author.id == ctx.bot.owner_id
-            or await queries.is_donator(self.bot, ctx.author, 2)
-            or await queries.is_vip(self.bot, ctx.author)
-        ):
-            await self.reinvoke_command(ctx)
-        else:
-            await self.send_embed(
-                ctx,
-                ErrorMessages.command_on_cooldown.format(error.retry_after),
-                ":hourglass_flowing_sand:",
-                "ffe8b6",
-            )
+        await self.send_embed(
+            ctx,
+            ErrorMessages.command_on_cooldown.format(error.retry_after),
+            ":hourglass_flowing_sand:",
+            "ffe8b6",
+        )
 
     @commands.Cog.listener()
     async def on_command_error(

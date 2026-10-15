@@ -165,6 +165,7 @@ class Mod(commands.Cog):
         members: commands.Greedy[discord.Member],
     ):
         """Give a role to multiple people"""
+        util.check_role_assignment(ctx, role)
         success = []
         failure = []
         for member in members:

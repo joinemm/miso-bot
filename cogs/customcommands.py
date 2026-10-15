@@ -9,7 +9,6 @@ import json
 import arrow
 import discord
 from discord.ext import commands
-from loguru import logger
 
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
@@ -80,20 +79,28 @@ class CustomCommands(commands.Cog, name="Commands"):
                 keyword,
             )
             if response:
-                logger.info(util.log_command_format(ctx, extra="(CUSTOM)"))
-                await ctx.send(response)
-                await self.bot.db.execute(
-                    """
-                    INSERT INTO command_usage (guild_id, user_id, command_name, command_type)
-                        VALUES (%s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE
-                        uses = uses + 1
-                    """,
-                    ctx.guild.id,
-                    ctx.author.id,
-                    keyword,
-                    "custom",
-                )
+
+                async def send_response(custom_ctx: commands.Context):
+                    if custom_ctx.guild is None:
+                        raise commands.NoPrivateMessage()
+                    await custom_ctx.send(response)
+                    await self.bot.db.execute(
+                        """
+                        INSERT INTO command_usage (guild_id, user_id, command_name, command_type)
+                            VALUES (%s, %s, %s, %s)
+                        ON DUPLICATE KEY UPDATE
+                            uses = uses + 1
+                        """,
+                        custom_ctx.guild.id,
+                        custom_ctx.author.id,
+                        keyword,
+                        "custom",
+                    )
+
+                # A fresh context avoids sharing mutable state with other error listeners.
+                custom_ctx = await self.bot.get_context(ctx.message)
+                custom_ctx.command = commands.Command(send_response, name=keyword)
+                await self.bot.invoke(custom_ctx)
 
     @commands.group(aliases=["cmd", "commands", "tag"], case_insensitive=True)
     @commands.guild_only()

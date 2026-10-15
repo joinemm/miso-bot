@@ -187,8 +187,34 @@ def user_is_blacklisted(bot: "MisoBot", user: discord.User | discord.Member) -> 
     return user.id in bot.cache.blacklist["global"]["user"]
 
 
+def check_role_assignment(ctx: commands.Context, role: discord.Role) -> None:
+    """Require both the caller and the bot to be allowed to assign a role."""
+    if ctx.guild is None or not isinstance(ctx.author, discord.Member):
+        raise commands.NoPrivateMessage()
+
+    if role.guild != ctx.guild or role.is_default() or role.managed:
+        raise exceptions.CommandWarning("This role cannot be assigned.")
+
+    if ctx.author.id != ctx.guild.owner_id and role >= ctx.author.top_role:
+        raise exceptions.CommandWarning(
+            "You can only assign roles below your highest role."
+        )
+
+    if not ctx.guild.me.guild_permissions.manage_roles:
+        raise commands.BotMissingPermissions(["manage_roles"])
+
+    if not role.is_assignable():
+        raise exceptions.CommandWarning(
+            "I cannot assign this role. It must be below my highest role."
+        )
+
+
 async def is_blacklisted(ctx: commands.Context) -> bool:
     """Check command invocation context for blacklist triggers"""
+    # Exemptions apply only to this check, never to command permission checks.
+    if ctx.author.id == ctx.bot.owner_id:
+        return True
+
     if ctx.author.id in ctx.bot.cache.blacklist["global"]["user"]:
         raise exceptions.BlacklistedUser()
 
@@ -197,6 +223,12 @@ async def is_blacklisted(ctx: commands.Context) -> bool:
 
     if ctx.guild.id in ctx.bot.cache.blacklist["global"]["guild"]:
         raise exceptions.BlacklistedGuild()
+
+    if (
+        isinstance(ctx.author, discord.Member)
+        and ctx.channel.permissions_for(ctx.author).administrator
+    ):
+        return True
 
     if ctx.channel.id in ctx.bot.cache.blacklist["global"]["channel"]:
         raise exceptions.BlacklistedChannel()

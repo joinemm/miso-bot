@@ -300,6 +300,7 @@ class Roles(commands.Cog):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
+        util.check_role_assignment(ctx, role)
         await self.bot.db.execute(
             """
             INSERT INTO rolepicker_role (guild_id, role_name, role_id)

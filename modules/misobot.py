@@ -16,7 +16,7 @@ from discord.errors import Forbidden
 from discord.ext import commands
 from loguru import logger
 
-from modules import cache, maria, util
+from modules import cache, maria, queries, util
 from modules.help import EmbedHelpCommand
 from modules.keychain import Keychain
 from modules.reddit import Reddit
@@ -216,6 +216,13 @@ class MisoBot(commands.AutoShardedBot):
         bucket = ctx.bot.global_cd.get_bucket(ctx.message)
         if bucket:
             if retry_after := bucket.update_rate_limit():
+                # Exempt only the global cooldown; all other checks still run.
+                if (
+                    ctx.author.id == ctx.bot.owner_id
+                    or await queries.is_donator(ctx.bot, ctx.author, 2)
+                    or await queries.is_vip(ctx.bot, ctx.author)
+                ):
+                    return True
                 raise commands.CommandOnCooldown(
                     bucket, retry_after, commands.BucketType.member
                 )

@@ -6,7 +6,6 @@ import html
 import io
 import json
 import random
-from time import time
 from typing import Optional
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -149,11 +148,11 @@ class Utility(commands.Cog):
             error, commands.CommandNotFound
         ) and ctx.message.content.startswith(f"{ctx.prefix}!"):
             # type ignores everywhere because this is so hacky
-            ctx.timer = time()  # type: ignore
             ctx.iscallback = True  # type: ignore
             ctx.command = self.bot.get_command("!")
             if ctx.command:
-                await ctx.command.callback(self, ctx)  # type: ignore
+                # Run normal global, cog and command checks for bang aliases too.
+                await self.bot.invoke(ctx)
 
     async def resolve_bang(self, ctx: commands.Context, bang, args):
         params = {"q": f"!{bang} {args}", "format": "json", "no_redirect": 1}
@@ -193,7 +192,6 @@ class Utility(commands.Cog):
         except discord.errors.Forbidden:
             pass
 
-        logger.info(util.log_command_format(ctx))
         await queries.save_command_usage(ctx)
         try:
             bang, args = ctx.message.content[len(ctx.prefix or "") + 1 :].split(" ", 1)
@@ -208,8 +206,9 @@ class Utility(commands.Cog):
         if url_or_attachment:
             result = await self.shazam_client.recognize_from_url(url_or_attachment)
         elif ctx.message.attachments:
-            attachment = await ctx.message.attachments[0].to_file()
-            result = await self.shazam_client.recognize_file(attachment.fp.read())
+            result = await self.shazam_client.recognize_from_url(
+                ctx.message.attachments[0].url
+            )
         elif (
             ctx.message.reference
             and ctx.message.reference.message_id
@@ -220,8 +219,9 @@ class Utility(commands.Cog):
             )
             if not reply_message.attachments:
                 raise exceptions.CommandWarning("Referenced message has no attachments")
-            attachment = await reply_message.attachments[0].to_file()
-            result = await self.shazam_client.recognize_file(attachment.fp.read())
+            result = await self.shazam_client.recognize_from_url(
+                reply_message.attachments[0].url
+            )
         else:
             return await util.send_command_help(ctx)
 
