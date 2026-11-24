@@ -8,6 +8,7 @@ import subprocess
 import urllib.request
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit
 
 import arrow
 import discord
@@ -21,7 +22,7 @@ from loguru import logger
 
 from modules import emojis, exceptions, instagram, util
 from modules.instagram import InstagramError, Snapsave
-from modules.tiktok import TikTokNew
+from modules.tiktok import TikTok
 
 if TYPE_CHECKING:
     from modules.misobot import MisoBot
@@ -541,7 +542,7 @@ class TikTokEmbedder(BaseEmbedder):
     NO_RESULTS_ERROR = "Found no TikTok links to embed!"
 
     def __init__(self, bot: "MisoBot"):
-        self.downloader = TikTokNew(bot.session)
+        self.downloader = TikTok(bot.session)
         super().__init__(bot)
 
     @staticmethod
@@ -555,12 +556,10 @@ class TikTokEmbedder(BaseEmbedder):
         shortcode_pattern = r"\bhttps?:\/\/(?:vm|vt|www)\.tiktok\.com\/(t/|)(\w+)/?"
 
         validated_urls = [
-            f"https://m.tiktok.com/v/{match.group(1)}"
-            for match in regex.finditer(video_id_pattern, text)
+            match.group(0) for match in regex.finditer(video_id_pattern, text)
         ]
         validated_urls.extend(
-            f"https://vm.tiktok.com/{match.group(2)}"
-            for match in regex.finditer(shortcode_pattern, text)
+            match.group(0) for match in regex.finditer(shortcode_pattern, text)
         )
 
         return validated_urls
@@ -574,20 +573,20 @@ class TikTokEmbedder(BaseEmbedder):
         video = await self.downloader.get_video(tiktok_url)
         file = await self.download_media(
             video.video_url,
-            f"{video.user}_{tiktok_url.split('/')[-1]}",
+            urlsplit(tiktok_url).path.rstrip("/").split("/")[-1],
             "mp4",
             filesize_limit(channel.guild),
             url_tags=["tiktok"],
             spoiler=options.spoiler if options else False,
         )
-        caption = f"{self.EMOJI} **@{video.user}**"
-        if options and options.captions:
-            caption += f"\n>>> {video.description}"
+        caption = ""
+        if options and options.captions and video.description:
+            caption = f">>> {video.description}"
 
         # file was too big to send, just use the url
         if isinstance(file, str):
             return {
-                "content": f"{caption}\n{file}",
+                "content": f"{caption}\n{file}" if caption else file,
                 "view": MediaUI("View on TikTok", tiktok_url, should_suppress=False),
             }
 
