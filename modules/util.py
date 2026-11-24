@@ -948,7 +948,10 @@ async def send_tasks_result_list(
     await RowPaginator(content, rows).run(ctx)
 
 
-async def server_is_premium(guild: discord.Guild, bot: "MisoBot") -> bool:
+async def server_is_premium(guild: discord.Guild | None, bot: "MisoBot") -> bool:
+    if guild is None:
+        return False
+
     manager = await bot.db.fetch_value(
         """
         SELECT activated_by_user_id FROM premium_server
@@ -956,12 +959,12 @@ async def server_is_premium(guild: discord.Guild, bot: "MisoBot") -> bool:
         """,
         guild.id,
     )
-    if manager and await user_is_donator(bot.get_user(manager), bot):
+    if manager and await user_is_donator(discord.Object(id=manager), bot):
         return True
     return False
 
 
-async def user_is_donator(user: discord.User, bot: "MisoBot") -> bool:
+async def user_is_donator(user: discord.abc.Snowflake, bot: "MisoBot") -> bool:
     if (not bot.debug) and user.id == bot.owner_id:
         return True
     if await queries.is_donator(bot, user):

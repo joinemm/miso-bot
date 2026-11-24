@@ -45,7 +45,7 @@ async def update_setting(ctx, table, setting, new_value):
 
 async def is_donator(
     bot: "MisoBot",
-    user: discord.User | discord.Member,
+    user: discord.abc.Snowflake,
     unlock_tier: int | None = None,
 ):
     data = await bot.db.fetch_row(
@@ -64,7 +64,7 @@ async def is_donator(
     return True
 
 
-async def is_vip(bot: MisoBot, user: discord.User | discord.Member):
+async def is_vip(bot: MisoBot, user: discord.abc.Snowflake):
     vips = await bot.db.fetch_flattened(
         """
         SELECT user_id FROM vip_user
