@@ -251,6 +251,11 @@ class Snapsave:
 
         media = []
         for item in data["data"]["media"]:
+            parsed_url = urlparse(item.get("url") or "")
+            if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+                raise InstagramError(
+                    "Instagram downloader returned unusable media URL for this post"
+                )
             media.append(
                 IgMedia(
                     url=remove_params(item["url"], ["dl"]),
