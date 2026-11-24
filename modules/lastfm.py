@@ -424,9 +424,16 @@ class LastFmApi:
         ) as response:
             if self.bot.debug:
                 logger.info(f"Scraping page {response.url}")
-            response.raise_for_status()
             content = await response.text()
             soup = BeautifulSoup(content, "lxml")
+            if response.status in {403, 406, 429} or (
+                soup.title and soup.title.get_text(strip=True) == "Client Challenge"
+            ):
+                raise exceptions.LastFMError(
+                    error_code=response.status if response.status >= 400 else 403,
+                    message="Last.fm is temporarily blocking page requests. Please try again later.",
+                )
+            response.raise_for_status()
             return soup
 
     @staticmethod
@@ -506,7 +513,7 @@ class LastFmApi:
         url = f"https://www.last.fm/music/{self.double_encode(artist)}/+images"
         try:
             soup = await self.scrape_page(url)
-        except aiohttp.ClientResponseError:
+        except (aiohttp.ClientResponseError, exceptions.LastFMError):
             return None
         image = soup.select_one(".image-list-item-wrapper a img")
         return LastFmImage.from_url(image.attrs["src"]) if image else None
@@ -549,21 +556,26 @@ class LastFmApi:
         username: str,
         amount: int,
         period: Period,
-    ) -> list[LastFmImage]:
-        """Get image hashes for user's top n artists"""
+    ) -> dict[str, LastFmImage]:
+        """Get image hashes by name for user's top n artists."""
         url: str = f"https://www.last.fm/user/{username}/library/artists?date_preset={period.web_format()}"
         tasks = []
         for i in range(1, math.ceil(amount / 50) + 1):
             params = {"page": str(i)} if i > 1 else None
             tasks.append(self.scrape_page(url, params))
 
-        images = []
+        images = {}
         soup: BeautifulSoup
         for soup in await asyncio.gather(*tasks):
             if len(images) >= amount:
                 break
 
-            imagedivs = soup.select(".chartlist-image .avatar img")
-            images += [LastFmImage.from_url(div.attrs["src"]) for div in imagedivs]
+            for row in soup.select(".chartlist-row"):
+                name = row.select_one(".chartlist-name a")
+                image = row.select_one(".chartlist-image .avatar img")
+                if name is not None and image is not None:
+                    images[name.get("title") or name.get_text(strip=True)] = (
+                        LastFmImage.from_url(image.attrs["src"])
+                    )
 
         return images

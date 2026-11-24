@@ -517,8 +517,8 @@ class LastFm(commands.Cog):
         metadata = None
         try:
             metadata = await self.api.scrape_album_metadata(artist_name, album_name)
-        except aiohttp.ClientError as e:
-            logger.error(f"Error fetching metadata: {e}")
+        except (aiohttp.ClientError, exceptions.LastFMError) as e:
+            logger.warning(f"Error fetching metadata: {e}")
 
         content = discord.Embed(
             color=await self.image_color(image),
@@ -1175,15 +1175,21 @@ class LastFm(commands.Cog):
             data = await self.api.user_get_top_artists(
                 ctx.lfm.username, timeframe, size.count
             )
-            scraped_images = await self.api.library_artist_images(
-                ctx.lfm.username, size.count, timeframe
-            )
+            try:
+                scraped_images = await self.api.library_artist_images(
+                    ctx.lfm.username, size.count, timeframe
+                )
+            except exceptions.LastFMError as e:
+                logger.warning(f"Unable to fetch artist chart images: {e}")
+                scraped_images = {}
             for i, artist in enumerate(data["artist"]):
                 name = artist["name"]
                 plays = int(artist["playcount"])
                 chart_nodes.append(
                     (
-                        scraped_images[i],
+                        scraped_images.get(
+                            name, LastFmImage(LastFmImage.MISSING_IMAGE_HASH)
+                        ),
                         f"<p class='label'>{name}</p><p class='playcount'>{plays}</p>",
                     )
                 )
@@ -2209,10 +2215,13 @@ class LastFm(commands.Cog):
         data = []
         for member_chunk in batched(fm_members, 30):
             tasks = []
-            async with asyncio.TaskGroup() as tg:
-                for user_id, lastfm_username in member_chunk:
-                    task = tg.create_task(playcount_fn(lastfm_username, user_id))
-                    tasks.append(task)
+            try:
+                async with asyncio.TaskGroup() as tg:
+                    for user_id, lastfm_username in member_chunk:
+                        task = tg.create_task(playcount_fn(lastfm_username, user_id))
+                        tasks.append(task)
+            except* exceptions.LastFMError as errors:
+                raise errors.exceptions[0]
 
             chunkdata = [task.result() for task in tasks]
             data += chunkdata
