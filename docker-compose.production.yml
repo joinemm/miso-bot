@@ -5,9 +5,19 @@ services:
   bot-db:
     volumes:
       - ./mariadb/encryption.cnf:/etc/mysql/conf.d/encryption.cnf:ro
-      - /var/lib/miso/mariadb-encryption:/run/mariadb-encryption:ro
+      - type: bind
+        source: /run/secrets/mariadb_encryption_key
+        target: /run/mariadb-encryption/keys
+        read_only: true
+        bind:
+          create_host_path: false
 
   shlink-db:
     volumes:
       - ./mariadb/encryption.cnf:/etc/mysql/conf.d/encryption.cnf:ro
-      - /var/lib/miso/mariadb-encryption:/run/mariadb-encryption:ro
+      - type: bind
+        source: /run/secrets/mariadb_encryption_key
+        target: /run/mariadb-encryption/keys
+        read_only: true
+        bind:
+          create_host_path: false

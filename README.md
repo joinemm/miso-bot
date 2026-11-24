@@ -77,13 +77,14 @@ First copy/rename `.env.example` to `.env` and fill it with your own keys.
 Everything else should be handled by the dockerfile.
 
 Production databases use the encryption configuration in
-`docker-compose.production.yml`. Provision `/var/lib/miso/mariadb-encryption/keys`
-on the server before starting the databases. This is a MariaDB file-key-management
-key file, with entries in the format `1;<64 hexadecimal characters>`. The
-directory must be readable by the container's `mysql` user and the key file must
-be readable only by that user. Keep the key in your password manager separately
-from the database volume. When recovering an existing encrypted database,
-restore the same key; generating a new key will not decrypt the existing files.
+`docker-compose.production.yml`. The server's SOPS configuration provisions
+`/run/secrets/mariadb_encryption_key` before the databases start. Its content is a
+MariaDB file-key-management entry in the format `1;<64 hexadecimal characters>`.
+The secret has UID/GID `999` and mode `0400`, matching the containers' `mysql` user,
+and is mounted read-only into both databases. Keep the key in your password manager
+separately from the database volume. When recovering an existing encrypted
+database, restore the same key; generating a new key will not decrypt the
+existing files.
 
 Add the following to the production `.env` so subsequent Compose commands keep
 encryption enabled:
