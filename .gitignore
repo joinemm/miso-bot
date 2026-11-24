@@ -4,6 +4,7 @@ venv/
 .env
 __pycache__
 .devenv
+.direnv
 # because it is managed with nix
 .pre-commit-config.yaml
 .codex
