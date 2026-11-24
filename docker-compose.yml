@@ -87,6 +87,7 @@ services:
       - 8080
     depends_on:
       - bot-db
+      - redis
     env_file:
       - .env
     environment:
@@ -125,6 +126,7 @@ services:
   redis:
     container_name: miso-redis
     image: "redis:alpine"
+    restart: unless-stopped
     environment:
       - REDIS_REPLICATION_MODE=master
     expose:

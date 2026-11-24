@@ -95,6 +95,14 @@ COMPOSE_FILE=docker-compose.yml:docker-compose.production.yml
 
 Local development uses `docker-compose.yml` without the production override.
 
+The production override also enables
+[`MARIADB_AUTO_UPGRADE`](https://mariadb.com/docs/server/server-management/automated-mariadb-deployment-and-administration/docker-and-mariadb/mariadb-server-docker-official-image-environment-variables)
+for both databases. The image's entrypoint updates system tables when the MariaDB
+version changes and backs up the system database before upgrading. Take a full
+database backup before changing database versions, and keep the encryption key
+with the recovery materials. An upgrade of system tables does not replace a full
+backup.
+
 ```sh
 docker compose --profile prod up
 ```

@@ -3,6 +3,8 @@
 
 services:
   bot-db:
+    environment:
+      - MARIADB_AUTO_UPGRADE=1
     volumes:
       - ./mariadb/encryption.cnf:/etc/mysql/conf.d/encryption.cnf:ro
       - type: bind
@@ -13,6 +15,8 @@ services:
           create_host_path: false
 
   shlink-db:
+    environment:
+      - MARIADB_AUTO_UPGRADE=1
     volumes:
       - ./mariadb/encryption.cnf:/etc/mysql/conf.d/encryption.cnf:ro
       - type: bind
