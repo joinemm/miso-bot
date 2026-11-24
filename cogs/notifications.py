@@ -7,6 +7,7 @@ from typing import Optional
 
 import discord
 import regex
+from discord.backoff import ExponentialBackoff
 from discord.ext import commands
 from loguru import logger
 
@@ -23,6 +24,12 @@ class Notifications(commands.Cog):
         self.icon = "📨"
         self.keyword_regex = r"(?:^|\s|[\~\"\'\+\*\`\_\/])(\L<words>)(?:$|\W|\s|s)"
         self.notifications_cache: dict[int, dict[str, set]] = {}
+        self.failed_dms = commands.CooldownMapping.from_cooldown(
+            1, 3600, lambda user: user.id
+        )
+        self.dm_open_lock = asyncio.Lock()
+        self.dm_open_backoff = ExponentialBackoff()
+        self.dm_open_retry_at = 0.0
 
     async def cog_load(self):
         await self.create_cache()
@@ -44,6 +51,28 @@ class Notifications(commands.Cog):
 
             self.notifications_cache[guild_id][keyword].add(user_id)
 
+    async def remove_member_notifications(self, guild_id: int, user_id: int):
+        await self.bot.db.execute(
+            "DELETE FROM notification WHERE guild_id = %s AND user_id = %s",
+            guild_id,
+            user_id,
+        )
+        for keyword, users in list(self.notifications_cache.get(guild_id, {}).items()):
+            users.discard(user_id)
+            if not users:
+                del self.notifications_cache[guild_id][keyword]
+        if not self.notifications_cache.get(guild_id):
+            self.notifications_cache.pop(guild_id, None)
+
+    @commands.Cog.listener()
+    async def on_raw_member_remove(self, payload: discord.RawMemberRemoveEvent):
+        await self.bot.wait_until_ready()
+        if any(
+            payload.user.id in users
+            for users in self.notifications_cache.get(payload.guild_id, {}).values()
+        ):
+            await self.remove_member_notifications(payload.guild_id, payload.user.id)
+
     async def send_notification(
         self,
         member: discord.User | discord.Member,
@@ -52,6 +81,10 @@ class Notifications(commands.Cog):
         test=False,
     ):
         if message.guild is None:
+            return
+
+        dm_cooldown = self.failed_dms.get_bucket(member)
+        if not test and dm_cooldown.get_tokens() == 0:
             return
 
         content = discord.Embed(color=message.author.color)
@@ -76,7 +109,41 @@ class Notifications(commands.Cog):
         content.timestamp = message.created_at
 
         try:
+            if member.dm_channel is None:
+                async with self.dm_open_lock:
+                    for attempt in range(3):
+                        if member.dm_channel is not None:
+                            break
+                        delay = (
+                            self.dm_open_retry_at - asyncio.get_running_loop().time()
+                        )
+                        if delay > 0:
+                            await asyncio.sleep(delay)
+                        try:
+                            await member.create_dm()
+                        except discord.HTTPException as error:
+                            if error.code != 40003:
+                                raise
+                            retry_after = error.response.headers.get("Retry-After")
+                            if retry_after is None:
+                                retry_after = (await error.response.json()).get(
+                                    "retry_after"
+                                )
+                            self.dm_open_retry_at = (
+                                asyncio.get_running_loop().time()
+                                + (
+                                    float(retry_after)
+                                    if retry_after is not None
+                                    else self.dm_open_backoff.delay()
+                                )
+                            )
+                            if attempt == 2:
+                                raise
+                        else:
+                            self.dm_open_backoff = ExponentialBackoff()
+                            break
             await member.send(embed=content)
+            dm_cooldown.reset()
             logger.info(f"Sending notification for words {keywords} to {member}")
             if not test:
                 for keyword in keywords:
@@ -91,7 +158,10 @@ class Notifications(commands.Cog):
                         keyword,
                     )
         except discord.errors.Forbidden:
+            dm_cooldown.update_rate_limit()
             logger.warning(f"Forbidden when trying to send a notification to {member}.")
+        except discord.HTTPException as error:
+            logger.warning(f"Unable to send a notification to {member}: {error}")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -134,24 +204,17 @@ class Notifications(commands.Cog):
                 users_keywords[user_id].add(keyword)
 
         for user_id, users_words in users_keywords.items():
+            if self.failed_dms.get_bucket(discord.Object(id=user_id)).get_tokens() == 0:
+                continue
             try:
-                member = await message.guild.fetch_member(user_id)
+                member = message.guild.get_member(
+                    user_id
+                ) or await message.guild.fetch_member(user_id)
             except discord.NotFound:
                 logger.warning(
-                    f"User {user_id} not found, deleting their notification for {users_words}"
+                    f"User {user_id} not found in guild {message.guild.id}, removing their notifications"
                 )
-                await self.bot.db.execute(
-                    """
-                    DELETE FROM notification
-                        WHERE guild_id = %s
-                        AND user_id = %s
-                        AND keyword IN %s
-                    """,
-                    message.guild.id,
-                    user_id,
-                    users_words,
-                )
-                await self.create_cache()
+                await self.remove_member_notifications(message.guild.id, user_id)
                 continue
 
             if (
