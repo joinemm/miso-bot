@@ -10,6 +10,8 @@
 .gitignore
 *.md
 docker-compose.yml
+docker-compose.production.yml
+mariadb
 .env.example
 flake.*
 

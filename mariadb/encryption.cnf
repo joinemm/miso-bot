@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Joonas Rautiola <mail@joinemm.dev>
+# SPDX-License-Identifier: MPL-2.0
+
+[mariadb]
+plugin_load_add = file_key_management
+file_key_management_filename = /run/mariadb-encryption/keys
+
+innodb_encrypt_tables = FORCE
+innodb_encrypt_log = ON
+innodb_encrypt_temporary_tables = ON
+innodb_encryption_threads = 2
+
+aria_encrypt_tables = ON
+encrypt_tmp_disk_tables = ON
+encrypt_tmp_files = ON
+encrypt_binlog = ON

@@ -76,6 +76,24 @@ The nix shell installs these as pre-commit hook automatically.
 First copy/rename `.env.example` to `.env` and fill it with your own keys.
 Everything else should be handled by the dockerfile.
 
+Production databases use the encryption configuration in
+`docker-compose.production.yml`. Provision `/var/lib/miso/mariadb-encryption/keys`
+on the server before starting the databases. This is a MariaDB file-key-management
+key file, with entries in the format `1;<64 hexadecimal characters>`. The
+directory must be readable by the container's `mysql` user and the key file must
+be readable only by that user. Keep the key in your password manager separately
+from the database volume. When recovering an existing encrypted database,
+restore the same key; generating a new key will not decrypt the existing files.
+
+Add the following to the production `.env` so subsequent Compose commands keep
+encryption enabled:
+
+```sh
+COMPOSE_FILE=docker-compose.yml:docker-compose.production.yml
+```
+
+Local development uses `docker-compose.yml` without the production override.
+
 ```sh
 docker compose --profile prod up
 ```

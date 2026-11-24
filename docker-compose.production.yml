@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Joonas Rautiola <mail@joinemm.dev>
+# SPDX-License-Identifier: MPL-2.0
+
+services:
+  bot-db:
+    volumes:
+      - ./mariadb/encryption.cnf:/etc/mysql/conf.d/encryption.cnf:ro
+      - /var/lib/miso/mariadb-encryption:/run/mariadb-encryption:ro
+
+  shlink-db:
+    volumes:
+      - ./mariadb/encryption.cnf:/etc/mysql/conf.d/encryption.cnf:ro
+      - /var/lib/miso/mariadb-encryption:/run/mariadb-encryption:ro
