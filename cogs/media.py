@@ -68,15 +68,15 @@ class Media(commands.Cog):
 
             data = await response.json(loads=orjson.loads)
 
-        if not data.get("items"):
+        videos = [
+            f"https://youtube.com/watch?v={item['id']['videoId']}"
+            for item in data.get("items", [])
+            if "videoId" in item["id"]
+        ]
+        if not videos:
             return await ctx.send("No results found!")
 
-        await TextPaginator(
-            [
-                f"https://youtube.com/watch?v={item['id']['videoId']}"
-                for item in data.get("items")
-            ]
-        ).run(ctx)
+        await TextPaginator(videos).run(ctx)
 
     @util.patrons_only()
     @commands.group(

@@ -57,10 +57,11 @@ class CustomCommands(commands.Cog, name="Commands"):
         data = await self.bot.db.fetch_flattened(
             "SELECT command_trigger FROM custom_command WHERE guild_id = %s", guild_id
         )
+        match = match.casefold()
         return {
             command_trigger
             for command_trigger in data
-            if match == "" or match in command_trigger
+            if match in command_trigger.casefold()
         }
 
     @commands.Cog.listener()
@@ -200,22 +201,21 @@ class CustomCommands(commands.Cog, name="Commands"):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        content = discord.Embed()
-
-        if internal_rows := [
-            f"{ctx.prefix}{command}" for command in self.bot_command_list(match=name)
-        ]:
-            content.add_field(name="Internal commands", value="\n".join(internal_rows))
-
-        custom_rows = [
-            f"{ctx.prefix}{command}"
-            for command in await self.custom_command_list(ctx.guild.id, match=name)
+        rows = [
+            f"**Internal:** {ctx.prefix}{command}"
+            for command in sorted(self.bot_command_list(match=name), key=str.casefold)
         ]
-        if custom_rows:
-            content.add_field(name="Custom commands", value="\n".join(custom_rows))
+        rows.extend(
+            f"**Custom:** {ctx.prefix}{command}"
+            for command in sorted(
+                await self.custom_command_list(ctx.guild.id, match=name),
+                key=str.casefold,
+            )
+        )
 
-        if content.fields:
-            await ctx.send(embed=content)
+        if rows:
+            content = discord.Embed(title="Command search results")
+            await RowPaginator(content, rows).run(ctx)
         else:
             await ctx.send("**Found nothing!**")
 

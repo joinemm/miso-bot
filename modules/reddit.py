@@ -77,7 +77,12 @@ class Reddit:
                 "Authorization": f"Bearer {self.access_token['token']}",
             },
         ) as response:
+            response.raise_for_status()
             data = await response.json()
+            if not data["data"]["children"]:
+                raise exceptions.CommandWarning(
+                    "This Reddit post is unavailable or cannot be accessed."
+                )
             post = data["data"]["children"][0]["data"]
 
         return post

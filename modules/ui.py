@@ -151,7 +151,7 @@ class ImagePaginator(BaseButtonPaginator):
 
     async def format_page(self, entries: list[dict]):
         self.embed.set_image(url=entries[0]["properties"]["url"])
-        self.embed.set_author(name=entries[0]["title"], url=entries[0]["url"])
+        self.embed.set_author(name=entries[0]["title"][:256], url=entries[0]["url"])
         self.embed.set_footer(
             text=entries[0]["meta_url"]["hostname"],
             icon_url=entries[0]["meta_url"]["favicon"],
