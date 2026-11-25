@@ -2220,16 +2220,16 @@ class LastFm(commands.Cog):
 
         data = []
         for member_chunk in batched(fm_members, 30):
-            tasks = []
+            playcount_tasks = []
             try:
                 async with asyncio.TaskGroup() as tg:
                     for user_id, lastfm_username in member_chunk:
                         task = tg.create_task(playcount_fn(lastfm_username, user_id))
-                        tasks.append(task)
+                        playcount_tasks.append(task)
             except* exceptions.LastFMError as errors:
                 raise errors.exceptions[0]
 
-            chunkdata = [task.result() for task in tasks]
+            chunkdata = [task.result() for task in playcount_tasks]
             data += chunkdata
         crown_holder = None
         crown_playcount = 0

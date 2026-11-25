@@ -8,13 +8,6 @@ from markdownify import MarkdownConverter
 from modules.misobot import MisoBot
 
 
-class MDText(MarkdownConverter):
-    """Custom converter than doesn't render hyperlinks"""
-
-    def convert_a(self, _el, text, _convert_as_inline):
-        return text
-
-
 class Genius:
     API_BASE_URL: str = "genius.p.rapidapi.com"
 
@@ -49,6 +42,7 @@ class Genius:
             soup = BeautifulSoup(content, "lxml")
             lyric_containers = soup.find_all("div", {"data-lyrics-container": "true"})
             lyrics.extend(
-                MDText().convert_soup(container) for container in lyric_containers
+                MarkdownConverter(strip=["a"]).convert_soup(container)
+                for container in lyric_containers
             )
         return lyrics

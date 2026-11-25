@@ -127,8 +127,7 @@ class EmbedEz:
                         await self.bot.redis.set("ez_on_cooldown", 1, 600)
                         logger.info("Stopping EZ requests for one hour")
                         raise InstagramError("API Error: Rate limited")
-                    else:
-                        raise InstagramError(f"API Error: {response.status}")
+                    raise InstagramError(f"API Error: {response.status}")
                 data = await response.json()
                 if not data["success"]:
                     raise InstagramError(f"API Error: {data['message']}")
@@ -218,12 +217,14 @@ class Snapsave:
             timestamp=pk_to_timestamp(shortcode_to_id(shortcode)),
         )
 
-    async def get_story(self, id: int, username: str) -> IgPost:
-        media = await self.embed(f"https://www.instagram.com/stories/{username}/{id}")
+    async def get_story(self, story_id: int, username: str) -> IgPost:
+        media = await self.embed(
+            f"https://www.instagram.com/stories/{username}/{story_id}"
+        )
 
         metadata = {
             "username": username,
-            "url": f"https://www.instagram.com/stories/{username}/{id}",
+            "url": f"https://www.instagram.com/stories/{username}/{story_id}",
             "description": "",
         }
 
@@ -232,7 +233,7 @@ class Snapsave:
             user=IgUser(username=metadata["username"].strip("@")),
             caption=metadata["description"],
             media=media,
-            timestamp=pk_to_timestamp(id),
+            timestamp=pk_to_timestamp(story_id),
         )
 
     async def embed(self, url: str) -> list[IgMedia]:
@@ -333,7 +334,6 @@ class InstaFix:
         except AttributeError:
             logger.error("No description found in meta")
             metadata["description"] = ""
-            pass
 
         try:
             metadata["username"] = soup.find(
@@ -342,7 +342,6 @@ class InstaFix:
         except AttributeError:
             logger.error("No description found in meta")
             metadata["username"] = ""
-            pass
 
         media = await self.try_media(shortcode)
 

@@ -408,7 +408,7 @@ class InstagramEmbedder(BaseEmbedder):
         instagram_regex = r"(?:https?:\/\/)?(?:www.)?instagram.com\/([a-zA-Z0-9\.\_\-]+)\/([a-zA-Z0-9\.\_\-]+)\/?([a-zA-Z0-9\.\_\-]+)?"
         results: list[InstagramPost | InstagramStory] = []
 
-        def parse(fragments: tuple[str, ...], round=1):
+        def parse(fragments: tuple[str, ...], attempt=1):
             url_type = fragments[0]
             if url_type in ["p", "reel", "reels", "tv"]:
                 results.append(InstagramPost(shortcode=fragments[1]))
@@ -426,7 +426,7 @@ class InstagramEmbedder(BaseEmbedder):
                 else:
                     raise InstagramError("Share link redirected to unsupported url")
             else:
-                if round == 1:
+                if attempt == 1:
                     # let's assume it's username, and user clicked through the profile page for this
                     # shift fragments over by one and try parsing again
                     parse(fragments[1:], 2)

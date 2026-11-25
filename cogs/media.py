@@ -44,7 +44,7 @@ class Media(commands.Cog):
                     ":warning: All results were hidden by safe search, run in NSFW channel to disable safe search"
                 )
             return await ctx.send("No results! :(")
-        elif results["query"]["show_strict_warning"]:
+        if results["query"]["show_strict_warning"]:
             await ctx.send(
                 ":warning: Some of the images may be hidden due to safe search, run in NSFW channel to disable safe search"
             )

@@ -849,21 +849,19 @@ class Misc(commands.Cog):
             raise exceptions.CommandError("Unable to get current guild")
 
         stickers = ctx.message.stickers
-        if not stickers:
-            if (
-                ctx.message.reference
-                and ctx.message.reference.message_id
-                and isinstance(ctx.channel, (discord.Thread, discord.TextChannel))
-            ):
-                reply_message = await ctx.channel.fetch_message(
-                    ctx.message.reference.message_id
-                )
-                if reply_message.stickers:
-                    stickers = reply_message.stickers
-                else:
-                    raise exceptions.CommandWarning(
-                        "Replied to message has no stickers"
-                    )
+        if (
+            not stickers
+            and ctx.message.reference
+            and ctx.message.reference.message_id
+            and isinstance(ctx.channel, (discord.Thread, discord.TextChannel))
+        ):
+            reply_message = await ctx.channel.fetch_message(
+                ctx.message.reference.message_id
+            )
+            if reply_message.stickers:
+                stickers = reply_message.stickers
+            else:
+                raise exceptions.CommandWarning("Replied to message has no stickers")
 
         if not stickers:
             await util.send_command_help(ctx)
