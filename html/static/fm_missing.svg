@@ -1,0 +1,10 @@
+<!--
+SPDX-FileCopyrightText: 2026 Joonas Rautiola <mail@joinemm.dev>
+SPDX-License-Identifier: MPL-2.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <path fill="#252525" d="M0 0h300v300H0z"/>
+  <circle cx="150" cy="150" r="95" fill="#444"/>
+  <circle cx="150" cy="150" r="35" fill="#666"/>
+  <circle cx="150" cy="150" r="10" fill="#252525"/>
+</svg>

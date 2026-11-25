@@ -18,7 +18,7 @@ https://git.joinemm.dev/miso-bot
         style='grid-template-columns: repeat({{COLUMNS}}, 1fr); grid-template-rows: repeat({{ROWS}}, 1fr);'
       >
         {{#each ALBUMS}}
-          <div class='box' style='background-image: url("{{this.image_url}}"); font-size: {{FONT_SIZE}}'>
+          <div class='box' style='background-image: url("{{this.image_url}}"), url("{{../STATIC}}/fm_missing.svg"); font-size: {{FONT_SIZE}}'>
             {{{this.label}}}
           </div>
         {{/each}}
