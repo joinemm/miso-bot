@@ -7,6 +7,12 @@ services:
     container_name: miso-bot-db
     image: mariadb
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     volumes:
       - miso-data:/var/lib/mysql
       - ./sql/init:/docker-entrypoint-initdb.d:ro
@@ -86,8 +92,10 @@ services:
     expose:
       - 8080
     depends_on:
-      - bot-db
-      - redis
+      bot-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - .env
     environment:
@@ -110,7 +118,8 @@ services:
     expose:
       - 8080
     depends_on:
-      - bot-db
+      bot-db:
+        condition: service_healthy
     env_file:
       - .env
     environment:
