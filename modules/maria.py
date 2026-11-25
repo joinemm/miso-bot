@@ -14,6 +14,14 @@ from loguru import logger
 from modules import exceptions
 
 
+# TODO: Revert this helper and its call sites after upgrading aiomysql to a release
+# fixing sequence parameters with PyMySQL >= 1.2.4:
+# https://github.com/aio-libs/aiomysql/issues/1104
+def placeholders(values: list | tuple) -> str:
+    """SQL placeholders for an IN clause, including an empty collection."""
+    return ", ".join("%s" for _ in values) or "NULL"
+
+
 @dataclass()
 class DatabaseCredentials:
     db: str

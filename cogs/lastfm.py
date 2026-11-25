@@ -25,6 +25,7 @@ from loguru import logger
 
 from modules import emojis, exceptions, util
 from modules.lastfm import LastFmApi, LastFmImage, Period
+from modules.maria import placeholders
 from modules.misobot import LastFmContext, MisoBot, MisoContext
 from modules.ui import RowPaginator
 
@@ -35,12 +36,13 @@ def is_small_server():
             return True
 
         await util.require_chunked(ctx.guild)
+        guild_user_ids = [user.id for user in ctx.guild.members]
         users = await ctx.bot.db.fetch_value(
-            """
-            SELECT count(*) FROM user_settings WHERE user_id IN %s
+            f"""
+            SELECT count(*) FROM user_settings WHERE user_id IN ({placeholders(guild_user_ids)})
             AND lastfm_username IS NOT NULL
             """,
-            [user.id for user in ctx.guild.members],
+            *guild_user_ids,
         )
         if users and users > 200:
             raise exceptions.ServerTooBig(ctx.guild.member_count)
@@ -1301,11 +1303,12 @@ class LastFm(commands.Cog):
             albums.append(img)
 
         to_fetch = []
+        image_hashes = [image.hash for image in albums]
         albumcolors = await self.bot.db.fetch(
-            """
-            SELECT image_hash, r, g, b FROM image_color_cache WHERE image_hash IN %s
+            f"""
+            SELECT image_hash, r, g, b FROM image_color_cache WHERE image_hash IN ({placeholders(image_hashes)})
             """,
-            tuple(a.hash for a in albums),
+            *image_hashes,
         )
 
         albumcolors_dict = {}
@@ -1494,10 +1497,10 @@ class LastFm(commands.Cog):
 
         if filter_blacklisted:
             data = await self.bot.db.fetch(
-                """
+                f"""
                 SELECT user_id, lastfm_username
                 FROM user_settings
-                WHERE user_id IN %s
+                WHERE user_id IN ({placeholders(guild_user_ids)})
                 AND lastfm_username IS NOT NULL
                 AND user_id not in (
                     SELECT user_id
@@ -1505,18 +1508,18 @@ class LastFm(commands.Cog):
                     WHERE guild_id = %s
                 )
                 """,
-                guild_user_ids,
+                *guild_user_ids,
                 guild.id,
             )
         else:
             data = await self.bot.db.fetch(
-                """
+                f"""
                 SELECT user_id, lastfm_username
                 FROM user_settings
-                WHERE user_id IN %s
+                WHERE user_id IN ({placeholders(guild_user_ids)})
                 AND lastfm_username IS NOT NULL
                 """,
-                guild_user_ids,
+                *guild_user_ids,
             )
 
         if data is None:

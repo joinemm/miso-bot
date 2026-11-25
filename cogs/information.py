@@ -13,6 +13,7 @@ import orjson
 from discord.ext import commands
 
 from modules import emojis, exceptions, util
+from modules.maria import placeholders
 from modules.misobot import MisoBot
 from modules.ui import RowPaginator
 
@@ -429,14 +430,14 @@ class Information(commands.Cog):
             title=f":bar_chart: `{ctx.prefix}{command.qualified_name}`"
         )
 
-        # set command name to be tuple of subcommands if this is a command group
+        # Include subcommands when looking up a command group's usage.
         group = hasattr(command, "commands")
         if group:
-            command_name = tuple(
+            command_names = tuple(
                 [f"{command.name} {x.name}" for x in command.commands] + [command_name]
             )
         else:
-            command_name = command.qualified_name
+            command_names = (command.qualified_name,)
 
         total_uses: int = 0
         most_used_by_user_id: Optional[int] = None
@@ -449,11 +450,11 @@ class Information(commands.Cog):
             SELECT SUM(use_sum) as total, user_id, MAX(use_sum) FROM (
                 SELECT SUM(uses) as use_sum, user_id FROM command_usage
                     WHERE command_type = 'internal'
-                      AND command_name {"IN %s" if group else "= %s"}
+                      AND command_name IN ({placeholders(command_names)})
                 GROUP BY user_id
             ) as subq
             """,
-            command_name,
+            *command_names,
         )
         if global_use_data:
             total_uses, most_used_by_user_id, most_used_by_user_amount = global_use_data
@@ -465,11 +466,11 @@ class Information(commands.Cog):
             SELECT guild_id, MAX(use_sum) FROM (
                 SELECT guild_id, SUM(uses) as use_sum FROM command_usage
                     WHERE command_type = 'internal'
-                      AND command_name {"IN %s" if group else "= %s"}
+                      AND command_name IN ({placeholders(command_names)})
                 GROUP BY guild_id
             ) as subq
             """,
-            command_name,
+            *command_names,
         )
         if uses_by_guild_data:
             most_used_by_guild_id, most_used_by_guild_amount = uses_by_guild_data
@@ -480,11 +481,11 @@ class Information(commands.Cog):
                     f"""
                     SELECT SUM(uses) FROM command_usage
                         WHERE command_type = 'internal'
-                        AND command_name {"IN %s" if group else "= %s"}
+                        AND command_name IN ({placeholders(command_names)})
                         AND guild_id = %s
                     GROUP BY guild_id
                     """,
-                    command_name,
+                    *command_names,
                     ctx.guild.id,
                 )
                 or 0
@@ -512,13 +513,13 @@ class Information(commands.Cog):
                 f"{command.name} {x.name}" for x in command.commands
             )
             subcommand_usage = await self.bot.db.fetch(
-                """
+                f"""
                 SELECT command_name, SUM(uses) FROM command_usage
                     WHERE command_type = 'internal'
-                      AND command_name IN %s
+                      AND command_name IN ({placeholders(subcommands_tuple)})
                 GROUP BY command_name ORDER BY SUM(uses) DESC
                 """,
-                subcommands_tuple,
+                *subcommands_tuple,
             )
             if subcommand_usage:
                 content.add_field(

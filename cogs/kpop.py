@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 from discord.ext import commands
 
 from modules import exceptions, util
+from modules.maria import placeholders
 from modules.misobot import MisoBot
 from modules.ui import RowPaginator
 
@@ -82,8 +83,8 @@ class Kpop(commands.Cog):
         gender = get_gender(gender)
 
         idol_id_list = await self.bot.db.fetch_flattened(
-            "SELECT idol_id FROM kpop_idol WHERE gender IN %s",
-            gender,
+            f"SELECT idol_id FROM kpop_idol WHERE gender IN ({placeholders(gender)})",
+            *gender,
         )
         if not idol_id_list:
             raise exceptions.CommandError(
@@ -207,8 +208,8 @@ class Kpop(commands.Cog):
         gender = get_gender(gender)
 
         group_id_list = await self.bot.db.fetch_flattened(
-            "SELECT group_id FROM kpop_group WHERE gender IN %s",
-            gender,
+            f"SELECT group_id FROM kpop_group WHERE gender IN ({placeholders(gender)})",
+            *gender,
         )
         if not group_id_list:
             raise exceptions.CommandError(

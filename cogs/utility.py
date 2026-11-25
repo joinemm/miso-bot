@@ -17,6 +17,7 @@ from discord.ext import commands, tasks
 from loguru import logger
 
 from modules import emojis, exceptions, queries, util
+from modules.maria import placeholders
 from modules.misobot import MisoBot
 from modules.shazam import Shazam
 from modules.ui import BaseButtonPaginator, Compliance, RowPaginator
@@ -1045,11 +1046,11 @@ class Utility(commands.Cog):
         rows = []
         user_ids = [user.id for user in ctx.guild.members]
         data = await self.bot.db.fetch(
-            """
+            f"""
             SELECT user_id, timezone FROM user_settings
-            WHERE user_id IN %s AND timezone IS NOT NULL
+            WHERE user_id IN ({placeholders(user_ids)}) AND timezone IS NOT NULL
             """,
-            user_ids,
+            *user_ids,
         )
         if not data:
             raise exceptions.CommandWarning(
