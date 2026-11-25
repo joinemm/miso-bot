@@ -5,6 +5,7 @@
 import asyncio
 import io
 import json
+from itertools import zip_longest
 
 import arrow
 import discord
@@ -12,7 +13,7 @@ from discord.ext import commands
 
 from modules import emojis, exceptions, queries, util
 from modules.misobot import MisoBot
-from modules.ui import RowPaginator
+from modules.ui import BaseButtonPaginator, RowPaginator
 
 
 class CustomCommands(commands.Cog, name="Commands"):
@@ -201,21 +202,22 @@ class CustomCommands(commands.Cog, name="Commands"):
         if ctx.guild is None:
             raise exceptions.CommandError("Unable to get current guild")
 
-        rows = [
-            f"**Internal:** {ctx.prefix}{command}"
+        internal_rows = [
+            f"{ctx.prefix}{command}"
             for command in sorted(self.bot_command_list(match=name), key=str.casefold)
         ]
-        rows.extend(
-            f"**Custom:** {ctx.prefix}{command}"
+        custom_rows = [
+            f"{ctx.prefix}{command}"
             for command in sorted(
                 await self.custom_command_list(ctx.guild.id, match=name),
                 key=str.casefold,
             )
-        )
+        ]
 
-        if rows:
-            content = discord.Embed(title="Command search results")
-            await RowPaginator(content, rows).run(ctx)
+        if internal_rows or custom_rows:
+            await CommandSearchPaginator(
+                list(zip_longest(internal_rows, custom_rows))
+            ).run(ctx)
         else:
             await ctx.send("**Found nothing!**")
 
@@ -411,3 +413,16 @@ class CustomCommands(commands.Cog, name="Commands"):
 
 async def setup(bot):
     await bot.add_cog(CustomCommands(bot))
+
+
+class CommandSearchPaginator(BaseButtonPaginator):
+    def __init__(self, entries: list[tuple[str | None, str | None]]):
+        super().__init__(entries=entries, per_page=10)
+
+    async def format_page(self, entries: list[tuple[str | None, str | None]]):
+        content = discord.Embed()
+        for index, name in enumerate(("Internal commands", "Custom commands")):
+            rows = [entry[index] for entry in entries if entry[index] is not None]
+            if rows:
+                content.add_field(name=name, value="\n".join(rows))
+        return {"embed": content}
