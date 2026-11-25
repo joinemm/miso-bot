@@ -287,18 +287,31 @@ class Media(commands.Cog):
             if response.ok:
                 data = await response.json()
                 gifs = data["data"]
+                if not gifs:
+                    raise exceptions.CommandInfo("No GIFs found for this search.")
 
         if not gifs:
             # go for web scraping backup
             logger.warning("Giphy API response was not 200, going for web scraping...")
             URL = f"https://giphy.com/search/{urllib.parse.quote(query)}"
             async with self.bot.session.get(URL, params={"rating": "r"}) as response:
-                soup = BeautifulSoup(await response.text(), "lxml")
-                raw_json = re.search(
-                    r"gifs: (.*),\n\s*nextUrl:",
-                    soup.findAll("script")[-2].text,
-                ).group(1)
-                gifs = orjson.loads('{"gifs": ' + raw_json + "}")["gifs"]
+                if response.ok:
+                    soup = BeautifulSoup(await response.text(), "lxml")
+                    for script in soup.find_all("script"):
+                        match = re.search(
+                            r"gifs: (.*),\n\s*nextUrl:", script.get_text()
+                        )
+                        if match is not None:
+                            try:
+                                gifs = orjson.loads(match.group(1))
+                            except orjson.JSONDecodeError:
+                                continue
+                            if gifs:
+                                break
+            if not gifs:
+                raise exceptions.CommandWarning(
+                    "GIF search is temporarily unavailable. Please try again later."
+                )
 
         await GiphyUI(gifs).run(ctx)
 
@@ -400,7 +413,7 @@ class GiphyUI(discord.ui.View):
         self, interaction: discord.Interaction, _button: discord.ui.Button
     ):
         self.history.append(self._current_page)
-        self._current_page = random.randint(1, len(self.gifs))
+        self._current_page = random.randrange(len(self.gifs))
         await self.update(interaction)
 
     @discord.ui.button(emoji=emojis.CONFIRM, style=discord.ButtonStyle.success)
@@ -435,7 +448,7 @@ class GiphyUI(discord.ui.View):
                 pass
 
     async def run(self, ctx: commands.Context):
-        self._current_page = random.randint(1, len(self.gifs))
+        self._current_page = random.randrange(len(self.gifs))
         self.message = await ctx.send(self.gifs[self._current_page]["url"], view=self)
 
     async def on_timeout(self):

@@ -706,17 +706,15 @@ class Utility(commands.Cog):
         """
         source = ""
         target = ""
-        parts = text.split(" ", 1)
+        parts = text.split(maxsplit=1)
         if len(parts) > 1:
-            languages, text = parts
+            languages = parts[0]
             for separator in ["/", "->"]:
                 if separator in languages:
-                    source, target = languages.split(separator)
+                    source, target = languages.split(separator, 1)
                     if source or target:
+                        text = parts[1]
                         break
-            else:
-                # nothing was found, reconstruct the full text
-                text = languages + " " + text
 
         # default target to english
         if not target:
@@ -747,6 +745,10 @@ class Utility(commands.Cog):
         # check for errors and raise if any are present
         error = data.get("error")
         if error:
+            if error["code"] == 400:
+                raise exceptions.CommandWarning(
+                    f"Translation failed for `{source}->{target}`. Check the language codes and text."
+                )
             logger.error(error)
             raise exceptions.CommandError("Error: " + error["message"])
 

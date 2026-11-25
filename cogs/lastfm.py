@@ -542,7 +542,7 @@ class LastFm(commands.Cog):
         except exceptions.LastFMError:
             track_info = None
         if track_info is not None:
-            play_count = int(track_info["userplaycount"])
+            play_count = int(track_info.get("userplaycount", 0))
             if play_count > 0:
                 content.description = (
                     f"{content.description}\n> {format_playcount(play_count)}"
