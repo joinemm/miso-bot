@@ -7,6 +7,9 @@ services:
     container_name: miso-bot-db
     image: mariadb
     restart: unless-stopped
+    # Work around rootless Podman exec/healthcheck failures until this fix ships:
+    # https://github.com/podman-container-tools/podman/pull/30253
+    oom_score_adj: 200
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
@@ -55,7 +58,6 @@ services:
     container_name: miso-embed-server
     build: https://github.com/miso-bot/miso-embed-server.git#master
     restart: unless-stopped
-    init: true
     expose:
       - 3000
     ports:
