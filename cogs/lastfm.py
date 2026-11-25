@@ -792,16 +792,25 @@ class LastFm(commands.Cog):
         )
         soup = await self.api.scrape_page(url)
 
-        try:
-            chartlists = soup.select(".chartlist")
-            # there are "ghost" chartlists that mess up web scraping
-            albumsdiv = chartlists[1]
-            tracksdiv = chartlists[3]
-        except IndexError:
+        metadata = [
+            parse_playcount(item.text) for item in soup.select(".metadata-display")
+        ]
+        if metadata and metadata[0] == 0:
             return raise_no_artist_plays(artist, timeframe)
-
-        albums = self.api.get_library_playcounts(albumsdiv)
-        tracks = self.api.get_library_playcounts(tracksdiv)
+        albumsdiv = soup.select_one("#top-albums-section")
+        tracksdiv = soup.select_one("#top-tracks-section")
+        albums = self.api.get_library_playcounts(albumsdiv) if albumsdiv else []
+        tracks = self.api.get_library_playcounts(tracksdiv) if tracksdiv else []
+        if (
+            len(metadata) != 3
+            or (metadata[1] and not albums)
+            or (metadata[2] and not tracks)
+        ):
+            raise exceptions.LastFMError(
+                error_code=0,
+                message="Last.fm returned an unexpected artist library page. Please try again later.",
+            )
+        scrobbles, albums_count, tracks_count = metadata
 
         img = soup.select_one("span.library-header-image img")
 
@@ -823,12 +832,6 @@ class LastFm(commands.Cog):
             icon_url=ctx.lfm.target_user.display_avatar.url,
             url=url,
         )
-
-        metadata = []
-        for metadata_item in soup.select(".metadata-display"):
-            metadata.append(parse_playcount(metadata_item.text))
-
-        scrobbles, albums_count, tracks_count = metadata
 
         crownstate = ""
         if ctx.guild:
@@ -881,19 +884,19 @@ class LastFm(commands.Cog):
         track_ranking = [
             f"{escape_markdown(name)} [**{plays}**]" for (plays, name) in tracks[:10]
         ]
-        longest_line = len(max(album_ranking, key=len)) + len(
-            max(track_ranking, key=len)
+        longest_line = len(max(album_ranking, key=len, default="")) + len(
+            max(track_ranking, key=len, default="")
         )
         render_inline = longest_line < 79
 
         content.add_field(
             name=f":cd: {albums_count} Albums heard",
-            value=">>> " + "\n".join(album_ranking),
+            value=">>> " + "\n".join(album_ranking) if album_ranking else "None",
             inline=render_inline,
         )
         content.add_field(
             name=f":musical_note: {tracks_count} Tracks heard",
-            value=">>> " + "\n".join(track_ranking),
+            value=">>> " + "\n".join(track_ranking) if track_ranking else "None",
             inline=render_inline,
         )
 
