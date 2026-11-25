@@ -153,6 +153,7 @@ class Roles(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["colourme"])
+    @commands.bot_has_guild_permissions(manage_roles=True)
     async def colorme(self, ctx: commands.Context, hex_color: str):
         """Get yourself a nice color role of any color you want"""
         if ctx.guild is None or isinstance(ctx.author, discord.User):
@@ -189,6 +190,10 @@ class Roles(commands.Cog):
                 "The base role to inherit permissions from is not set or doesn't exist "
                 "please use `>colorizer baserole` to set it."
             )
+        if baserole >= ctx.guild.me.top_role:
+            raise exceptions.CommandWarning(
+                "My highest role must be above the colorizer base role. Ask a moderator to move it higher."
+            )
 
         existing_roles = await self.bot.db.fetch(
             """
@@ -198,6 +203,13 @@ class Roles(commands.Cog):
         )
 
         existing_roles_ids: list[int] = [x[1] for x in (existing_roles or [])]
+        if any(
+            role.id in existing_roles_ids and not role.is_assignable()
+            for role in ctx.guild.roles
+        ):
+            raise exceptions.CommandWarning(
+                "I cannot manage the color roles. Ask a moderator to move my highest role above them."
+            )
 
         color_role = None
         if existing_roles is not None:
@@ -259,13 +271,20 @@ class Roles(commands.Cog):
                     before_colors += acquired
                     acquired = []
 
+            if color_role not in colors:
+                colors.insert(0, color_role)
             final = before_colors + colors + acquired
-            payload = [{"id": role.id, "position": i} for i, role in enumerate(final)]
-            await self.bot.http.move_role_position(
-                ctx.guild.id,
-                payload,
-                reason="Colorizer action",
-            )  # type: ignore
+            try:
+                await ctx.guild.edit_role_positions(
+                    positions={
+                        role: i for i, role in enumerate(final) if role.is_assignable()
+                    },
+                    reason="Colorizer action",
+                )
+            except discord.Forbidden:
+                raise exceptions.CommandWarning(
+                    "I couldn't position the color roles. Check my Manage Roles permission and role hierarchy."
+                )
 
         # color the user
         await ctx.author.add_roles(color_role)
